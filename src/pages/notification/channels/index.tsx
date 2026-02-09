@@ -456,7 +456,7 @@ const NotificationChannelsPage: React.FC = () => {
 
     // ==================== Main Render ====================
     return (
-        <PageContainer header={{ title: <><BellOutlined /> 通知渠道 / CHANNELS</>, subTitle: `${total} 个接入口` }}>
+        <PageContainer ghost header={{ title: <><BellOutlined /> 通知渠道 / CHANNELS</>, subTitle: `${total} 个接入口` }}>
             <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>
                 <div className="launchpad-grid" style={{ height: 'auto', overflow: 'visible' }}>
                     {/* Toolbar */}

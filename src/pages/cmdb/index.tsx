@@ -582,6 +582,7 @@ const CMDBList: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{ title: <><CloudServerOutlined /> 资产管理 / CMDB</> }}
             content={
                 <Paragraph type="secondary" style={{ marginBottom: 0 }}>

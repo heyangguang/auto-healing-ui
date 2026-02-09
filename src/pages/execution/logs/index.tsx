@@ -85,6 +85,7 @@ const ExecutionLogs: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><HistoryOutlined /> 执行日志 / LOGS</>,
                 subTitle: '全系统取证时间轴',

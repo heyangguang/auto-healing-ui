@@ -277,7 +277,7 @@ const NotificationRecords: React.FC = () => {
 
     // ==================== Render ====================
     return (
-        <PageContainer header={{ title: <><HistoryOutlined /> 通知日志 / LOGS</> }}>
+        <PageContainer ghost header={{ title: <><HistoryOutlined /> 通知日志 / LOGS</> }}>
             <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>
                 <div className="launchpad-grid" style={{ height: 'auto', overflow: 'visible' }}>
                     {/* Toolbar */}

@@ -609,6 +609,7 @@ const SecretsSourceList: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><KeyOutlined /> 密钥管理 / SECRETS</>,
                 subTitle: '管理 SSH 凭据来源，支持文件、Vault、Webhook 等多种方式',

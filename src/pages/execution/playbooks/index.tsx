@@ -1688,6 +1688,7 @@ const PlaybookList: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{ title: <><BookOutlined /> Playbook 模板 / PLAYBOOKS</> }}
             extra={[
                 <Button key="import" type="primary" icon={<PlusOutlined />} onClick={() => { setImportModalOpen(true); setExpandedKeys(Object.keys(groupedPlaybooks)); }} disabled={!access.canManagePlaybook}>

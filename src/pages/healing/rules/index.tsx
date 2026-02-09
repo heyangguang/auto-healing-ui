@@ -246,10 +246,10 @@ const HealingRulesPage: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><SafetyCertificateOutlined /> 自愈规则 / RULES</>,
                 subTitle: '定义事件触发的自愈流程和条件',
-                breadcrumb: {}
             }}
         >
             <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>

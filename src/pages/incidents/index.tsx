@@ -468,6 +468,7 @@ const IncidentList: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{ title: <><AlertOutlined /> ITSM 工单 / INCIDENTS</>, subTitle: '从 ITSM 插件同步的工单列表' }}
         >
             {renderStatsCards()}

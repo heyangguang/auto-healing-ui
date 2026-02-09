@@ -220,6 +220,7 @@ const RolesPage: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><SafetyOutlined /> 角色管理 / ROLES</>,
                 subTitle: '管理系统角色、权限分配和工作区',

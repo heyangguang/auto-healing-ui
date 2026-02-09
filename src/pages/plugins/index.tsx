@@ -365,7 +365,7 @@ const PluginList: React.FC = () => {
     };
 
     return (
-        <PageContainer header={{ title: <><ApiOutlined /> 插件管理 / PLUGINS</>, subTitle: '管理 ITSM 和 CMDB 数据源' }}>
+        <PageContainer ghost header={{ title: <><ApiOutlined /> 插件管理 / PLUGINS</>, subTitle: '管理 ITSM 和 CMDB 数据源' }}>
             {/* 统计 - 第一行：状态 */}
             <Row gutter={16} style={{ marginBottom: 8 }}>
                 {[

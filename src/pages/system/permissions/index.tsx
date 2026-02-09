@@ -82,6 +82,7 @@ const PermissionsPage: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><SafetyOutlined /> 权限目录 / PERMISSIONS</>,
                 subTitle: '查看系统所有权限定义和分类',

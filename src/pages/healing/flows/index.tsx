@@ -136,10 +136,10 @@ const HealingFlows: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><DeploymentUnitOutlined /> 自愈流程 / FLOWS</>,
                 subTitle: '可视化编排自动化修复流程',
-                breadcrumb: {}
             }}
         >
             <div style={{ height: 'auto', overflow: 'visible' }}>

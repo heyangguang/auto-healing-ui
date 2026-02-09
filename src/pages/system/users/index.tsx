@@ -157,6 +157,7 @@ const UsersPage: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><UserOutlined /> 用户管理 / USERS</>,
                 subTitle: '管理系统用户、角色分配和权限',

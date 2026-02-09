@@ -401,10 +401,10 @@ const InstanceList: React.FC = () => {
 
     return (
         <PageContainer
+            ghost
             header={{
                 title: <><HistoryOutlined /> 流程实例 / INSTANCES</>,
                 subTitle: '自愈流程执行时间轴',
-                breadcrumb: {}
             }}
             style={{ width: '100%', height: 'calc(100vh - 56px)' }}
         >

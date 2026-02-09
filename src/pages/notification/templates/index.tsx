@@ -447,7 +447,7 @@ const NotificationTemplatesPage: React.FC = () => {
     // 初始加载时显示整页loading
     if (loading && templates.length === 0) {
         return (
-            <PageContainer header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
+            <PageContainer ghost header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
                 <div style={{
                     height: 'calc(100vh - 56px)',
                     display: 'flex',
@@ -462,7 +462,7 @@ const NotificationTemplatesPage: React.FC = () => {
     }
 
     return (
-        <PageContainer header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
+        <PageContainer ghost header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
             <div style={{
                 height: 'calc(100vh - 56px)', // Adjust for global header if present
                 display: 'flex',

@@ -723,6 +723,7 @@ const GitRepoList: React.FC = () => {
     // ==================== 主渲染 ====================
     return (
         <PageContainer
+            ghost
             header={{ title: <><GithubOutlined style={{ fontSize: 20 }} /> Git 仓库 / REPOSITORIES</> }}
             extra={[
                 <Button key="r" icon={<ReloadOutlined />} onClick={loadRepos}>刷新</Button>,
