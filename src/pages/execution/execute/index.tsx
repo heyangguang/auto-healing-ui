@@ -24,7 +24,7 @@ import SecretsSelector from '@/components/SecretsSelector';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
 import './style.css';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const ExecuteTaskPage: React.FC = () => {
     const access = useAccess();
@@ -281,11 +281,7 @@ const ExecuteTaskPage: React.FC = () => {
     const renderLaunchpad = () => (
         <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>
             <div className="launchpad-grid" style={{ height: 'auto', overflow: 'visible' }}>
-                <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                    <Space size="large">
-                        <Title level={4} style={{ margin: 0 }}><RocketOutlined /> 任务发射台 / LAUNCH PAD</Title>
-                        <Text type="secondary">{totalTemplates} 个模板</Text>
-                    </Space>
+                <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                     <Space wrap>
                         <Input
                             placeholder="搜索模板名称/Playbook/描述..."
@@ -783,10 +779,7 @@ const ExecuteTaskPage: React.FC = () => {
 
     return (
         <PageContainer
-            header={{
-                title: null,
-                breadcrumb: {},
-            }}
+            header={{ title: <><RocketOutlined /> 任务发射台 / LAUNCH PAD</>, subTitle: `${totalTemplates} 个模板` }}
             ghost
         >
             {mode === 'selection' ? renderLaunchpad() : renderMissionControl()}

@@ -247,7 +247,7 @@ const HealingRulesPage: React.FC = () => {
     return (
         <PageContainer
             header={{
-                title: '自愈规则管理',
+                title: <><SafetyCertificateOutlined /> 自愈规则 / RULES</>,
                 subTitle: '定义事件触发的自愈流程和条件',
                 breadcrumb: {}
             }}

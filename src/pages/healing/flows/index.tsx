@@ -16,7 +16,8 @@ import {
     SafetyCertificateOutlined,
     FunctionOutlined,
     SearchOutlined,
-    ReloadOutlined
+    ReloadOutlined,
+    DeploymentUnitOutlined
 } from '@ant-design/icons';
 import { history, useAccess } from '@umijs/max';
 import { getFlows, deleteFlow, updateFlow } from '@/services/auto-healing/healing';
@@ -136,7 +137,7 @@ const HealingFlows: React.FC = () => {
     return (
         <PageContainer
             header={{
-                title: '自愈流程',
+                title: <><DeploymentUnitOutlined /> 自愈流程 / FLOWS</>,
                 subTitle: '可视化编排自动化修复流程',
                 breadcrumb: {}
             }}

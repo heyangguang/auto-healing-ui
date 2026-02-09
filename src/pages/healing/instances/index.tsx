@@ -402,7 +402,7 @@ const InstanceList: React.FC = () => {
     return (
         <PageContainer
             header={{
-                title: <><HistoryOutlined /> 流程实例</>,
+                title: <><HistoryOutlined /> 流程实例 / INSTANCES</>,
                 subTitle: '自愈流程执行时间轴',
                 breadcrumb: {}
             }}
@@ -412,17 +412,20 @@ const InstanceList: React.FC = () => {
                 {/* Left Pane: Instance List (30%) */}
                 <div style={{ width: '30%', minWidth: 320, maxWidth: 420, height: '100%', borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column' }}>
                     {/* Toolbar */}
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <Input.Search
-                            placeholder="搜索流程/规则..."
-                            allowClear
-                            onSearch={(v) => setSearchText(v)}
-                            style={{ flex: 1 }}
-                        />
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <Input.Search
+                                placeholder="搜索流程名称 / 规则名称..."
+                                allowClear
+                                onSearch={(v) => setSearchText(v)}
+                                style={{ flex: 1 }}
+                            />
+                            <Button icon={<ReloadOutlined />} size="small" onClick={handleRefresh} />
+                        </div>
                         <Select
-                            placeholder="状态"
+                            placeholder="按状态筛选"
                             allowClear
-                            style={{ width: 160 }}
+                            style={{ width: '100%' }}
                             onChange={(v) => setFilterStatus(v)}
                         >
                             <Option value="running">执行中</Option>
@@ -435,7 +438,6 @@ const InstanceList: React.FC = () => {
                             </Option>
                             <Option value="failed">失败</Option>
                         </Select>
-                        <Button icon={<ReloadOutlined />} size="small" onClick={handleRefresh} />
                     </div>
 
                     {/* Instance List */}

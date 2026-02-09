@@ -15,7 +15,7 @@ import { getNotifications, retryNotification, getChannels, getTemplates } from '
 import { getExecutionRun } from '@/services/auto-healing/execution';
 import '../../execution/execute/style.css';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 // ==================== Constants ====================
 const CHANNEL_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
@@ -277,14 +277,11 @@ const NotificationRecords: React.FC = () => {
 
     // ==================== Render ====================
     return (
-        <PageContainer header={{ title: null, breadcrumb: {} }}>
+        <PageContainer header={{ title: <><HistoryOutlined /> 通知日志 / LOGS</> }}>
             <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>
                 <div className="launchpad-grid" style={{ height: 'auto', overflow: 'visible' }}>
-                    {/* Header */}
-                    <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                        <Space size="large">
-                            <Title level={4} style={{ margin: 0 }}><HistoryOutlined /> 通知日志 / LOGS</Title>
-                        </Space>
+                    {/* Toolbar */}
+                    <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                         <Space wrap>
                             <Input.Search
                                 placeholder="搜索主题..."

@@ -511,11 +511,7 @@ const ExecutionSchedulePage: React.FC = () => {
         <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>
             <div className="launchpad-grid" style={{ height: 'auto', overflow: 'visible' }}>
                 {/* Header - Aligned with ExecuteTaskPage */}
-                <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                    <Space size="large">
-                        <Title level={4} style={{ margin: 0 }}><ScheduleOutlined /> 轨道控制台 / ORBIT CONTROL</Title>
-                        <Text type="secondary">{scheduleTotal} 个调度</Text>
-                    </Space>
+                <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                     <Space wrap>
                         <Input
                             placeholder="搜索调度名称/表达式..."
@@ -1196,7 +1192,7 @@ const ExecutionSchedulePage: React.FC = () => {
     };
 
     return (
-        <PageContainer ghost header={{ title: null, breadcrumb: {} }}>
+        <PageContainer ghost header={{ title: <><ScheduleOutlined /> 定时调度 / SCHEDULES</>, subTitle: `${scheduleTotal} 个调度` }}>
             {mode === 'list' && renderList()}
             {mode === 'create-step-1' && renderStep1()}
             {(mode === 'create-step-2' || mode === 'edit') && renderCockpit()}

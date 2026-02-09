@@ -6,7 +6,7 @@ import { SearchOutlined, ReloadOutlined, AlertOutlined, WarningOutlined, InfoCir
 import { getPendingTriggers, getPendingApprovals, triggerHealing, approveTask, rejectTask } from '@/services/auto-healing/healing';
 import './index.less';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const PAGE_SIZE = 10;
@@ -228,7 +228,7 @@ const PendingCenter: React.FC = () => {
     // 未挂载时返回最小化 UI，避免阻塞主线程
     if (!mounted) {
         return (
-            <PageContainer header={{ title: null, breadcrumb: {} }} ghost>
+            <PageContainer header={{ title: <><DashboardOutlined /> 待办中心 / PENDING CENTER</> }} ghost>
                 <div style={{ textAlign: 'center', padding: 100 }}>
                     <Spin size="large" />
                 </div>
@@ -239,19 +239,15 @@ const PendingCenter: React.FC = () => {
     return (
         <PageContainer
             header={{
-                title: null,
-                breadcrumb: {},
+                title: <><DashboardOutlined /> 待办中心 / PENDING CENTER</>,
+                subTitle: `${triggerTotal + approvalTotal} 条待处理`,
             }}
             ghost
         >
             <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>
                 <div className="launchpad-grid" style={{ height: 'auto', overflow: 'visible' }}>
-                    {/* Title + Global Toolbar */}
-                    <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                        <Space size="large">
-                            <Title level={4} style={{ margin: 0 }}><DashboardOutlined /> 待办中心 / PENDING CENTER</Title>
-                            <Text type="secondary">{triggerTotal + approvalTotal} 条待处理</Text>
-                        </Space>
+                    {/* Toolbar */}
+                    <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                         <Space wrap>
                             <RangePicker
                                 placeholder={['开始日期', '结束日期']}

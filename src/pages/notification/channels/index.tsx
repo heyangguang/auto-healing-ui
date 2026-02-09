@@ -21,7 +21,7 @@ import {
 } from '@/services/auto-healing/notification';
 import '../../execution/execute/style.css';
 
-const { Text, Title, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 // ==================== Constants ====================
@@ -456,15 +456,11 @@ const NotificationChannelsPage: React.FC = () => {
 
     // ==================== Main Render ====================
     return (
-        <PageContainer header={{ title: null, breadcrumb: {} }}>
+        <PageContainer header={{ title: <><BellOutlined /> 通知渠道 / CHANNELS</>, subTitle: `${total} 个接入口` }}>
             <div className="mission-control-container" style={{ height: 'auto', overflow: 'visible' }}>
                 <div className="launchpad-grid" style={{ height: 'auto', overflow: 'visible' }}>
-                    {/* Header */}
-                    <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                        <Space size="large">
-                            <Title level={4} style={{ margin: 0 }}><BellOutlined /> 通知渠道 / CHANNELS</Title>
-                            <Text type="secondary">{total} 个接入口</Text>
-                        </Space>
+                    {/* Toolbar */}
+                    <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                         <Space wrap>
                             <Input
                                 placeholder="搜索渠道..."

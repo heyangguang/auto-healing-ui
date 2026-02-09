@@ -33,7 +33,7 @@ loader.init().then(monaco => {
 // Reusing styles from execute module for consistency
 import '../../execution/execute/style.css';
 
-const { Text, Title, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Sider, Content } = Layout;
 
@@ -447,7 +447,7 @@ const NotificationTemplatesPage: React.FC = () => {
     // 初始加载时显示整页loading
     if (loading && templates.length === 0) {
         return (
-            <PageContainer header={{ title: null, breadcrumb: {} }}>
+            <PageContainer header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
                 <div style={{
                     height: 'calc(100vh - 56px)',
                     display: 'flex',
@@ -462,7 +462,7 @@ const NotificationTemplatesPage: React.FC = () => {
     }
 
     return (
-        <PageContainer header={{ title: null, breadcrumb: {} }}>
+        <PageContainer header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
             <div style={{
                 height: 'calc(100vh - 56px)', // Adjust for global header if present
                 display: 'flex',
@@ -482,7 +482,7 @@ const NotificationTemplatesPage: React.FC = () => {
                     {/* Sidebar Header & Filters */}
                     <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fff', display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Title level={4} style={{ margin: 0 }}><FileTextOutlined /> 模板库 / TEMPLATES</Title>
+                            <Text strong style={{ fontSize: 15 }}>模板列表</Text>
                             <Tooltip title="新建模板">
                                 <Button type="primary" size="small" icon={<PlusOutlined />} disabled={!access.canCreateTemplate} onClick={handleCreateNew} />
                             </Tooltip>

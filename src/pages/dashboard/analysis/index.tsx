@@ -13,6 +13,7 @@ import {
   AppstoreAddOutlined,
   BlockOutlined,
   CloseOutlined,
+  DashboardOutlined,
   DeleteOutlined,
   EditOutlined,
   LockOutlined,
@@ -123,6 +124,82 @@ function autoArrangeLayouts(widgets: WidgetInstance[], currentLayouts: LayoutIte
     }
   }
   return newLayouts;
+}
+
+// ==================== 响应式多断点布局生成 ====================
+
+/**
+ * 根据 lg 布局自动为 md/sm/xs 断点生成合理布局
+ * 核心策略：按 lg 布局的 y->x 排序，然后在较少列数的网格中贪心重排
+ * widget 宽度会按比例缩放到目标列数，确保不超出网格
+ */
+const BREAKPOINT_COLS: Record<string, number> = { lg: 12, md: 10, sm: 6, xs: 4 };
+
+function generateLayoutForBreakpoint(lgLayout: LayoutItem[], targetCols: number): LayoutItem[] {
+  if (targetCols >= 12) return lgLayout; // lg 直接返回
+
+  // 按 y -> x 排序，保持视觉顺序
+  const sorted = [...lgLayout].sort((a, b) => a.y - b.y || a.x - b.x);
+
+  const grid: boolean[][] = [];
+  const result: LayoutItem[] = [];
+
+  function canPlace(x: number, y: number, w: number, h: number): boolean {
+    for (let row = y; row < y + h; row++) {
+      if (!grid[row]) grid[row] = new Array(targetCols).fill(false);
+      for (let col = x; col < x + w; col++) {
+        if (col >= targetCols || grid[row][col]) return false;
+      }
+    }
+    return true;
+  }
+
+  function placeItem(x: number, y: number, w: number, h: number): void {
+    for (let row = y; row < y + h; row++) {
+      if (!grid[row]) grid[row] = new Array(targetCols).fill(false);
+      for (let col = x; col < x + w; col++) {
+        grid[row][col] = true;
+      }
+    }
+  }
+
+  for (const item of sorted) {
+    // 按比例缩放宽度，最少为 minW 或 2
+    const minW = item.minW ?? 2;
+    let w = Math.max(minW, Math.round(item.w * targetCols / 12));
+    // 如果缩放后宽度仍超出列数，设为满宽
+    if (w > targetCols) w = targetCols;
+
+    // 贪心放置：从上到下，从左到右找第一个能放的位置
+    let placed = false;
+    for (let y = 0; !placed && y < 200; y++) {
+      for (let x = 0; x <= targetCols - w; x++) {
+        if (canPlace(x, y, w, item.h)) {
+          placeItem(x, y, w, item.h);
+          result.push({ ...item, x, y, w });
+          placed = true;
+          break;
+        }
+      }
+    }
+    // fallback: 放不下就满宽堆叠
+    if (!placed) {
+      const fallbackY = grid.length;
+      const fallbackW = Math.min(w, targetCols);
+      placeItem(0, fallbackY, fallbackW, item.h);
+      result.push({ ...item, x: 0, y: fallbackY, w: fallbackW });
+    }
+  }
+  return result;
+}
+
+function generateAllBreakpointLayouts(lgLayout: LayoutItem[]): Record<string, LayoutItem[]> {
+  return {
+    lg: lgLayout,
+    md: generateLayoutForBreakpoint(lgLayout, BREAKPOINT_COLS.md),
+    sm: generateLayoutForBreakpoint(lgLayout, BREAKPOINT_COLS.sm),
+    xs: generateLayoutForBreakpoint(lgLayout, BREAKPOINT_COLS.xs),
+  };
 }
 
 // ==================== 布局比较工具 ====================
@@ -248,6 +325,12 @@ const DashboardBuilder: React.FC = () => {
   const activeWorkspace = useMemo(
     () => state.workspaces.find((ws) => ws.id === state.activeWorkspaceId) || state.workspaces[0],
     [state],
+  );
+
+  // 缓存多断点响应式布局
+  const responsiveLayouts = useMemo(
+    () => generateAllBreakpointLayouts(activeWorkspace.layouts as LayoutItem[]),
+    [activeWorkspace.layouts],
   );
 
   const handleTabChange = useCallback((id: string) => {
@@ -554,28 +637,17 @@ const DashboardBuilder: React.FC = () => {
 
   return (
     <PageContainer
-      title={false}
-      header={{ title: undefined, breadcrumb: {} }}
-      style={{ padding: 0 }}
+      header={{ title: <><DashboardOutlined /> 运维监控中心 / DASHBOARD</>, subTitle: `${state.workspaces.length} 个工作区 · ${activeWorkspace.widgets.length} 个组件` }}
     >
-      {/* ========== 顶部控制栏 — 与页面融合，无割裂 ========== */}
+      {/* ========== 顶部控制栏 ========== */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         marginBottom: 0,
         padding: '0 0 12px 0',
         borderBottom: '1px solid #f0f0f0',
       }}>
-        {/* 左侧：标题 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Typography.Title level={4} style={{ margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
-            运维监控中心
-          </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 2 }}>
-            {state.workspaces.length} 个工作区 · {activeWorkspace.widgets.length} 个组件
-          </Typography.Text>
-        </div>
 
         {/* 右侧：操作按钮 */}
         <Space size={6}>
@@ -826,9 +898,9 @@ const DashboardBuilder: React.FC = () => {
           <ResponsiveGridLayout
             className={`dashboard-grid${isEditing ? ' editing' : ''}`}
             width={width || 1200}
-            layouts={{ lg: activeWorkspace.layouts as any }}
+            layouts={responsiveLayouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-            cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+            cols={BREAKPOINT_COLS}
             rowHeight={60}
             dragConfig={{ enabled: isEditing, handle: '.ant-card-head' }}
             resizeConfig={{ enabled: isEditing }}
