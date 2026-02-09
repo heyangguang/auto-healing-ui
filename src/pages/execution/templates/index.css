@@ -1,0 +1,6 @@
+/* 任务模板表单样式覆盖 */
+
+/* 强制所有 Select 组件使用直角边框 */
+.square-select .ant-select-selector {
+    border-radius: 0 !important;
+}

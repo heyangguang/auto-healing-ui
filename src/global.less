@@ -1,0 +1,317 @@
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*1GSgSYDD_aIAAAAAQsAAAAgAegCCAQ/AlibabaSans-Light.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*2zEUQqnPNesAAAAAQtAAAAgAegCCAQ/AlibabaSans-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Heavy.woff2") format("woff2");
+}
+
+html {
+  height: 100%;
+  overflow-y: scroll !important;
+  /* 始终显示滚动条，防止Drawer/Modal打开时页面抖动 */
+}
+
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family:
+    AlibabaSans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.colorWeak {
+  filter: invert(80%);
+}
+
+.ant-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   粘性页脚修复
+   DOM 链: #root > div > .ant-app > .ant-pro-layout > .ant-layout
+   确保每层都传递高度，内容区填满剩余空间
+   ============================================ */
+#root>div {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.ant-pro-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.ant-pro-layout>.ant-layout.ant-layout-has-sider {
+  flex: 1;
+  min-height: 100vh;
+}
+
+/* 右侧内容列（侧边栏旁边的主列） */
+.ant-pro-layout>.ant-layout.ant-layout-has-sider>.ant-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* 内容区域撑满，页脚自然下沉 */
+.ant-pro-layout>.ant-layout.ant-layout-has-sider>.ant-layout>.ant-pro-layout-content {
+  flex: 1;
+}
+
+/* .ant-pro-sider.ant-layout-sider.ant-pro-sider-fixed {
+  left: unset;
+} */
+
+/* 内容区域 */
+.ant-layout-content {
+  will-change: auto;
+}
+
+/* 优化菜单过渡 - 使用 GPU 加速避免页面加载时卡顿 */
+.ant-menu {
+  transition: none !important;
+}
+
+.ant-menu-item,
+.ant-menu-submenu-title {
+  /* 使用 transform 触发 GPU 合成层，避免主线程阻塞时卡顿 */
+  transform: translateZ(0);
+  will-change: background-color;
+  transition: background-color 0.15s ease-out !important;
+}
+
+/* 禁用菜单项其他动画 */
+.ant-menu-item::after,
+.ant-menu-submenu-title::after {
+  transition: none !important;
+}
+
+/* 侧边栏菜单独立渲染 — 不要使用 contain: strict，会裁剪折叠触发按钮 */
+.ant-pro-sider {
+  contain: layout style;
+}
+
+canvas {
+  display: block;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+@media (max-width: 768px) {
+  .ant-table {
+    width: 100%;
+    overflow-x: auto;
+
+    &-thead>tr,
+    &-tbody>tr {
+
+      >th,
+      >td {
+        white-space: pre;
+
+        >span {
+          display: block;
+        }
+      }
+    }
+  }
+}
+
+/* =============================================================================
+   Industrial UI / OpenShift Style Overrides
+   Enforce straight corners and sharp edges
+   ============================================================================= */
+
+/* Switch Component - Rectangular Style */
+.ant-switch {
+  border-radius: 1px !important;
+
+  .ant-switch-inner {
+    border-radius: 1px !important;
+  }
+
+  .ant-switch-handle::before {
+    border-radius: 1px !important;
+  }
+}
+
+/* Tag Component - Rectangular Style */
+.ant-tag {
+  border-radius: 1px !important;
+}
+
+/* Segmented Control - Rectangular Style */
+.ant-segmented,
+.ant-segmented-item,
+.ant-segmented-item-label {
+  border-radius: 1px !important;
+}
+
+/* Radio Button - Rectangular Style */
+.ant-radio-button-wrapper {
+  border-radius: 0 !important;
+
+  &:first-child {
+    border-radius: 0 !important;
+  }
+
+  &:last-child {
+    border-radius: 0 !important;
+  }
+}
+
+/* Ensure global borders are sharp even if inline styles interfere */
+.ant-btn,
+.ant-input,
+.ant-select-selector,
+.ant-card,
+.ant-modal-content,
+.ant-drawer-content-wrapper {
+  border-radius: 0 !important;
+}
+
+/* Scrollbars customized for industrial look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============================================
+   防止 Ant Design Drawer/Modal 打开时页面抖动
+   适用于所有带 Drawer 的页面
+   ============================================ */
+
+/* 核心修复：强制覆盖 Ant Design 的内联样式 */
+body {
+  padding-right: 0 !important;
+  width: 100% !important;
+}
+
+/* 确保 body 即使被 Ant Design 添加类或内联样式也不变 */
+body.ant-scrolling-effect {
+  overflow-y: scroll !important;
+  width: 100% !important;
+  padding-right: 0 !important;
+}
+
+/* body 任何样式都强制覆盖 */
+body[style] {
+  padding-right: 0 !important;
+  width: 100% !important;
+}
+
+/* 确保固定定位的侧边栏不受影响 */
+.ant-pro-sider-fixed,
+.ant-layout-sider-fixed {
+  padding-right: 0 !important;
+}
+
+/* 确保主内容区域也不受影响 */
+.ant-pro-layout-content,
+.ant-layout-content {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* 当前执行节点脉冲高亮动画 */
+@keyframes currentNodePulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px #1890ff, 0 0 12px rgba(24, 144, 255, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 0 2px #1890ff, 0 0 20px rgba(24, 144, 255, 0.8);
+  }
+}
+
+/* ============================================
+   Dashboard Widget Spin wrapper 高度修复
+   wrapperClassName 加在 .ant-spin-nested-loading 自身上，
+   所以 .widget-spin-wrapper 就是 .ant-spin-nested-loading。
+   内部结构: .ant-spin-nested-loading > .ant-spin-container > children
+   ============================================ */
+.widget-spin-wrapper {
+  /* 这些样式直接应用于 .ant-spin-nested-loading 元素 */
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1;
+  min-height: 0;
+
+  /* .ant-spin-container 是 .widget-spin-wrapper 的直接子元素 */
+  >.ant-spin-container {
+    height: 100% !important;
+    flex: 1;
+    min-height: 0;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}

@@ -1,0 +1,14 @@
+Test Plan for Dashboard Chart Fixes
+
+1. Verify Trend Chart X-Axis
+   - Go to "Incident Trend Last 30 Days" (or any trend chart).
+   - Check X-axis labels. They should be in "MM-DD" format (e.g. "01-15") instead of "2026-01-15T00..."
+   - Labels should not overlap.
+
+2. Verify Bar Chart Labels
+   - Go to "Incident Category Statistics" (or any bar chart).
+   - Check the bars.
+   - Numbers should be ABOVE the bars, not inside.
+   - Numbers should be dark grey, not white.
+   - Small bars should have visible numbers above them.
+   - There should be NO duplicate numbers.
