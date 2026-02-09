@@ -69,12 +69,6 @@ export default [
     component: './cmdb',
     access: 'canViewPlugins',
   },
-  {
-    path: '/cmdb/:id',
-    component: './cmdb/detail',
-    hideInMenu: true,
-    access: 'canViewPlugins',
-  },
   // ==================== 密钥管理 ====================
   {
     path: '/secrets',
