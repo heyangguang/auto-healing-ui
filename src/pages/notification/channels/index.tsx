@@ -19,7 +19,6 @@ import { useAccess } from '@umijs/max';
 import {
     getChannels, createChannel, updateChannel, deleteChannel, testChannel
 } from '@/services/auto-healing/notification';
-import '../../execution/execute/style.css';
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;

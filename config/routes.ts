@@ -56,7 +56,7 @@ export default [
   // ==================== ITSM 工单 ====================
   {
     path: '/incidents',
-    name: 'ITSM 工单',
+    name: '工单管理',
     icon: 'warning',
     component: './incidents',
     access: 'canViewPlugins',

@@ -18,7 +18,6 @@ import {
     getHealingRules, updateHealingRule, deleteHealingRule, activateHealingRule, deactivateHealingRule, createHealingRule
 } from '@/services/auto-healing/healing-rules';
 import { request } from '@umijs/max';
-import '../../execution/execute/style.css'; // Reuse existing styles
 import { RuleTester } from './RuleTester';
 import { ConditionBuilder } from './ConditionBuilder';
 

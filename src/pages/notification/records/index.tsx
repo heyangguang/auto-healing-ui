@@ -13,7 +13,6 @@ import { ProTable, ActionType, ProColumns, PageContainer } from '@ant-design/pro
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getNotifications, retryNotification, getChannels, getTemplates } from '@/services/auto-healing/notification';
 import { getExecutionRun } from '@/services/auto-healing/execution';
-import '../../execution/execute/style.css';
 
 const { Text } = Typography;
 

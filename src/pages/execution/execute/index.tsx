@@ -22,7 +22,6 @@ import HostList from './components/HostList';
 import HostSelector from '@/components/HostSelector';
 import SecretsSelector from '@/components/SecretsSelector';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
-import './style.css';
 
 const { Text } = Typography;
 

@@ -31,7 +31,6 @@ loader.init().then(monaco => {
     }
 });
 // Reusing styles from execute module for consistency
-import '../../execution/execute/style.css';
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;

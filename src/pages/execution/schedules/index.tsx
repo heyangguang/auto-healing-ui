@@ -32,7 +32,6 @@ import VariableInput, { extractDefaultValue } from '@/components/VariableInput';
 import HostList from '../execute/components/HostList';
 import CronEditor from '@/components/CronEditor';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
-import '../execute/style.css'; // Reuse existing industrial styles
 
 
 const { Text, Title } = Typography;
