@@ -3,17 +3,18 @@ import {
     CodeOutlined, FileTextOutlined, DeleteOutlined, ReloadOutlined, FolderOpenOutlined,
     InfoCircleOutlined, EditOutlined, ExclamationCircleOutlined, SearchOutlined,
     SettingOutlined, HistoryOutlined, BranchesOutlined, SaveOutlined, FolderOutlined,
-    RightOutlined, DownOutlined, PlusSquareOutlined, MinusSquareOutlined, CheckOutlined,
-    BookOutlined,
+    RightOutlined, DownOutlined, CheckOutlined,
+    BookOutlined, GithubOutlined, GitlabOutlined,
 } from '@ant-design/icons';
-import { useAccess } from '@umijs/max';
-import { PageContainer, ProCard, ModalForm, ProFormText, ProFormTextArea, ProFormSelect } from '@ant-design/pro-components';
+import { useAccess, history } from '@umijs/max';
+import { ModalForm, ProFormText, ProFormTextArea } from '@ant-design/pro-components';
+import StandardTable from '@/components/StandardTable';
+import type { SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import {
     Button, message, Space, Tag, Tooltip, Descriptions, Card, Row, Col,
     Typography, Tabs, Empty, Alert, Modal, Input, Table, Spin, Badge, Statistic, List, Form,
-    Switch, Select, Tree, Steps, Checkbox, Divider, Popover, InputNumber, AutoComplete,
+    Switch, Select, Checkbox, Divider, Popover, InputNumber, AutoComplete,
 } from 'antd';
-import type { DataNode, TreeProps } from 'antd/es/tree';
 import React, { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue, startTransition } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
@@ -23,6 +24,7 @@ import {
 } from '@/services/auto-healing/playbooks';
 import { getGitRepos, getFiles } from '@/services/auto-healing/git-repos';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
+import './index.css';
 
 const { Text, Paragraph } = Typography;
 
@@ -54,6 +56,38 @@ const variableTypeConfig: Record<string, { text: string; color: string }> = {
     password: { text: '密码', color: '#f5222d' },
 };
 
+// Git 平台图标
+const BitbucketIcon = () => (
+    <svg viewBox="0 0 1024 1024" width="1em" height="1em" fill="currentColor">
+        <path d="M575.2 588.8l-62.4-198.4h-2.4l-60 198.4h124.8zM149.6 128c-19.2 0-33.6 16-32 35.2l96 684.8c2.4 16 16 28.8 32 30.4h540.8c12 0 22.4-8.8 24-20.8l96-694.4c1.6-19.2-12.8-35.2-32-35.2H149.6zm420.8 508.8H453.6L408 428.8h210.4l-48 208z" />
+    </svg>
+);
+const GiteeIcon = () => (
+    <svg viewBox="0 0 1024 1024" width="1em" height="1em" fill="currentColor">
+        <path d="M512 1024C229.2 1024 0 794.8 0 512S229.2 0 512 0s512 229.2 512 512-229.2 512-512 512zm259.1-568.9H480.7c-15.8 0-28.6 12.8-28.6 28.6v57.1c0 15.8 12.8 28.6 28.6 28.6h176.8c15.8 0 28.6 12.8 28.6 28.6v14.3c0 47.3-38.4 85.7-85.7 85.7H366.7a28.6 28.6 0 0 1-28.6-28.6V416c0-47.3 38.4-85.7 85.7-85.7h347.3c15.8 0 28.6-12.8 28.6-28.6v-57.1c0-15.8-12.8-28.6-28.6-28.6H423.9c-94.7 0-171.4 76.8-171.4 171.4v275.5c0 15.8 12.8 28.6 28.6 28.6h344.6c85.2 0 154.3-69.1 154.3-154.3V483.7c0-15.8-12.8-28.6-28.6-28.6h-.3z" />
+    </svg>
+);
+const AzureIcon = () => (
+    <svg viewBox="0 0 1024 1024" width="1em" height="1em" fill="currentColor">
+        <path d="M388.8 131.2L153.6 460.8l-128 355.2h230.4L388.8 131.2zm48 0L307.2 816h432L563.2 358.4l-126.4-227.2zM768 816h230.4L588.8 131.2 768 816z" />
+    </svg>
+);
+const getProviderInfo = (url: string) => {
+    const lower = (url || '').toLowerCase();
+    if (lower.includes('github.com') || lower.includes('github.'))
+        return { icon: <GithubOutlined />, color: '#24292f', label: 'GitHub' };
+    if (lower.includes('gitlab.com') || lower.includes('gitlab.') || lower.includes('gitlab/'))
+        return { icon: <GitlabOutlined />, color: '#e24329', label: 'GitLab' };
+    if (lower.includes('bitbucket.org') || lower.includes('bitbucket.'))
+        return { icon: <BitbucketIcon />, color: '#0052cc', label: 'Bitbucket' };
+    if (lower.includes('gitee.com') || lower.includes('gitee.'))
+        return { icon: <GiteeIcon />, color: '#c71d23', label: 'Gitee' };
+    if (lower.includes('dev.azure.com') || lower.includes('visualstudio.com'))
+        return { icon: <AzureIcon />, color: '#0078d4', label: 'Azure' };
+    if (lower.startsWith('file://') || lower.startsWith('/'))
+        return { icon: <FolderOutlined />, color: '#595959', label: '本地' };
+    return { icon: <BranchesOutlined />, color: '#595959', label: 'Git' };
+};
 // 解析 Jinja2 default 表达式，提取实际默认值
 const parseDefaultValue = (value: any): string => {
     if (value === undefined || value === null) return '';
@@ -91,14 +125,77 @@ const formatDefaultDisplay = (value: any, _type: string): React.ReactNode => {
     return <Text style={{ fontFamily: 'SFMono-Regular, Consolas, monospace', fontSize: 13 }}>{parsed}</Text>;
 };
 
+// ============ 搜索配置 ============
+const playbookSearchFields: SearchField[] = [
+    { key: 'search', label: '名称/路径' },
+    { key: 'file_path', label: '入口文件' },
+    {
+        key: '__enum__status', label: '状态', options: [
+            { label: '就绪', value: 'ready' },
+            { label: '待处理', value: 'pending' },
+            { label: '已扫描', value: 'scanned' },
+            { label: '错误', value: 'error' },
+        ]
+    },
+    {
+        key: '__enum__config_mode', label: '扫描模式', options: [
+            { label: '自动模式', value: 'auto' },
+            { label: '增强模式', value: 'enhanced' },
+        ]
+    },
+    {
+        key: '__enum__has_variables', label: '包含变量', options: [
+            { label: '有变量', value: 'true' },
+            { label: '无变量', value: 'false' },
+        ]
+    },
+    {
+        key: '__enum__has_required_vars', label: '必填变量', options: [
+            { label: '有必填变量', value: 'true' },
+            { label: '无必填变量', value: 'false' },
+        ]
+    },
+];
+
+const playbookAdvancedSearchFields: AdvancedSearchField[] = [
+    { key: 'name', label: '模板名称', type: 'input', placeholder: '输入模板名称' },
+    { key: 'file_path', label: '入口文件', type: 'input', placeholder: '输入文件路径' },
+    {
+        key: 'status', label: '状态', type: 'select', options: [
+            { label: '就绪', value: 'ready' },
+            { label: '待处理', value: 'pending' },
+            { label: '已扫描', value: 'scanned' },
+            { label: '错误', value: 'error' },
+        ]
+    },
+    {
+        key: 'config_mode', label: '扫描模式', type: 'select', options: [
+            { label: '自动模式', value: 'auto' },
+            { label: '增强模式', value: 'enhanced' },
+        ]
+    },
+    {
+        key: 'has_variables', label: '包含变量', type: 'select', options: [
+            { label: '有变量', value: 'true' },
+            { label: '无变量', value: 'false' },
+        ]
+    },
+    {
+        key: 'has_required_vars', label: '必填变量', type: 'select', options: [
+            { label: '有必填变量', value: 'true' },
+            { label: '无必填变量', value: 'false' },
+        ]
+    },
+    { key: 'created_at', label: '创建时间', type: 'dateRange' },
+];
+
 // ==================== 主组件 ====================
 const PlaybookList: React.FC = () => {
     const access = useAccess();
     const [playbooks, setPlaybooks] = useState<AutoHealing.Playbook[]>([]);
     const [repos, setRepos] = useState<AutoHealing.GitRepository[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchText, setSearchText] = useState('');
-    const deferredSearchText = useDeferredValue(searchText);
+    const [searchParams, setSearchParams] = useState<Record<string, any>>({});
 
     // 选中的 Playbook
     const [selectedPlaybook, setSelectedPlaybook] = useState<AutoHealing.Playbook>();
@@ -109,15 +206,6 @@ const PlaybookList: React.FC = () => {
     const [savingVariables, setSavingVariables] = useState(false);
 
     // 弹窗状态
-    const [importModalOpen, setImportModalOpen] = useState(false);
-    const [importStep, setImportStep] = useState(0);
-    const [importRepoId, setImportRepoId] = useState<string>();
-    const [importFileTree, setImportFileTree] = useState<DataNode[]>([]);
-    const [importExpandedKeys, setImportExpandedKeys] = useState<string[]>([]);
-    const [importSelectedFiles, setImportSelectedFiles] = useState<string[]>([]);
-    const [importPlaybooks, setImportPlaybooks] = useState<{ file: string; name: string; description: string; config_mode: 'auto' | 'enhanced' }[]>([]);
-    const [loadingFiles, setLoadingFiles] = useState(false);
-    const [creating, setCreating] = useState(false);
 
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -150,14 +238,33 @@ const PlaybookList: React.FC = () => {
     const [tasks, setTasks] = useState<AutoHealing.ExecutionTask[]>([]);
 
     // ==================== 数据加载 ====================
-    const loadPlaybooks = useCallback(async () => {
+    const loadPlaybooks = useCallback(async (params?: Record<string, any>) => {
         setLoading(true);
         try {
-            const res = await getPlaybooks({ page: 1, page_size: 100 });
-            setPlaybooks(res.data || res.items || []);
+            const queryParams: any = { page: 1, page_size: 100 };
+            const p = params || searchParams;
+            if (p.search) queryParams.search = p.search;
+            if (p.name) queryParams.name = p.name;
+            if (p.file_path) queryParams.file_path = p.file_path;
+            if (p.status) queryParams.status = p.status;
+            if (p.config_mode) queryParams.config_mode = p.config_mode;
+            if (p.has_variables) queryParams.has_variables = p.has_variables;
+            if (p.has_required_vars) queryParams.has_required_vars = p.has_required_vars;
+            if (p.repository_id) queryParams.repository_id = p.repository_id;
+            if (p.created_from) queryParams.created_from = p.created_from;
+            if (p.created_to) queryParams.created_to = p.created_to;
+
+            const [playbooksRes, reposRes, tasksRes] = await Promise.all([
+                getPlaybooks(queryParams),
+                getGitRepos({ status: 'ready' }),
+                getExecutionTasks({ page: 1, page_size: 500 }),
+            ]);
+            setPlaybooks(playbooksRes.data || playbooksRes.items || []);
+            setRepos(reposRes.data || []);
+            setTasks(tasksRes.data || []);
         } catch { /* ignore */ }
         finally { setLoading(false); }
-    }, []);
+    }, [searchParams]);
 
     const loadRepos = useCallback(async () => {
         try {
@@ -207,22 +314,8 @@ const PlaybookList: React.FC = () => {
         return groups;
     }, [playbooks, repos]);
 
-    // 搜索过滤 (使用 deferred 值避免卡顿)
-    const filteredGroupedPlaybooks = useMemo(() => {
-        if (!deferredSearchText) return groupedPlaybooks;
-        const result: typeof groupedPlaybooks = {};
-        const searchLower = deferredSearchText.toLowerCase();
-        Object.entries(groupedPlaybooks).forEach(([repoId, group]) => {
-            const filtered = group.playbooks.filter(p =>
-                p.name.toLowerCase().includes(searchLower) ||
-                p.file_path.toLowerCase().includes(searchLower)
-            );
-            if (filtered.length > 0) {
-                result[repoId] = { ...group, playbooks: filtered };
-            }
-        });
-        return result;
-    }, [groupedPlaybooks, deferredSearchText]);
+    // 后端已过滤，直接使用分组结果
+    const filteredGroupedPlaybooks = groupedPlaybooks;
 
     // 默认展开所有仓库
     useEffect(() => {
@@ -241,6 +334,30 @@ const PlaybookList: React.FC = () => {
         pendingOnline: playbooks.filter(p => p.status === 'scanned').length,
         error: playbooks.filter(p => p.status === 'error' || p.status === 'invalid').length,
     }), [playbooks]);
+
+    // 统计栏（同代码仓库标准）
+    const statsBar = useMemo(() => (
+        <div className="pb-stats-bar">
+            {[
+                { icon: <CodeOutlined />, cls: 'total', val: stats.total, lbl: '总模板' },
+                { icon: <CheckCircleOutlined />, cls: 'ready', val: stats.ready, lbl: '就绪' },
+                { icon: <ClockCircleOutlined />, cls: 'pending', val: stats.pendingScan, lbl: '待扫描' },
+                { icon: <SyncOutlined />, cls: 'online', val: stats.pendingOnline, lbl: '待上线' },
+                { icon: <CloseCircleOutlined />, cls: 'error', val: stats.error, lbl: '错误' },
+            ].filter(s => s.val > 0 || ['total', 'ready'].includes(s.cls)).map((s, i) => (
+                <React.Fragment key={i}>
+                    {i > 0 && <div className="pb-stat-divider" />}
+                    <div className="pb-stat-item">
+                        <span className={`pb-stat-icon pb-stat-icon-${s.cls}`}>{s.icon}</span>
+                        <div className="pb-stat-content">
+                            <div className="pb-stat-value">{s.val}</div>
+                            <div className="pb-stat-label">{s.lbl}</div>
+                        </div>
+                    </div>
+                </React.Fragment>
+            ))}
+        </div>
+    ), [stats]);
 
     // ==================== 选中 Playbook ====================
     const handleSelectPlaybook = useCallback(async (playbook: AutoHealing.Playbook) => {
@@ -377,103 +494,7 @@ const PlaybookList: React.FC = () => {
         finally { setLoadingFileContent(false); }
     }, [selectedPlaybook]);
 
-    // ==================== 导入 Playbook ====================
-    const handleImportSelectRepo = useCallback(async (repoId: string) => {
-        setImportRepoId(repoId);
-        setLoadingFiles(true);
-        try {
-            const res = await getFiles(repoId);
-            // 转换文件树，目录优先排序
-            const buildTree = (nodes: any[]): DataNode[] => {
-                // 排序：目录在前，文件在后，同类型按名称排序
-                const sorted = [...nodes].sort((a, b) => {
-                    const aIsDir = a.type === 'directory';
-                    const bIsDir = b.type === 'directory';
-                    if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
-                    return a.name.localeCompare(b.name);
-                });
-                return sorted.map(node => {
-                    const isDir = node.type === 'directory';
-                    const isValidFile = /\.ya?ml$/i.test(node.name);
-                    return {
-                        key: node.path,
-                        title: <span style={{ fontSize: 13 }}>{node.name}</span>,
-                        icon: isDir
-                            ? <FolderOutlined style={{ color: '#faad14' }} />
-                            : isValidFile
-                                ? <FileTextOutlined style={{ color: '#1890ff' }} />
-                                : <FileTextOutlined style={{ color: '#d9d9d9' }} />,
-                        isLeaf: !isDir,
-                        children: node.children ? buildTree(node.children) : undefined,
-                        // 目录：可展开但不可勾选；只有 yml/yaml 文件可选
-                        checkable: !isDir && isValidFile,
-                        selectable: false,
-                        disabled: !isDir && !isValidFile,
-                    };
-                });
-            };
-            const fileData = Array.isArray(res.data) ? res.data : (res.data?.files || []);
-            const tree = buildTree(fileData);
-            setImportFileTree(tree);
-            // 收集所有目录的 key 并默认展开
-            const collectDirKeys = (nodes: DataNode[]): string[] => {
-                return nodes.flatMap(n => {
-                    if (n.children && n.children.length > 0) {
-                        return [n.key as string, ...collectDirKeys(n.children)];
-                    }
-                    return [];
-                });
-            };
-            setImportExpandedKeys(collectDirKeys(tree));
-            setImportStep(1);
-        } catch { /* 错误消息由全局错误处理器显示 */ }
-        finally { setLoadingFiles(false); }
-    }, []);
 
-    const handleImportFilesSelect = useCallback(() => {
-        // 根据选中的文件创建 Playbook 列表
-        const newPlaybooks = importSelectedFiles.map(file => ({
-            file,
-            name: file.replace(/\.ya?ml$/i, '').replace(/\//g, '-'),
-            description: '',
-            config_mode: 'auto' as const,
-        }));
-        setImportPlaybooks(newPlaybooks);
-        setImportStep(2);
-    }, [importSelectedFiles]);
-
-    const handleImportCreate = useCallback(async () => {
-        if (!importRepoId) return;
-        setCreating(true);
-        try {
-            for (const pb of importPlaybooks) {
-                await createPlaybook({
-                    repository_id: importRepoId,
-                    name: pb.name,
-                    file_path: pb.file,
-                    config_mode: pb.config_mode,
-                    description: pb.description,
-                });
-            }
-            message.success(`成功创建 ${importPlaybooks.length} 个 Playbook`);
-            setImportModalOpen(false);
-            setImportStep(0);
-            setImportRepoId(undefined);
-            setImportSelectedFiles([]);
-            setImportPlaybooks([]);
-            loadPlaybooks();
-        } catch { /* ignore */ }
-        finally { setCreating(false); }
-    }, [importRepoId, importPlaybooks, loadPlaybooks]);
-
-    const closeImportModal = () => {
-        setImportModalOpen(false);
-        setImportStep(0);
-        setImportRepoId(undefined);
-        setImportSelectedFiles([]);
-        setImportPlaybooks([]);
-        setImportFileTree([]);
-    };
 
     // ==================== 虚拟滚动：扁平化列表 ====================
     const flattenedList = useMemo(() => {
@@ -501,15 +522,7 @@ const PlaybookList: React.FC = () => {
     // ==================== 渲染左侧列表 ====================
     const renderLeftPanel = () => (
         <div style={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
-                <Input
-                    placeholder="搜索 Playbook..."
-                    prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                    value={searchText}
-                    onChange={e => setSearchText(e.target.value)}
-                    allowClear
-                />
-            </div>
+
             <div ref={parentRef} style={{ flex: 1, overflowY: 'auto' }}>
                 {!initialized ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -623,15 +636,7 @@ const PlaybookList: React.FC = () => {
                     </div>
                 )}
             </div>
-            <div style={{ padding: '12px 16px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Space size={12}>
-                    <Text type="secondary" style={{ color: '#8c8c8c' }}>待扫描: {stats.pendingScan}</Text>
-                    <Text type="secondary" style={{ color: '#1890ff' }}>待上线: {stats.pendingOnline}</Text>
-                    <Text type="secondary" style={{ color: '#52c41a' }}>就绪: {stats.ready}</Text>
-                    {stats.error > 0 && <Text type="secondary" style={{ color: '#ff4d4f' }}>错误: {stats.error}</Text>}
-                </Space>
-                <Button size="small" icon={<ReloadOutlined />} onClick={loadPlaybooks} loading={loading} />
-            </div>
+
         </div>
     );
 
@@ -661,7 +666,7 @@ const PlaybookList: React.FC = () => {
         const statusInfo = getStatusInfo();
 
         return (
-            <div style={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {/* 头部 */}
                 <div style={{ padding: '16px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -692,89 +697,87 @@ const PlaybookList: React.FC = () => {
                 </div>
 
                 {/* Tabs */}
-                <div style={{ flex: 1, overflow: 'auto' }}>
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     <Tabs
                         activeKey={activeTab}
                         onChange={setActiveTab}
-                        style={{ height: '100%' }}
+                        className="pb-detail-tabs"
                         tabBarStyle={{ padding: '0 24px', marginBottom: 0 }}
                         items={[
                             {
                                 key: 'overview',
                                 label: '概览',
                                 children: (
-                                    <div style={{ padding: 24, overflowY: 'auto', height: 'calc(100% - 46px)' }}>
-                                        {/* 简约统计行 */}
-                                        <div style={{ display: 'flex', gap: 32, marginBottom: 24, padding: '16px 24px', background: '#fafafa' /* borderRadius: 8 */ }}>
-                                            <div>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>变量总数</Text>
-                                                <div style={{ fontSize: 24, fontWeight: 600 }}>{selectedPlaybook.variables?.length || 0}</div>
-                                            </div>
-                                            <div>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>必填变量</Text>
-                                                <div style={{ fontSize: 24, fontWeight: 600, color: '#ff4d4f' }}>{selectedPlaybook.variables?.filter((v: any) => v.required).length || 0}</div>
-                                            </div>
-                                            <div>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>有默认值</Text>
-                                                <div style={{ fontSize: 24, fontWeight: 600, color: '#52c41a' }}>{selectedPlaybook.variables?.filter((v: any) => v.default).length || 0}</div>
-                                            </div>
-                                            <div>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>扫描次数</Text>
-                                                <div style={{ fontSize: 24, fontWeight: 600 }}>{scanLogs.length}</div>
-                                            </div>
+                                    <div style={{ padding: 24, overflowY: 'auto' }}>
+                                        {/* 紧凑统计条 */}
+                                        <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                                            <Tag style={{ padding: '2px 10px', fontSize: 13, borderRadius: 4, margin: 0 }}>
+                                                变量 <Text strong>{selectedPlaybook.variables?.length || 0}</Text>
+                                            </Tag>
+                                            <Tag color="error" style={{ padding: '2px 10px', fontSize: 13, borderRadius: 4, margin: 0 }}>
+                                                必填 <Text strong style={{ color: '#ff4d4f' }}>{selectedPlaybook.variables?.filter((v: any) => v.required).length || 0}</Text>
+                                            </Tag>
+                                            <Tag color="success" style={{ padding: '2px 10px', fontSize: 13, borderRadius: 4, margin: 0 }}>
+                                                默认值 <Text strong style={{ color: '#52c41a' }}>{selectedPlaybook.variables?.filter((v: any) => v.default).length || 0}</Text>
+                                            </Tag>
+                                            <Tag style={{ padding: '2px 10px', fontSize: 13, borderRadius: 4, margin: 0 }}>
+                                                扫描 <Text strong>{scanLogs.length}</Text> 次
+                                            </Tag>
                                         </div>
 
                                         <Row gutter={16}>
                                             {/* 左列 */}
                                             <Col span={12}>
-                                                {/* 基本信息 */}
-                                                <Card title="基本信息" size="small" style={{ marginBottom: 16 }}>
-                                                    <Descriptions column={1} size="small">
+                                                {/* 详细信息 */}
+                                                <Card title="详细信息" size="small" style={{ marginBottom: 16 }}>
+                                                    <Descriptions column={2} size="small" labelStyle={{ width: 80, color: '#8c8c8c' }}>
                                                         <Descriptions.Item label="名称">{selectedPlaybook.name}</Descriptions.Item>
                                                         <Descriptions.Item label="状态">
-                                                            <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
+                                                            <Space size={8}>
+                                                                <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
+                                                                <Tag color={selectedPlaybook.config_mode === 'enhanced' ? 'purple' : 'blue'}>
+                                                                    {selectedPlaybook.config_mode === 'enhanced' ? '增强模式' : '自动模式'}
+                                                                </Tag>
+                                                            </Space>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="入口文件">
-                                                            <Text code copyable style={{ fontSize: 12 }}>{selectedPlaybook.file_path}</Text>
+                                                        <Descriptions.Item label="入口文件" span={2}>
+                                                            <Text code copyable style={{ fontSize: 12, wordBreak: 'break-all' }}>{selectedPlaybook.file_path}</Text>
                                                         </Descriptions.Item>
-                                                        <Descriptions.Item label="扫描模式">
-                                                            <Tag color={selectedPlaybook.config_mode === 'enhanced' ? 'purple' : 'blue'}>
-                                                                {selectedPlaybook.config_mode === 'enhanced' ? '增强模式' : '自动模式'}
-                                                            </Tag>
-                                                        </Descriptions.Item>
-                                                        <Descriptions.Item label="描述">
+                                                        <Descriptions.Item label="描述" span={2}>
                                                             {selectedPlaybook.description || <Text type="secondary">-</Text>}
+                                                        </Descriptions.Item>
+                                                        <Descriptions.Item label="创建时间">{new Date(selectedPlaybook.created_at).toLocaleString()}</Descriptions.Item>
+                                                        <Descriptions.Item label="更新时间">{new Date(selectedPlaybook.updated_at || selectedPlaybook.created_at).toLocaleString()}</Descriptions.Item>
+                                                        <Descriptions.Item label="扫描时间" span={2}>
+                                                            {selectedPlaybook.last_scanned_at ? new Date(selectedPlaybook.last_scanned_at).toLocaleString() : <Text type="secondary">尚未扫描</Text>}
                                                         </Descriptions.Item>
                                                     </Descriptions>
                                                 </Card>
 
                                                 {/* 关联仓库 */}
-                                                <Card title="关联仓库" size="small" style={{ marginBottom: 16 }}>
+                                                <Card size="small"
+                                                    title={(() => {
+                                                        const repo = repos.find(r => r.id === selectedPlaybook.repository_id);
+                                                        if (!repo) return '关联仓库';
+                                                        const provider = getProviderInfo(repo.url);
+                                                        return <Space size={6}><span style={{ color: provider.color, display: 'flex', alignItems: 'center' }}>{provider.icon}</span>关联仓库</Space>;
+                                                    })()}
+                                                >
                                                     {(() => {
                                                         const repo = repos.find(r => r.id === selectedPlaybook.repository_id);
-                                                        return repo ? (
-                                                            <Descriptions column={1} size="small">
+                                                        if (!repo) return <Text type="secondary">仓库信息不可用</Text>;
+                                                        return (
+                                                            <Descriptions column={2} size="small" labelStyle={{ width: 80, color: '#8c8c8c' }}>
                                                                 <Descriptions.Item label="仓库">{repo.name}</Descriptions.Item>
                                                                 <Descriptions.Item label="分支">
                                                                     <Tag icon={<BranchesOutlined />}>{repo.default_branch}</Tag>
                                                                 </Descriptions.Item>
-                                                                <Descriptions.Item label="地址">
-                                                                    <Text copyable style={{ fontSize: 11 }}>{repo.url}</Text>
+                                                                <Descriptions.Item label="地址" span={2}>
+                                                                    <Text copyable style={{ fontSize: 11, wordBreak: 'break-all' }}>{repo.url}</Text>
                                                                 </Descriptions.Item>
                                                             </Descriptions>
-                                                        ) : <Text type="secondary">仓库信息不可用</Text>;
+                                                        );
                                                     })()}
-                                                </Card>
-
-                                                {/* 时间信息 */}
-                                                <Card title="时间记录" size="small">
-                                                    <Descriptions column={1} size="small">
-                                                        <Descriptions.Item label="创建">{new Date(selectedPlaybook.created_at).toLocaleString()}</Descriptions.Item>
-                                                        <Descriptions.Item label="更新">{new Date(selectedPlaybook.updated_at || selectedPlaybook.created_at).toLocaleString()}</Descriptions.Item>
-                                                        <Descriptions.Item label="扫描">
-                                                            {selectedPlaybook.last_scanned_at ? new Date(selectedPlaybook.last_scanned_at).toLocaleString() : <Text type="secondary">尚未扫描</Text>}
-                                                        </Descriptions.Item>
-                                                    </Descriptions>
                                                 </Card>
                                             </Col>
 
@@ -862,7 +865,7 @@ const PlaybookList: React.FC = () => {
                                 key: 'variables',
                                 label: <Badge count={editedVariables.length} size="small" offset={[8, 0]}>变量 </Badge>,
                                 children: (
-                                    <div style={{ padding: 24, overflowY: 'auto' }}>
+                                    <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
                                         {editedVariables.length > 0 ? (
                                             <>
                                                 <div style={{ marginBottom: 16 }}>
@@ -1429,7 +1432,7 @@ const PlaybookList: React.FC = () => {
                                 key: 'files',
                                 label: <Badge count={playbookFiles.length} size="small" offset={[8, 0]}>文件 </Badge>,
                                 children: (
-                                    <div style={{ padding: 24, height: 'calc(100% - 46px)', display: 'flex', gap: 16 }}>
+                                    <div style={{ padding: 24, display: 'flex', gap: 16, height: '100%', boxSizing: 'border-box' }}>
                                         {/* 左侧文件树 - GitHub 风格 */}
                                         <div style={{
                                             width: 320,
@@ -1583,7 +1586,7 @@ const PlaybookList: React.FC = () => {
                                 key: 'logs',
                                 label: '扫描日志',
                                 children: (
-                                    <div style={{ padding: 24, overflowY: 'auto', height: 'calc(100% - 46px)' }}>
+                                    <div style={{ padding: 24 }}>
                                         {loadingLogs ? <Spin /> : scanLogs.length > 0 ? (
                                             <div>
                                                 {/* 统计顶栏 */}
@@ -1619,7 +1622,7 @@ const PlaybookList: React.FC = () => {
                                                 </Card>
 
                                                 {/* 时间线 - 超出时自动显示滚动条 */}
-                                                <div style={{ maxHeight: 'calc(100vh - 450px)', overflowY: 'auto' }}>
+                                                <div>
                                                     {scanLogs.map((log, index) => (
                                                         <Card
                                                             key={log.id}
@@ -1687,17 +1690,48 @@ const PlaybookList: React.FC = () => {
     };
 
     return (
-        <PageContainer
-            ghost
-            header={{ title: <><BookOutlined /> Playbook 模板 / PLAYBOOKS</> }}
-            extra={[
-                <Button key="import" type="primary" icon={<PlusOutlined />} onClick={() => { setImportModalOpen(true); setExpandedKeys(Object.keys(groupedPlaybooks)); }} disabled={!access.canManagePlaybook}>
-                    导入 Playbook
-                </Button>,
-            ]}
+        <StandardTable<any>
+            tabs={[{ key: 'workbench', label: 'Playbook 工作台' }]}
+            title="Playbook 模板管理"
+            description="管理 Ansible Playbook 模板，支持从 Git 仓库导入、变量扫描和版本追踪。"
+            headerExtra={statsBar}
+            headerIcon={
+                <svg viewBox="0 0 48 48" fill="none">
+                    <rect x="6" y="4" width="36" height="40" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+                    <path d="M14 14h20M14 22h20M14 30h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <circle cx="34" cy="34" r="6" stroke="currentColor" strokeWidth="2" fill="none" />
+                    <path d="M34 31v6M31 34h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+            }
+            columns={[]}
+            searchFields={playbookSearchFields}
+            advancedSearchFields={playbookAdvancedSearchFields}
+            onSearch={({ advancedSearch }) => {
+                const raw = advancedSearch || {};
+                const params: Record<string, any> = {};
+                // 处理所有 key：去掉 __enum__ 前缀，转换 dateRange 键
+                Object.entries(raw).forEach(([key, value]) => {
+                    if (!value && value !== false && value !== 0) return;
+                    const cleanKey = key.replace(/^__enum__/, '');
+                    if (cleanKey === 'created_at_from') {
+                        params.created_from = value;
+                    } else if (cleanKey === 'created_at_to') {
+                        params.created_to = value;
+                    } else {
+                        params[cleanKey] = value;
+                    }
+                });
+                setSearchParams(params);
+                loadPlaybooks(params);
+            }}
+            primaryActionLabel="导入 Playbook"
+            primaryActionIcon={<PlusOutlined />}
+            primaryActionDisabled={!access.canManagePlaybook}
+            onPrimaryAction={() => history.push('/execution/playbooks/import')}
         >
+
             {/* 双栏布局 - 带 opacity 过渡动画 */}
-            <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 160px)' }}>
+            <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 260px)' }}>
                 {/* 左侧面板 - 带淡入淡出动画 */}
                 <div style={{
                     width: (activeTab === 'variables' || activeTab === 'files') ? 48 : 280,
@@ -1757,221 +1791,11 @@ const PlaybookList: React.FC = () => {
                 </div>
                 {/* 右侧面板 - 带过渡动画 */}
                 <div style={{ flex: 1, minWidth: 0, transition: 'opacity 0.15s ease-out' }}>
-                    <Card bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
+                    <Card bodyStyle={{ padding: 0, height: '100%', overflow: 'hidden' }} style={{ height: '100%', overflow: 'hidden' }}>
                         {renderRightPanel()}
                     </Card>
                 </div>
             </div>
-
-            {/* 扫描模式选择弹窗已移除，config_mode 在创建时固定 */}
-
-            {/* 导入 Playbook 弹窗 - 简约大气设计 */}
-            <Modal
-                title={null}
-                open={importModalOpen}
-                onCancel={closeImportModal}
-                footer={null}
-                width={600}
-                destroyOnClose
-                centered
-                styles={{ body: { padding: 0 } }}
-            >
-                <div style={{ padding: 32 }}>
-                    {/* 头部 - 简约风格 */}
-                    <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                        <div style={{
-                            width: 56,
-                            height: 56,
-                            // borderRadius: 12,
-                            background: '#f5f5f5',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: 12,
-                        }}>
-                            <CodeOutlined style={{ fontSize: 24, color: '#333' }} />
-                        </div>
-                        <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>导入 Playbook</div>
-                        <div style={{ color: '#8c8c8c', fontSize: 13 }}>从 Git 仓库导入 Ansible Playbook 模板</div>
-                    </div>
-
-                    {/* 步骤条 - 简约 */}
-                    <Steps
-                        current={importStep}
-                        size="small"
-                        style={{ marginBottom: 24 }}
-                        items={[{ title: '选择仓库' }, { title: '选择文件' }, { title: '配置' }]}
-                    />
-
-                    {/* Step 0: 选择仓库 */}
-                    {importStep === 0 && (
-                        <div>
-                            <Select
-                                placeholder="选择 Git 仓库"
-                                style={{ width: '100%' }}
-                                size="large"
-                                value={importRepoId}
-                                onChange={handleImportSelectRepo}
-                                loading={loadingFiles}
-                                optionLabelProp="label"
-                            >
-                                {repos.map(r => (
-                                    <Select.Option key={r.id} value={r.id} label={r.name}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                            <BranchesOutlined style={{ color: '#8c8c8c' }} />
-                                            <div>
-                                                <div style={{ fontWeight: 500 }}>{r.name}</div>
-                                                <div style={{ fontSize: 11, color: '#bfbfbf' }}>{r.default_branch}</div>
-                                            </div>
-                                        </div>
-                                    </Select.Option>
-                                ))}
-                            </Select>
-                            {loadingFiles && (
-                                <div style={{ textAlign: 'center', padding: 32 }}>
-                                    <Spin tip="加载文件..." />
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Step 1: 选择入口文件 */}
-                    {importStep === 1 && (
-                        <div>
-                            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Text strong>选择入口文件</Text>
-                                <Space size={16}>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                        <FolderOutlined style={{ color: '#faad14', marginRight: 4 }} />目录
-                                    </Text>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                        <FileTextOutlined style={{ color: '#1890ff', marginRight: 4 }} />可选文件
-                                    </Text>
-                                </Space>
-                            </div>
-                            {/* 展开/收起按钮 */}
-                            <div style={{ marginBottom: 8 }}>
-                                <Space size={8}>
-                                    <Button
-                                        size="small"
-                                        icon={<PlusSquareOutlined />}
-                                        onClick={() => {
-                                            const collectDirKeys = (nodes: DataNode[]): string[] => {
-                                                return nodes.flatMap(n => {
-                                                    if (n.children && n.children.length > 0) {
-                                                        return [n.key as string, ...collectDirKeys(n.children)];
-                                                    }
-                                                    return [];
-                                                });
-                                            };
-                                            setImportExpandedKeys(collectDirKeys(importFileTree));
-                                        }}
-                                    >
-                                        展开全部
-                                    </Button>
-                                    <Button
-                                        size="small"
-                                        icon={<MinusSquareOutlined />}
-                                        onClick={() => setImportExpandedKeys([])}
-                                    >
-                                        收起全部
-                                    </Button>
-                                </Space>
-                            </div>
-                            <div style={{
-                                border: '1px solid #d9d9d9',
-                                // borderRadius: 6,
-                                maxHeight: 240,
-                                overflowY: 'auto',
-                                background: '#fff',
-                            }}>
-                                <Tree
-                                    checkable
-                                    showIcon
-                                    showLine={{ showLeafIcon: false }}
-                                    treeData={importFileTree}
-                                    expandedKeys={importExpandedKeys}
-                                    onExpand={(keys) => setImportExpandedKeys(keys as string[])}
-                                    checkedKeys={importSelectedFiles}
-                                    onCheck={(keys) => setImportSelectedFiles(keys as string[])}
-                                    style={{ padding: 8 }}
-                                />
-                            </div>
-                            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between' }}>
-                                <Button onClick={() => { setImportStep(0); setImportFileTree([]); setImportSelectedFiles([]); }}>
-                                    返回
-                                </Button>
-                                <Button type="primary" onClick={handleImportFilesSelect} disabled={importSelectedFiles.length === 0}>
-                                    下一步 ({importSelectedFiles.length})
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 2: 配置 */}
-                    {importStep === 2 && (
-                        <div>
-                            <div style={{ marginBottom: 16 }}>
-                                <Text strong>配置 Playbook</Text>
-                                <div style={{ marginTop: 8, padding: 12, background: '#f5f5f5', /* borderRadius: 6 */ fontSize: 12, color: '#666' }}>
-                                    <div><strong>名称</strong>：Playbook 模板的显示名称，用于在列表中识别</div>
-                                    <div style={{ marginTop: 4 }}><strong>扫描模式</strong>：<Tag color="blue">自动</Tag> 基础变量扫描 | <Tag color="purple">增强</Tag> 深度扫描（包括注释中的变量）</div>
-                                </div>
-                            </div>
-                            <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-                                {importPlaybooks.map((pb, idx) => (
-                                    <div key={pb.file} style={{
-                                        padding: 12,
-                                        marginBottom: 8,
-                                        background: '#fafafa',
-                                        // borderRadius: 6,
-                                        border: '1px solid #f0f0f0',
-                                    }}>
-                                        <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>
-                                            <FileTextOutlined style={{ marginRight: 4 }} />
-                                            <code>{pb.file}</code>
-                                        </div>
-                                        <Row gutter={8}>
-                                            <Col flex="1">
-                                                <Input
-                                                    placeholder="Playbook 名称"
-                                                    value={pb.name}
-                                                    onChange={e => {
-                                                        const newList = [...importPlaybooks];
-                                                        newList[idx] = { ...newList[idx], name: e.target.value };
-                                                        setImportPlaybooks(newList);
-                                                    }}
-                                                />
-                                            </Col>
-                                            <Col>
-                                                <Select
-                                                    value={pb.config_mode}
-                                                    onChange={val => {
-                                                        const newList = [...importPlaybooks];
-                                                        newList[idx] = { ...newList[idx], config_mode: val };
-                                                        setImportPlaybooks(newList);
-                                                    }}
-                                                    style={{ width: 100 }}
-                                                    options={[
-                                                        { value: 'auto', label: '自动' },
-                                                        { value: 'enhanced', label: '增强' },
-                                                    ]}
-                                                />
-                                            </Col>
-                                        </Row>
-                                    </div>
-                                ))}
-                            </div>
-                            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between' }}>
-                                <Button onClick={() => setImportStep(1)}>返回</Button>
-                                <Button type="primary" onClick={handleImportCreate} loading={creating} disabled={importPlaybooks.some(p => !p.name)}>
-                                    创建 ({importPlaybooks.length})
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </Modal>
 
             {/* 删除确认 */}
             <Modal
@@ -2036,8 +1860,9 @@ const PlaybookList: React.FC = () => {
                     fieldProps={{ rows: 4, showCount: true, maxLength: 500 }}
                 />
             </ModalForm>
-        </PageContainer>
+        </StandardTable>
     );
 };
 
 export default PlaybookList;
+

@@ -1,0 +1,635 @@
+/* ===== StandardTable 通用组件样式 ===== */
+
+/* 整体容器 — 透明背景，让外层灰底显露 */
+.standard-table-container {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ===== 头部卡片 ===== */
+.standard-table-header {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-top: 3px solid #1677ff;
+    position: relative;
+}
+
+/* Ant Design Tabs — 灰色背景，直角，无 margin */
+.standard-table-tabs {
+    background: #fafbfc;
+    margin: 0 !important;
+}
+
+.standard-table-tabs .ant-tabs-nav {
+    margin: 0 !important;
+    padding: 0 16px;
+}
+
+.standard-table-tabs .ant-tabs-nav::before {
+    border-bottom: 1px solid #e8e8e8;
+}
+
+/* 内容行 — 白色背景 */
+.standard-table-header-content {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.standard-table-header-left {
+    flex: 1;
+}
+
+.standard-table-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #262626;
+    margin: 0 0 6px 0;
+    line-height: 1.4;
+}
+
+.standard-table-description {
+    font-size: 13px;
+    color: #8c8c8c;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.standard-table-header-icon {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    margin-left: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.35;
+    align-self: flex-end;
+}
+
+.standard-table-header-icon svg {
+    width: 56px;
+    height: 56px;
+    color: #1677ff;
+}
+
+/* ===== 筛选标签栏 ===== */
+.standard-table-filter-tags {
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.standard-table-filter-tag {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    border: 1.5px solid #1677ff !important;
+    color: #1677ff !important;
+    font-weight: 500;
+    padding: 2px 8px !important;
+    font-size: 13px;
+    line-height: 22px;
+}
+
+.standard-table-filter-tag .ant-tag-close-icon {
+    color: #1677ff !important;
+    font-size: 12px;
+    margin-inline-start: 4px;
+}
+
+.standard-table-filter-tag .ant-tag-close-icon:hover {
+    color: #0958d9 !important;
+}
+
+.standard-table-clear-filters {
+    font-size: 13px;
+    color: #1677ff;
+    cursor: pointer;
+    margin-left: 4px;
+    white-space: nowrap;
+}
+
+.standard-table-clear-filters:hover {
+    color: #4096ff;
+}
+
+/* ===== 主体卡片（搜索 + 表格 + 分页） ===== */
+.standard-table-main {
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== 搜索工具栏 ===== */
+.standard-table-toolbar {
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 12px;
+}
+
+.standard-table-search-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 680px;
+}
+
+/* 搜索图标 — 与 Select 连体 */
+.standard-table-search-icon {
+    color: #8c8c8c;
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d9d9d9;
+    border-right: none;
+    background: #fafafa;
+}
+
+/* 工具栏右侧：分组排列 */
+.standard-table-search-right {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+/* 高级搜索文字 */
+.standard-table-advanced-toggle {
+    cursor: pointer;
+    color: #1677ff;
+    font-size: 13px;
+    white-space: nowrap;
+    user-select: none;
+    transition: color 0.2s;
+    margin-right: 12px;
+}
+
+.standard-table-advanced-toggle:hover {
+    color: #4096ff;
+}
+
+/* 工具栏按钮组：竖线分隔 */
+.standard-table-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #e8e8e8;
+    margin: 0 8px;
+    flex-shrink: 0;
+}
+
+.standard-table-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ===== 高级搜索区域 ===== */
+.standard-table-advanced-search {
+    padding: 16px 24px;
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.standard-table-advanced-fields {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px 16px;
+    margin-bottom: 12px;
+}
+
+.standard-table-advanced-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.standard-table-advanced-field label {
+    font-size: 13px;
+    color: #595959;
+    font-weight: 500;
+}
+
+.standard-table-advanced-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+/* ===== 数据表格区域 ===== */
+.standard-table-body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 消除表头与数据行之间的间隔 */
+.standard-table-body .ant-table-content>table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.standard-table-body .ant-table-thead>tr>th {
+    border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.standard-table-body .ant-table-tbody>tr:first-child>td {
+    border-top: none !important;
+}
+
+/* 有数据时：列宽按定义值，不被容器自动撑开
+   注意：当有自定义列宽（tableLayout=fixed）时，不使用 max-content，否则窄列会被内容撑开 */
+.standard-table-has-data .ant-table-content>table {
+    min-width: max-content;
+}
+
+.standard-table-has-data.standard-table-fixed-layout .ant-table-content>table {
+    min-width: 0 !important;
+}
+
+/* fixed layout 模式：严格执行保存的列宽，裁剪超长内容 */
+.standard-table-fixed-layout .ant-table-thead>tr>th,
+.standard-table-fixed-layout .ant-table-tbody>tr>td {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    word-break: keep-all;
+}
+
+/* 空数据占位行：去掉所有边框、内容居中 */
+.standard-table-body .ant-table-placeholder td {
+    border: none !important;
+    text-align: center !important;
+}
+
+/* 表头：总高度 40px，白色底色，列间竖线分隔 */
+.standard-table-body .ant-table-thead>tr>th {
+    background: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    color: #595959;
+    border-bottom: 1px solid #f0f0f0;
+    border-right: 1px solid #f0f0f0;
+    padding: 0 5px 0 16px !important;
+    height: 40px;
+    line-height: 40px;
+}
+
+/* 最后一列不加右边框 */
+.standard-table-body .ant-table-thead>tr>th:last-child {
+    border-right: none;
+}
+
+.standard-table-body .ant-table-tbody>tr>td {
+    padding: 10px 5px 10px 16px !important;
+    font-size: 13px;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+/* 隐藏 antd 固定列触发的测量行（表头与数据之间的空白行） */
+.standard-table-body .ant-table-measure-row {
+    display: none !important;
+}
+
+.standard-table-body .ant-table-measure-row td {
+    display: none !important;
+}
+
+/* 隐藏表头下方的 sticky-scroll 占位条 */
+.standard-table-body .ant-table-sticky-scroll {
+    display: none !important;
+}
+
+/* 固定列 cell 也缩减右侧 padding */
+.standard-table-body .ant-table-cell-fix-right {
+    padding-right: 5px !important;
+}
+
+.standard-table-body .ant-table-tbody>tr:hover>td {
+    background: #fafafa;
+}
+
+.standard-table-body .ant-table-placeholder {
+    height: auto;
+}
+
+.standard-table-body .ant-table-placeholder td {
+    padding: 60px 16px !important;
+}
+
+/* ===== 分页区域 — 紧贴表格底部 ===== */
+.standard-table-footer {
+    padding: 12px 24px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 分页组件顺序: 共N条 → 条/页 → 页码 → 跳至 */
+.standard-table-footer .ant-pagination {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.standard-table-footer .ant-pagination .ant-pagination-total-text {
+    order: 1;
+}
+
+.standard-table-footer .ant-pagination .ant-pagination-options .ant-pagination-options-size-changer {
+    order: 2;
+}
+
+.standard-table-footer .ant-pagination .ant-pagination-prev {
+    order: 3;
+}
+
+.standard-table-footer .ant-pagination .ant-pagination-item {
+    order: 4;
+}
+
+.standard-table-footer .ant-pagination .ant-pagination-next {
+    order: 5;
+}
+
+.standard-table-footer .ant-pagination .ant-pagination-options {
+    order: 6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.standard-table-footer .ant-pagination .ant-pagination-options .ant-pagination-options-size-changer {
+    order: -1;
+}
+
+
+
+.standard-table-footer .ant-pagination .ant-pagination-options .ant-pagination-options-quick-jumper {
+    order: 1;
+}
+
+
+/* ===== 列设置弹窗 ===== */
+.column-settings-modal .ant-modal-body {
+    padding: 0;
+}
+
+.column-settings-content {
+    display: flex;
+    height: 348px;
+    border-top: 1px solid #e8e8e8;
+}
+
+/* 左侧 / 右侧面板 */
+.column-settings-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.column-settings-section:first-child {
+    border-right: 1px solid #e8e8e8;
+}
+
+.column-settings-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #262626;
+    padding: 12px 20px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    flex-shrink: 0;
+}
+
+.column-settings-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* 每行完整边框 */
+.column-settings-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: grab;
+    transition: background 0.15s;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.column-settings-item:hover {
+    background: #f5f8ff;
+}
+
+/* 固定列 — 虚线底边，灰色文字，不可拖 */
+.column-settings-item-locked {
+    cursor: default;
+    border-bottom: 1px dashed #d9d9d9;
+}
+
+.column-settings-item-locked:hover {
+    background: transparent;
+}
+
+.column-settings-item-locked .column-settings-item-name {
+    color: #bfbfbf;
+}
+
+.column-settings-item-drag {
+    color: #d9d9d9;
+    margin-right: 12px;
+    font-size: 14px;
+    cursor: grab;
+    transition: color 0.15s;
+}
+
+.column-settings-item:hover .column-settings-item-drag {
+    color: #8c8c8c;
+}
+
+.column-settings-item-name {
+    flex: 1;
+    font-size: 13px;
+    color: #262626;
+}
+
+.column-settings-item-fixed {
+    font-size: 12px;
+    color: #bfbfbf;
+    padding: 1px 8px;
+    font-weight: 500;
+}
+
+.column-settings-item-remove {
+    color: #ff7875;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.column-settings-item-remove:hover {
+    color: #ff4d4f;
+    transform: scale(1.15);
+}
+
+.column-settings-item-add {
+    color: #69b1ff;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.column-settings-item-add:hover {
+    color: #1677ff;
+    transform: scale(1.15);
+}
+
+.column-settings-empty {
+    color: #bfbfbf;
+    font-size: 13px;
+    text-align: center;
+    padding: 40px 20px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.column-settings-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 4px 0;
+}
+
+/* ===== 列宽拖拽手柄 ===== */
+
+/* 让 Ant Design 的滚动容器只在内容溢出时显示滚动条 */
+.standard-table-body .ant-table-content {
+    overflow-x: auto !important;
+}
+
+.standard-table-body th {
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.column-resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    z-index: 2;
+    user-select: none;
+}
+
+.column-resize-handle:hover {
+    background: rgba(22, 119, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1200px) {
+    .standard-table-advanced-fields {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .standard-table-advanced-fields {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+
+    /* 页面头部: 垂直布局，隐藏装饰图标 */
+    .standard-table-header-content {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start !important;
+    }
+
+    .standard-table-header-icon {
+        display: none;
+    }
+
+    .standard-table-header-left h2 {
+        font-size: 18px;
+    }
+
+    .standard-table-header-left p {
+        font-size: 12px;
+    }
+
+    /* 工具栏换行 */
+    .standard-table-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .standard-table-search-input {
+        min-width: 120px !important;
+        flex: 1;
+    }
+
+    .standard-table-toolbar-group {
+        flex-wrap: wrap;
+    }
+
+    /* 高级搜索 */
+    .standard-table-advanced-fields {
+        grid-template-columns: 1fr;
+    }
+
+    /* 分页器精简 */
+    .standard-table-footer .ant-pagination {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    /* 标签筛选 */
+    .standard-table-active-filters {
+        flex-wrap: wrap;
+    }
+}

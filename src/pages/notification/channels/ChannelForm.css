@@ -1,0 +1,39 @@
+/* ===== 渠道表单页面样式 ===== */
+
+.channel-form-page {
+    padding: 0;
+    min-height: calc(100vh - 120px);
+    background: #f5f5f5;
+}
+
+.channel-form-card {
+    background: #fff;
+    margin: 16px 24px 24px 24px;
+    padding: 32px 40px;
+    border: 1px solid #f0f0f0;
+}
+
+.channel-form-card .ant-form-item-label>label {
+    font-weight: 500;
+    color: #262626;
+}
+
+.channel-form-card .ant-form-item {
+    margin-bottom: 24px;
+}
+
+.channel-form-card .ant-card-head {
+    min-height: 40px;
+    padding: 0 16px;
+}
+
+.channel-form-card .ant-card-head-title {
+    padding: 8px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #595959;
+}
+
+.channel-form-card .ant-card-body {
+    padding: 16px;
+}

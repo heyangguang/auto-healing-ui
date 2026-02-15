@@ -1,0 +1,168 @@
+/* ===== 通知渠道页面样式 ===== */
+
+/* 工具栏 */
+.channels-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.channels-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.channels-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.channels-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #e8e8e8;
+    margin: 0 4px;
+}
+
+.channels-search-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 32px;
+    background: #fafafa;
+    border: 1px solid #d9d9d9;
+    border-right: none;
+    color: #8c8c8c;
+    font-size: 14px;
+}
+
+/* 卡片网格 */
+.channels-grid {
+    padding: 20px 24px;
+}
+
+/* 单个渠道卡片 */
+.channel-card {
+    display: flex;
+    height: 160px;
+    border: 1px solid #d9d9d9;
+    overflow: hidden;
+    background: #fff;
+    transition: all 0.2s;
+    position: relative;
+    cursor: pointer;
+}
+
+.channel-card:hover {
+    border-color: #1890ff;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+}
+
+/* 左侧标签条 */
+.channel-card-stub {
+    width: 64px;
+    min-width: 64px;
+    border-right: 1px dashed #d9d9d9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 4px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.channel-card-default-badge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-top: 24px solid #1890ff;
+    border-right: 24px solid transparent;
+    z-index: 1;
+}
+
+.channel-card-default-badge-text {
+    position: absolute;
+    top: -22px;
+    left: 2px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    transform: scale(0.8);
+}
+
+.channel-card-stub-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.channel-card-type-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-align: center;
+    line-height: 1;
+}
+
+/* 右侧内容区 */
+.channel-card-body {
+    flex: 1;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.channel-card-endpoint {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fafafa;
+    padding: 4px 6px;
+    border: 1px solid #f0f0f0;
+}
+
+.channel-card-metrics {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #8c8c8c;
+    align-items: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.channel-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 8px;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* 分页 */
+.channels-pagination {
+    margin-top: 16px;
+    padding: 0 24px 24px 24px;
+    display: flex;
+    justify-content: flex-end;
+}

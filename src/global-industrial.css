@@ -146,3 +146,9 @@
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
     font-size: 12px;
 }
+
+/* 调整 Ant Design Pro SettingDrawer 齿轮位置避免重叠 */
+.ant-pro-setting-drawer-handle {
+    top: 50% !important;
+    z-index: 99 !important;
+}

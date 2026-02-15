@@ -1,55 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import { List, Card, Typography, Space, Input, Badge, Tag, Select, Popover, Button, Switch, Segmented } from 'antd';
-import { SearchOutlined, FilterOutlined, DesktopOutlined, CodeOutlined, AuditOutlined, RocketOutlined } from '@ant-design/icons';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { List, Card, Typography, Space, Badge, Tag, Tooltip } from 'antd';
+import {
+    AuditOutlined, RocketOutlined, FileTextOutlined,
+    DesktopOutlined, CloudServerOutlined,
+} from '@ant-design/icons';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
-import dayjs from 'dayjs';
 
 const { Text } = Typography;
-const { Option } = Select;
+
+interface TaskFilters {
+    search?: string;
+    executor_type?: string;
+    target_hosts?: string;
+    playbook_name?: string;
+    repository_name?: string;
+    status?: string;
+    has_runs?: boolean;
+    has_logs?: boolean;
+    min_run_count?: number;
+    last_run_status?: string;
+}
 
 interface TaskNavigatorProps {
-    loading: boolean;
     selectedTaskId?: string;
     onSelectTask: (id: string | undefined) => void;
+    /** 来自 StandardTable 统一搜索的外部筛选参数 */
+    externalFilters?: TaskFilters;
 }
+
+/* 执行器类型配置 */
+const executorConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+    local: { icon: <DesktopOutlined />, label: '本地', color: '#52c41a' },
+    docker: { icon: <CloudServerOutlined />, label: 'Docker', color: '#1677ff' },
+};
+
+/* 解析 hosts */
+const parseHosts = (hosts?: string) => {
+    if (!hosts) return [];
+    return hosts.split(',').map(h => h.trim()).filter(Boolean);
+};
 
 const TaskNavigator: React.FC<TaskNavigatorProps> = ({
     selectedTaskId,
     onSelectTask,
+    externalFilters = {},
 }) => {
     const [tasks, setTasks] = useState<AutoHealing.ExecutionTask[]>([]);
     const [loading, setLoading] = useState(false);
-    const [searchText, setSearchText] = useState('');
 
     // Pagination State
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
-    const PAGE_SIZE = 20;
+    const PAGE_SIZE = 10;
 
-    // New Filters
-    const [executorType, setExecutorType] = useState<string | undefined>(undefined);
-    const [targetHost, setTargetHost] = useState<string>('');
-    const [playbookName, setPlaybookName] = useState<string>('');
-    const [repoName, setRepoName] = useState<string>('');
-    const [lastRunStatus, setLastRunStatus] = useState<string | undefined>(undefined);
-    const [hasRuns, setHasRuns] = useState<boolean | undefined>(true);
-    const [minRunCount, setMinRunCount] = useState<number | undefined>(undefined);
-
-    const fetchTasks = async (currentPage: number, isReset: boolean) => {
-        if (loading) return;
+    const loadingRef = useRef(false);
+    const fetchTasks = useCallback(async (currentPage: number, isReset: boolean) => {
+        if (loadingRef.current) return;
+        loadingRef.current = true;
         setLoading(true);
         try {
             const res = await getExecutionTasks({
                 page: currentPage,
                 page_size: PAGE_SIZE,
-                search: searchText,
-                executor_type: executorType,
-                target_hosts: targetHost,
-                playbook_name: playbookName,
-                repository_name: repoName,
-                has_runs: hasRuns,
-                min_run_count: minRunCount,
-                last_run_status: lastRunStatus
+                search: externalFilters.search,
+                executor_type: externalFilters.executor_type,
+                target_hosts: externalFilters.target_hosts,
+                playbook_name: externalFilters.playbook_name,
+                repository_name: externalFilters.repository_name,
+                status: externalFilters.status,
+                has_runs: externalFilters.has_runs,
+                has_logs: externalFilters.has_logs,
+                min_run_count: externalFilters.min_run_count,
+                last_run_status: externalFilters.last_run_status,
             });
             const newTasks = res.data || [];
 
@@ -59,182 +81,102 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
                 setTasks(prev => [...prev, ...newTasks]);
             }
 
-            // Check if we have more data
             setHasMore(newTasks.length === PAGE_SIZE);
             setPage(currentPage);
         } catch (e) {
             console.error(e);
         } finally {
+            loadingRef.current = false;
             setLoading(false);
         }
-    };
+    }, []);
 
-    // Reload tasks when filters change (Reset to page 1)
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchTasks(1, true);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchText, targetHost, playbookName, repoName, hasRuns, minRunCount, lastRunStatus]);
-
+    // Reload on external filter changes
     useEffect(() => {
         fetchTasks(1, true);
-    }, [executorType]);
+    }, [
+        externalFilters.search,
+        externalFilters.executor_type,
+        externalFilters.target_hosts,
+        externalFilters.playbook_name,
+        externalFilters.repository_name,
+        externalFilters.status,
+        externalFilters.has_runs,
+        externalFilters.has_logs,
+        externalFilters.min_run_count,
+        externalFilters.last_run_status,
+    ]);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
-        // Trigger load when scrolled to within 50px of bottom
         if (scrollHeight - scrollTop - clientHeight < 50 && !loading && hasMore) {
             fetchTasks(page + 1, false);
         }
     };
 
-    const FilterContent = (
-        <div style={{ width: 280, padding: 8 }}>
-            <Space direction="vertical" style={{ width: '100%' }} size={12}>
-                <Text strong>筛选任务</Text>
-
-                <div>
-                    <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6 }}>执行记录</div>
-                    <Segmented
-                        block
-                        options={[
-                            { label: '不限', value: 'all' },
-                            { label: '有记录', value: 'yes' },
-                            { label: '无记录', value: 'no' }
-                        ]}
-                        value={hasRuns === undefined ? 'all' : hasRuns ? 'yes' : 'no'}
-                        onChange={(v) => setHasRuns(v === 'all' ? undefined : v === 'yes')}
-                    />
-                </div>
-
-                <Input
-                    placeholder="最小执行次数 (如: 5)"
-                    type="number"
-                    min={0}
-                    value={minRunCount}
-                    onChange={e => setMinRunCount(e.target.value ? Number(e.target.value) : undefined)}
-                    allowClear
-                />
-                <Select
-                    placeholder="最后执行状态"
-                    style={{ width: '100%' }}
-                    allowClear
-                    onChange={setLastRunStatus}
-                    value={lastRunStatus}
-                >
-                    <Option value="success"><Tag color="success">成功</Tag></Option>
-                    <Option value="failed"><Tag color="error">失败</Tag></Option>
-                    <Option value="running"><Tag color="processing">执行中</Tag></Option>
-                    <Option value="pending"><Tag color="warning">等待中</Tag></Option>
-                    <Option value="timeout"><Tag color="#fa8c16">超时</Tag></Option>
-                    <Option value="cancelled"><Tag color="default">已取消</Tag></Option>
-                </Select>
-                <Select
-                    placeholder="执行方式"
-                    style={{ width: '100%' }}
-                    allowClear
-                    onChange={setExecutorType}
-                    value={executorType}
-                >
-                    <Option value="local">Local Node (Shell/Ansible)</Option>
-                    <Option value="docker">Docker Container</Option>
-                </Select>
-                <Input
-                    placeholder="目标主机 (支持模糊搜索)"
-                    value={targetHost}
-                    onChange={e => setTargetHost(e.target.value)}
-                    allowClear
-                    suffix={<DesktopOutlined style={{ color: '#bfbfbf' }} />}
-                />
-                <Input
-                    placeholder="剧本名称"
-                    value={playbookName}
-                    onChange={e => setPlaybookName(e.target.value)}
-                    allowClear
-                    suffix={<CodeOutlined style={{ color: '#bfbfbf' }} />}
-                />
-                <Input
-                    placeholder="仓库名称"
-                    value={repoName}
-                    onChange={e => setRepoName(e.target.value)}
-                    allowClear
-                    suffix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                />
-            </Space>
-        </div>
-    );
-
-
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #f0f0f0', background: '#fff' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
-                <Space style={{ marginBottom: 12, justifyContent: 'space-between', width: '100%' }}>
-                    <Text strong style={{ fontSize: 16 }}>任务导航</Text>
-                    <Popover content={FilterContent} trigger="click" placement="bottomRight">
-                        <Button
-                            icon={<FilterOutlined />}
-                            size="small"
-                            type={(executorType || targetHost || playbookName || repoName || lastRunStatus || hasRuns !== true || minRunCount) ? 'primary' : 'default'}
-                            ghost={!!(executorType || targetHost || playbookName || repoName || lastRunStatus || hasRuns !== true || minRunCount)}
-                        />
-                    </Popover>
-                </Space>
-                <Input
-                    placeholder="搜索任务模板..."
-                    prefix={<SearchOutlined style={{ color: searchText ? '#1890ff' : '#bfbfbf' }} />}
-                    value={searchText}
-                    onChange={e => setSearchText(e.target.value)}
-                    style={{
-                        borderRadius: 0,
-                        borderColor: searchText ? '#1890ff' : undefined,
-                        boxShadow: searchText ? '0 0 0 2px rgba(24,144,255,0.2)' : undefined
-                    }}
-                    allowClear
-                />
+            {/* Header */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text strong style={{ fontSize: 14 }}>模板分组</Text>
+                <Badge count={tasks.length} style={{ backgroundColor: '#f0f0f0', color: '#8c8c8c' }} overflowCount={999} />
             </div>
 
             <style>{`
-                .hide-scrollbar {
+                .exec-logs-scrollbar {
                     scrollbar-width: thin;
                     scrollbar-color: transparent transparent;
                 }
-                .hide-scrollbar:hover {
+                .exec-logs-scrollbar:hover {
                     scrollbar-color: rgba(0,0,0,0.2) transparent;
                 }
-                .hide-scrollbar::-webkit-scrollbar {
+                .exec-logs-scrollbar::-webkit-scrollbar {
                     width: 6px;
                 }
-                .hide-scrollbar::-webkit-scrollbar-thumb {
+                .exec-logs-scrollbar::-webkit-scrollbar-thumb {
                     background-color: transparent;
                     border-radius: 3px;
                     transition: background-color 0.3s;
                 }
-                .hide-scrollbar:hover::-webkit-scrollbar-thumb {
+                .exec-logs-scrollbar:hover::-webkit-scrollbar-thumb {
                     background-color: rgba(0,0,0,0.2);
                 }
-                .hide-scrollbar::-webkit-scrollbar-track {
+                .exec-logs-scrollbar::-webkit-scrollbar-track {
                     background: transparent;
                 }
+                .task-nav-card .ant-card-body { padding: 10px 12px !important; }
+                .task-nav-card:hover .task-nav-name { color: #1677ff; }
+                .task-nav-card { position: relative; cursor: pointer; }
+                .task-nav-card-selected::before {
+                    content: '';
+                    position: absolute;
+                    left: -1px; top: -1px; bottom: -1px;
+                    width: 3px;
+                    background: #1890ff;
+                    z-index: 1;
+                }
             `}</style>
+
             <div
-                className="hide-scrollbar"
-                style={{ flex: 1, overflowY: 'auto', padding: 12 }}
+                className="exec-logs-scrollbar"
+                style={{ flex: 1, overflowY: 'auto', padding: 8 }}
                 onScroll={handleScroll}
             >
+                {/* "全部日志流" card */}
                 <Card
                     hoverable
                     size="small"
+                    className="task-nav-card"
                     style={{
                         borderRadius: 0,
-                        marginBottom: 8,
+                        marginBottom: 6,
                         background: !selectedTaskId ? '#e6f7ff' : '#fff',
                         borderColor: !selectedTaskId ? '#1890ff' : '#f0f0f0'
                     }}
                     onClick={() => onSelectTask(undefined)}
                 >
                     <Space>
-                        <AuditOutlined />
+                        <AuditOutlined style={{ color: '#1677ff' }} />
                         <Text strong>全部日志流</Text>
                     </Space>
                 </Card>
@@ -243,34 +185,86 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
                     dataSource={tasks}
                     renderItem={(item) => {
                         const isSelected = selectedTaskId === item.id;
+                        const exec = executorConfig[item.executor_type] || executorConfig.local;
+                        const hosts = parseHosts(item.target_hosts);
+                        const playbookName = item.playbook?.name || '-';
+                        const filePath = item.playbook?.file_path;
+
                         return (
                             <Card
                                 hoverable
                                 size="small"
+                                className={`task-nav-card${isSelected ? ' task-nav-card-selected' : ''}`}
                                 style={{
                                     borderRadius: 0,
-                                    marginBottom: 8,
-                                    background: isSelected ? '#e6f7ff' : '#fff',
+                                    marginBottom: 6,
+                                    background: isSelected ? '#e6f7ff' : undefined,
                                     borderColor: isSelected ? '#1890ff' : '#f0f0f0',
-                                    transition: 'all 0.2s'
                                 }}
                                 onClick={() => onSelectTask(item.id)}
                             >
-                                <Space direction="vertical" size={2} style={{ width: '100%' }}>
-                                    <Space>
-                                        <RocketOutlined style={{ color: '#1890ff' }} />
-                                        <Text strong ellipsis style={{ maxWidth: 180 }}>{item.name}</Text>
-                                    </Space>
-                                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 20 }}>
-                                        {item.playbook?.name || item.playbook_id.slice(0, 8)}
-                                    </Text>
-                                    <Space style={{ marginLeft: 20, marginTop: 4 }}>
-                                        <Tag style={{ margin: 0, fontSize: 10 }}>{item.executor_type}</Tag>
-                                        <Text type="secondary" style={{ fontSize: 11, fontFamily: 'Fira Code' }}>
-                                            {item.target_hosts ? item.target_hosts.slice(0, 15) + (item.target_hosts.length > 15 ? '...' : '') : 'No Hosts'}
+                                {/* Row 1: Task Name + Executor Tag */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                                        <RocketOutlined style={{ color: '#1677ff', fontSize: 13, flexShrink: 0 }} />
+                                        <Text strong ellipsis className="task-nav-name" style={{ fontSize: 13 }}>
+                                            {item.name}
                                         </Text>
-                                    </Space>
-                                </Space>
+                                    </div>
+                                    <Tag
+                                        color={exec.color}
+                                        style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', flexShrink: 0 }}
+                                    >
+                                        {exec.label}
+                                    </Tag>
+                                </div>
+
+                                {/* Row 2: Playbook ID */}
+                                <div style={{ paddingLeft: 19, marginBottom: 2 }}>
+                                    <Text type="secondary" copyable={{ text: item.playbook_id, tooltips: ['复制 Playbook ID', '已复制'] }} style={{ fontSize: 11, fontFamily: 'SFMono-Regular, Consolas, monospace' }}>
+                                        <span style={{ color: '#8c8c8c', fontFamily: 'inherit', marginRight: 4 }}>Playbook</span>{item.playbook_id.slice(0, 12)}...
+                                    </Text>
+                                </div>
+
+                                {/* Row 3: Playbook Name + File Path */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, paddingLeft: 19 }}>
+                                    <FileTextOutlined style={{ fontSize: 11, color: '#8c8c8c', flexShrink: 0 }} />
+                                    <Text type="secondary" ellipsis style={{ fontSize: 11 }}>
+                                        {playbookName}
+                                    </Text>
+                                    {filePath && (
+                                        <Text type="secondary" style={{ fontSize: 10, fontFamily: 'SFMono-Regular, Consolas, monospace', flexShrink: 0 }}>
+                                            ({filePath})
+                                        </Text>
+                                    )}
+                                </div>
+
+                                {/* Row 3: Target Hosts */}
+                                <div style={{ paddingLeft: 19 }}>
+                                    {hosts.length > 0 ? (
+                                        <Tooltip title={hosts.join(', ')}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                                <DesktopOutlined style={{ fontSize: 10, color: '#8c8c8c' }} />
+                                                <Text type="secondary" style={{ fontSize: 11, fontFamily: 'SFMono-Regular, Consolas, monospace' }}>
+                                                    {hosts.length <= 2
+                                                        ? hosts.join(', ')
+                                                        : `${hosts[0]}, ${hosts[1]} +${hosts.length - 2}`
+                                                    }
+                                                </Text>
+                                                {hosts.length > 2 && (
+                                                    <span style={{
+                                                        fontSize: 10, color: '#1677ff', background: '#e6f4ff',
+                                                        padding: '0 4px', lineHeight: '16px',
+                                                    }}>
+                                                        {hosts.length} 台
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </Tooltip>
+                                    ) : (
+                                        <Text type="secondary" style={{ fontSize: 11, color: '#d9d9d9' }}>未配置主机</Text>
+                                    )}
+                                </div>
                             </Card>
                         );
                     }}

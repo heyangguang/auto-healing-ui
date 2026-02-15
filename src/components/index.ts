@@ -8,5 +8,23 @@
 import Footer from './Footer';
 import { Question, SelectLang } from './RightContent';
 import { AvatarDropdown, AvatarName } from './RightContent/AvatarDropdown';
+import TopNavBar from './TopNavBar';
+import GlobalSearch from './GlobalSearch';
+import ProductMenu from './ProductMenu';
+import SideNav from './SideNav';
+import RightPanel from './RightPanel';
+import AppLayout from './AppLayout';
 
-export { AvatarDropdown, AvatarName, Footer, Question, SelectLang };
+export {
+    AvatarDropdown,
+    AvatarName,
+    Footer,
+    Question,
+    SelectLang,
+    TopNavBar,
+    GlobalSearch,
+    ProductMenu,
+    SideNav,
+    RightPanel,
+    AppLayout,
+};

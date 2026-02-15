@@ -18,10 +18,12 @@ export const TokenManager = {
     if (refreshToken) {
       localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
+    cachedTokenExpiry = null; // 清除缓存，强制重新解析
   },
   clearTokens: () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    cachedTokenExpiry = null;
   },
 };
 
@@ -38,9 +40,18 @@ const parseJwtExpiry = (token: string): number | null => {
   }
 };
 
+// 缓存 JWT 过期时间，避免每次请求重复解析
+let cachedTokenExpiry: { token: string; expiry: number | null } | null = null;
+
 // 检查 token 是否即将过期（提前 5 分钟刷新）
 const isTokenExpiringSoon = (token: string): boolean => {
-  const expiry = parseJwtExpiry(token);
+  let expiry: number | null;
+  if (cachedTokenExpiry && cachedTokenExpiry.token === token) {
+    expiry = cachedTokenExpiry.expiry;
+  } else {
+    expiry = parseJwtExpiry(token);
+    cachedTokenExpiry = { token, expiry };
+  }
   if (!expiry) return true;
   const bufferTime = 5 * 60 * 1000; // 5 分钟
   return Date.now() >= expiry - bufferTime;

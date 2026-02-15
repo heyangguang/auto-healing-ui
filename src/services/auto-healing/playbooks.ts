@@ -12,6 +12,18 @@ import { request } from '@umijs/max';
 export async function getPlaybooks(params?: {
     repository_id?: string;
     status?: AutoHealing.PlaybookStatus;
+    search?: string;
+    name?: string;
+    file_path?: string;
+    config_mode?: string;
+    has_variables?: string;
+    min_variables?: number;
+    max_variables?: number;
+    has_required_vars?: string;
+    sort_by?: string;
+    sort_order?: string;
+    created_from?: string;
+    created_to?: string;
     page?: number;
     page_size?: number;
 }) {

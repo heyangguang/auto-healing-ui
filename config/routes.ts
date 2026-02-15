@@ -24,58 +24,74 @@ export default [
       },
     ],
   },
-  // ==================== 仪表板 ====================
+  // ==================== 工作台 ====================
+  {
+    path: '/workbench',
+    name: '工作台',
+    icon: 'home',
+    component: './workbench',
+    hideInMenu: true,
+  },
+  // ==================== 监控面板 ====================
   {
     path: '/dashboard',
     name: 'dashboard',
     icon: 'dashboard',
     component: './dashboard/analysis',
   },
-  // ==================== 插件管理 ====================
+
+  // ==================== 资源配置 ====================
   {
-    path: '/plugins',
-    name: 'plugins',
-    icon: 'api',
-    component: './plugins',
-    access: 'canViewPlugins',
-  },
-  {
-    path: '/plugins/:id',
-    component: './plugins/detail',
-    hideInMenu: true,
-    access: 'canViewPlugins',
-  },
-  // ==================== 待办中心 ====================
-  {
-    path: '/pending-center',
-    name: '待办中心',
-    icon: 'carryOut',
-    component: './pending-center',
-    access: 'canViewApprovals',
-  },
-  // ==================== ITSM 工单 ====================
-  {
-    path: '/incidents',
-    name: '工单管理',
-    icon: 'warning',
-    component: './incidents',
-    access: 'canViewPlugins',
-  },
-  // ==================== CMDB ====================
-  {
-    path: '/cmdb',
-    name: '资产管理',
+    path: '/resources',
+    name: 'resources',
     icon: 'database',
-    component: './cmdb',
     access: 'canViewPlugins',
-  },
-  // ==================== 密钥管理 ====================
-  {
-    path: '/secrets',
-    name: '密钥管理',
-    icon: 'key',
-    component: './execution/secrets',
-    access: 'canViewPlugins',
+    routes: [
+      {
+        path: '/resources',
+        redirect: '/resources/cmdb',
+      },
+      {
+        path: '/resources/cmdb',
+        name: 'cmdb',
+        component: './cmdb',
+      },
+      {
+        path: '/resources/incidents',
+        name: 'incidents',
+        component: './incidents',
+      },
+      {
+        path: '/resources/secrets',
+        name: 'secrets',
+        component: './execution/secrets',
+      },
+      {
+        path: '/resources/secrets/create',
+        component: './execution/secrets/SecretForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/resources/secrets/:id/edit',
+        component: './execution/secrets/SecretForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/resources/plugins',
+        name: 'plugins',
+        component: './plugins',
+      },
+      {
+        path: '/resources/plugins/create',
+        component: './plugins/PluginForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/resources/plugins/:id/edit',
+        component: './plugins/PluginForm',
+        hideInMenu: true,
+      },
+    ],
   },
   // ==================== 执行模块 ====================
   {
@@ -94,8 +110,18 @@ export default [
         component: './execution/git-repos',
       },
       {
-        path: '/execution/git-repos/:id',
-        component: './execution/git-repos/detail',
+        path: '/execution/git-repos/create',
+        component: './execution/git-repos/GitRepoForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/execution/git-repos/:id/edit',
+        component: './execution/git-repos/GitRepoForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/execution/playbooks/import',
+        component: './execution/playbooks/PlaybookImport',
         hideInMenu: true,
       },
       {
@@ -107,6 +133,11 @@ export default [
         path: '/execution/templates',
         name: 'templates',
         component: './execution/templates',
+      },
+      {
+        path: '/execution/templates/:id',
+        component: './execution/templates/detail',
+        hideInMenu: true,
       },
       {
         path: '/execution/execute',
@@ -135,6 +166,14 @@ export default [
       },
     ],
   },
+  // ==================== 待办审批 ====================
+  {
+    path: '/pending-center',
+    name: '待办审批',
+    icon: 'carryOut',
+    component: './pending-center',
+    access: 'canViewApprovals',
+  },
   // ==================== 通知模块 ====================
   {
     path: '/notification',
@@ -150,6 +189,16 @@ export default [
         path: '/notification/channels',
         name: 'channels',
         component: './notification/channels',
+      },
+      {
+        path: '/notification/channels/create',
+        component: './notification/channels/ChannelForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/notification/channels/:id/edit',
+        component: './notification/channels/ChannelForm',
+        hideInMenu: true,
       },
       {
         path: '/notification/templates',
@@ -229,14 +278,39 @@ export default [
         component: './system/users',
       },
       {
+        path: '/system/users/create',
+        component: './system/users/UserForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/system/users/:id/edit',
+        component: './system/users/UserForm',
+        hideInMenu: true,
+      },
+      {
         path: '/system/roles',
         name: 'roles',
         component: './system/roles',
       },
       {
+        path: '/system/roles/create',
+        component: './system/roles/RoleForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/system/roles/:id/edit',
+        component: './system/roles/RoleForm',
+        hideInMenu: true,
+      },
+      {
         path: '/system/permissions',
         name: 'permissions',
         component: './system/permissions',
+      },
+      {
+        path: '/system/audit-logs',
+        name: 'audit-logs',
+        component: './system/audit-logs',
       },
     ],
   },
@@ -261,7 +335,7 @@ export default [
   // ==================== 默认重定向 ====================
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/workbench',
   },
   {
     component: '404',

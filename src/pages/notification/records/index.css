@@ -1,0 +1,72 @@
+/* ===== 通知记录页面样式 ===== */
+
+/* ---- 统计栏（对齐审计日志 statsBar） ---- */
+.records-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.records-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+}
+
+.records-stat-item:first-child {
+    padding-left: 0;
+}
+
+.records-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+}
+
+.records-stat-icon {
+    font-size: 22px;
+    opacity: 0.75;
+}
+
+.records-stat-icon-total {
+    color: #1677ff;
+}
+
+.records-stat-icon-sent {
+    color: #52c41a;
+}
+
+.records-stat-icon-failed {
+    color: #f5222d;
+}
+
+.records-stat-icon-pending {
+    color: #fa8c16;
+}
+
+.records-stat-icon-rate {
+    color: #722ed1;
+}
+
+.records-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.records-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.88);
+    font-variant-numeric: tabular-nums;
+}
+
+.records-stat-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    line-height: 1.4;
+}

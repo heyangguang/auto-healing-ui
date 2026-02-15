@@ -1,0 +1,249 @@
+/* ========== 审计日志页面 ========== */
+/* ---- 统计栏 ---- */
+.audit-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.audit-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+}
+
+.audit-stat-item:first-child {
+    padding-left: 0;
+}
+
+.audit-stat-trend {
+    margin-left: auto;
+    padding-right: 0;
+}
+
+.audit-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+}
+
+.audit-stat-icon {
+    font-size: 22px;
+    opacity: 0.75;
+}
+
+.audit-stat-icon-total {
+    color: #1677ff;
+}
+
+.audit-stat-icon-success {
+    color: #52c41a;
+}
+
+.audit-stat-icon-failed {
+    color: #f5222d;
+}
+
+.audit-stat-icon-risk {
+    color: #fa8c16;
+}
+
+.audit-stat-icon-today {
+    color: #722ed1;
+}
+
+.audit-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.audit-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.88);
+    font-variant-numeric: tabular-nums;
+}
+
+.audit-stat-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    line-height: 1.4;
+}
+
+.audit-trend-svg {
+    display: block;
+}
+
+/* ---- 表格单元格 ---- */
+.audit-user-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.audit-user-name {
+    font-weight: 500;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.88);
+    line-height: 1.4;
+}
+
+.audit-user-sub {
+    font-size: 11px;
+    color: #8c8c8c;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+.audit-resource-cell {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.audit-request-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.audit-method-badge {
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+}
+
+.audit-method-badge-lg {
+    font-size: 12px;
+}
+
+.audit-path {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.55);
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- 详情抽屉 ---- */
+.audit-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.audit-detail-banner {
+    padding: 12px 16px;
+    background: #f6ffed;
+    border: 1px solid #b7eb8f;
+}
+
+.audit-detail-banner-failed {
+    background: #fff2f0;
+    border-color: #ffccc7;
+}
+
+.audit-detail-banner-risk {
+    background: #fff7e6;
+    border-color: #ffd591;
+}
+
+.audit-detail-banner-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.audit-detail-time {
+    margin-left: auto;
+    font-size: 12px;
+    color: #8c8c8c;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.audit-detail-desc {
+    margin-top: 4px;
+}
+
+.audit-detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.audit-detail-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.65);
+    letter-spacing: 0.02em;
+}
+
+.audit-detail-request-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+}
+
+.audit-detail-path {
+    font-size: 12px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audit-detail-json {
+    margin: 0;
+    padding: 12px 16px;
+    background: #1e1e2e;
+    color: #a6e3a1;
+    font-size: 12px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.audit-detail-error {
+    padding: 10px 12px;
+    background: #fff2f0;
+    border: 1px solid #ffccc7;
+    color: #cf1322;
+    font-size: 13px;
+}
+
+.audit-detail-footer {
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    color: #bfbfbf;
+}
+
+
+/* ---- 导出预览计数 ---- */
+.audit-export-preview {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    font-size: 13px;
+    color: #595959;
+}

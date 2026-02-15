@@ -1,0 +1,77 @@
+/* ========== 执行记录 - 统计条 ========== */
+
+.exec-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.exec-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+    cursor: default;
+}
+
+.exec-stat-item:first-child {
+    padding-left: 0;
+}
+
+.exec-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+}
+
+.exec-stat-icon {
+    font-size: 22px;
+    opacity: 0.75;
+    transition: transform 0.3s;
+}
+
+.exec-stat-icon-total {
+    color: #1677ff;
+}
+
+.exec-stat-icon-success {
+    color: #52c41a;
+}
+
+.exec-stat-icon-failed {
+    color: #ff4d4f;
+}
+
+.exec-stat-icon-rate {
+    color: #722ed1;
+}
+
+.exec-stat-icon-duration {
+    color: #13c2c2;
+}
+
+.exec-stat-icon-today {
+    color: #fa8c16;
+}
+
+.exec-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.exec-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.88);
+    font-variant-numeric: tabular-nums;
+}
+
+.exec-stat-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    line-height: 1.4;
+}

@@ -1,0 +1,229 @@
+/* ========== 工单管理页面 ========== */
+
+/* ---- 统计栏 ---- */
+.incidents-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.incidents-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+}
+
+.incidents-stat-item:first-child {
+    padding-left: 0;
+}
+
+.incidents-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+}
+
+.incidents-stat-icon {
+    font-size: 22px;
+    opacity: 0.75;
+}
+
+.incidents-stat-icon-total {
+    color: #1677ff;
+}
+
+.incidents-stat-icon-scanned {
+    color: #52c41a;
+}
+
+.incidents-stat-icon-unscanned {
+    color: #faad14;
+}
+
+.incidents-stat-icon-healed {
+    color: #13c2c2;
+}
+
+.incidents-stat-icon-failed {
+    color: #f5222d;
+}
+
+.incidents-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.incidents-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.88);
+    font-variant-numeric: tabular-nums;
+}
+
+.incidents-stat-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    line-height: 1.4;
+}
+
+/* ---- 批量操作栏 ---- */
+.incidents-batch-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+/* ---- 详情 Drawer ---- */
+.incidents-detail-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.incidents-detail-header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.incidents-detail-header-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: #f0f5ff;
+    color: #1677ff;
+    flex-shrink: 0;
+}
+
+.incidents-detail-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.incidents-detail-title {
+    font-size: 16px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.incidents-detail-sub {
+    font-size: 13px;
+    color: #8c8c8c;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.incidents-detail-body {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ---- 卡片分区 ---- */
+.incidents-detail-card {
+    border: 1px solid #f0f0f0;
+    background: #fff;
+}
+
+.incidents-detail-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.incidents-detail-card-header-icon {
+    font-size: 14px;
+    color: #1677ff;
+}
+
+.incidents-detail-card-header-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.88);
+}
+
+.incidents-detail-card-body {
+    padding: 16px;
+}
+
+/* ---- 字段网格 ---- */
+.incidents-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+.incidents-detail-field {
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.incidents-detail-field:nth-child(odd) {
+    padding-right: 16px;
+}
+
+.incidents-detail-field:nth-child(even) {
+    padding-left: 16px;
+    border-left: 1px solid #f5f5f5;
+}
+
+/* 去掉最后一行的 border-bottom */
+.incidents-detail-grid>.incidents-detail-field:nth-last-child(-n+2) {
+    border-bottom: none;
+}
+
+.incidents-detail-field-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.incidents-detail-field-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.88);
+    word-break: break-all;
+}
+
+.incidents-detail-field-value-mono {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+}
+
+/* ---- 描述块 ---- */
+.incidents-detail-desc {
+    font-size: 13px;
+    line-height: 1.8;
+    color: rgba(0, 0, 0, 0.65);
+    white-space: pre-wrap;
+    padding: 4px 0;
+}
+
+/* ---- 原始数据 ---- */
+.incidents-raw-data {
+    background: #141414;
+    color: #d4d4d4;
+    padding: 14px 16px;
+    max-height: 280px;
+    overflow: auto;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+}

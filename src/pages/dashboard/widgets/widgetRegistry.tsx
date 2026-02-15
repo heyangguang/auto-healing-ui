@@ -193,7 +193,7 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
     },
 
     // ======================================================================
-    // S2: CMDB 资产 (cmdb) — 12 个
+    // S2: 资产管理 (cmdb) — 12 个
     // ======================================================================
     'stat-cmdb-total': {
         id: 'stat-cmdb-total', name: '资产总数', description: 'CMDB 配置项总数',
@@ -635,7 +635,7 @@ export const WIDGET_CATEGORIES = [
 
 export const WIDGET_SECTIONS = [
     { key: 'incidents', label: '🚨 工单/事件', count: 14 },
-    { key: 'cmdb', label: '🖥️ CMDB 资产', count: 12 },
+    { key: 'cmdb', label: '🖥️ 资产管理', count: 12 },
     { key: 'healing', label: '🩺 自愈引擎', count: 17 },
     { key: 'execution', label: '⚡ 执行管理', count: 14 },
     { key: 'plugins', label: '🔌 插件管理', count: 10 },

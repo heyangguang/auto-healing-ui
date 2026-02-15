@@ -23,7 +23,7 @@ import HostSelector from '@/components/HostSelector';
 import SecretsSelector from '@/components/SecretsSelector';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 const ExecuteTaskPage: React.FC = () => {
     const access = useAccess();

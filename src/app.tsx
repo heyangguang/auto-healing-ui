@@ -1,20 +1,23 @@
-import { LinkOutlined } from '@ant-design/icons';
 import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
-import { history, Link } from '@umijs/max';
+import { history } from '@umijs/max';
 import React from 'react';
-import {
-  AvatarDropdown,
-  AvatarName,
-  Footer,
-  Question,
-  SelectLang,
-} from '@/components';
 import { getCurrentUser } from '@/services/auto-healing/auth';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig, TokenManager } from './requestErrorConfig';
 
+import TopNavBar from '@/components/TopNavBar';
+import AppLayout from '@/components/AppLayout';
+
+// 本地字体引入（不依赖 Google CDN）
+import '@fontsource/inter/300.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/noto-sans-sc/400.css';
+import '@fontsource/noto-sans-sc/500.css';
+import '@fontsource/noto-sans-sc/700.css';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
@@ -84,21 +87,12 @@ export const layout: RunTimeLayoutConfig = ({
   setInitialState,
 }) => {
   return {
-    actionsRender: () => [
-      <Question key="doc" />,
-      <SelectLang key="SelectLang" />,
-    ],
-    avatarProps: {
-      src: initialState?.currentUser?.avatar,
-      title: <AvatarName />,
-      render: (_, avatarChildren) => {
-        return <AvatarDropdown>{avatarChildren}</AvatarDropdown>;
-      },
-    },
-    waterMarkProps: {
-      content: initialState?.currentUser?.name,
-    },
-    footerRender: () => <Footer />,
+    // 禁用 ProLayout 默认 Header，使用自定义 TopNavBar
+    headerRender: () => <TopNavBar />,
+    // 禁用 ProLayout 默认的侧边菜单（由 SideNav 组件管理）
+    menuRender: false,
+    // 禁用默认 Footer（在 AppLayout 中管理）
+    footerRender: false,
     onPageChange: () => {
       const { location } = history;
       // 如果没有登录，重定向到 login
@@ -106,20 +100,13 @@ export const layout: RunTimeLayoutConfig = ({
         history.push(loginPath);
       }
     },
-    // bgLayoutImgList 已移除以提升页面切换性能
-    links: isDev
-      ? [
-        <Link key="openapi" to="/umi/plugin/openapi" target="_blank">
-          <LinkOutlined />
-          <span>OpenAPI 文档</span>
-        </Link>,
-      ]
-      : [],
-    menuHeaderRender: undefined,
+    menuHeaderRender: false,
     childrenRender: (children) => {
       return (
         <>
-          {children}
+          <AppLayout>
+            {children}
+          </AppLayout>
           {isDev && (
             <SettingDrawer
               disableUrlParams

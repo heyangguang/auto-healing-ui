@@ -1,7 +1,8 @@
 import type { ProLayoutProps } from '@ant-design/pro-components';
 
 /**
- * @name
+ * @name 布局配置
+ * @description 使用 top 布局模式，顶部导航由 TopNavBar 自定义渲染
  */
 const Settings: ProLayoutProps & {
   pwa?: boolean;
@@ -10,18 +11,24 @@ const Settings: ProLayoutProps & {
   navTheme: 'light',
   // IBM Blue
   colorPrimary: '#0f62fe',
-  layout: 'mix',
+  layout: 'top',
   contentWidth: 'Fluid',
-  fixedHeader: false,
-  fixSiderbar: true,
+  fixedHeader: true,
+  fixSiderbar: false,
   colorWeak: false,
-  title: 'KY-AHS',
+  title: 'Auto Healing',
   pwa: true,
   logo: '/logo.svg',
   iconfontUrl: '',
   token: {
-    // 参见ts声明，demo 见文档，通过token 修改样式
-    //https://procomponents.ant.design/components/layout#%E9%80%9A%E8%BF%87-token-%E4%BF%AE%E6%94%B9%E6%A0%B7%E5%BC%8F
+    header: {
+      colorBgHeader: '#001529',
+      colorHeaderTitle: '#fff',
+      heightLayoutHeader: 48,
+    },
+    sider: {
+      colorMenuBackground: '#fff',
+    },
   },
 };
 

@@ -318,6 +318,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                     onChange: (p, ps) => { setPage(p); setPageSize(ps || 10); },
                     showSizeChanger: true,
                     showTotal: (t) => `共 ${t} 条`,
+                    showQuickJumper: true,
                     size: 'small',
                 }}
                 rowSelection={{

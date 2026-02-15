@@ -158,6 +158,7 @@ export async function getNotifications(params?: {
     page_size?: number;
     status?: AutoHealing.NotificationStatus;
     run_id?: string;
+    search?: string;
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.Notification>>('/api/v1/notifications', {
         method: 'GET',

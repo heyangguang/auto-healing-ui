@@ -8,6 +8,14 @@ export async function getUsers(params?: {
     page_size?: number;
     status?: 'active' | 'inactive';
     search?: string;
+    username?: string;
+    email?: string;
+    display_name?: string;
+    user_id?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+    created_at_start?: string;
+    created_at_end?: string;
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.User>>('/api/v1/users', {
         method: 'GET',

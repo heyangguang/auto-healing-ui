@@ -6,14 +6,15 @@ import {
     CheckCircleOutlined, StopOutlined, EyeOutlined,
     MoreOutlined, SettingOutlined, UndoOutlined
 } from '@ant-design/icons';
-import { PageContainer } from '@ant-design/pro-components';
+import StandardTable from '@/components/StandardTable';
+import './index.css';
 import {
     Button, message, Space, Tag, Typography, Input,
     Empty, Switch, Spin, Popconfirm, Row, Col, Pagination, Avatar,
     Form, Select, Modal, Drawer, Alert, Badge, Card, Tooltip, Divider,
     List, Flex, Layout, Menu, Dropdown, Segmented
 } from 'antd';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAccess } from '@umijs/max';
 import {
     getTemplates, createTemplate, updateTemplate, deleteTemplate, previewTemplate, getTemplateVariables
@@ -93,6 +94,22 @@ const NotificationTemplatesPage: React.FC = () => {
     const [variablesDrawerOpen, setVariablesDrawerOpen] = useState(false);
     const editorRef = React.useRef<any>(null);  // Monaco editor instance ref
 
+    // StandardTable onSearch callback
+    const handleSearchChange = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => {
+        const filters = params.filters || [];
+        const nameFilter = filters.find(f => f.field === 'search');
+        const eventTypeFilter = filters.find(f => f.field === '__enum__event_type');
+        const statusFilter = filters.find(f => f.field === '__enum__status');
+        const formatFilter = filters.find(f => f.field === '__enum__format');
+        const channelFilter = filters.find(f => f.field === '__enum__channel_type');
+
+        setSearchText(nameFilter?.value || params.advancedSearch?.search || '');
+        setFilterEventType(eventTypeFilter?.value || params.advancedSearch?.event_type || 'all');
+        setFilterStatus(statusFilter?.value || params.advancedSearch?.status || 'all');
+        setFilterFormat(formatFilter?.value || params.advancedSearch?.format || 'all');
+        setFilterChannel(channelFilter?.value || params.advancedSearch?.channel_type || 'all');
+    }, []);
+
     // Responsive: Window Size Detection
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
@@ -124,9 +141,9 @@ const NotificationTemplatesPage: React.FC = () => {
         return params;
     }, [searchText, filterEventType, filterStatus, filterFormat, filterChannel, sortBy, sortOrder]);
 
-    const loadTemplates = useCallback(async (resetPage = true) => {
+    const loadTemplates = useCallback(async (resetPage = true, silent = false) => {
         if (resetPage) {
-            setLoading(true);
+            if (!silent) setLoading(true);
             setPage(1);
         } else {
             setLoadingMore(true);
@@ -155,7 +172,7 @@ const NotificationTemplatesPage: React.FC = () => {
             console.error('Failed to load templates:', error);
             message.error('加载模板列表失败');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
             setLoadingMore(false);
         }
     }, [buildFilterParams, page, selectedId, isCreating]);
@@ -174,13 +191,20 @@ const NotificationTemplatesPage: React.FC = () => {
         }
     }, [page]);
 
-    // Debounced search effect
+    // Debounced search/filter effect
     useEffect(() => {
         const timer = setTimeout(() => {
             loadTemplates(true);
         }, 300);
         return () => clearTimeout(timer);
-    }, [searchText, filterEventType, filterStatus, filterFormat, filterChannel, sortBy, sortOrder]);
+    }, [searchText, filterEventType, filterStatus, filterFormat, filterChannel]);
+
+    // Sort change — immediate silent refresh (no flicker)
+    const sortMounted = useRef(false);
+    useEffect(() => {
+        if (!sortMounted.current) { sortMounted.current = true; return; }
+        loadTemplates(true, true);
+    }, [sortBy, sortOrder]);
 
     const loadVariables = async () => {
         try {
@@ -286,12 +310,14 @@ const NotificationTemplatesPage: React.FC = () => {
                 const res = await createTemplate(payload);
                 message.success('模板已创建');
                 setIsCreating(false);
-                await loadTemplates(true);
-                setSelectedId(res.id); // Select new
+                setSelectedId(res.id);
+                // 静默刷新：不闪 loading
+                loadTemplates(true, true);
             } else if (selectedId) {
                 await updateTemplate(selectedId, payload);
                 message.success('模板已更新');
-                await loadTemplates(true);
+                // 静默刷新：不闪 loading
+                loadTemplates(true, true);
             }
             setIsDirty(false);
         } catch (error) {
@@ -446,121 +472,178 @@ const NotificationTemplatesPage: React.FC = () => {
     // 初始加载时显示整页loading
     if (loading && templates.length === 0) {
         return (
-            <PageContainer ghost header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
-                <div style={{
-                    height: 'calc(100vh - 56px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#fff'
-                }}>
+            <StandardTable<any>
+                tabs={[{ key: 'editor', label: '模板编辑器' }]}
+                title="通知模板"
+                description="管理通知模板，配置不同事件的通知内容和格式"
+                headerIcon={
+                    <svg viewBox="0 0 48 48" fill="none">
+                        <rect x="8" y="6" width="32" height="36" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+                        <path d="M16 14h16M16 22h16M16 30h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M30 32l4 4 8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                }
+                searchFields={[
+                    { key: 'search', label: '模板名称' },
+                ]}
+                columns={[
+                    {
+                        columnKey: 'event_type',
+                        columnTitle: '事件类型',
+                        dataIndex: 'event_type',
+                        headerFilters: [
+                            ...Object.keys(EVENT_TYPE_CONFIG).map(k => ({ label: EVENT_TYPE_CONFIG[k].label, value: k })),
+                        ],
+                    },
+                    {
+                        columnKey: 'status',
+                        columnTitle: '状态',
+                        dataIndex: 'is_active',
+                        headerFilters: [
+                            { label: '启用', value: 'active' },
+                            { label: '禁用', value: 'inactive' },
+                        ],
+                    },
+                    {
+                        columnKey: 'format',
+                        columnTitle: '格式',
+                        dataIndex: 'format',
+                        headerFilters: [
+                            { label: '纯文本', value: 'text' },
+                            { label: 'Markdown', value: 'markdown' },
+                            { label: 'HTML', value: 'html' },
+                        ],
+                    },
+                    {
+                        columnKey: 'channel_type',
+                        columnTitle: '渠道类型',
+                        dataIndex: 'channel_type',
+                        headerFilters: [
+                            { label: 'Webhook', value: 'webhook' },
+                            { label: 'Email', value: 'email' },
+                            { label: 'DingTalk', value: 'dingtalk' },
+                        ],
+                    },
+                ]}
+                onSearch={handleSearchChange}
+                primaryActionLabel="新建模板"
+                primaryActionDisabled={!access.canCreateTemplate}
+                onPrimaryAction={handleCreateNew}
+                extraToolbarActions={
+                    <Select
+                        value={`${sortBy}_${sortOrder}`}
+                        onChange={(v) => {
+                            const i = v.lastIndexOf('_');
+                            setSortBy(v.slice(0, i));
+                            setSortOrder(v.slice(i + 1));
+                        }}
+                        style={{ width: 130 }}
+                        variant="borderless"
+                        popupMatchSelectWidth={false}
+                        options={[
+                            { label: '最近更新', value: 'updated_at_desc' },
+                            { label: '最早更新', value: 'updated_at_asc' },
+                            { label: '最近创建', value: 'created_at_desc' },
+                            { label: '名称 A-Z', value: 'name_asc' },
+                            { label: '名称 Z-A', value: 'name_desc' },
+                        ]}
+                    />
+                }
+            >
+                <div className="templates-body" style={{ alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
                     <Spin size="large" tip="加载中..." />
                 </div>
-            </PageContainer>
+            </StandardTable>
         );
     }
 
     return (
-        <PageContainer ghost header={{ title: <><FileTextOutlined /> 模板库 / TEMPLATES</> }}>
-            <div style={{
-                height: 'calc(100vh - 56px)', // Adjust for global header if present
-                display: 'flex',
-                overflow: 'hidden',
-                background: '#fff'
-            }}>
+        <StandardTable<any>
+            tabs={[{ key: 'editor', label: '模板编辑器' }]}
+            title="通知模板"
+            description={`管理通知模板，配置不同事件的通知内容和格式，共 ${templates.length} 个模板`}
+            headerIcon={
+                <svg viewBox="0 0 48 48" fill="none">
+                    <rect x="8" y="6" width="32" height="36" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+                    <path d="M16 14h16M16 22h16M16 30h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M30 32l4 4 8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            }
+            searchFields={[
+                { key: 'search', label: '模板名称' },
+            ]}
+            columns={[
+                {
+                    columnKey: 'event_type',
+                    columnTitle: '事件类型',
+                    dataIndex: 'event_type',
+                    headerFilters: [
+                        ...Object.keys(EVENT_TYPE_CONFIG).map(k => ({ label: EVENT_TYPE_CONFIG[k].label, value: k })),
+                    ],
+                },
+                {
+                    columnKey: 'status',
+                    columnTitle: '状态',
+                    dataIndex: 'is_active',
+                    headerFilters: [
+                        { label: '启用', value: 'active' },
+                        { label: '禁用', value: 'inactive' },
+                    ],
+                },
+                {
+                    columnKey: 'format',
+                    columnTitle: '格式',
+                    dataIndex: 'format',
+                    headerFilters: [
+                        { label: '纯文本', value: 'text' },
+                        { label: 'Markdown', value: 'markdown' },
+                        { label: 'HTML', value: 'html' },
+                    ],
+                },
+                {
+                    columnKey: 'channel_type',
+                    columnTitle: '渠道类型',
+                    dataIndex: 'channel_type',
+                    headerFilters: [
+                        { label: 'Webhook', value: 'webhook' },
+                        { label: 'Email', value: 'email' },
+                        { label: 'DingTalk', value: 'dingtalk' },
+                    ],
+                },
+            ]}
+            onSearch={handleSearchChange}
+            primaryActionLabel="新建模板"
+            primaryActionDisabled={!access.canCreateTemplate}
+            onPrimaryAction={handleCreateNew}
+            extraToolbarActions={
+                <Select
+                    value={`${sortBy}_${sortOrder}`}
+                    onChange={(v) => {
+                        const i = v.lastIndexOf('_');
+                        setSortBy(v.slice(0, i));
+                        setSortOrder(v.slice(i + 1));
+                    }}
+                    style={{ width: 130 }}
+                    variant="borderless"
+                    popupMatchSelectWidth={false}
+                    options={[
+                        { label: '最近更新', value: 'updated_at_desc' },
+                        { label: '最早更新', value: 'updated_at_asc' },
+                        { label: '最近创建', value: 'created_at_desc' },
+                        { label: '名称 A-Z', value: 'name_asc' },
+                        { label: '名称 Z-A', value: 'name_desc' },
+                    ]}
+                />
+            }
+        >
+            {/* 工作站主体 */}
+            <div className="templates-body">
                 {/* LEFT SIDEBAR: Navigation */}
-                <div style={{
-                    width: leftSidebarWidth,
-                    minWidth: leftSidebarWidth,
-                    borderRight: '1px solid #f0f0f0',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: '#fafafa',
-                    transition: 'width 0.2s'
-                }}>
-                    {/* Sidebar Header & Filters */}
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fff', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text strong style={{ fontSize: 15 }}>模板列表</Text>
-                            <Tooltip title="新建模板">
-                                <Button type="primary" size="small" icon={<PlusOutlined />} disabled={!access.canCreateTemplate} onClick={handleCreateNew} />
-                            </Tooltip>
-                        </div>
-
-                        <Input
-                            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                            placeholder="搜索名称..."
-                            value={searchText}
-                            onChange={e => setSearchText(e.target.value)}
-                            allowClear
-                        />
-
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <Select
-                                value={filterEventType}
-                                onChange={setFilterEventType}
-                                style={{ flex: 1 }}
-                                options={[
-                                    { label: '全部类型', value: 'all' },
-                                    ...Object.keys(EVENT_TYPE_CONFIG).map(k => ({ label: EVENT_TYPE_CONFIG[k].label, value: k }))
-                                ]}
-                            />
-                            <Select
-                                value={filterStatus}
-                                onChange={setFilterStatus}
-                                style={{ width: 90 }}
-                                options={[
-                                    { label: '全部', value: 'all' },
-                                    { label: '启用', value: 'active' },
-                                    { label: '禁用', value: 'inactive' },
-                                ]}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <Select
-                                value={filterFormat}
-                                onChange={setFilterFormat}
-                                style={{ flex: 1 }}
-                                options={[
-                                    { label: '全部格式', value: 'all' },
-                                    { label: '纯文本', value: 'text' },
-                                    { label: 'Markdown', value: 'markdown' },
-                                    { label: 'HTML', value: 'html' },
-                                ]}
-                            />
-                            <Select
-                                value={filterChannel}
-                                onChange={setFilterChannel}
-                                style={{ flex: 1 }}
-                                options={[
-                                    { label: '全部渠道', value: 'all' },
-                                    { label: 'Webhook', value: 'webhook' },
-                                    { label: 'Email', value: 'email' },
-                                    { label: 'DingTalk', value: 'dingtalk' },
-                                ]}
-                            />
-                        </div>
-                        <Select
-                            value={`${sortBy}_${sortOrder}`}
-                            onChange={(v) => {
-                                const [field, order] = v.split('_');
-                                setSortBy(field);
-                                setSortOrder(order);
-                            }}
-                            style={{ width: '100%' }}
-                            options={[
-                                { label: '最近更新', value: 'updated_at_desc' },
-                                { label: '最早更新', value: 'updated_at_asc' },
-                                { label: '最近创建', value: 'created_at_desc' },
-                                { label: '名称 A-Z', value: 'name_asc' },
-                                { label: '名称 Z-A', value: 'name_desc' },
-                            ]}
-                        />
-                    </div>
-
+                <div className="templates-sidebar" style={{ width: leftSidebarWidth, minWidth: leftSidebarWidth }}>
                     {/* List with Infinite Scroll */}
                     <div
-                        style={{ flex: 1, overflowY: 'auto' }}
+                        className="templates-sidebar-list"
+                        style={{ height: '100%' }}
                         onScroll={(e) => {
                             const target = e.target as HTMLDivElement;
                             if (target.scrollHeight - target.scrollTop - target.clientHeight < 100) {
@@ -579,14 +662,7 @@ const NotificationTemplatesPage: React.FC = () => {
                                             return (
                                                 <div
                                                     onClick={() => handleSelect(item.id)}
-                                                    style={{
-                                                        padding: '12px 16px',
-                                                        borderBottom: '1px solid #f0f0f0',
-                                                        cursor: 'pointer',
-                                                        background: isSelected ? '#e6f7ff' : '#fff',
-                                                        borderLeft: isSelected ? '3px solid #1890ff' : '3px solid transparent',
-                                                        transition: 'all 0.1s'
-                                                    }}
+                                                    className={`templates-sidebar-item ${isSelected ? 'templates-sidebar-item-selected' : ''}`}
                                                 >
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                                                         <Text strong style={{ color: isSelected ? '#1890ff' : '#262626', maxWidth: 180 }} ellipsis>{item.name}</Text>
@@ -610,7 +686,7 @@ const NotificationTemplatesPage: React.FC = () => {
                                     />
                                     {loadingMore && <div style={{ padding: 12, textAlign: 'center' }}><Spin size="small" /></div>}
                                     {!hasMore && templates.length > 0 && (
-                                        <div style={{ padding: 12, textAlign: 'center', color: '#8c8c8c', fontSize: 12 }}>
+                                        <div className="templates-sidebar-footer">
                                             已加载全部 {templates.length} 个模板
                                         </div>
                                     )}
@@ -635,15 +711,7 @@ const NotificationTemplatesPage: React.FC = () => {
                     ) : (
                         <>
                             {/* Editor Header */}
-                            <div style={{
-                                padding: '12px 24px',
-                                borderBottom: '1px solid #f0f0f0',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                height: 64,
-                                flexShrink: 0
-                            }}>
+                            <div className="templates-editor-header">
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                                         <Text type="secondary" style={{ fontSize: 11 }}>
@@ -705,14 +773,14 @@ const NotificationTemplatesPage: React.FC = () => {
                             </div>
 
                             {/* Editor Body */}
-                            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+                            <div className="templates-editor-body">
 
                                 {/* Main Canvas */}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 0, overflowY: 'hidden' }}>
                                     {showPreview ? (
                                         // PREVIEW MODE
-                                        <div style={{ flex: 1, overflowY: 'auto', padding: 24, background: '#f5f7fa' }}>
-                                            <div style={{ maxWidth: 800, margin: '0 auto', background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                        <div className="templates-preview-container">
+                                            <div className="templates-preview-card">
                                                 {previewLoading ? <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div> : (
                                                     previewData ? (
                                                         <div>
@@ -870,13 +938,7 @@ const NotificationTemplatesPage: React.FC = () => {
                                                             </Dropdown>
                                                         </Space>
                                                     </div>
-                                                    <div style={{
-                                                        flex: 1,
-                                                        border: '1px solid #d9d9d9',
-                                                        borderRadius: 4,
-                                                        overflow: 'hidden',
-                                                        minHeight: 320
-                                                    }}>
+                                                    <div className="templates-monaco-wrapper">
                                                         <Editor
                                                             key={`editor-${selectedId || 'new'}`}
                                                             height="100%"
@@ -1023,15 +1085,7 @@ const NotificationTemplatesPage: React.FC = () => {
                                             size="large"
                                             icon={<CodeOutlined />}
                                             onClick={() => setVariablesDrawerOpen(true)}
-                                            style={{
-                                                position: 'absolute',
-                                                right: 24,
-                                                bottom: 24,
-                                                width: 48,
-                                                height: 48,
-                                                boxShadow: '0 4px 12px rgba(24, 144, 255, 0.4)',
-                                                zIndex: 10
-                                            }}
+                                            className="templates-fab-button"
                                         />
                                     </Tooltip>
                                 )}
@@ -1059,7 +1113,7 @@ const NotificationTemplatesPage: React.FC = () => {
                     {renderVariableHints()}
                 </Drawer>
             </div>
-        </PageContainer>
+        </StandardTable>
     );
 };
 

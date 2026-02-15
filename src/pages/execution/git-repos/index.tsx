@@ -1,73 +1,152 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-    PlusOutlined, SyncOutlined, BranchesOutlined, GithubOutlined, EyeOutlined, DeleteOutlined,
+    PlusOutlined, SyncOutlined, BranchesOutlined, GithubOutlined, GitlabOutlined, DeleteOutlined,
     CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, KeyOutlined, LockOutlined,
     SafetyCertificateOutlined, GlobalOutlined, FolderOutlined, FileOutlined, ReloadOutlined,
-    ExclamationCircleOutlined, SearchOutlined, CloudSyncOutlined, ArrowRightOutlined,
-    CheckOutlined, LoadingOutlined, LinkOutlined, HistoryOutlined, CodeOutlined, SettingOutlined,
+    ExclamationCircleOutlined, CloudSyncOutlined, HistoryOutlined, CodeOutlined, SettingOutlined,
+    InfoCircleOutlined, LinkOutlined, FileTextOutlined, RightOutlined,
 } from '@ant-design/icons';
-import { PageContainer } from '@ant-design/pro-components';
-import { useAccess } from '@umijs/max';
+import { useAccess, history } from '@umijs/max';
 import {
-    Button, message, Space, Tag, Tooltip, Drawer, Descriptions, Card, Row, Col,
-    Typography, Tabs, Empty, Alert, Modal, Input, Table, Spin, Badge, Steps, Form,
-    Select, Radio, Result, Timeline, Avatar,
+    Button, message, Space, Tag, Tooltip, Drawer, Typography, Tabs,
+    Empty, Alert, Modal, Table, Spin, Badge, Popconfirm,
 } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { Tree } from 'antd';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/zh-cn';
+import StandardTable from '@/components/StandardTable';
+import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import {
-    getGitRepos, getGitRepo, createGitRepo, updateGitRepo, deleteGitRepo,
-    syncGitRepo, getFiles, validateGitRepo, getCommits, getSyncLogs,
+    getGitRepos, getGitRepo, deleteGitRepo, syncGitRepo,
+    getFiles, getCommits, getSyncLogs,
 } from '@/services/auto-healing/git-repos';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
+import './index.css';
 
-const { Text, Paragraph, Title } = Typography;
+dayjs.extend(relativeTime);
+dayjs.locale('zh-cn');
 
-// ==================== 配置 ====================
-const statusConfig: Record<string, { text: string; color: string; icon: React.ReactNode }> = {
-    pending: { text: '待同步', color: 'default', icon: <ClockCircleOutlined /> },
-    ready: { text: '就绪', color: 'success', icon: <CheckCircleOutlined /> },
-    syncing: { text: '同步中', color: 'processing', icon: <SyncOutlined spin /> },
-    error: { text: '错误', color: 'error', icon: <CloseCircleOutlined /> },
+const { Text } = Typography;
+
+// ============ 配置 ============
+const statusConfig: Record<string, { text: string; color: string; icon: React.ReactNode; badge: 'success' | 'default' | 'error' | 'processing' }> = {
+    pending: { text: '待同步', color: 'default', icon: <ClockCircleOutlined />, badge: 'default' },
+    ready: { text: '就绪', color: 'success', icon: <CheckCircleOutlined />, badge: 'success' },
+    syncing: { text: '同步中', color: 'processing', icon: <SyncOutlined spin />, badge: 'processing' },
+    error: { text: '错误', color: 'error', icon: <CloseCircleOutlined />, badge: 'error' },
 };
 
-const authTypeOptions = [
-    { value: 'none', label: '公开仓库', icon: <GlobalOutlined />, desc: '无需认证' },
-    { value: 'token', label: 'Token', icon: <KeyOutlined />, desc: '访问令牌' },
-    { value: 'password', label: '密码', icon: <LockOutlined />, desc: '用户名/密码' },
-    { value: 'ssh_key', label: 'SSH', icon: <SafetyCertificateOutlined />, desc: 'SSH 密钥' },
+const authLabels: Record<string, { icon: React.ReactNode; text: string }> = {
+    none: { icon: <GlobalOutlined />, text: '公开' },
+    token: { icon: <KeyOutlined />, text: 'Token' },
+    password: { icon: <LockOutlined />, text: '密码' },
+    ssh_key: { icon: <SafetyCertificateOutlined />, text: 'SSH' },
+};
+
+// ============ 搜索 ============
+const searchFields: SearchField[] = [
+    { key: 'search', label: '名称/URL' },
+    { key: 'name', label: '名称' },
+    { key: 'url', label: '仓库地址' },
 ];
 
-// ==================== 主组件 ====================
+const advancedSearchFields: AdvancedSearchField[] = [
+    { key: 'name', label: '仓库名称', type: 'input', placeholder: '输入仓库名称' },
+    { key: 'url', label: '仓库地址', type: 'input', placeholder: '输入仓库 URL' },
+    {
+        key: 'status', label: '状态', type: 'select', options: [
+            { label: '就绪', value: 'ready' },
+            { label: '待同步', value: 'pending' },
+            { label: '同步中', value: 'syncing' },
+            { label: '错误', value: 'error' },
+        ]
+    },
+    {
+        key: 'auth_type', label: '认证方式', type: 'select', options: [
+            { label: '公开', value: 'none' },
+            { label: 'Token', value: 'token' },
+            { label: '密码', value: 'password' },
+            { label: 'SSH', value: 'ssh_key' },
+        ]
+    },
+    {
+        key: 'sync_enabled', label: '定时同步', type: 'select', options: [
+            { label: '已开启', value: 'true' },
+            { label: '未开启', value: 'false' },
+        ]
+    },
+    { key: 'created_at', label: '创建时间', type: 'dateRange' },
+];
+
+const headerIcon = (
+    <svg viewBox="0 0 48 48" fill="none">
+        <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
+        <path d="M18 18v12M18 30l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M28 30h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
+// ============ Git 平台自动检测 ============
+const BitbucketIcon = () => (
+    <svg viewBox="0 0 1024 1024" width="1em" height="1em" fill="currentColor">
+        <path d="M575.2 588.8l-62.4-198.4h-2.4l-60 198.4h124.8zM149.6 128c-19.2 0-33.6 16-32 35.2l96 684.8c2.4 16 16 28.8 32 30.4h540.8c12 0 22.4-8.8 24-20.8l96-694.4c1.6-19.2-12.8-35.2-32-35.2H149.6zm420.8 508.8H453.6L408 428.8h210.4l-48 208z" />
+    </svg>
+);
+
+const GiteeIcon = () => (
+    <svg viewBox="0 0 1024 1024" width="1em" height="1em" fill="currentColor">
+        <path d="M512 1024C229.2 1024 0 794.8 0 512S229.2 0 512 0s512 229.2 512 512-229.2 512-512 512zm259.1-568.9H480.7c-15.8 0-28.6 12.8-28.6 28.6v57.1c0 15.8 12.8 28.6 28.6 28.6h176.8c15.8 0 28.6 12.8 28.6 28.6v14.3c0 47.3-38.4 85.7-85.7 85.7H366.7a28.6 28.6 0 0 1-28.6-28.6V416c0-47.3 38.4-85.7 85.7-85.7h347.3c15.8 0 28.6-12.8 28.6-28.6v-57.1c0-15.8-12.8-28.6-28.6-28.6H423.9c-94.7 0-171.4 76.8-171.4 171.4v275.5c0 15.8 12.8 28.6 28.6 28.6h344.6c85.2 0 154.3-69.1 154.3-154.3V483.7c0-15.8-12.8-28.6-28.6-28.6h-.3z" />
+    </svg>
+);
+
+const AzureIcon = () => (
+    <svg viewBox="0 0 1024 1024" width="1em" height="1em" fill="currentColor">
+        <path d="M388.8 131.2L153.6 460.8l-128 355.2h230.4L388.8 131.2zm48 0L307.2 816h432L563.2 358.4l-126.4-227.2zM768 816h230.4L588.8 131.2 768 816z" />
+    </svg>
+);
+
+type ProviderInfo = { icon: React.ReactNode; color: string; bg: string; label: string };
+
+const getProviderInfo = (url: string): ProviderInfo => {
+    const lower = (url || '').toLowerCase();
+    if (lower.includes('github.com') || lower.includes('github.')) {
+        return { icon: <GithubOutlined />, color: '#24292f', bg: '#f5f5f5', label: 'GitHub' };
+    }
+    if (lower.includes('gitlab.com') || lower.includes('gitlab.') || lower.includes('gitlab/')) {
+        return { icon: <GitlabOutlined />, color: '#e24329', bg: '#fef0ed', label: 'GitLab' };
+    }
+    if (lower.includes('bitbucket.org') || lower.includes('bitbucket.')) {
+        return { icon: <BitbucketIcon />, color: '#0052cc', bg: '#e6f0ff', label: 'Bitbucket' };
+    }
+    if (lower.includes('gitee.com') || lower.includes('gitee.')) {
+        return { icon: <GiteeIcon />, color: '#c71d23', bg: '#fef0f0', label: 'Gitee' };
+    }
+    if (lower.includes('dev.azure.com') || lower.includes('visualstudio.com')) {
+        return { icon: <AzureIcon />, color: '#0078d4', bg: '#e6f2ff', label: 'Azure' };
+    }
+    // 通用 Git
+    return { icon: <BranchesOutlined />, color: '#595959', bg: '#f5f5f5', label: 'Git' };
+};
+
+// ============ 主组件 ============
 const GitRepoList: React.FC = () => {
     const access = useAccess();
-    const [repos, setRepos] = useState<AutoHealing.GitRepository[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchText, setSearchText] = useState('');
+
+    // 统计
+    const [stats, setStats] = useState({ total: 0, ready: 0, pending: 0, error: 0 });
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [syncing, setSyncing] = useState<string>();
 
-    // 创建向导
-    const [createModalOpen, setCreateModalOpen] = useState(false);
-    const [createStep, setCreateStep] = useState(0);
-    const [createForm] = Form.useForm();
-    const [validating, setValidating] = useState(false);
-    const [availableBranches, setAvailableBranches] = useState<string[]>([]);
-    const [defaultBranch, setDefaultBranch] = useState('');
-    const [creating, setCreating] = useState(false);
-    const [validatedData, setValidatedData] = useState<any>(null); // 保存验证后的数据
-
-    // 详情
+    // 详情 Drawer
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [currentRow, setCurrentRow] = useState<AutoHealing.GitRepository>();
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('info');
     const [commits, setCommits] = useState<any[]>([]);
     const [loadingCommits, setLoadingCommits] = useState(false);
     const [syncLogs, setSyncLogs] = useState<any[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
-    const [activeTab, setActiveTab] = useState('info');
-    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-    const [scheduleForm] = Form.useForm();
-    const [savingSchedule, setSavingSchedule] = useState(false);
 
     // 文件浏览
     const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
@@ -77,162 +156,30 @@ const GitRepoList: React.FC = () => {
     const [loadingFiles, setLoadingFiles] = useState(false);
     const [loadingContent, setLoadingContent] = useState(false);
 
-    // Form watch 移到组件顶层
-    const authType = Form.useWatch('auth_type', createForm);
-    const createSyncEnabled = Form.useWatch('sync_enabled', createForm);
-    const scheduleSyncEnabled = Form.useWatch('sync_enabled', scheduleForm);
-
-    // 加载
-    const loadRepos = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await getGitRepos();
-            setRepos(res.data || []);
-        } catch { }
-        finally { setLoading(false); }
-    }, []);
-
-    useEffect(() => { loadRepos(); }, [loadRepos]);
-
-    // Playbook 数据（用于删除保护检查）
+    // Playbook 保护
     const [playbooks, setPlaybooks] = useState<AutoHealing.Playbook[]>([]);
     useEffect(() => {
         getPlaybooks({ page_size: 500 }).then(res => setPlaybooks(res.data || res.items || [])).catch(() => { });
     }, []);
+    const getRepoPlaybooks = useCallback((repoId: string) => playbooks.filter(p => p.repository_id === repoId), [playbooks]);
 
-    // 获取仓库关联的 Playbook
-    const getRepoPlaybooks = useCallback((repoId: string) => {
-        return playbooks.filter(p => p.repository_id === repoId);
-    }, [playbooks]);
+    const triggerRefresh = useCallback(() => setRefreshTrigger(n => n + 1), []);
 
-    const filteredRepos = useMemo(() => {
-        if (!searchText) return repos;
-        return repos.filter(r => r.name.toLowerCase().includes(searchText.toLowerCase()) || r.url.toLowerCase().includes(searchText.toLowerCase()));
-    }, [repos, searchText]);
-
-    const stats = useMemo(() => ({
-        total: repos.length,
-        ready: repos.filter(r => r.status === 'ready').length,
-        pending: repos.filter(r => r.status === 'pending').length,
-        error: repos.filter(r => r.status === 'error').length,
-    }), [repos]);
-
-    // ==================== 创建向导 ====================
-    const resetCreate = () => {
-        setCreateStep(0);
-        setAvailableBranches([]);
-        setDefaultBranch('');
-        setValidatedData(null);
-        createForm.resetFields();
-    };
-
-    const openCreate = () => { resetCreate(); setCreateModalOpen(true); };
-    const closeCreate = () => { setCreateModalOpen(false); resetCreate(); };
-
-    // 第一步：验证
-    const handleValidate = async () => {
-        try {
-            await createForm.validateFields(['url', 'auth_type', 'token', 'username', 'password', 'private_key']);
-        } catch { return; }
-
-        const values = createForm.getFieldsValue();
-        setValidating(true);
-
-        try {
-            const req: any = { url: values.url, auth_type: values.auth_type || 'none' };
-            if (values.auth_type === 'token') req.auth_config = { token: values.token };
-            else if (values.auth_type === 'password') req.auth_config = { username: values.username, password: values.password };
-            else if (values.auth_type === 'ssh_key') req.auth_config = { private_key: values.private_key, passphrase: values.passphrase };
-
-            const res = await validateGitRepo(req);
-            const branches = res.data?.branches || [];
-            const defBranch = res.data?.default_branch || 'main';
-
-            if (branches.length === 0) {
-                message.warning('未检测到分支');
-                return;
-            }
-
-            setAvailableBranches(branches);
-            setDefaultBranch(defBranch);
-            // 保存验证数据供创建时使用
-            setValidatedData({
-                url: values.url,
-                auth_type: values.auth_type || 'none',
-                auth_config: req.auth_config,
-            });
-            createForm.setFieldValue('default_branch', defBranch);
-            setCreateStep(1);
-            message.success(`验证成功，获取 ${branches.length} 个分支`);
-        } catch {
-            // 错误消息由全局错误处理器显示
-        } finally {
-            setValidating(false);
-        }
-    };
-
-    // 第二步：创建
-    const handleCreate = async () => {
-        if (!validatedData) {
-            message.error('请先验证仓库');
-            return;
-        }
-
-        try {
-            await createForm.validateFields(['name', 'default_branch']);
-        } catch { return; }
-
-        const values = createForm.getFieldsValue();
-        setCreating(true);
-
-        try {
-            // 组合间隔值
-            let syncInterval = '1h';
-            if (values.interval_value && values.interval_unit) {
-                syncInterval = `${values.interval_value}${values.interval_unit}`;
-            }
-
-            const req: AutoHealing.CreateGitRepoRequest = {
-                name: values.name,
-                url: validatedData.url,
-                default_branch: values.default_branch,
-                auth_type: validatedData.auth_type,
-                auth_config: validatedData.auth_config,
-                sync_enabled: values.sync_enabled || false,
-                sync_interval: syncInterval,
-            };
-
-            await createGitRepo(req);
-            setCreateStep(2);
-            loadRepos();
-        } catch {
-            // 错误消息由全局错误处理器显示
-        } finally {
-            setCreating(false);
-        }
-    };
-
-    // ==================== 操作 ====================
+    // ======= 操作 =======
     const handleSync = useCallback(async (repo: AutoHealing.GitRepository) => {
         setSyncing(repo.id);
         try {
             await syncGitRepo(repo.id);
             message.success('同步已触发');
-            loadRepos();
-            // 2秒后自动刷新同步日志
-            setTimeout(async () => {
-                try {
-                    const logRes = await getSyncLogs(repo.id, { page: 1, page_size: 10 });
-                    setSyncLogs(logRes.data || []);
-                } catch { }
-            }, 2000);
+            triggerRefresh();
         } catch { }
         finally { setSyncing(undefined); }
-    }, [loadRepos]);
+    }, [triggerRefresh]);
 
-    const handleViewDetail = useCallback(async (record: AutoHealing.GitRepository) => {
+    const openDetail = useCallback(async (record: AutoHealing.GitRepository) => {
         setCurrentRow(record);
         setDrawerOpen(true);
+        setActiveTab('info');
         setCommits([]);
         setSyncLogs([]);
 
@@ -240,7 +187,6 @@ const GitRepoList: React.FC = () => {
             const res = await getGitRepo(record.id);
             setCurrentRow(res.data);
 
-            // 加载 commits
             if (res.data.status === 'ready') {
                 setLoadingCommits(true);
                 try {
@@ -250,7 +196,6 @@ const GitRepoList: React.FC = () => {
                 finally { setLoadingCommits(false); }
             }
 
-            // 加载同步日志
             setLoadingLogs(true);
             try {
                 const lRes = await getSyncLogs(res.data.id, { page: 1, page_size: 10 });
@@ -260,24 +205,25 @@ const GitRepoList: React.FC = () => {
         } catch { }
     }, []);
 
-    const handleDelete = useCallback(async () => {
-        if (!currentRow) return;
-        const relatedPlaybooks = getRepoPlaybooks(currentRow.id);
-        if (relatedPlaybooks.length > 0) {
-            message.error(`无法删除：该仓库关联 ${relatedPlaybooks.length} 个 Playbook，请先删除 Playbook`);
+    const openCreate = useCallback(() => history.push('/execution/git-repos/create'), []);
+    const openEdit = useCallback((r: AutoHealing.GitRepository) => history.push(`/execution/git-repos/${r.id}/edit`), []);
+
+    const handleDelete = useCallback(async (id: string) => {
+        const related = getRepoPlaybooks(id);
+        if (related.length > 0) {
+            message.error(`无法删除：关联 ${related.length} 个 Playbook`);
             return;
         }
         try {
-            await deleteGitRepo(currentRow.id);
+            await deleteGitRepo(id);
             message.success('删除成功');
-            setDeleteConfirmOpen(false);
             setDrawerOpen(false);
-            loadRepos();
+            triggerRefresh();
         } catch { }
-    }, [currentRow, loadRepos, getRepoPlaybooks]);
+    }, [getRepoPlaybooks, triggerRefresh]);
 
     // 文件浏览
-    const loadFileTree = async (id: string) => {
+    const loadFileTree = useCallback(async (id: string) => {
         setLoadingFiles(true);
         setFileTree([]);
         setFileContent('');
@@ -292,9 +238,9 @@ const GitRepoList: React.FC = () => {
             setFileTree(convert(res.data.files || []));
         } catch { }
         finally { setLoadingFiles(false); }
-    };
+    }, []);
 
-    const loadFileContent = async (id: string, path: string) => {
+    const loadFileContent = useCallback(async (id: string, path: string) => {
         setLoadingContent(true);
         setSelectedFilePath(path);
         try {
@@ -302,479 +248,509 @@ const GitRepoList: React.FC = () => {
             setFileContent(res.data.content || '');
         } catch { }
         finally { setLoadingContent(false); }
-    };
+    }, []);
 
-    // ==================== 渲染创建向导 ====================
-    const renderCreateWizard = () => {
-
-        return (
-            <Modal title={null} open={createModalOpen} onCancel={closeCreate} footer={null} width={640} destroyOnClose centered styles={{ body: { padding: 0 } }}>
-                <div style={{ padding: '32px' }}>
-                    {/* Header */}
-                    <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                        <Avatar size={56} style={{ background: '#f0f0f0', marginBottom: 12 }}>
-                            <GithubOutlined style={{ fontSize: 28, color: '#333' }} />
-                        </Avatar>
-                        <Title level={4} style={{ marginBottom: 4 }}>添加 Git 仓库</Title>
-                        <Text type="secondary">连接代码仓库，导入 Ansible Playbook</Text>
-                    </div>
-
-                    <Steps current={createStep} size="small" style={{ marginBottom: 24 }} items={[{ title: '验证仓库' }, { title: '完善信息' }, { title: '完成' }]} />
-
-                    <Form form={createForm} layout="vertical" requiredMark={false} preserve>
-                        {createStep === 0 && (
-                            <>
-                                <Form.Item name="url" label="仓库地址" rules={[{ required: true, message: '请输入' }]}>
-                                    <Input size="large" placeholder="https://github.com/org/repo.git" prefix={<LinkOutlined style={{ color: '#bfbfbf' }} />} />
-                                </Form.Item>
-
-                                <Form.Item name="auth_type" label="认证方式" initialValue="none">
-                                    <Radio.Group>
-                                        <Space size="middle">
-                                            {authTypeOptions.map(o => (
-                                                <Radio key={o.value} value={o.value}>
-                                                    <Space size={4}>
-                                                        <span style={{ color: '#666' }}>{o.icon}</span>
-                                                        <span>{o.label}</span>
-                                                    </Space>
-                                                </Radio>
-                                            ))}
-                                        </Space>
-                                    </Radio.Group>
-                                </Form.Item>
-
-                                {authType === 'token' && <Form.Item name="token" label="Access Token" rules={[{ required: true }]}><Input.Password placeholder="ghp_xxxx" /></Form.Item>}
-                                {authType === 'password' && (
-                                    <Row gutter={12}>
-                                        <Col span={12}><Form.Item name="username" label="用户名" rules={[{ required: true }]}><Input /></Form.Item></Col>
-                                        <Col span={12}><Form.Item name="password" label="密码" rules={[{ required: true }]}><Input.Password /></Form.Item></Col>
-                                    </Row>
-                                )}
-                                {authType === 'ssh_key' && (
-                                    <>
-                                        <Form.Item name="private_key" label="SSH 私钥" rules={[{ required: true }]}><Input.TextArea rows={3} placeholder="-----BEGIN RSA PRIVATE KEY-----" style={{ fontFamily: 'monospace', fontSize: 11 }} /></Form.Item>
-                                        <Form.Item name="passphrase" label="密钥密码"><Input.Password placeholder="可选" /></Form.Item>
-                                    </>
-                                )}
-
-                                <Button type="primary" block size="large" onClick={handleValidate} loading={validating}>
-                                    {validating ? '验证中...' : '验证并获取分支'}
-                                </Button>
-                            </>
-                        )}
-
-                        {createStep === 1 && (
-                            <>
-                                <Alert type="success" message={`验证成功，检测到 ${availableBranches.length} 个分支`} showIcon style={{ marginBottom: 16 }} />
-
-                                <Row gutter={12}>
-                                    <Col span={12}>
-                                        <Form.Item name="name" label="仓库名称" rules={[{ required: true }]}>
-                                            <Input placeholder="ansible-playbooks" />
-                                        </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                        <Form.Item name="default_branch" label="默认分支" rules={[{ required: true }]}>
-                                            <Select>
-                                                {availableBranches.map(b => <Select.Option key={b} value={b}>{b === defaultBranch ? `${b} (默认)` : b}</Select.Option>)}
-                                            </Select>
-                                        </Form.Item>
-                                    </Col>
-                                </Row>
-
-                                <Form.Item name="sync_enabled" label="定时同步" initialValue={false}>
-                                    <Radio.Group>
-                                        <Radio value={false}>不启用</Radio>
-                                        <Radio value={true}>启用</Radio>
-                                    </Radio.Group>
-                                </Form.Item>
-
-                                {createSyncEnabled && (
-                                    <Form.Item label="同步频率">
-                                        <Space.Compact>
-                                            <Form.Item name="interval_value" noStyle initialValue={1}>
-                                                <Select style={{ width: 80 }}>
-                                                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30].map(n => (
-                                                        <Select.Option key={n} value={n}>{n}</Select.Option>
-                                                    ))}
-                                                </Select>
-                                            </Form.Item>
-                                            <Form.Item name="interval_unit" noStyle initialValue="h">
-                                                <Select style={{ width: 80 }}>
-                                                    <Select.Option value="m">分钟</Select.Option>
-                                                    <Select.Option value="h">小时</Select.Option>
-                                                    <Select.Option value="d">天</Select.Option>
-                                                </Select>
-                                            </Form.Item>
-                                        </Space.Compact>
-                                    </Form.Item>
-                                )}
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
-                                    <Button onClick={() => setCreateStep(0)}>上一步</Button>
-                                    <Button type="primary" onClick={handleCreate} loading={creating} icon={<CheckOutlined />} disabled={!access.canManageGitRepo}>创建仓库</Button>
-                                </div>
-                            </>
-                        )}
-
-                        {createStep === 2 && (
-                            <Result status="success" title="创建成功" subTitle="仓库已添加，正在后台同步代码" extra={<Button type="primary" onClick={closeCreate}>完成</Button>} />
-                        )}
-                    </Form>
-                </div>
-            </Modal>
-        );
-    };
-
-    // ==================== 渲染详情抽屉 ====================
-    const renderDrawer = () => {
-        if (!currentRow) return null;
-        const st = statusConfig[currentRow.status] || statusConfig.pending;
-
-        return (
-            <Drawer
-                title={<Space><GithubOutlined />{currentRow.name}</Space>}
-                width={720}
-                open={drawerOpen}
-                onClose={() => { setDrawerOpen(false); setActiveTab('info'); }}
-                extra={
-                    <Space>
-                        <Button icon={<SyncOutlined spin={syncing === currentRow.id} />} onClick={() => handleSync(currentRow)} disabled={syncing === currentRow.id}>手动同步</Button>
-                        <Button icon={<SettingOutlined />} onClick={() => { scheduleForm.setFieldsValue({ sync_enabled: currentRow.sync_enabled, sync_interval: currentRow.sync_interval || '1h' }); setScheduleModalOpen(true); }}>调度</Button>
-                        <Button icon={<FolderOutlined />} onClick={() => { loadFileTree(currentRow.id); setFileBrowserOpen(true); }} disabled={currentRow.status !== 'ready'}>文件</Button>
-                        <Button danger icon={<DeleteOutlined />} onClick={() => setDeleteConfirmOpen(true)} disabled={!access.canManageGitRepo}>删除</Button>
-                    </Space>
-                }
-            >
-                <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
-                    {
-                        key: 'info',
-                        label: '概览',
-                        children: (
-                            <>
-                                <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
-                                    <Descriptions.Item label="URL" span={2}><Text copyable style={{ wordBreak: 'break-all' }}>{currentRow.url}</Text></Descriptions.Item>
-                                    <Descriptions.Item label="本地路径" span={2}><Text code style={{ fontSize: 12 }}>{currentRow.local_path || '-'}</Text></Descriptions.Item>
-                                    <Descriptions.Item label="默认分支"><Tag icon={<BranchesOutlined />}>{currentRow.default_branch || 'main'}</Tag></Descriptions.Item>
-                                    <Descriptions.Item label="当前 Commit">{currentRow.last_commit_id ? <Text code copyable style={{ fontSize: 12 }}>{currentRow.last_commit_id}</Text> : '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="状态"><Tag color={st.color} icon={st.icon}>{st.text}</Tag></Descriptions.Item>
-                                    <Descriptions.Item label="最后同步">{currentRow.last_sync_at ? new Date(currentRow.last_sync_at).toLocaleString() : '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="定时同步">{currentRow.sync_enabled ? <Text style={{ color: '#1890ff' }}>已启用 ({currentRow.sync_interval})</Text> : <Text type="secondary">未启用</Text>}</Descriptions.Item>
-                                    <Descriptions.Item label="下次同步">{currentRow.next_sync_at ? new Date(currentRow.next_sync_at).toLocaleString() : (currentRow.sync_enabled ? '等待调度' : '-')}</Descriptions.Item>
-                                    <Descriptions.Item label="创建时间">{currentRow.created_at ? new Date(currentRow.created_at).toLocaleString() : '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="更新时间">{currentRow.updated_at ? new Date(currentRow.updated_at).toLocaleString() : '-'}</Descriptions.Item>
-                                    {currentRow.error_message && <Descriptions.Item label="错误" span={2}><Alert type="error" message={currentRow.error_message} style={{ margin: 0 }} /></Descriptions.Item>}
-                                </Descriptions>
-
-                                {/* Commits */}
-                                <Card size="small" title={<Space><HistoryOutlined />最近提交</Space>}>
-                                    {loadingCommits ? <Spin /> : commits.length > 0 ? (
-                                        <Timeline items={commits.map(c => ({
-                                            children: (
-                                                <div>
-                                                    <Text code copyable={{ text: c.full_id || c.commit_id }} style={{ fontSize: 11, marginRight: 8 }}>{c.commit_id}</Text>
-                                                    <Text>{c.message}</Text>
-                                                    <div><Text type="secondary" style={{ fontSize: 11 }}>{c.author} · {new Date(c.date).toLocaleDateString()}</Text></div>
-                                                </div>
-                                            ),
-                                        }))} />
-                                    ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无提交记录" />}
-                                </Card>
-                            </>
-                        ),
-                    },
-                    {
-                        key: 'logs',
-                        label: <><CloudSyncOutlined style={{ marginRight: 4 }} />同步日志</>,
-                        children: loadingLogs ? <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div> : syncLogs.length > 0 ? (
-                            <div>
-                                {syncLogs.map((log: any, index: number) => (
-                                    <Card
-                                        key={log.id}
-                                        size="small"
-                                        style={{
-                                            marginBottom: index < syncLogs.length - 1 ? 12 : 0,
-                                            borderColor: log.status === 'failed' ? '#ffccc7' : '#f0f0f0',
-                                            background: log.status === 'failed' ? '#fff2f0' : '#fff',
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                            <Text type="secondary" style={{ fontSize: 12 }}>{new Date(log.created_at).toLocaleString()}</Text>
-                                            <Tag color={log.status === 'success' ? 'green' : 'red'}>{log.status === 'success' ? '成功' : '失败'}</Tag>
-                                        </div>
-                                        <Row gutter={16}>
-                                            <Col span={5}><Text type="secondary">触发</Text><div>{log.trigger_type === 'manual' ? '手动' : log.trigger_type === 'create' ? '创建' : log.trigger_type === 'scheduled' ? <Text style={{ color: '#1890ff' }}>定时</Text> : log.trigger_type}</div></Col>
-                                            <Col span={5}><Text type="secondary">操作</Text><div>{log.action === 'pull' ? '拉取' : log.action === 'clone' ? '克隆' : log.action || '-'}</div></Col>
-                                            <Col span={5}><Text type="secondary">分支</Text><div>{log.branch}</div></Col>
-                                            <Col span={6}><Text type="secondary">Commit</Text><div>{log.commit_id ? <Text code copyable={{ text: log.commit_id }} style={{ fontSize: 11 }}>{log.commit_id}</Text> : '-'}</div></Col>
-                                            <Col span={3}><Text type="secondary">耗时</Text><div>{log.duration_ms}ms</div></Col>
-                                        </Row>
-                                        {log.error_message && <Alert type="error" message={log.error_message} style={{ marginTop: 12 }} />}
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无同步记录" />,
-                    },
-                ]} />
-            </Drawer>
-        );
-    };
-
-    // ==================== 文件浏览器 ====================
-    const renderFileBrowser = () => {
-        if (!currentRow) return null;
-        return (
-            <Modal title={<Space><FolderOutlined />{currentRow.name} - 文件浏览</Space>} open={fileBrowserOpen} onCancel={() => setFileBrowserOpen(false)} footer={null} width={1000} styles={{ body: { padding: 0 } }}>
-                <div style={{ display: 'flex', height: 500 }}>
-                    <div style={{ width: 260, borderRight: '1px solid #f0f0f0', overflow: 'auto', padding: 8 }}>
-                        <Button size="small" icon={<ReloadOutlined spin={loadingFiles} />} onClick={() => loadFileTree(currentRow.id)} loading={loadingFiles} style={{ marginBottom: 8 }}>刷新</Button>
-                        {loadingFiles ? <Spin /> : fileTree.length > 0 ? <Tree showLine treeData={fileTree} onSelect={(_, i) => { const n = i.node as DataNode; if (n.isLeaf) loadFileContent(currentRow.id, n.key as string); }} /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无" />}
-                    </div>
-                    <div style={{ flex: 1, overflow: 'auto', background: '#1e1e1e' }}>
-                        {loadingContent ? <div style={{ padding: 80, textAlign: 'center' }}><Spin /></div> : fileContent ? (
-                            <>
-                                <div style={{ padding: '6px 12px', background: '#252526', borderBottom: '1px solid #3c3c3c' }}><Text style={{ color: '#aaa', fontSize: 11 }}>{selectedFilePath}</Text></div>
-                                <pre style={{ color: '#d4d4d4', padding: 12, margin: 0, fontSize: 12, fontFamily: 'Consolas, monospace', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{fileContent}</pre>
-                            </>
-                        ) : <div style={{ padding: 80, textAlign: 'center' }}><FileOutlined style={{ fontSize: 32, color: '#555' }} /><div><Text style={{ color: '#888' }}>选择文件</Text></div></div>}
-                    </div>
-                </div>
-            </Modal>
-        );
-    };
-
-    // ==================== 调度设置 ====================
-    const handleSaveSchedule = async () => {
-        if (!currentRow) return;
-        const values = scheduleForm.getFieldsValue();
-        setSavingSchedule(true);
-        try {
-            // 组合间隔值：数字 + 单位
-            let syncInterval = values.sync_interval;
-            if (values.interval_value && values.interval_unit) {
-                syncInterval = `${values.interval_value}${values.interval_unit}`;
-            }
-            await updateGitRepo(currentRow.id, {
-                sync_enabled: values.sync_enabled,
-                sync_interval: syncInterval,
-            });
-            message.success('调度设置已保存');
-            setScheduleModalOpen(false);
-            const res = await getGitRepo(currentRow.id);
-            setCurrentRow(res.data);
-            loadRepos();
-        } catch { /* 错误消息由全局错误处理器显示 */ }
-        finally { setSavingSchedule(false); }
-    };
-
-    const renderScheduleModal = () => {
-        return (
-            <Modal
-                title={<Space><SettingOutlined />定时同步设置</Space>}
-                open={scheduleModalOpen}
-                onCancel={() => setScheduleModalOpen(false)}
-                onOk={handleSaveSchedule}
-                confirmLoading={savingSchedule}
-                okText="保存"
-                width={520}
-            >
-                <div style={{ padding: '8px 0' }}>
-                    <Form form={scheduleForm} layout="vertical">
-                        <Form.Item name="sync_enabled" style={{ marginBottom: 16 }}>
-                            <div style={{ display: 'flex', gap: 12 }}>
-                                <Card
-                                    size="small"
-                                    hoverable
-                                    onClick={() => scheduleForm.setFieldValue('sync_enabled', false)}
-                                    style={{
-                                        flex: 1,
-                                        cursor: 'pointer',
-                                        border: !scheduleSyncEnabled ? '2px solid #1890ff' : '1px solid #f0f0f0',
-                                        background: !scheduleSyncEnabled ? '#f0f7ff' : '#fff',
-                                    }}
-                                    styles={{ body: { padding: 16, textAlign: 'center' } }}
-                                >
-                                    <CloseCircleOutlined style={{ fontSize: 24, color: !scheduleSyncEnabled ? '#1890ff' : '#bfbfbf', marginBottom: 8 }} />
-                                    <div><Text strong style={{ color: !scheduleSyncEnabled ? '#1890ff' : '#666' }}>关闭</Text></div>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>仅手动同步</Text>
-                                </Card>
-                                <Card
-                                    size="small"
-                                    hoverable
-                                    onClick={() => scheduleForm.setFieldValue('sync_enabled', true)}
-                                    style={{
-                                        flex: 1,
-                                        cursor: 'pointer',
-                                        border: scheduleSyncEnabled ? '2px solid #52c41a' : '1px solid #f0f0f0',
-                                        background: scheduleSyncEnabled ? '#f6ffed' : '#fff',
-                                    }}
-                                    styles={{ body: { padding: 16, textAlign: 'center' } }}
-                                >
-                                    <CheckCircleOutlined style={{ fontSize: 24, color: scheduleSyncEnabled ? '#52c41a' : '#bfbfbf', marginBottom: 8 }} />
-                                    <div><Text strong style={{ color: scheduleSyncEnabled ? '#52c41a' : '#666' }}>开启</Text></div>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>自动定时同步</Text>
-                                </Card>
-                            </div>
-                        </Form.Item>
-
-                        {scheduleSyncEnabled && (
-                            <>
-                                <Form.Item label="同步频率" style={{ marginBottom: 16 }}>
-                                    <Space>
-                                        <span>每</span>
-                                        <Form.Item name="interval_value" noStyle initialValue={1}>
-                                            <Select style={{ width: 70 }}>
-                                                {[1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30].map(n => (
-                                                    <Select.Option key={n} value={n}>{n}</Select.Option>
-                                                ))}
-                                            </Select>
-                                        </Form.Item>
-                                        <Form.Item name="interval_unit" noStyle initialValue="h">
-                                            <Select style={{ width: 80 }}>
-                                                <Select.Option value="m">分钟</Select.Option>
-                                                <Select.Option value="h">小时</Select.Option>
-                                                <Select.Option value="d">天</Select.Option>
-                                            </Select>
-                                        </Form.Item>
-                                        <span>同步一次</span>
-                                    </Space>
-                                </Form.Item>
-                                <Alert
-                                    type="info"
-                                    showIcon
-                                    message="同步时会自动拉取最新代码，并触发关联 Playbook 的变量重新扫描"
-                                />
-                            </>
-                        )}
-                    </Form>
-                </div>
-            </Modal>
-        );
-    };
-
-    // ==================== 表格列 ====================
-    const columns = [
+    // ======= 列 =======
+    const columns = useMemo<StandardColumnDef<AutoHealing.GitRepository>[]>(() => [
         {
-            title: '仓库',
-            key: 'name',
-            width: 350,
+            columnKey: 'name', columnTitle: '仓库', fixedColumn: true, dataIndex: 'name', width: 360, sorter: true,
             render: (_: any, r: AutoHealing.GitRepository) => {
                 const st = statusConfig[r.status] || statusConfig.pending;
+                const pbCount = getRepoPlaybooks(r.id).length;
                 return (
-                    <div style={{ cursor: 'pointer' }} onClick={() => handleViewDetail(r)}>
-                        <Space><Avatar size={32} style={{ background: '#f5f5f5' }}><GithubOutlined style={{ color: '#333' }} /></Avatar>
-                            <div>
-                                <Space size={8}>
-                                    <Text strong>{r.name}</Text>
-                                    <Tag color={st.color}>{st.text}</Tag>
-                                    {r.sync_enabled && <Tooltip title="已启用定时同步"><CloudSyncOutlined style={{ color: '#1890ff' }} /></Tooltip>}
-                                </Space>
-                                <br /><Text type="secondary" style={{ fontSize: 11 }}><BranchesOutlined style={{ marginRight: 2 }} />{r.default_branch || 'main'} · {r.url}</Text>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {(() => {
+                            const p = getProviderInfo(r.url); return (
+                                <Tooltip title={p.label}>
+                                    <div className="git-repo-icon" style={{ background: p.bg, color: p.color }}>
+                                        <span style={{ fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{p.icon}</span>
+                                    </div>
+                                </Tooltip>
+                            );
+                        })()}
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <a style={{ fontWeight: 500, color: '#1677ff', cursor: 'pointer' }}
+                                    onClick={(e) => { e.stopPropagation(); openDetail(r); }}>{r.name}</a>
+                                <Tag color={st.color} style={{ marginLeft: 6, fontSize: 11 }}>{st.text}</Tag>
+                                {r.sync_enabled && <Tooltip title="已启用定时同步"><CloudSyncOutlined style={{ color: '#1890ff', marginLeft: 4 }} /></Tooltip>}
+                                {pbCount > 0 && (
+                                    <Tooltip title={`关联 ${pbCount} 个 Playbook`}>
+                                        <span className="git-playbook-badge"><FileTextOutlined />{pbCount}</span>
+                                    </Tooltip>
+                                )}
                             </div>
-                        </Space>
+                            <div style={{ fontSize: 11, color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <BranchesOutlined style={{ marginRight: 2 }} />{r.default_branch || 'main'} · {r.url}
+                            </div>
+                        </div>
                     </div>
                 );
             },
         },
         {
-            title: 'Commit',
-            dataIndex: 'last_commit_id',
-            width: 50,
-            render: (v: string) => v ? <Text code copyable={{ text: v }} style={{ fontSize: 11 }}>{v}</Text> : '-',
+            columnKey: 'status', columnTitle: '状态', dataIndex: 'status', width: 90, sorter: true,
+            headerFilters: [
+                { label: '就绪', value: 'ready' },
+                { label: '待同步', value: 'pending' },
+                { label: '同步中', value: 'syncing' },
+                { label: '错误', value: 'error' },
+            ],
+            render: (_: any, r: AutoHealing.GitRepository) => {
+                const st = statusConfig[r.status] || statusConfig.pending;
+                return <Badge status={st.badge} text={st.text} />;
+            },
         },
         {
-            title: '认证',
-            dataIndex: 'auth_type',
-            width: 50,
+            columnKey: 'auth_type', columnTitle: '认证', dataIndex: 'auth_type', width: 80,
+            headerFilters: [
+                { label: '公开', value: 'none' },
+                { label: 'Token', value: 'token' },
+                { label: '密码', value: 'password' },
+                { label: 'SSH', value: 'ssh_key' },
+            ],
             render: (v: string) => {
-                const authLabels: Record<string, { icon: React.ReactNode; text: string }> = {
-                    none: { icon: <GlobalOutlined />, text: '公开' },
-                    token: { icon: <KeyOutlined />, text: 'Token' },
-                    password: { icon: <LockOutlined />, text: '密码' },
-                    ssh_key: { icon: <SafetyCertificateOutlined />, text: 'SSH' },
-                };
                 const auth = authLabels[v] || authLabels.none;
                 return <Space size={4}><Text type="secondary">{auth.icon}</Text><Text type="secondary">{auth.text}</Text></Space>;
             },
         },
         {
-            title: '同步',
-            key: 'sync_info',
-            width: 100,
+            columnKey: 'last_commit_id', columnTitle: 'Commit', dataIndex: 'last_commit_id', width: 120,
+            render: (v: string) => v ? <Text code copyable={{ text: v }} style={{ fontSize: 11 }}>{v}</Text> : '-',
+        },
+        {
+            columnKey: 'sync_info', columnTitle: '同步', width: 150,
             render: (_: any, r: AutoHealing.GitRepository) => (
                 <div>
-                    {r.sync_enabled ? <Text style={{ color: '#1890ff' }}>{r.sync_interval}</Text> : <Text type="secondary">-</Text>}
-                    {r.last_sync_at && <div><Text type="secondary" style={{ fontSize: 11 }}>{new Date(r.last_sync_at).toLocaleString()}</Text></div>}
+                    {r.sync_enabled ? <Tag color="blue" icon={<SyncOutlined />}>{r.sync_interval}</Tag> : <Tag>未开启</Tag>}
+                    {r.last_sync_at && (
+                        <Tooltip title={dayjs(r.last_sync_at).format('YYYY-MM-DD HH:mm:ss')}>
+                            <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2, cursor: 'default' }}>{dayjs(r.last_sync_at).fromNow()}</div>
+                        </Tooltip>
+                    )}
                 </div>
             ),
         },
         {
-            title: '操作', width: 120,
+            columnKey: 'created_at', columnTitle: '创建时间', dataIndex: 'created_at', width: 140, defaultVisible: false, sorter: true,
+            render: (_: any, r: AutoHealing.GitRepository) => dayjs(r.created_at).format('YYYY-MM-DD HH:mm'),
+        },
+        {
+            columnKey: 'actions', columnTitle: '操作', fixedColumn: true, width: 160,
             render: (_: any, r: AutoHealing.GitRepository) => (
-                <Space>
-                    <Tooltip title="查看"><Button type="text" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(r)} /></Tooltip>
-                    <Tooltip title="手动同步"><Button type="text" size="small" icon={<SyncOutlined spin={syncing === r.id} />} onClick={() => handleSync(r)} disabled={syncing === r.id} /></Tooltip>
-                    <Tooltip title="文件"><Button type="text" size="small" icon={<FolderOutlined />} onClick={() => { setCurrentRow(r); loadFileTree(r.id); setFileBrowserOpen(true); }} disabled={r.status !== 'ready'} /></Tooltip>
+                <Space size="small" onClick={(e) => e.stopPropagation()}>
+                    <Tooltip title="手动同步">
+                        <Button type="link" size="small"
+                            icon={syncing === r.id ? <Spin size="small" /> : <SyncOutlined />}
+                            onClick={() => handleSync(r)} disabled={!!syncing} />
+                    </Tooltip>
+                    <Tooltip title="文件浏览">
+                        <Button type="link" size="small" icon={<FolderOutlined />}
+                            onClick={() => { setCurrentRow(r); loadFileTree(r.id); setFileBrowserOpen(true); }}
+                            disabled={r.status !== 'ready'} />
+                    </Tooltip>
+                    <Tooltip title="编辑">
+                        <Button type="link" size="small" icon={<SettingOutlined />}
+                            onClick={() => openEdit(r)} disabled={!access.canManageGitRepo} />
+                    </Tooltip>
+                    <Popconfirm title="确定删除？" description="本地代码也会被清除，不可恢复" onConfirm={() => handleDelete(r.id)}>
+                        <Button type="link" size="small" danger icon={<DeleteOutlined />} disabled={!access.canManageGitRepo} />
+                    </Popconfirm>
                 </Space>
             ),
         },
-    ];
+    ], [openDetail, openEdit, handleSync, handleDelete, syncing, access, loadFileTree, getRepoPlaybooks]);
 
-    // ==================== 主渲染 ====================
-    return (
-        <PageContainer
-            ghost
-            header={{ title: <><GithubOutlined style={{ fontSize: 20 }} /> Git 仓库 / REPOSITORIES</> }}
-            extra={[
-                <Button key="r" icon={<ReloadOutlined />} onClick={loadRepos}>刷新</Button>,
-                <Button key="c" type="primary" icon={<PlusOutlined />} onClick={openCreate}>添加仓库</Button>,
-            ]}
-        >
-            <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
-                <Row justify="space-between" align="middle">
-                    <Space split={<span style={{ color: '#e8e8e8' }}>|</span>} size="middle">
-                        <Text>总计 <Text strong>{stats.total}</Text></Text>
-                        <Text>就绪 <Text strong style={{ color: '#52c41a' }}>{stats.ready}</Text></Text>
-                        <Text>待同步 <Text strong style={{ color: '#8c8c8c' }}>{stats.pending}</Text></Text>
-                        <Text>错误 <Text strong style={{ color: '#ff4d4f' }}>{stats.error}</Text></Text>
+    // ======= 数据请求 =======
+    const handleRequest = useCallback(async (params: {
+        page: number; pageSize: number; searchField?: string; searchValue?: string;
+        advancedSearch?: Record<string, any>; sorter?: { field: string; order: 'ascend' | 'descend' };
+    }) => {
+        try {
+            const apiParams: Record<string, any> = {
+                page: params.page,
+                page_size: params.pageSize,
+            };
+
+            // 简单搜索
+            if (params.searchValue) {
+                if (params.searchField) {
+                    apiParams[params.searchField] = params.searchValue;
+                } else {
+                    apiParams.search = params.searchValue;
+                }
+            }
+
+            // 高级搜索
+            if (params.advancedSearch) {
+                const adv = params.advancedSearch;
+                if (adv.name) apiParams.name = adv.name;
+                if (adv.url) apiParams.url = adv.url;
+                if (adv.status) apiParams.status = adv.status;
+                if (adv.auth_type) apiParams.auth_type = adv.auth_type;
+                if (adv.sync_enabled) apiParams.sync_enabled = adv.sync_enabled;
+                if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
+                    apiParams.created_from = adv.created_at[0].toISOString();
+                    apiParams.created_to = adv.created_at[1].toISOString();
+                }
+            }
+
+            // 排序
+            if (params.sorter) {
+                apiParams.sort_field = params.sorter.field;
+                apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
+            }
+
+            const res = await getGitRepos(apiParams);
+            const items = res.data || [];
+            const total = (res as any)?.total ?? items.length;
+
+            // 更新统计（用不带分页查询获取全量统计）
+            const statsRes = await getGitRepos({ page: 1, page_size: 1000 });
+            const allItems = statsRes.data || [];
+            setStats({
+                total: allItems.length,
+                ready: allItems.filter(r => r.status === 'ready').length,
+                pending: allItems.filter(r => r.status === 'pending').length,
+                error: allItems.filter(r => r.status === 'error').length,
+            });
+
+            return { data: items, total };
+        } catch {
+            return { data: [], total: 0 };
+        }
+    }, []);
+
+    // ======= 统计栏 =======
+    const statsBar = useMemo(() => (
+        <div className="git-stats-bar">
+            {[
+                { icon: <CodeOutlined />, cls: 'total', val: stats.total, lbl: '总仓库' },
+                { icon: <CheckCircleOutlined />, cls: 'ready', val: stats.ready, lbl: '就绪' },
+                { icon: <ClockCircleOutlined />, cls: 'pending', val: stats.pending, lbl: '待同步' },
+                { icon: <CloseCircleOutlined />, cls: 'error', val: stats.error, lbl: '错误' },
+            ].map((s, i) => (
+                <React.Fragment key={i}>
+                    {i > 0 && <div className="git-stat-divider" />}
+                    <div className="git-stat-item">
+                        <span className={`git-stat-icon git-stat-icon-${s.cls}${syncing && s.cls === 'pending' ? ' git-stat-icon-syncing' : ''}`}>{s.icon}</span>
+                        <div className="git-stat-content">
+                            <div className="git-stat-value">{s.val}</div>
+                            <div className="git-stat-label">{s.lbl}</div>
+                        </div>
+                    </div>
+                </React.Fragment>
+            ))}
+        </div>
+    ), [stats, syncing]);
+
+    // extraActions 移至 primaryAction（右侧按钮）
+
+    // ======= Drawer 详情 =======
+    const renderDrawer = () => {
+        if (!currentRow) return null;
+        const st = statusConfig[currentRow.status] || statusConfig.pending;
+        const auth = authLabels[currentRow.auth_type] || authLabels.none;
+
+        return (
+            <Drawer title={null} width={680} open={drawerOpen}
+                onClose={() => { setDrawerOpen(false); setActiveTab('info'); }}
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }} destroyOnClose>
+
+                {/* Header */}
+                <div className="git-detail-header">
+                    <div className="git-detail-header-top">
+                        {(() => {
+                            const p = getProviderInfo(currentRow.url); return (
+                                <div className="git-detail-header-icon" style={{ background: p.bg, color: p.color }}>{p.icon}</div>
+                            );
+                        })()}
+                        <div className="git-detail-header-info">
+                            <div className="git-detail-title">{currentRow.name}</div>
+                            <div className="git-detail-sub">{currentRow.url}</div>
+                        </div>
+                        <Badge status={st.badge} text={st.text} />
+                    </div>
+                    <Space size="small">
+                        <Button size="small" icon={<SyncOutlined spin={syncing === currentRow.id} />}
+                            onClick={() => handleSync(currentRow)} disabled={!!syncing}>同步</Button>
+                        <Button size="small" icon={<FolderOutlined />}
+                            onClick={() => { loadFileTree(currentRow.id); setFileBrowserOpen(true); }}
+                            disabled={currentRow.status !== 'ready'}>文件</Button>
+                        <Button size="small" icon={<SettingOutlined />}
+                            onClick={() => { setDrawerOpen(false); openEdit(currentRow); }}>编辑</Button>
+                        <Popconfirm title="确定删除？" description="本地代码也会被清除" onConfirm={() => handleDelete(currentRow.id)}>
+                            <Button size="small" danger icon={<DeleteOutlined />} disabled={!access.canManageGitRepo}>删除</Button>
+                        </Popconfirm>
                     </Space>
-                    <Input placeholder="搜索..." prefix={<SearchOutlined />} value={searchText} onChange={e => setSearchText(e.target.value)} allowClear style={{ width: 220 }} />
-                </Row>
-            </Card>
+                </div>
 
-            <Card>
-                <Table rowKey="id" loading={loading} dataSource={filteredRepos} columns={columns} pagination={{ pageSize: 10, showTotal: t => `共 ${t} 条` }}
-                    locale={{ emptyText: <Empty description="暂无仓库"><Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>添加第一个</Button></Empty> }} />
-            </Card>
+                <Tabs activeKey={activeTab} onChange={setActiveTab} className="git-detail-tabs"
+                    items={[
+                        {
+                            key: 'info',
+                            label: '概览',
+                            children: (
+                                <div className="git-detail-body">
+                                    {/* 基本信息 */}
+                                    <div className="git-detail-card">
+                                        <div className="git-detail-card-header">
+                                            <InfoCircleOutlined className="git-detail-card-header-icon" />
+                                            <span className="git-detail-card-header-title">基本信息</span>
+                                        </div>
+                                        <div className="git-detail-card-body">
+                                            <div className="git-detail-grid">
+                                                <div className="git-detail-field" style={{ gridColumn: '1 / -1' }}>
+                                                    <span className="git-detail-field-label">仓库地址</span>
+                                                    <div className="git-detail-field-value">
+                                                        <Text code copyable style={{ wordBreak: 'break-all', fontSize: 12 }}>{currentRow.url}</Text>
+                                                    </div>
+                                                </div>
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">默认分支</span>
+                                                    <div className="git-detail-field-value">
+                                                        <Tag icon={<BranchesOutlined />}>{currentRow.default_branch || 'main'}</Tag>
+                                                    </div>
+                                                </div>
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">认证方式</span>
+                                                    <div className="git-detail-field-value">
+                                                        <Space size={4}>{auth.icon}<span>{auth.text}</span></Space>
+                                                    </div>
+                                                </div>
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">当前 Commit</span>
+                                                    <div className="git-detail-field-value">
+                                                        {currentRow.last_commit_id
+                                                            ? <Text code copyable={{ text: currentRow.last_commit_id }} style={{ fontSize: 11 }}>{currentRow.last_commit_id}</Text>
+                                                            : '-'}
+                                                    </div>
+                                                </div>
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">本地路径</span>
+                                                    <div className="git-detail-field-value">
+                                                        <Text code style={{ fontSize: 11 }}>{currentRow.local_path || '-'}</Text>
+                                                    </div>
+                                                </div>
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">创建时间</span>
+                                                    <div className="git-detail-field-value">{dayjs(currentRow.created_at).format('YYYY-MM-DD HH:mm')}</div>
+                                                </div>
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">更新时间</span>
+                                                    <div className="git-detail-field-value">{currentRow.updated_at ? dayjs(currentRow.updated_at).format('YYYY-MM-DD HH:mm') : '-'}</div>
+                                                </div>
+                                                {currentRow.error_message && (
+                                                    <div className="git-detail-field" style={{ gridColumn: '1 / -1' }}>
+                                                        <span className="git-detail-field-label">错误信息</span>
+                                                        <div className="git-detail-field-value" style={{ color: '#ff4d4f' }}>{currentRow.error_message}</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
 
-            {renderCreateWizard()}
+                                    {/* 同步配置 */}
+                                    <div className="git-detail-card">
+                                        <div className="git-detail-card-header">
+                                            <SyncOutlined className="git-detail-card-header-icon" />
+                                            <span className="git-detail-card-header-title">同步配置</span>
+                                        </div>
+                                        <div className="git-detail-card-body">
+                                            <div className="git-detail-grid">
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">定时同步</span>
+                                                    <div className="git-detail-field-value">
+                                                        {currentRow.sync_enabled
+                                                            ? <Tag color="blue" icon={<SyncOutlined />}>每 {currentRow.sync_interval}</Tag>
+                                                            : <Tag>未开启</Tag>}
+                                                    </div>
+                                                </div>
+                                                <div className="git-detail-field">
+                                                    <span className="git-detail-field-label">上次同步</span>
+                                                    <div className="git-detail-field-value">{currentRow.last_sync_at ? dayjs(currentRow.last_sync_at).format('YYYY-MM-DD HH:mm') : '暂无'}</div>
+                                                </div>
+                                                {currentRow.next_sync_at && currentRow.sync_enabled && (
+                                                    <div className="git-detail-field">
+                                                        <span className="git-detail-field-label">下次同步</span>
+                                                        <div className="git-detail-field-value" style={{ color: '#1890ff' }}>{dayjs(currentRow.next_sync_at).format('YYYY-MM-DD HH:mm')}</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 最近提交 — Git 时间线 */}
+                                    <div className="git-detail-card">
+                                        <div className="git-detail-card-header">
+                                            <HistoryOutlined className="git-detail-card-header-icon" />
+                                            <span className="git-detail-card-header-title">最近提交</span>
+                                            {commits.length > 0 && <span className="git-detail-card-header-count">{commits.length} 条</span>}
+                                        </div>
+                                        <div className="git-detail-card-body">
+                                            {loadingCommits ? <div style={{ textAlign: 'center', padding: 16 }}><Spin size="small" /></div>
+                                                : commits.length > 0
+                                                    ? <div className="git-timeline">
+                                                        {commits.map((c, i) => (
+                                                            <div key={i} className="git-timeline-item">
+                                                                <div className="git-timeline-dot" />
+                                                                <div>
+                                                                    <span className="git-timeline-commit-hash">{c.commit_id}</span>
+                                                                    <span className="git-timeline-message">{c.message}</span>
+                                                                </div>
+                                                                <div className="git-timeline-meta">{c.author} · {dayjs(c.date).fromNow()}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无提交记录" />}
+                                        </div>
+                                    </div>
+
+                                    {/* 关联 Playbook */}
+                                    {currentRow && (() => {
+                                        const related = getRepoPlaybooks(currentRow.id);
+                                        return related.length > 0 ? (
+                                            <div className="git-detail-card">
+                                                <div className="git-detail-card-header">
+                                                    <FileTextOutlined className="git-detail-card-header-icon" />
+                                                    <span className="git-detail-card-header-title">关联 Playbook</span>
+                                                    <span className="git-detail-card-header-count">{related.length} 个</span>
+                                                </div>
+                                                <div style={{ padding: 0 }}>
+                                                    {related.map(pb => (
+                                                        <div key={pb.id} className="git-playbook-link"
+                                                            onClick={() => history.push(`/execution/playbooks`)}>
+                                                            <div className="git-playbook-link-icon"><FileTextOutlined /></div>
+                                                            <div className="git-playbook-link-info">
+                                                                <div className="git-playbook-link-name">{pb.name}</div>
+                                                                {pb.playbook_path && <div className="git-playbook-link-path">{pb.playbook_path}</div>}
+                                                            </div>
+                                                            <RightOutlined style={{ color: '#d9d9d9', fontSize: 12 }} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : null;
+                                    })()}
+                                </div>
+                            ),
+                        },
+                        {
+                            key: 'logs',
+                            label: <><CloudSyncOutlined style={{ marginRight: 4 }} />同步日志</>,
+                            children: (
+                                <div className="git-detail-body">
+                                    {loadingLogs ? <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+                                        : syncLogs.length > 0
+                                            ? <Table size="small" pagination={false} dataSource={syncLogs} rowKey="id"
+                                                expandable={{
+                                                    expandedRowRender: (r: any) => (
+                                                        <div style={{ padding: '4px 0', fontSize: 12, color: '#ff4d4f', wordBreak: 'break-all' }}>
+                                                            <Text type="danger" style={{ fontSize: 12 }}>{r.error_message}</Text>
+                                                        </div>
+                                                    ),
+                                                    rowExpandable: (r: any) => !!r.error_message,
+                                                    defaultExpandedRowKeys: syncLogs.filter(l => l.status === 'failed' && l.error_message).slice(0, 3).map(l => l.id),
+                                                    expandIcon: ({ expanded, onExpand, record }: any) =>
+                                                        record.error_message
+                                                            ? <span style={{ cursor: 'pointer', color: '#ff4d4f', fontSize: 12, display: 'inline-block', width: 16, textAlign: 'center' }}
+                                                                onClick={e => onExpand(record, e)}>{expanded ? '−' : '+'}</span>
+                                                            : <span style={{ display: 'inline-block', width: 16, textAlign: 'center', color: '#52c41a', fontSize: 14 }}>✓</span>,
+                                                }}
+                                                columns={[
+                                                    {
+                                                        title: '状态', dataIndex: 'status', width: 80,
+                                                        render: (s: string) => (
+                                                            <Badge status={s === 'success' ? 'success' : s === 'failed' ? 'error' : 'processing'}
+                                                                text={s === 'success' ? '成功' : s === 'failed' ? '失败' : '进行中'} />
+                                                        ),
+                                                    },
+                                                    {
+                                                        title: '触发', dataIndex: 'trigger_type', width: 60,
+                                                        render: (t: string) => <Tag>{t === 'manual' ? '手动' : t === 'create' ? '创建' : t === 'scheduled' ? '定时' : t}</Tag>,
+                                                    },
+                                                    {
+                                                        title: '操作', dataIndex: 'action', width: 60,
+                                                        render: (a: string) => a === 'pull' ? '拉取' : a === 'clone' ? '克隆' : a || '-',
+                                                    },
+                                                    {
+                                                        title: 'Commit', dataIndex: 'commit_id', width: 100,
+                                                        render: (v: string) => v ? <Text code style={{ fontSize: 11 }}>{v}</Text> : '-',
+                                                    },
+                                                    {
+                                                        title: '时间', dataIndex: 'created_at', width: 120,
+                                                        render: (t: string) => <span style={{ fontSize: 12 }}>{dayjs(t).format('MM-DD HH:mm:ss')}</span>,
+                                                    },
+                                                ]} />
+                                            : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无同步记录" />}
+                                </div>
+                            ),
+                        },
+                    ]}
+                />
+            </Drawer>
+        );
+    };
+
+    // ======= 文件浏览器 =======
+    const renderFileBrowser = () => {
+        if (!currentRow) return null;
+        return (
+            <Modal title={<Space><FolderOutlined />{currentRow.name} - 文件浏览</Space>} open={fileBrowserOpen}
+                onCancel={() => setFileBrowserOpen(false)} footer={null} width={1000} styles={{ body: { padding: 0 } }}
+                getContainer={false} zIndex={1100}>
+                <div style={{ display: 'flex', height: 500 }}>
+                    <div style={{ width: 260, borderRight: '1px solid #f0f0f0', overflow: 'auto', padding: 8 }}>
+                        <Button size="small" icon={<ReloadOutlined spin={loadingFiles} />}
+                            onClick={() => loadFileTree(currentRow.id)} loading={loadingFiles} style={{ marginBottom: 8 }}>刷新</Button>
+                        {loadingFiles ? <Spin /> : fileTree.length > 0
+                            ? <Tree showLine treeData={fileTree}
+                                onSelect={(_, i) => { const n = i.node as DataNode; if (n.isLeaf) loadFileContent(currentRow.id, n.key as string); }} />
+                            : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无" />}
+                    </div>
+                    <div style={{ flex: 1, overflow: 'auto', background: '#1e1e1e' }}>
+                        {loadingContent ? <div style={{ padding: 80, textAlign: 'center' }}><Spin /></div>
+                            : fileContent ? (
+                                <>
+                                    <div style={{ padding: '6px 12px', background: '#252526', borderBottom: '1px solid #3c3c3c' }}>
+                                        <Text style={{ color: '#aaa', fontSize: 11 }}>{selectedFilePath}</Text>
+                                    </div>
+                                    <pre style={{ color: '#d4d4d4', padding: 12, margin: 0, fontSize: 12, fontFamily: 'Consolas, monospace', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{fileContent}</pre>
+                                </>
+                            ) : <div style={{ padding: 80, textAlign: 'center' }}><FileOutlined style={{ fontSize: 32, color: '#555' }} /><div><Text style={{ color: '#888' }}>选择文件</Text></div></div>}
+                    </div>
+                </div>
+            </Modal>
+        );
+    };
+
+    // ======= 主渲染 =======
+    return (
+        <>
+            <StandardTable<AutoHealing.GitRepository>
+                refreshTrigger={refreshTrigger}
+                tabs={[{ key: 'list', label: '仓库列表' }]}
+                title="代码仓库"
+                description="管理 Git 代码仓库，同步 Ansible Playbook 和配置文件。"
+                headerIcon={headerIcon}
+                headerExtra={statsBar}
+                searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
+                primaryActionLabel="添加仓库"
+                primaryActionIcon={<PlusOutlined />}
+                primaryActionDisabled={!access.canManageGitRepo}
+                onPrimaryAction={openCreate}
+                columns={columns}
+                rowKey="id"
+                onRowClick={openDetail}
+                request={handleRequest}
+                defaultPageSize={20}
+                preferenceKey="git_repos_v2"
+            />
+
             {renderDrawer()}
             {renderFileBrowser()}
-            {renderScheduleModal()}
-
-            <Modal
-                title={<><ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />确认删除</>}
-                open={deleteConfirmOpen}
-                onCancel={() => setDeleteConfirmOpen(false)}
-                onOk={handleDelete}
-                okText="删除"
-                okButtonProps={{
-                    danger: true,
-                    disabled: currentRow ? getRepoPlaybooks(currentRow.id).length > 0 : false
-                }}
-            >
-                {currentRow && getRepoPlaybooks(currentRow.id).length > 0 ? (
-                    <Alert
-                        type="error"
-                        message={<>无法删除：关联 <b>{getRepoPlaybooks(currentRow.id).length}</b> 个 Playbook</>}
-                        description="请先删除关联的 Playbook 后再删除此仓库"
-                        showIcon
-                    />
-                ) : (
-                    <>确定删除 <Text strong>{currentRow?.name}</Text>？本地代码也会被清除。</>
-                )}
-            </Modal>
-        </PageContainer>
+        </>
     );
 };
 

@@ -1,813 +1,902 @@
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     CheckCircleOutlined, CloseCircleOutlined, ToolOutlined,
-    EyeOutlined, ApiOutlined, ReloadOutlined, CloudServerOutlined,
+    ApiOutlined, CloudServerOutlined,
     DesktopOutlined, AppstoreOutlined, GlobalOutlined, HddOutlined,
-    AppleOutlined, WindowsOutlined, LinuxOutlined, CloudOutlined,
-    StopOutlined, PlayCircleOutlined, InfoCircleOutlined,
+    LinuxOutlined, WindowsOutlined, CloudOutlined,
 } from '@ant-design/icons';
-import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { PageContainer, ProTable } from '@ant-design/pro-components';
 import {
-    Drawer, Space, Card, Row, Col, Statistic, Button, Alert,
-    Tooltip, message, Tabs, Typography, Descriptions, Modal, Select, Progress, Badge, Input, DatePicker,
+    Space, Tooltip, message, Typography, Modal, Select, Badge,
+    Tag, Button, Alert, Progress, Drawer, Divider, Descriptions, Input, DatePicker,
 } from 'antd';
-import React, { useRef, useState, useEffect } from 'react';
+import SecretsSourceSelector from '@/components/SecretsSourceSelector';
+import ConnectionTestResultModal from '@/components/ConnectionTestResultModal';
 import dayjs from 'dayjs';
+import StandardTable from '@/components/StandardTable';
+import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
+
 import {
     getCMDBItems, getCMDBStats, getCMDBItem, testCMDBConnection, batchTestCMDBConnection,
     enterMaintenance, resumeFromMaintenance, batchEnterMaintenance, batchResumeFromMaintenance,
     getCMDBMaintenanceLogs,
 } from '@/services/auto-healing/cmdb';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
+import './index.css';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
-// ==================== 类型配置 ====================
-const getTypeInfo = (type: string) => {
-    const lowerType = type?.toLowerCase() || '';
-    if (lowerType.includes('server')) return { text: '服务器', icon: <DesktopOutlined />, color: '#1890ff' };
-    if (lowerType.includes('app')) return { text: '应用', icon: <AppstoreOutlined />, color: '#13c2c2' };
-    if (lowerType.includes('network')) return { text: '网络', icon: <GlobalOutlined />, color: '#722ed1' };
-    if (lowerType.includes('db') || lowerType.includes('database')) return { text: '数据库', icon: <HddOutlined />, color: '#fa8c16' };
-    return { text: type, icon: <CloudOutlined />, color: '#8c8c8c' };
+/* ========== 枚举映射 ========== */
+const TYPE_MAP: Record<string, { text: string; icon: React.ReactNode; color: string }> = {
+    server: { text: '服务器', icon: <DesktopOutlined />, color: '#1890ff' },
+    application: { text: '应用', icon: <AppstoreOutlined />, color: '#13c2c2' },
+    network: { text: '网络', icon: <GlobalOutlined />, color: '#722ed1' },
+    database: { text: '数据库', icon: <HddOutlined />, color: '#fa8c16' },
 };
 
-const getStatusInfo = (status: string) => {
-    const map: Record<string, { text: string; color: string; badge: 'success' | 'error' | 'warning' | 'default' }> = {
-        active: { text: '活跃', color: '#52c41a', badge: 'success' },
-        offline: { text: '离线', color: '#ff4d4f', badge: 'error' },
-        maintenance: { text: '维护', color: '#faad14', badge: 'warning' },
-    };
-    return map[status] || { text: status, color: '#8c8c8c', badge: 'default' as const };
+const STATUS_MAP: Record<string, { text: string; color: string; badge: 'success' | 'error' | 'warning' | 'default' }> = {
+    active: { text: '活跃', color: '#52c41a', badge: 'success' },
+    inactive: { text: '离线', color: '#ff4d4f', badge: 'error' },
+    maintenance: { text: '维护', color: '#faad14', badge: 'warning' },
 };
 
-const getEnvInfo = (env: string) => {
-    const lowerEnv = env?.toLowerCase() || '';
-    if (lowerEnv.includes('prod')) return { text: '生产', color: '#ff4d4f' };
-    if (lowerEnv.includes('stag')) return { text: '预发', color: '#fa8c16' };
-    if (lowerEnv.includes('dev')) return { text: '开发', color: '#1890ff' };
-    if (lowerEnv.includes('test')) return { text: '测试', color: '#52c41a' };
-    return { text: env, color: '#8c8c8c' };
+const ENV_MAP: Record<string, { text: string; color: string }> = {
+    production: { text: '生产', color: 'red' },
+    staging: { text: '预发', color: 'orange' },
+    test: { text: '测试', color: 'green' },
+    development: { text: '开发', color: 'blue' },
 };
 
 const getOSIcon = (os: string) => {
-    const lowerOS = os?.toLowerCase() || '';
-    if (lowerOS.includes('linux') || lowerOS.includes('ubuntu') || lowerOS.includes('centos') || lowerOS.includes('rhel'))
+    const o = os?.toLowerCase() || '';
+    if (o.includes('linux') || o.includes('ubuntu') || o.includes('centos') || o.includes('rhel'))
         return <LinuxOutlined style={{ color: '#E95420' }} />;
-    if (lowerOS.includes('windows')) return <WindowsOutlined style={{ color: '#1890ff' }} />;
-    if (lowerOS.includes('mac') || lowerOS.includes('darwin')) return <AppleOutlined style={{ color: '#8c8c8c' }} />;
+    if (o.includes('windows')) return <WindowsOutlined style={{ color: '#1890ff' }} />;
     return <CloudOutlined style={{ color: '#8c8c8c' }} />;
 };
 
-interface StatsData {
-    total: number;
-    active: number;
-    offline: number;
-    maintenance: number;
-    byType: Record<string, number>;
-    byEnv: Record<string, number>;
-}
+/* ========== 搜索字段 ========== */
+const searchFields: SearchField[] = [
+    { key: 'keyword', label: '关键字' },
+    { key: 'ip_address', label: 'IP 地址' },
+    { key: 'hostname', label: '主机名' },
+];
 
+const advancedSearchFields: AdvancedSearchField[] = [
+    { key: 'keyword', label: '关键字', type: 'input', placeholder: '搜索名称 / IP / 主机名' },
+    {
+        key: 'type', label: '类型', type: 'select', placeholder: '全部类型',
+        options: Object.entries(TYPE_MAP).map(([v, t]) => ({ label: t.text, value: v })),
+    },
+    {
+        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        options: Object.entries(STATUS_MAP).map(([v, s]) => ({ label: s.text, value: v })),
+    },
+    {
+        key: 'environment', label: '环境', type: 'select', placeholder: '全部环境',
+        options: Object.entries(ENV_MAP).map(([v, e]) => ({ label: e.text, value: v })),
+    },
+    { key: 'source_plugin_name', label: '数据来源', type: 'input', placeholder: '插件名称' },
+];
+
+/* ========== Header Icon ========== */
+const headerIcon = (
+    <svg viewBox="0 0 48 48" fill="none">
+        <rect x="6" y="8" width="36" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+        <rect x="6" y="22" width="36" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+        <rect x="6" y="36" width="36" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.5" />
+        <circle cx="12" cy="14" r="2" fill="#52c41a" />
+        <circle cx="12" cy="28" r="2" fill="#52c41a" />
+        <circle cx="12" cy="39" r="1.5" fill="#faad14" />
+        <rect x="18" y="13" width="14" height="2" rx="1" fill="currentColor" opacity="0.3" />
+        <rect x="18" y="27" width="10" height="2" rx="1" fill="currentColor" opacity="0.3" />
+    </svg>
+);
+
+/* ========== 组件 ========== */
 const CMDBList: React.FC = () => {
-    const actionRef = useRef<ActionType>(null);
-    const [drawerOpen, setDrawerOpen] = useState(false);
-    const [currentRow, setCurrentRow] = useState<AutoHealing.CMDBItem>();
-    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-    const [stats, setStats] = useState<StatsData>({ total: 0, active: 0, offline: 0, maintenance: 0, byType: {}, byEnv: {} });
+    /* ---- 统计 ---- */
+    const [stats, setStats] = useState<AutoHealing.CMDBStats | null>(null);
 
+    const loadStats = useCallback(async () => {
+        try {
+            const res = await getCMDBStats();
+            setStats(res);
+        } catch { /* ignore */ }
+    }, []);
+
+    useEffect(() => { loadStats(); }, []);
+
+    /* ---- 密钥源 ---- */
     const [secretsSources, setSecretsSources] = useState<AutoHealing.SecretsSource[]>([]);
-    const [selectedSecretsSource, setSelectedSecretsSource] = useState<string>();
-    const [testResults, setTestResults] = useState<AutoHealing.CMDBBatchConnectionTestResult | null>(null);
-    const [testing, setTesting] = useState(false);
-    const [selectSourceModalOpen, setSelectSourceModalOpen] = useState(false);
-    const [testResultModalOpen, setTestResultModalOpen] = useState(false);
-    const [singleTestTarget, setSingleTestTarget] = useState<AutoHealing.CMDBItem | null>(null);
+    useEffect(() => {
+        getSecretsSources().then((res: any) => {
+            setSecretsSources(res?.data || res?.items || []);
+        }).catch(() => { });
+    }, []);
 
-    // 维护模式相关状态
-    const [disableModalOpen, setDisableModalOpen] = useState(false);
-    const [disableTarget, setDisableTarget] = useState<AutoHealing.CMDBItem | null>(null);
-    const [disableReason, setDisableReason] = useState('');
-    const [maintenanceEndAt, setMaintenanceEndAt] = useState<string>('');
-    const [disabling, setDisabling] = useState(false);
-
-    // 批量维护状态
-    const [batchDisableModalOpen, setBatchDisableModalOpen] = useState(false);
-    const [batchDisableReason, setBatchDisableReason] = useState('');
-    const [batchMaintenanceEndAt, setBatchMaintenanceEndAt] = useState<string>('');
-
-    // 维护日志状态
+    /* ---- 详情 Drawer ---- */
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [currentRow, setCurrentRow] = useState<AutoHealing.CMDBItem | null>(null);
     const [maintenanceLogs, setMaintenanceLogs] = useState<AutoHealing.CMDBMaintenanceLog[]>([]);
-    const [logsLoading, setLogsLoading] = useState(false);
-    const [activeTabKey, setActiveTabKey] = useState('basic');
 
-    const loadStats = async () => {
-        try {
-            const data = await getCMDBStats();
-            const byStatus = data.by_status?.reduce((acc, item) => {
-                acc[item.status] = item.count;
-                return acc;
-            }, {} as Record<string, number>) || {};
-
-            const byType: Record<string, number> = {};
-            data.by_type?.forEach(item => {
-                let key = item.type.toLowerCase();
-                if (key.includes('server')) key = 'server';
-                else if (key.includes('database') || key.includes('db')) key = 'database';
-                else if (key.includes('app')) key = 'application';
-                else if (key.includes('network')) key = 'network';
-                byType[key] = (byType[key] || 0) + item.count;
-            });
-
-            const byEnv: Record<string, number> = {};
-            data.by_environment?.forEach(item => {
-                let key = item.environment.toLowerCase();
-                if (key.includes('prod')) key = 'production';
-                else if (key.includes('stag')) key = 'staging';
-                else if (key.includes('dev')) key = 'development';
-                else if (key.includes('test')) key = 'test';
-                byEnv[key] = (byEnv[key] || 0) + item.count;
-            });
-
-            setStats({
-                total: data.total || 0,
-                active: byStatus.active || 0,
-                offline: byStatus.offline || 0,
-                maintenance: byStatus.maintenance || 0,
-                byType,
-                byEnv,
-            });
-        } catch (e) { console.error(e); }
-    };
-
-    const loadSecretsSources = async () => {
-        try {
-            const res = await getSecretsSources();
-            setSecretsSources(res.data || []);
-        } catch (e) { console.error(e); }
-    };
-
-    useEffect(() => { loadStats(); loadSecretsSources(); }, []);
-
-    const handleViewDetail = async (record: AutoHealing.CMDBItem) => {
-        // 立即打开抽屉，使用列表中的数据（不卡顿）
-        setActiveTabKey('basic');
-        setMaintenanceLogs([]);
+    const openDetail = useCallback(async (record: AutoHealing.CMDBItem) => {
         setCurrentRow(record);
         setDrawerOpen(true);
-        // 异步获取最新详情
+        setDetailLoading(true);
         try {
-            const data = await getCMDBItem(record.id);
-            setCurrentRow(data);
-        } catch { /* 静默失败，已有列表数据 */ }
-    };
+            const [detail, logRes] = await Promise.all([
+                getCMDBItem(record.id),
+                getCMDBMaintenanceLogs(record.id, { page: 1, page_size: 20 }),
+            ]);
+            setCurrentRow(detail);
+            setMaintenanceLogs((logRes as any)?.data || (logRes as any)?.items || []);
+        } catch { /* ignore */ }
+        finally { setDetailLoading(false); }
+    }, []);
 
-    const loadMaintenanceLogs = async (id: string) => {
-        setLogsLoading(true);
-        try {
-            const res = await getCMDBMaintenanceLogs(id, { page: 1, page_size: 20 });
-            // API 返回格式: { code, message, data: { data: [...], page, page_size, total } }
-            const logs = (res as any)?.data?.data || res.data || [];
-            setMaintenanceLogs(Array.isArray(logs) ? logs : []);
-        } catch (e) {
-            console.error(e);
-            setMaintenanceLogs([]);
-        } finally {
-            setLogsLoading(false);
-        }
-    };
+    /* ---- 密钥测试 ---- */
+    const [selectSourceModalOpen, setSelectSourceModalOpen] = useState(false);
+    const [singleTestTarget, setSingleTestTarget] = useState<AutoHealing.CMDBItem | null>(null);
+    const [testing, setTesting] = useState(false);
+    const [testResults, setTestResults] = useState<AutoHealing.CMDBBatchConnectionTestResult | null>(null);
+    const [testResultModalOpen, setTestResultModalOpen] = useState(false);
 
-    const handleOpenSingleTest = (record: AutoHealing.CMDBItem) => {
-        setSingleTestTarget(record);
+    /* ---- 维护模式 ---- */
+    const [maintenanceModalOpen, setMaintenanceModalOpen] = useState(false);
+    const [maintenanceTarget, setMaintenanceTarget] = useState<AutoHealing.CMDBItem | null>(null);
+    const [maintenanceReason, setMaintenanceReason] = useState('');
+    const [maintenanceEndAt, setMaintenanceEndAt] = useState<string>();
+
+    /* ---- 选中行（批量操作 — 跨页保持） ---- */
+    const [selectedRowMap, setSelectedRowMap] = useState<Map<string, AutoHealing.CMDBItem>>(new Map());
+    const selectedRows = useMemo(() => Array.from(selectedRowMap.values()), [selectedRowMap]);
+    const totalCountRef = useRef(0);
+
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const triggerRefresh = useCallback(() => {
+        setRefreshTrigger(n => n + 1);
+    }, []);
+
+    /* ======= 密钥测试流程 ======= */
+    const handleOpenTestModal = useCallback((target: AutoHealing.CMDBItem | null) => {
+        setSingleTestTarget(target);
         setSelectSourceModalOpen(true);
-    };
+    }, []);
 
-    const handleOpenBatchTest = () => {
-        if (selectedRowKeys.length === 0) { message.warning('请选择配置项'); return; }
-        setSingleTestTarget(null);
-        setSelectSourceModalOpen(true);
-    };
-
-    const handleRunTest = async () => {
-        if (!selectedSecretsSource) { message.warning('请选择密钥源'); return; }
+    const handleRunTest = useCallback(async (sourceId: string) => {
         setTesting(true);
-        setSelectSourceModalOpen(false);
-
-        if (singleTestTarget) {
-            // 单个测试：直接运行
-            try {
-                const result = await testCMDBConnection(singleTestTarget.id, selectedSecretsSource);
-                if (result.success) message.success(`${result.host} 连接成功 (${result.latency_ms}ms)`);
-                else message.error(`${result.host} 失败: ${result.message}`);
-            } catch { /* 错误消息由全局错误处理器显示 */ }
-            finally { setTesting(false); }
-        } else {
-            // 批量测试：先打开弹窗显示 loading，再调用 API
-            setTestResults(null);
-            setTestResultModalOpen(true);
-            try {
-                const result = await batchTestCMDBConnection(selectedRowKeys as string[], selectedSecretsSource);
-                setTestResults(result);
-            } catch { setTestResultModalOpen(false); }
-            finally { setTesting(false); }
-        }
-    };
-
-    // 单个维护模式
-    const handleOpenDisable = (record: AutoHealing.CMDBItem) => {
-        setDisableTarget(record);
-        setDisableReason('');
-        setMaintenanceEndAt('');
-        setDisableModalOpen(true);
-    };
-
-    const handleDisable = async () => {
-        if (!disableTarget || !disableReason.trim()) { message.warning('请输入原因'); return; }
-        setDisabling(true);
         try {
-            await enterMaintenance(disableTarget.id, disableReason, maintenanceEndAt || undefined);
-            message.success('已进入维护模式');
-            setDisableModalOpen(false);
-            setDisableReason('');
-            setMaintenanceEndAt('');
-            actionRef.current?.reload();
-            if (currentRow?.id === disableTarget.id) {
-                const data = await getCMDBItem(disableTarget.id);
-                setCurrentRow(data);
+            if (singleTestTarget) {
+                const res = await testCMDBConnection(singleTestTarget.id, sourceId);
+                setTestResults({ total: 1, success: res.success ? 1 : 0, failed: res.success ? 0 : 1, results: [res] });
+            } else {
+                const ids = selectedRows.map(r => r.id);
+                const res = await batchTestCMDBConnection(ids, sourceId);
+                setTestResults(res);
             }
-        } catch { /* 错误消息由全局错误处理器显示 */ }
-        finally { setDisabling(false); }
-    };
+            setSelectSourceModalOpen(false);
+            setTestResultModalOpen(true);
+        } catch { message.error('测试失败'); }
+        finally { setTesting(false); }
+    }, [singleTestTarget, selectedRows]);
 
-    const handleEnable = async (record: AutoHealing.CMDBItem) => {
+    /* ======= 维护模式流程 ======= */
+    const handleEnterMaintenance = useCallback(async () => {
+        if (!maintenanceReason) { message.warning('请输入维护原因'); return; }
+        try {
+            if (maintenanceTarget) {
+                await enterMaintenance(maintenanceTarget.id, maintenanceReason, maintenanceEndAt);
+                message.success('已进入维护模式');
+            } else {
+                const ids = selectedRows.map(r => r.id);
+                await batchEnterMaintenance(ids, maintenanceReason, maintenanceEndAt);
+                message.success(`批量维护成功 (${ids.length} 台)`);
+            }
+            setMaintenanceModalOpen(false);
+            setMaintenanceReason('');
+            setMaintenanceEndAt(undefined);
+            setSelectedRowMap(new Map());
+            triggerRefresh();
+        } catch { message.error('操作失败'); }
+    }, [maintenanceTarget, maintenanceReason, maintenanceEndAt, selectedRows, triggerRefresh]);
+
+    const handleResumeMaintenance = useCallback(async (record: AutoHealing.CMDBItem) => {
         try {
             await resumeFromMaintenance(record.id);
-            message.success('已解除维护模式');
-            actionRef.current?.reload();
-            if (currentRow?.id === record.id) {
-                const data = await getCMDBItem(record.id);
-                setCurrentRow(data);
-            }
-        } catch { /* 错误消息由全局错误处理器显示 */ }
-    };
+            message.success('已退出维护模式');
+            triggerRefresh();
+        } catch { message.error('操作失败'); }
+    }, [triggerRefresh]);
 
-    // 批量维护模式
-    const handleOpenBatchDisable = () => {
-        if (selectedRowKeys.length === 0) { message.warning('请选择配置项'); return; }
-        setBatchDisableReason('');
-        setBatchMaintenanceEndAt('');
-        setBatchDisableModalOpen(true);
-    };
-
-    const handleBatchDisable = async () => {
-        if (!batchDisableReason.trim()) { message.warning('请输入原因'); return; }
-        setDisabling(true);
+    const handleBatchResume = useCallback(async () => {
+        const ids = selectedRows.filter(r => r.status === 'maintenance').map(r => r.id);
+        if (ids.length === 0) { message.warning('没有处于维护模式的主机'); return; }
         try {
-            const result = await batchEnterMaintenance(selectedRowKeys as string[], batchDisableReason, batchMaintenanceEndAt || undefined);
-            message.success(`已完成：成功 ${result.success}，失败 ${result.failed}`);
-            setBatchDisableModalOpen(false);
-            setBatchDisableReason('');
-            setBatchMaintenanceEndAt('');
-            setSelectedRowKeys([]);
-            actionRef.current?.reload();
-        } catch { /* 错误消息由全局错误处理器显示 */ }
-        finally { setDisabling(false); }
-    };
+            await batchResumeFromMaintenance(ids);
+            message.success(`批量恢复成功 (${ids.length} 台)`);
+            setSelectedRowMap(new Map());
+            triggerRefresh();
+        } catch { message.error('操作失败'); }
+    }, [selectedRows, triggerRefresh]);
 
-    const handleBatchEnable = async () => {
-        if (selectedRowKeys.length === 0) { message.warning('请选择配置项'); return; }
-        try {
-            const result = await batchResumeFromMaintenance(selectedRowKeys as string[]);
-            message.success(`已完成：成功 ${result.success}，失败 ${result.failed}`);
-            setSelectedRowKeys([]);
-            actionRef.current?.reload();
-        } catch { /* 错误消息由全局错误处理器显示 */ }
-    };
-
-    // 表格列
-    const columns: ProColumns<AutoHealing.CMDBItem>[] = [
+    /* ========== 列定义 (memoized) ========== */
+    const columns = useMemo<StandardColumnDef<AutoHealing.CMDBItem>[]>(() => [
         {
-            title: '主机',
+            columnKey: 'name',
+            columnTitle: '名称',
+            fixedColumn: true,
             dataIndex: 'name',
-            width: 280,
-            render: (_, r) => {
-                const typeInfo = getTypeInfo(r.type);
-                const statusInfo = getStatusInfo(r.status);
-                const isInMaintenance = r.status === 'maintenance';
+            width: 160,
+            sorter: true,
+            render: (_: any, record: AutoHealing.CMDBItem) => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <a
+                        style={{ fontWeight: 500, color: '#1677ff', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); openDetail(record); }}
+                    >
+                        {record.name || record.hostname}
+                    </a>
+                    <span style={{ fontSize: 11, fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', monospace", color: '#8590a6', letterSpacing: '0.02em' }}>
+                        {record.ip_address}
+                    </span>
+                </div>
+            ),
+        },
+        {
+            columnKey: 'hostname',
+            columnTitle: '主机名',
+            dataIndex: 'hostname',
+            width: 150,
+            ellipsis: true,
+            defaultVisible: false,
+            render: (_: any, record: AutoHealing.CMDBItem) => record.hostname || <Text type="secondary">-</Text>,
+        },
+        {
+            columnKey: 'type',
+            columnTitle: '类型',
+            dataIndex: 'type',
+            width: 60,
+            sorter: true,
+            headerFilters: Object.entries(TYPE_MAP).map(([v, t]) => ({ label: t.text, value: v })),
+            render: (_: any, record: AutoHealing.CMDBItem) => {
+                const info = TYPE_MAP[record.type] || { text: record.type, icon: <CloudServerOutlined />, color: '#8c8c8c' };
                 return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{
-                            width: 40, height: 40, borderRadius: 8,
-                            background: isInMaintenance ? '#f5f5f5' : `${typeInfo.color}15`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: isInMaintenance ? '#bfbfbf' : typeInfo.color, fontSize: 18,
-                        }}>
-                            {isInMaintenance ? <StopOutlined /> : typeInfo.icon}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Text strong style={{ fontSize: 14, color: isInMaintenance ? '#bfbfbf' : undefined }}>{r.name}</Text>
-                                {isInMaintenance ? (
-                                    <Tooltip title={`维护中: ${r.maintenance_reason || '-'}`}>
-                                        <Badge status="default" text={<Text type="secondary" style={{ fontSize: 12 }}>维护中</Text>} />
-                                    </Tooltip>
-                                ) : (
-                                    <Badge status={statusInfo.badge} />
-                                )}
-                            </div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>{r.ip_address}</Text>
-                        </div>
-                    </div>
+                    <Tooltip title={info.text}>
+                        <span style={{ fontSize: 16, color: info.color }}>{info.icon}</span>
+                    </Tooltip>
                 );
             },
         },
         {
-            title: '环境',
-            dataIndex: 'environment',
-            width: 80,
-            valueEnum: { production: { text: '生产' }, staging: { text: '预发' }, development: { text: '开发' }, test: { text: '测试' } },
-            render: (_, r) => {
-                const info = getEnvInfo(r.environment);
-                return <Text strong style={{ color: info.color }}>{info.text}</Text>;
+            columnKey: 'status',
+            columnTitle: '状态',
+            dataIndex: 'status',
+            width: 90,
+            sorter: true,
+            headerFilters: Object.entries(STATUS_MAP).map(([v, s]) => ({ label: s.text, value: v })),
+            render: (_: any, record: AutoHealing.CMDBItem) => {
+                const info = STATUS_MAP[record.status] || { text: record.status, badge: 'default' as const };
+                return <Badge status={info.badge} text={info.text} />;
             },
         },
         {
-            title: '类型',
-            dataIndex: 'type',
-            hideInTable: true,
-            valueEnum: { server: { text: '服务器' }, application: { text: '应用' }, network: { text: '网络' }, database: { text: '数据库' } },
+            columnKey: 'environment',
+            columnTitle: '环境',
+            dataIndex: 'environment',
+            width: 80,
+            sorter: true,
+            headerFilters: Object.entries(ENV_MAP).map(([v, e]) => ({ label: e.text, value: v })),
+            render: (_: any, record: AutoHealing.CMDBItem) => {
+                const info = ENV_MAP[record.environment] || { text: record.environment, color: 'default' };
+                return <Tag color={info.color} style={{ margin: 0 }}>{info.text}</Tag>;
+            },
         },
         {
-            title: '状态',
-            dataIndex: 'status',
-            hideInTable: true,
-            valueEnum: { active: { text: '活跃' }, offline: { text: '离线' }, maintenance: { text: '维护' } },
-        },
-        {
-            title: '来源插件',
-            dataIndex: 'source_plugin_name',
-            hideInTable: true,
-            fieldProps: { placeholder: '输入插件名称' },
-        },
-        {
-            title: '关联状态',
-            dataIndex: 'has_plugin',
-            valueType: 'select',
-            hideInTable: true,
-            valueEnum: { true: { text: '有关联插件' }, false: { text: '插件已删除' } },
-            fieldProps: { allowClear: true },
-        },
-        {
-            title: '操作系统',
+            columnKey: 'os',
+            columnTitle: 'OS',
             dataIndex: 'os',
-            width: 140,
-            hideInSearch: true,
-            render: (_, r) => (
-                <Space size={6}>
-                    {getOSIcon(r.os)}
-                    <Text>{r.os || '-'}</Text>
-                </Space>
-            ),
+            width: 60,
+            sorter: true,
+            render: (_: any, record: AutoHealing.CMDBItem) => {
+                if (!record.os) return <Text type="secondary">-</Text>;
+                return (
+                    <Tooltip title={record.os}>
+                        <span style={{ fontSize: 16 }}>{getOSIcon(record.os)}</span>
+                    </Tooltip>
+                );
+            },
         },
         {
-            title: '负责人',
+            columnKey: 'spec',
+            columnTitle: 'CPU / 内存',
+            width: 130,
+            render: (_: any, record: AutoHealing.CMDBItem) => {
+                if (!record.cpu && !record.memory) return <Text type="secondary">-</Text>;
+                return <Text style={{ fontSize: 12, fontFamily: 'monospace' }}>{record.cpu || '-'} / {record.memory || '-'}</Text>;
+            },
+        },
+        {
+            columnKey: 'owner',
+            columnTitle: '负责人',
             dataIndex: 'owner',
             width: 100,
-            hideInSearch: true,
+            sorter: true,
             ellipsis: true,
+            defaultVisible: false,
+            render: (_: any, record: AutoHealing.CMDBItem) => record.owner || <Text type="secondary">-</Text>,
         },
         {
-            title: '来源',
+            columnKey: 'department',
+            columnTitle: '部门',
+            dataIndex: 'department',
+            width: 100,
+            sorter: true,
+            ellipsis: true,
+            defaultVisible: false,
+            render: (_: any, record: AutoHealing.CMDBItem) => record.department || <Text type="secondary">-</Text>,
+        },
+        {
+            columnKey: 'source',
+            columnTitle: '来源',
             dataIndex: 'source_plugin_name',
-            width: 120,
-            hideInSearch: true,
-            ellipsis: true,
-            render: (_, r) => <Text type="secondary">{r.source_plugin_name || '-'}</Text>,
+            width: 100,
+            sorter: true,
+            render: (_: any, record: AutoHealing.CMDBItem) =>
+                record.source_plugin_name
+                    ? <Tag style={{ margin: 0 }}>{record.source_plugin_name}</Tag>
+                    : <Text type="secondary" style={{ fontSize: 12 }}>手动</Text>,
         },
         {
-            title: '操作',
-            valueType: 'option',
-            width: 120,
-            fixed: 'right',
-            render: (_, r) => (
-                <Space size={0}>
-                    <Tooltip title="详情"><Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(r)} /></Tooltip>
-                    <Tooltip title="测试密钥"><Button type="link" size="small" icon={<ApiOutlined />} onClick={() => handleOpenSingleTest(r)} /></Tooltip>
-                    {r.status === 'maintenance' && (
-                        <Tooltip title="恢复正常"><Button type="link" size="small" icon={<PlayCircleOutlined style={{ color: '#52c41a' }} />} onClick={() => handleEnable(r)} /></Tooltip>
-                    )}
-                    {r.status === 'active' && (
-                        <Tooltip title="进入维护"><Button type="link" size="small" icon={<ToolOutlined style={{ color: '#faad14' }} />} onClick={() => handleOpenDisable(r)} /></Tooltip>
+            columnKey: 'updated_at',
+            columnTitle: '更新时间',
+            dataIndex: 'updated_at',
+            width: 170,
+            sorter: true,
+            render: (_: any, record: AutoHealing.CMDBItem) =>
+                record.updated_at ? dayjs(record.updated_at).format('YYYY-MM-DD HH:mm:ss') : '-',
+        },
+        {
+            columnKey: 'actions',
+            columnTitle: '操作',
+            fixedColumn: true,
+            width: 140,
+            render: (_: any, record: AutoHealing.CMDBItem) => (
+                <Space size="small">
+                    <Tooltip title="密钥测试">
+                        <Button
+                            type="link" size="small" icon={<ApiOutlined />}
+                            onClick={(e) => { e.stopPropagation(); handleOpenTestModal(record); }}
+                        />
+                    </Tooltip>
+                    {record.status === 'maintenance' ? (
+                        <Tooltip title="退出维护">
+                            <Button
+                                type="link" size="small" icon={<CheckCircleOutlined />}
+                                style={{ color: '#52c41a' }}
+                                onClick={(e) => { e.stopPropagation(); handleResumeMaintenance(record); }}
+                            />
+                        </Tooltip>
+                    ) : (
+                        <Tooltip title="进入维护">
+                            <Button
+                                type="link" size="small" icon={<ToolOutlined />}
+                                style={{ color: '#faad14' }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMaintenanceTarget(record);
+                                    setMaintenanceModalOpen(true);
+                                }}
+                            />
+                        </Tooltip>
                     )}
                 </Space>
             ),
         },
-    ];
+    ], [openDetail, handleOpenTestModal, handleResumeMaintenance]);
 
-    const renderStats = () => (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={6}>
-                <Card size="small">
-                    <Statistic title="总数" value={stats.total} prefix={<CloudServerOutlined style={{ color: '#1890ff', marginRight: 8 }} />} valueStyle={{ color: '#1890ff' }} />
-                </Card>
-            </Col>
-            <Col span={6}>
-                <Card size="small">
-                    <Statistic title="活跃" value={stats.active} prefix={<CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />} valueStyle={{ color: '#52c41a' }} />
-                </Card>
-            </Col>
-            <Col span={6}>
-                <Card size="small">
-                    <Statistic title="维护" value={stats.maintenance} prefix={<ToolOutlined style={{ color: '#faad14', marginRight: 8 }} />} valueStyle={{ color: '#faad14' }} />
-                </Card>
-            </Col>
-            <Col span={6}>
-                <Card size="small">
-                    <Statistic title="离线" value={stats.offline} prefix={<CloseCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />} valueStyle={{ color: '#ff4d4f' }} />
-                </Card>
-            </Col>
-            <Col span={12} style={{ marginTop: 16 }}>
-                <Card size="small" title="类型分布">
-                    <Space wrap>
-                        {Object.entries(stats.byType).map(([type, count]) => (
-                            <Text key={type}>{getTypeInfo(type).text}: <Text strong style={{ color: getTypeInfo(type).color }}>{count}</Text></Text>
-                        ))}
-                    </Space>
-                </Card>
-            </Col>
-            <Col span={12} style={{ marginTop: 16 }}>
-                <Card size="small" title="环境分布">
-                    <Space wrap>
-                        {Object.entries(stats.byEnv).map(([env, count]) => (
-                            <Text key={env}>{getEnvInfo(env).text}: <Text strong style={{ color: getEnvInfo(env).color }}>{count}</Text></Text>
-                        ))}
-                    </Space>
-                </Card>
-            </Col>
-        </Row>
-    );
+    /* ========== 数据请求 ========== */
+    const handleRequest = useCallback(async (params: {
+        page: number;
+        pageSize: number;
+        searchField?: string;
+        searchValue?: string;
+        advancedSearch?: Record<string, any>;
+        sorter?: { field: string; order: 'ascend' | 'descend' };
+    }) => {
+        const apiParams: Record<string, any> = {
+            page: params.page,
+            page_size: params.pageSize,
+        };
 
-    const renderDrawer = () => {
-        if (!currentRow) return null;
-        const typeInfo = getTypeInfo(currentRow.type);
-        const statusInfo = getStatusInfo(currentRow.status);
-        const envInfo = getEnvInfo(currentRow.environment);
+        // 简单搜索
+        if (params.searchValue) {
+            const field = params.searchField || 'keyword';
+            if (field === 'ip_address') {
+                apiParams.ip_address = params.searchValue;
+            } else if (field === 'hostname') {
+                apiParams.hostname = params.searchValue;
+            } else {
+                apiParams.keyword = params.searchValue;
+            }
+        }
+
+        // 高级搜索
+        if (params.advancedSearch) {
+            const adv = params.advancedSearch;
+            if (adv.keyword) apiParams.keyword = adv.keyword;
+            if (adv.type) apiParams.type = adv.type;
+            if (adv.status) apiParams.status = adv.status;
+            if (adv.environment) apiParams.environment = adv.environment;
+            if (adv.source_plugin_name) apiParams.source_plugin_name = adv.source_plugin_name;
+        }
+
+        // 排序
+        if (params.sorter?.field) {
+            apiParams.sort_by = params.sorter.field;
+            apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
+        }
+
+        const res = await getCMDBItems(apiParams);
+        const items = (res as any)?.data || [];
+        const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? 0;
+
+        totalCountRef.current = total;
+        // 异步刷新统计，不阻塞表格渲染
+        loadStats();
+        return { data: items, total };
+    }, [loadStats]);
+
+    /* ========== 统计卡片 (memoized) ========== */
+    const statsBar = useMemo(() => {
+        if (!stats) return null;
+        const activeCount = stats.by_status?.find(s => s.status === 'active')?.count ?? 0;
+        const inactiveCount = stats.by_status?.find(s => s.status === 'inactive')?.count ?? 0;
+        const maintenanceCount = stats.by_status?.find(s => s.status === 'maintenance')?.count ?? 0;
         return (
-            <Drawer title={currentRow.name} width={600} open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-                {/* 维护状态提示 */}
-                {currentRow.status === 'maintenance' && (
-                    <Alert
-                        type="warning"
-                        showIcon
-                        icon={<StopOutlined />}
-                        message="此主机正在维护中"
-                        description={
-                            <div>
-                                <div>原因：{currentRow.maintenance_reason || '-'}</div>
-                                <div>开始时间：{currentRow.maintenance_start_at ? new Date(currentRow.maintenance_start_at).toLocaleString() : '-'}</div>
-                                <div>计划结束：{currentRow.maintenance_end_at ? new Date(currentRow.maintenance_end_at).toLocaleString() : '永久维护'}</div>
-                                <Button type="primary" size="small" icon={<PlayCircleOutlined />} style={{ marginTop: 8 }} onClick={() => handleEnable(currentRow)}>
-                                    恢复正常
-                                </Button>
-                            </div>
-                        }
-                        style={{ marginBottom: 16 }}
-                    />
-                )}
-
-                <Card size="small" style={{ marginBottom: 16 }}>
-                    <Row gutter={[24, 16]}>
-                        <Col span={12}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>IP 地址</Text>
-                            <div><Text strong copyable style={{ fontSize: 15 }}>{currentRow.ip_address}</Text></div>
-                        </Col>
-                        <Col span={12}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>主机名</Text>
-                            <div><Text strong style={{ fontSize: 15 }}>{currentRow.hostname || '-'}</Text></div>
-                        </Col>
-                        <Col span={8}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>类型</Text>
-                            <div><Space size={4}>{typeInfo.icon}<Text strong style={{ color: typeInfo.color }}>{typeInfo.text}</Text></Space></div>
-                        </Col>
-                        <Col span={8}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>状态</Text>
-                            <div><Badge status={statusInfo.badge} text={<Text strong style={{ color: statusInfo.color }}>{statusInfo.text}</Text>} /></div>
-                        </Col>
-                        <Col span={8}>
-                            <Text type="secondary" style={{ fontSize: 12 }}>环境</Text>
-                            <div><Text strong style={{ color: envInfo.color }}>{envInfo.text}</Text></div>
-                        </Col>
-                    </Row>
-                </Card>
-                <Tabs
-                    activeKey={activeTabKey}
-                    onChange={(key) => {
-                        setActiveTabKey(key);
-                        if (key === 'logs' && currentRow && maintenanceLogs.length === 0 && !logsLoading) {
-                            loadMaintenanceLogs(currentRow.id);
-                        }
-                    }}
-                    items={[
-                        {
-                            key: 'basic', label: '基本信息', children: (
-                                <Descriptions column={2} size="small" bordered>
-                                    <Descriptions.Item label="负责人">{currentRow.owner || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="位置">{currentRow.location || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="部门">{currentRow.department || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="来源">{currentRow.source_plugin_name || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="外部 ID" span={2}><Text copyable style={{ fontSize: 12 }}>{currentRow.external_id}</Text></Descriptions.Item>
-                                    <Descriptions.Item label="创建时间">{new Date(currentRow.created_at).toLocaleString()}</Descriptions.Item>
-                                    <Descriptions.Item label="更新时间">{new Date(currentRow.updated_at).toLocaleString()}</Descriptions.Item>
-                                </Descriptions>
-                            )
-                        },
-                        {
-                            key: 'hw', label: '硬件', children: (
-                                <Descriptions column={2} size="small" bordered>
-                                    <Descriptions.Item label="操作系统" span={2}><Space>{getOSIcon(currentRow.os)}{currentRow.os} {currentRow.os_version}</Space></Descriptions.Item>
-                                    <Descriptions.Item label="CPU" span={2}>{currentRow.cpu || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="内存">{currentRow.memory || '-'}</Descriptions.Item>
-                                    <Descriptions.Item label="磁盘">{currentRow.disk || '-'}</Descriptions.Item>
-                                </Descriptions>
-                            )
-                        },
-                        {
-                            key: 'logs', label: '维护日志', children: logsLoading ? (
-                                <div style={{ textAlign: 'center', padding: 40 }}>
-                                    <Text type="secondary">加载中...</Text>
-                                </div>
-                            ) : maintenanceLogs.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: 40 }}>
-                                    <Text type="secondary">暂无维护日志</Text>
-                                </div>
-                            ) : (
-                                <div style={{ flex: 1, overflow: 'auto' }}>
-                                    {maintenanceLogs.map((log) => (
-                                        <Card key={log.id} size="small" style={{ marginBottom: 8 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <Space>
-                                                    {log.action === 'enter' ? (
-                                                        <Badge status="warning" text={<Text strong>进入维护</Text>} />
-                                                    ) : (
-                                                        <Badge status="success" text={<Text strong>恢复正常</Text>} />
-                                                    )}
-                                                    <Text type="secondary">操作人: {log.operator}</Text>
-                                                </Space>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                                    {new Date(log.created_at).toLocaleString()}
-                                                </Text>
-                                            </div>
-                                            {log.reason && <div style={{ marginTop: 8 }}><Text type="secondary">原因: </Text>{log.reason}</div>}
-                                            {log.scheduled_end_at && (
-                                                <div><Text type="secondary">计划结束: </Text>{new Date(log.scheduled_end_at).toLocaleString()}</div>
-                                            )}
-                                            {log.actual_end_at && (
-                                                <div><Text type="secondary">实际结束: </Text>{new Date(log.actual_end_at).toLocaleString()} ({log.exit_type === 'auto' ? '自动' : '手动'})</div>
-                                            )}
-                                        </Card>
-                                    ))}
-                                </div>
-                            )
-                        },
-                        {
-                            key: 'raw', label: '原始数据', children: currentRow.raw_data ? (
-                                <pre style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 12, margin: 0 }}>
-                                    {JSON.stringify(currentRow.raw_data, null, 2)}
-                                </pre>
-                            ) : <Text type="secondary">无原始数据</Text>
-                        },
-                    ]} />
-            </Drawer>
+            <div className="cmdb-stats-bar">
+                <div className="cmdb-stat-item">
+                    <CloudServerOutlined className="cmdb-stat-icon cmdb-stat-icon-total" />
+                    <div className="cmdb-stat-content">
+                        <div className="cmdb-stat-value">{stats.total}</div>
+                        <div className="cmdb-stat-label">总资产</div>
+                    </div>
+                </div>
+                <div className="cmdb-stat-divider" />
+                <div className="cmdb-stat-item">
+                    <CheckCircleOutlined className="cmdb-stat-icon cmdb-stat-icon-active" />
+                    <div className="cmdb-stat-content">
+                        <div className="cmdb-stat-value">{activeCount}</div>
+                        <div className="cmdb-stat-label">活跃</div>
+                    </div>
+                </div>
+                <div className="cmdb-stat-divider" />
+                <div className="cmdb-stat-item">
+                    <CloseCircleOutlined className="cmdb-stat-icon cmdb-stat-icon-offline" />
+                    <div className="cmdb-stat-content">
+                        <div className="cmdb-stat-value">{inactiveCount}</div>
+                        <div className="cmdb-stat-label">离线</div>
+                    </div>
+                </div>
+                <div className="cmdb-stat-divider" />
+                <div className="cmdb-stat-item">
+                    <ToolOutlined className="cmdb-stat-icon cmdb-stat-icon-maintenance" />
+                    <div className="cmdb-stat-content">
+                        <div className="cmdb-stat-value">{maintenanceCount}</div>
+                        <div className="cmdb-stat-label">维护</div>
+                    </div>
+                </div>
+            </div>
         );
-    };
+    }, [stats]);
+
+    /* ========== 全选所有 ========== */
+    const handleSelectAll = useCallback(async () => {
+        try {
+            const res = await getCMDBItems({ page: 1, page_size: 9999 });
+            const items: AutoHealing.CMDBItem[] = (res as any)?.data || [];
+            const newMap = new Map<string, AutoHealing.CMDBItem>();
+            items.forEach(item => newMap.set(item.id, item));
+            setSelectedRowMap(newMap);
+            message.success(`已全选 ${items.length} 项`);
+        } catch { message.error('全选失败'); }
+    }, []);
+
+    /* ========== 批量操作栏 (memoized) ========== */
+    const batchToolbar = useMemo(() => {
+        if (selectedRows.length === 0) return null;
+        return (
+            <div className="cmdb-batch-bar" style={{ gap: 6 }}>
+                <span style={{ fontSize: 13, color: '#1677ff', fontWeight: 500 }}>已选 {selectedRows.length} 项</span>
+                <Button type="link" style={{ padding: 0, fontWeight: 500 }}
+                    onClick={handleSelectAll}>
+                    全选所有
+                </Button>
+                <Button size="small" icon={<ApiOutlined />}
+                    onClick={() => handleOpenTestModal(null)}>
+                    测试密钥
+                </Button>
+                <Button size="small" icon={<ToolOutlined />}
+                    onClick={() => { setMaintenanceTarget(null); setMaintenanceModalOpen(true); }}
+                    style={{ borderColor: '#faad14', color: '#faad14' }}>
+                    维护
+                </Button>
+                <Button size="small" icon={<CheckCircleOutlined />}
+                    onClick={handleBatchResume}
+                    style={{ borderColor: '#52c41a', color: '#52c41a' }}>
+                    恢复
+                </Button>
+                <Button type="link" style={{ color: '#8c8c8c' }}
+                    onClick={() => setSelectedRowMap(new Map())}>
+                    取消选择
+                </Button>
+            </div>
+        );
+    }, [selectedRows.length, handleSelectAll, handleOpenTestModal, handleBatchResume]);
 
     return (
-        <PageContainer
-            ghost
-            header={{ title: <><CloudServerOutlined /> 资产管理 / CMDB</> }}
-            content={
-                <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                    <InfoCircleOutlined style={{ marginRight: 8 }} />
-                    资产管理展示从 CMDB 同步的主机信息。处于<Text strong>维护模式</Text>的主机在自愈流程中会被跳过，适用于临时停机维护等场景。
-                </Paragraph>
-            }
-        >
-            {renderStats()}
-            <ProTable<AutoHealing.CMDBItem>
-                headerTitle="配置项列表"
-                actionRef={actionRef}
-                rowKey="id"
-                scroll={{ x: 900 }}
-                search={{ labelWidth: 80 }}
-                rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-                tableAlertOptionRender={() => (
-                    <Space>
-                        <Button type="primary" size="small" icon={<ApiOutlined />} onClick={handleOpenBatchTest} loading={testing}>
-                            批量测密钥 ({selectedRowKeys.length})
-                        </Button>
-                        <Button size="small" icon={<ToolOutlined />} onClick={handleOpenBatchDisable}>
-                            批量维护
-                        </Button>
-                        <Button size="small" icon={<PlayCircleOutlined />} onClick={handleBatchEnable}>
-                            批量解除
-                        </Button>
-                    </Space>
-                )}
-                toolBarRender={() => [
-                    <Button key="refresh" icon={<ReloadOutlined />} onClick={() => actionRef.current?.reload()}>刷新</Button>,
-                ]}
-                options={{ reload: false }}
-                request={async (params) => {
-                    const res = await getCMDBItems({
-                        page: params.current,
-                        page_size: params.pageSize,
-                        type: params.type,
-                        status: params.status,
-                        environment: params.environment,
-                        source_plugin_name: params.source_plugin_name,
-                        has_plugin: params.has_plugin,
-                    });
-                    loadStats();
-                    return { data: res.data || [], success: true, total: res.pagination?.total || res.total || 0 };
-                }}
+        <>
+            <StandardTable<AutoHealing.CMDBItem>
+                refreshTrigger={refreshTrigger}
+                tabs={[{ key: 'list', label: '资产列表' }]}
+                title="资产管理"
+                description="管理和监控所有 IT 基础设施资产，支持 SSH 连接测试、维护模式切换和批量操作。"
+                headerIcon={headerIcon}
+                headerExtra={statsBar}
+                searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
+                extraToolbarActions={batchToolbar}
                 columns={columns}
-                pagination={{
-                    defaultPageSize: 16,
-                    showSizeChanger: true,
-                    pageSizeOptions: ['16', '32', '64'],
-                    showQuickJumper: true,
-                    showTotal: (total) => `共 ${total} 条`,
-                    size: 'default',
+                rowKey="id"
+                onRowClick={openDetail}
+                rowSelection={{
+                    selectedRowKeys: Array.from(selectedRowMap.keys()),
+                    preserveSelectedRowKeys: true,
+                    onChange: (keys: React.Key[], rows: AutoHealing.CMDBItem[]) => {
+                        const validRows = rows.filter(Boolean);
+                        const keySet = new Set(keys.map(String));
+                        setSelectedRowMap(prev => {
+                            const next = new Map<string, AutoHealing.CMDBItem>();
+                            // 保留仍在 keys 中的旧选中项
+                            for (const [id, item] of prev) {
+                                if (keySet.has(id)) next.set(id, item);
+                            }
+                            // 加入当前页新选中的
+                            for (const row of validRows) {
+                                if (row?.id && keySet.has(row.id)) next.set(row.id, row);
+                            }
+                            return next;
+                        });
+                    },
                 }}
+                request={handleRequest}
+                defaultPageSize={20}
+                preferenceKey="cmdb_assets_v2"
             />
-            {renderDrawer()}
 
-            {/* 密钥源选择弹窗 */}
-            <Modal
-                title={singleTestTarget ? `测试密钥 - ${singleTestTarget.name}` : `批量测密钥 (${selectedRowKeys.length})`}
-                open={selectSourceModalOpen}
-                onCancel={() => setSelectSourceModalOpen(false)}
-                onOk={handleRunTest}
-                okText="开始测试"
-                okButtonProps={{ disabled: !selectedSecretsSource, loading: testing }}
+            {/* ====== 详情 Drawer ====== */}
+            <Drawer
+                title={null}
+                width={560}
+                open={drawerOpen}
+                onClose={() => { setDrawerOpen(false); setCurrentRow(null); setMaintenanceLogs([]); }}
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }}
+                loading={detailLoading}
+                destroyOnClose
             >
-                <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>请选择 SSH 密钥源：</Text>
-                <Select
-                    placeholder="搜索或选择密钥源"
-                    style={{ width: '100%' }}
-                    value={selectedSecretsSource}
-                    onChange={setSelectedSecretsSource}
-                    showSearch
-                    allowClear
-                    optionFilterProp="label"
-                    filterOption={(input, option) =>
-                        (option?.label?.toString() || '').toLowerCase().includes(input.toLowerCase())
-                    }
-                    options={[
-                        { label: 'SSH 密钥', options: secretsSources.filter(s => s.auth_type === 'ssh_key').map(s => ({ label: s.name, value: s.id })) },
-                        { label: '密码认证', options: secretsSources.filter(s => s.auth_type === 'password').map(s => ({ label: s.name, value: s.id })) },
-                    ].filter(g => g.options.length > 0)}
-                />
-            </Modal>
-
-            {/* 测试结果弹窗 */}
-            <Modal
-                title="测试结果"
-                open={testResultModalOpen}
-                onCancel={() => { setTestResultModalOpen(false); setTestResults(null); }}
-                footer={<Button onClick={() => { setTestResultModalOpen(false); setTestResults(null); }}>关闭</Button>}
-                width={550}
-            >
-                {testing && !testResults && (
-                    <div style={{ textAlign: 'center', padding: 40 }}>
-                        <ApiOutlined spin style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-                        <div><Text type="secondary">正在测试 {selectedRowKeys.length} 台主机的密钥连接...</Text></div>
-                        <div><Text type="secondary" style={{ fontSize: 12 }}>请稍候，这可能需要一些时间</Text></div>
-                    </div>
-                )}
-                {testResults && (
+                {currentRow && (
                     <>
-                        <Row gutter={12} style={{ marginBottom: 12 }}>
-                            <Col span={8}><Card size="small"><Statistic title="总数" value={testResults.total} /></Card></Col>
-                            <Col span={8}><Card size="small"><Statistic title="成功" value={testResults.success} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-                            <Col span={8}><Card size="small"><Statistic title="失败" value={testResults.failed} valueStyle={{ color: '#ff4d4f' }} /></Card></Col>
-                        </Row>
-                        <Progress percent={Math.round((testResults.success / testResults.total) * 100)} status={testResults.failed > 0 ? 'exception' : 'success'} />
-                        <div style={{ maxHeight: 250, overflow: 'auto', marginTop: 12 }}>
-                            {testResults.results.map((r, i) => (
-                                <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' }}>
-                                    <Space>
-                                        {r.success ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <CloseCircleOutlined style={{ color: '#ff4d4f' }} />}
-                                        <Text strong>{r.host}</Text>
-                                    </Space>
-                                    <Text type="secondary">{r.latency_ms ? `${r.latency_ms}ms` : r.message}</Text>
+                        {/* 头部 */}
+                        <div className="cmdb-detail-header">
+                            <div className="cmdb-detail-header-top">
+                                <div className="cmdb-detail-header-icon">
+                                    {(TYPE_MAP[currentRow.type] || { icon: <CloudServerOutlined /> }).icon}
                                 </div>
-                            ))}
+                                <div className="cmdb-detail-header-info">
+                                    <div className="cmdb-detail-title">{currentRow.name}</div>
+                                    <div className="cmdb-detail-sub">{currentRow.ip_address}</div>
+                                </div>
+                                <Badge
+                                    status={(STATUS_MAP[currentRow.status] || { badge: 'default' as const }).badge}
+                                    text={(STATUS_MAP[currentRow.status] || { text: currentRow.status }).text}
+                                />
+                            </div>
+                            <Space size={8}>
+                                <Button size="small" icon={<ApiOutlined />} onClick={() => handleOpenTestModal(currentRow)}>
+                                    密钥测试
+                                </Button>
+                                {currentRow.status === 'maintenance' ? (
+                                    <Button
+                                        size="small" icon={<CheckCircleOutlined />}
+                                        onClick={async () => {
+                                            await handleResumeMaintenance(currentRow);
+                                            setDrawerOpen(false);
+                                        }}
+                                    >
+                                        退出维护
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        size="small" icon={<ToolOutlined />}
+                                        onClick={() => { setMaintenanceTarget(currentRow); setMaintenanceModalOpen(true); }}
+                                    >
+                                        进入维护
+                                    </Button>
+                                )}
+                            </Space>
+                        </div>
+
+                        {/* 维护模式警告 */}
+                        {currentRow.status === 'maintenance' && (
+                            <Alert
+                                type="warning" showIcon icon={<ToolOutlined />}
+                                message="维护模式"
+                                description={
+                                    <div>
+                                        <div>原因：{currentRow.maintenance_reason || '-'}</div>
+                                        {currentRow.maintenance_end_at && <div>计划结束：{dayjs(currentRow.maintenance_end_at).format('YYYY-MM-DD HH:mm')}</div>}
+                                    </div>
+                                }
+                                style={{ margin: '16px 24px 0', borderRadius: 0 }}
+                            />
+                        )}
+
+                        {/* 详细信息 */}
+                        <div className="cmdb-detail-body">
+                            {/* 基本信息 */}
+                            <div className="cmdb-detail-section">
+                                <div className="cmdb-detail-section-title">基本信息</div>
+                                <div className="cmdb-detail-grid">
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">名称</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.name}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">主机名</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.hostname || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">IP 地址</Text>
+                                        <Text copyable className="cmdb-detail-field-value" style={{ fontFamily: 'monospace' }}>{currentRow.ip_address}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">类型</Text>
+                                        <Tag color={(TYPE_MAP[currentRow.type] || { color: 'default' }).color}>
+                                            {(TYPE_MAP[currentRow.type] || { text: currentRow.type }).text}
+                                        </Tag>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">环境</Text>
+                                        <Tag color={(ENV_MAP[currentRow.environment] || { color: 'default' }).color}>
+                                            {(ENV_MAP[currentRow.environment] || { text: currentRow.environment }).text}
+                                        </Tag>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">负责人</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.owner || '—'}</Text>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Divider style={{ margin: '12px 0' }} />
+
+                            {/* 硬件信息 */}
+                            <div className="cmdb-detail-section">
+                                <div className="cmdb-detail-section-title">硬件 / 系统</div>
+                                <div className="cmdb-detail-grid">
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">操作系统</Text>
+                                        <Space size={4}>
+                                            {getOSIcon(currentRow.os)}
+                                            <Text className="cmdb-detail-field-value">{currentRow.os || '—'}</Text>
+                                        </Space>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">系统版本</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.os_version || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">CPU</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.cpu || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">内存</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.memory || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">磁盘</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.disk || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">位置</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.location || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">厂商</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.manufacturer || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">型号</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.model || '—'}</Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">序列号</Text>
+                                        <Text copyable className="cmdb-detail-field-value" style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                                            {currentRow.serial_number || '—'}
+                                        </Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">部门</Text>
+                                        <Text className="cmdb-detail-field-value">{currentRow.department || '—'}</Text>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Divider style={{ margin: '12px 0' }} />
+
+                            {/* 来源 & 时间 */}
+                            <div className="cmdb-detail-section">
+                                <div className="cmdb-detail-section-title">来源 / 时间</div>
+                                <div className="cmdb-detail-grid">
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">数据来源</Text>
+                                        <Text className="cmdb-detail-field-value">
+                                            {currentRow.source_plugin_name || '手动录入'}
+                                        </Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">外部 ID</Text>
+                                        <Text className="cmdb-detail-field-value" style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                                            {currentRow.external_id || '—'}
+                                        </Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">创建时间</Text>
+                                        <Text style={{ fontSize: 13 }}>
+                                            {currentRow.created_at ? dayjs(currentRow.created_at).format('YYYY-MM-DD HH:mm') : '—'}
+                                        </Text>
+                                    </div>
+                                    <div>
+                                        <Text className="cmdb-detail-field-label">更新时间</Text>
+                                        <Text style={{ fontSize: 13 }}>
+                                            {currentRow.updated_at ? dayjs(currentRow.updated_at).format('YYYY-MM-DD HH:mm') : '—'}
+                                        </Text>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 维护日志 */}
+                            {maintenanceLogs.length > 0 && (
+                                <>
+                                    <Divider style={{ margin: '12px 0' }} />
+                                    <div className="cmdb-detail-section">
+                                        <div className="cmdb-detail-section-title">维护日志</div>
+                                        <div className="cmdb-maintenance-log">
+                                            {maintenanceLogs.map(log => (
+                                                <div key={log.id} className="cmdb-maintenance-log-item">
+                                                    <Tag color={log.action === 'enter' ? 'orange' : 'green'} style={{ margin: 0 }}>
+                                                        {log.action === 'enter' ? '进入' : '退出'}
+                                                    </Tag>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: 13 }}>{log.reason || '—'}</div>
+                                                        <Text type="secondary" style={{ fontSize: 11 }}>
+                                                            {log.operator} · {dayjs(log.created_at).format('YYYY-MM-DD HH:mm')}
+                                                        </Text>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* 资产 ID */}
+                            <div style={{ paddingTop: 12, borderTop: '1px solid #f0f0f0', marginTop: 12 }}>
+                                <Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>
+                                    ID: {currentRow.id}
+                                </Text>
+                            </div>
                         </div>
                     </>
                 )}
-            </Modal>
+            </Drawer>
 
-            {/* 维护弹窗 */}
+            {/* ====== 密钥源选择（独立组件，内部 state 不触发父组件渲染） ====== */}
+            <SecretsSourceSelector
+                open={selectSourceModalOpen}
+                sources={secretsSources}
+                targetName={singleTestTarget?.name}
+                batchCount={singleTestTarget ? undefined : selectedRows.length}
+                loading={testing}
+                onConfirm={handleRunTest}
+                onCancel={() => setSelectSourceModalOpen(false)}
+            />
+
+            {/* ====== 测试结果弹窗（聚合分组展示） ====== */}
+            <ConnectionTestResultModal
+                open={testResultModalOpen}
+                results={testResults}
+                cmdbItems={singleTestTarget ? [singleTestTarget] : selectedRows}
+                onClose={() => setTestResultModalOpen(false)}
+            />
+
+            {/* ====== 维护模式弹窗 ====== */}
             <Modal
-                title={<><ToolOutlined style={{ color: '#faad14', marginRight: 8 }} />进入维护模式</>}
-                open={disableModalOpen}
-                onCancel={() => setDisableModalOpen(false)}
-                onOk={handleDisable}
-                okText="确认进入"
-                okButtonProps={{ loading: disabling, disabled: !disableReason.trim() }}
-                width={630}
-            >
-                <Alert
-                    type="info"
-                    showIcon
-                    message="维护模式下此主机将不参与自愈流程"
-                    description="当主机需要临时停机维护，但 CMDB 还未同步该状态时，可通过此功能标记为维护模式。维护模式的主机在自愈流程中会被跳过，不会执行任何脚本。"
-                    style={{ marginBottom: 16 }}
-                />
-                {disableTarget && (
-                    <div style={{ marginBottom: 16 }}>
-                        <Text type="secondary">主机：</Text>
-                        <Text strong>{disableTarget.name}</Text>
-                        <Text type="secondary" style={{ marginLeft: 8 }}>({disableTarget.ip_address})</Text>
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <ToolOutlined style={{ color: '#faad14' }} />
+                        <span>{maintenanceTarget
+                            ? `进入维护模式 - ${maintenanceTarget.name}`
+                            : `批量进入维护模式 (${selectedRows.length})`}
+                        </span>
                     </div>
-                )}
-                <div style={{ marginBottom: 16 }}>
-                    <Text type="secondary">维护原因（必填）：</Text>
-                    <Input.TextArea
-                        placeholder="例如：临时停机维护、硬件更换中..."
-                        value={disableReason}
-                        onChange={(e) => setDisableReason(e.target.value)}
-                        rows={3}
-                        style={{ marginTop: 8 }}
-                    />
-                </div>
-                <div>
-                    <Text type="secondary">计划结束时间（可选，留空表示永久维护）：</Text>
-                    <DatePicker
-                        showTime
-                        placeholder="选择结束时间"
-                        style={{ width: '100%', marginTop: 8 }}
-                        value={maintenanceEndAt ? dayjs(maintenanceEndAt) : null}
-                        onChange={(date) => setMaintenanceEndAt(date ? date.format('YYYY-MM-DDTHH:mm:ssZ') : '')}
-                        presets={[
-                            { label: '2小时后', value: dayjs().add(2, 'hour') },
-                            { label: '4小时后', value: dayjs().add(4, 'hour') },
-                            { label: '8小时后', value: dayjs().add(8, 'hour') },
-                            { label: '24小时后', value: dayjs().add(24, 'hour') },
-                            { label: '3天后', value: dayjs().add(3, 'day') },
-                            { label: '7天后', value: dayjs().add(7, 'day') },
-                        ]}
-                    />
-                </div>
-            </Modal>
-
-            {/* 批量维护弹窗 */}
-            <Modal
-                title={<><ToolOutlined style={{ color: '#faad14', marginRight: 8 }} />批量进入维护模式 ({selectedRowKeys.length})</>}
-                open={batchDisableModalOpen}
-                onCancel={() => setBatchDisableModalOpen(false)}
-                onOk={handleBatchDisable}
+                }
+                open={maintenanceModalOpen}
+                onCancel={() => { setMaintenanceModalOpen(false); setMaintenanceReason(''); setMaintenanceEndAt(undefined); }}
                 okText="确认进入"
-                okButtonProps={{ loading: disabling, disabled: !batchDisableReason.trim() }}
-                width={750}
+                okButtonProps={{ disabled: !maintenanceReason, icon: <ToolOutlined /> }}
+                onOk={handleEnterMaintenance}
+                destroyOnClose
             >
-                <Alert
-                    type="info"
-                    showIcon
-                    message="维护模式下主机将不参与自愈流程"
-                    description="选中的主机将被标记为维护模式，在自愈流程中会被跳过。"
-                    style={{ marginBottom: 16 }}
-                />
-                <div style={{ marginBottom: 16 }}>
-                    <Text type="secondary">维护原因（必填）：</Text>
-                    <Input.TextArea
-                        placeholder="例如：批量停机维护、系统升级..."
-                        value={batchDisableReason}
-                        onChange={(e) => setBatchDisableReason(e.target.value)}
-                        rows={3}
-                        style={{ marginTop: 8 }}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {/* 操作说明 */}
+                    <Alert
+                        type="info"
+                        showIcon
+                        message="批量维护操作说明"
+                        description={maintenanceTarget
+                            ? `${maintenanceTarget.name} 将被标记为维护模式，暂时不参与自愈流程。`
+                            : `选中的 ${selectedRows.length} 台主机将被标记为维护模式，暂时不参与自愈流程。`
+                        }
                     />
-                </div>
-                <div>
-                    <Text type="secondary">计划结束时间（可选，留空表示永久维护）：</Text>
-                    <DatePicker
-                        showTime
-                        placeholder="选择结束时间"
-                        style={{ width: '100%', marginTop: 8 }}
-                        value={batchMaintenanceEndAt ? dayjs(batchMaintenanceEndAt) : null}
-                        onChange={(date) => setBatchMaintenanceEndAt(date ? date.format('YYYY-MM-DDTHH:mm:ssZ') : '')}
-                        presets={[
-                            { label: '2小时后', value: dayjs().add(2, 'hour') },
-                            { label: '4小时后', value: dayjs().add(4, 'hour') },
-                            { label: '8小时后', value: dayjs().add(8, 'hour') },
-                            { label: '24小时后', value: dayjs().add(24, 'hour') },
-                            { label: '3天后', value: dayjs().add(3, 'day') },
-                            { label: '7天后', value: dayjs().add(7, 'day') },
-                        ]}
-                    />
+
+                    {/* 维护原因 */}
+                    <div>
+                        <div style={{ marginBottom: 6, fontSize: 13 }}>维护原因（必填）：</div>
+                        <Input.TextArea
+                            rows={3}
+                            placeholder="例如：批量系统升级、机房断电维护..."
+                            value={maintenanceReason}
+                            onChange={(e) => setMaintenanceReason(e.target.value)}
+                            maxLength={200}
+                            showCount
+                        />
+                    </div>
+
+                    {/* 计划结束时间 */}
+                    <div>
+                        <div style={{ marginBottom: 6, fontSize: 13 }}>计划结束时间（可选）：</div>
+                        <DatePicker
+                            showTime={{ format: 'HH:mm' }}
+                            format="YYYY/MM/DD HH:mm"
+                            placeholder="YYYY/MM/DD hh:mm"
+                            style={{ width: '100%' }}
+                            value={maintenanceEndAt ? dayjs(maintenanceEndAt) : undefined}
+                            onChange={(val) => setMaintenanceEndAt(val ? val.toISOString() : undefined)}
+                            disabledDate={(current) => current && current < dayjs().startOf('day')}
+                        />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                            {[
+                                { label: '2小时后', hours: 2 },
+                                { label: '4小时后', hours: 4 },
+                                { label: '8小时后', hours: 8 },
+                                { label: '24小时后', hours: 24 },
+                                { label: '3天后', hours: 72 },
+                                { label: '7天后', hours: 168 },
+                            ].map(item => (
+                                <Button
+                                    key={item.hours}
+                                    size="small"
+                                    onClick={() => setMaintenanceEndAt(dayjs().add(item.hours, 'hour').toISOString())}
+                                >
+                                    {item.label}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </Modal>
-        </PageContainer>
+        </>
     );
 };
 

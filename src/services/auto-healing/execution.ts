@@ -118,6 +118,63 @@ export async function getExecutionRuns(params?: {
 }
 
 /**
+ * 获取执行记录统计概览
+ */
+export async function getExecutionRunStats() {
+    return request<{
+        data: {
+            total_count: number;
+            success_count: number;
+            failed_count: number;
+            partial_count: number;
+            cancelled_count: number;
+            success_rate: number;
+            avg_duration_sec: number;
+            today_count: number;
+        };
+    }>('/api/v1/execution-runs/stats', { method: 'GET' });
+}
+
+/**
+ * 获取执行趋势（按天分组）
+ */
+export async function getExecutionRunTrend(days = 7) {
+    return request<{
+        data: {
+            days: number;
+            items: { date: string; status: string; count: number }[];
+        };
+    }>('/api/v1/execution-runs/trend', { method: 'GET', params: { days } });
+}
+
+/**
+ * 获取触发方式分布
+ */
+export async function getExecutionTriggerDistribution() {
+    return request<{
+        data: { triggered_by: string; count: number }[];
+    }>('/api/v1/execution-runs/trigger-distribution', { method: 'GET' });
+}
+
+/**
+ * 获取失败率最高的 Top N 任务
+ */
+export async function getExecutionTopFailed(limit = 5) {
+    return request<{
+        data: { task_id: string; task_name: string; total: number; failed: number; fail_rate: number }[];
+    }>('/api/v1/execution-runs/top-failed', { method: 'GET', params: { limit } });
+}
+
+/**
+ * 获取最活跃的 Top N 任务
+ */
+export async function getExecutionTopActive(limit = 5) {
+    return request<{
+        data: { task_id: string; task_name: string; total: number }[];
+    }>('/api/v1/execution-runs/top-active', { method: 'GET', params: { limit } });
+}
+
+/**
  * 获取执行记录详情
  */
 export async function getExecutionRun(id: string) {

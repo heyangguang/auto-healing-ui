@@ -1,77 +1,143 @@
-import React, { useState, useRef } from 'react';
-import { useAccess } from '@umijs/max';
-import { PageContainer } from '@ant-design/pro-components';
-import type { ActionType, ProColumns } from '@ant-design/pro-components';
-import { ProTable } from '@ant-design/pro-components';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useAccess, history } from '@umijs/max';
 import {
-    Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm,
-    Drawer, Descriptions, Transfer, Tooltip, Typography,
+    Tag, Space, message, Popconfirm, Tooltip, Typography, Button,
+    Modal, Form, Input, Switch, Drawer, Descriptions, Avatar, Divider, Badge,
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined,
-    UserSwitchOutlined, EyeOutlined, UserOutlined,
+    UserOutlined, StopOutlined, CheckCircleOutlined, MailOutlined,
+    ClockCircleOutlined,
 } from '@ant-design/icons';
-import { getUsers, createUser, updateUser, deleteUser, resetUserPassword, assignUserRoles } from '@/services/auto-healing/users';
+import StandardTable from '@/components/StandardTable';
+import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
+import { getUsers, deleteUser, resetUserPassword, updateUser } from '@/services/auto-healing/users';
 import { getRoles } from '@/services/auto-healing/roles';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
+/* ========== 搜索字段配置 ========== */
+const searchFields: SearchField[] = [
+    { key: 'username', label: '用户名' },
+    { key: 'email', label: '邮箱' },
+    { key: 'display_name', label: '显示名称' },
+    { key: 'user_id', label: '用户 ID' },
+];
+
+const advancedSearchFields: AdvancedSearchField[] = [
+    { key: 'username', label: '用户名', type: 'input', placeholder: '输入用户名' },
+    { key: 'email', label: '邮箱', type: 'input', placeholder: '输入邮箱' },
+    { key: 'display_name', label: '显示名称', type: 'input', placeholder: '输入显示名称' },
+    { key: 'user_id', label: '用户 ID', type: 'input', placeholder: '输入用户 ID' },
+    { key: 'created_at', label: '创建时间', type: 'dateRange' },
+];
+
+/* ========== 用户管理页面 ========== */
 const UsersPage: React.FC = () => {
     const access = useAccess();
-    const actionRef = useRef<ActionType>(null);
-    const [createModalOpen, setCreateModalOpen] = useState(false);
-    const [editModalOpen, setEditModalOpen] = useState(false);
+
+    /* ---- 动态角色列表（用于筛选） ---- */
+    const [roleOptions, setRoleOptions] = useState<{ label: string; value: string }[]>([]);
+    useEffect(() => {
+        getRoles().then((res: any) => {
+            const items = res?.data || res?.items || [];
+            setRoleOptions(items.map((r: any) => ({ label: r.display_name || r.name, value: r.id })));
+        }).catch(() => { });
+    }, []);
+
+    /* ---- 详情 Drawer ---- */
+    const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+    const [detailUser, setDetailUser] = useState<any>(null);
+
+    const openDetailDrawer = useCallback((record: any) => {
+        setDetailUser(record);
+        setDetailDrawerOpen(true);
+    }, []);
+
+    /* ---- 重置密码 Modal ---- */
     const [resetPwdModalOpen, setResetPwdModalOpen] = useState(false);
-    const [assignRoleOpen, setAssignRoleOpen] = useState(false);
-    const [detailOpen, setDetailOpen] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
-    const [allRoles, setAllRoles] = useState<AutoHealing.RoleWithStats[]>([]);
-    const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
-    const [createForm] = Form.useForm();
-    const [editForm] = Form.useForm();
     const [resetPwdForm] = Form.useForm();
 
-    const loadRoles = async () => {
-        try {
-            const res = await getRoles();
-            setAllRoles(res?.data || []);
-        } catch { /* ignore */ }
-    };
+    // 触发 StandardTable 重新加载
+    const refreshCountRef = useRef(0);
+    const [, forceUpdate] = useState(0);
 
-    const columns: ProColumns<any>[] = [
+    const triggerRefresh = useCallback(() => {
+        refreshCountRef.current += 1;
+        forceUpdate(n => n + 1);
+    }, []);
+
+    /* ---- 切换用户启用/禁用（乐观更新，不刷整表） ---- */
+    const handleToggleStatus = useCallback(async (record: any) => {
+        const oldStatus = record.status;
+        const newStatus = oldStatus === 'active' ? 'inactive' : 'active';
+        // 乐观更新
+        record.status = newStatus;
+        forceUpdate(n => n + 1);
+        try {
+            await updateUser(record.id, { status: newStatus });
+            message.success(newStatus === 'active' ? '已启用' : '已禁用');
+        } catch {
+            // 回滚
+            record.status = oldStatus;
+            forceUpdate(n => n + 1);
+            message.error('状态切换失败');
+        }
+    }, []);
+
+    /* ========== 列定义 ========== */
+    const columns: StandardColumnDef<any>[] = [
         {
-            title: '用户名',
+            columnKey: 'username',
+            columnTitle: '用户名 / ID',
+            fixedColumn: true,
             dataIndex: 'username',
-            width: 120,
-            render: (_, record) => (
-                <a onClick={() => { setCurrentUser(record); setDetailOpen(true); }}>{record.username}</a>
+            width: 160,
+            sorter: true,
+            render: (_: any, record: any) => (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <a
+                        style={{ fontWeight: 500, color: '#1677ff', cursor: 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); openDetailDrawer(record); }}
+                    >
+                        {record.username}
+                    </a>
+                    <span style={{ fontSize: 11, fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', monospace", color: '#8590a6', letterSpacing: '0.02em' }}>
+                        {record.user_id || record.id || '-'}
+                    </span>
+                </div>
             ),
         },
         {
-            title: '显示名称',
+            columnKey: 'display_name',
+            columnTitle: '显示名称',
             dataIndex: 'display_name',
             width: 120,
+            sorter: true,
             ellipsis: true,
-            hideInSearch: true,
+            render: (_: any, record: any) => record.display_name || <Text type="secondary">-</Text>,
         },
         {
-            title: '邮箱',
+            columnKey: 'email',
+            columnTitle: '邮箱',
             dataIndex: 'email',
-            width: 180,
+            width: 200,
+            sorter: true,
             ellipsis: true,
-            hideInSearch: true,
         },
         {
-            title: '角色',
+            columnKey: 'roles',
+            columnTitle: '角色',
             dataIndex: 'roles',
-            width: 160,
-            hideInSearch: true,
-            render: (_, record) => {
+            width: 180,
+            headerFilters: roleOptions,
+            render: (_: any, record: any) => {
                 const roles = record.roles || [];
                 if (roles.length === 0) return <Text type="secondary">无角色</Text>;
                 return (
-                    <Space size={[0, 4]} wrap>
+                    <Space size={[4, 4]} wrap>
                         {roles.map((role: any) => (
                             <Tag key={role.id} color={role.is_system ? 'blue' : 'default'}>
                                 {role.display_name || role.name}
@@ -82,53 +148,55 @@ const UsersPage: React.FC = () => {
             },
         },
         {
-            title: '状态',
+            columnKey: 'status',
+            columnTitle: '状态',
             dataIndex: 'status',
             width: 80,
-            valueType: 'select',
-            valueEnum: {
-                active: { text: '启用', status: 'Success' },
-                inactive: { text: '禁用', status: 'Default' },
+            sorter: true,
+            headerFilters: [
+                { label: '启用', value: 'active' },
+                { label: '禁用', value: 'inactive' },
+            ],
+            render: (_: any, record: any) => {
+                const isActive = record.status === 'active';
+                return (
+                    <Tag color={isActive ? 'green' : 'default'}>
+                        {isActive ? '启用' : '禁用'}
+                    </Tag>
+                );
             },
         },
         {
-            title: '创建时间',
+            columnKey: 'created_at',
+            columnTitle: '创建时间',
             dataIndex: 'created_at',
-            valueType: 'dateTime',
-            width: 160,
-            hideInSearch: true,
+            width: 170,
+            sorter: true,
+            render: (_: any, record: any) =>
+                record.created_at
+                    ? dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss')
+                    : '-',
         },
         {
-            title: '操作',
-            valueType: 'option',
+            columnKey: 'actions',
+            columnTitle: '操作',
+            fixedColumn: true,
             width: 140,
-            render: (_, record) => (
+            render: (_: any, record: any) => (
                 <Space size="small">
+                    <Tooltip title={record.status === 'active' ? '禁用' : '启用'}>
+                        <Switch
+                            size="small"
+                            checked={record.status === 'active'}
+                            onChange={() => handleToggleStatus(record)}
+                            disabled={!access.canUpdateUser}
+                        />
+                    </Tooltip>
                     <Tooltip title="编辑">
                         <Button
                             type="link" size="small" icon={<EditOutlined />}
                             disabled={!access.canUpdateUser}
-                            onClick={() => {
-                                setCurrentUser(record);
-                                editForm.setFieldsValue({
-                                    display_name: record.display_name,
-                                    status: record.status,
-                                });
-                                setEditModalOpen(true);
-                            }}
-                        />
-                    </Tooltip>
-                    <Tooltip title="分配角色">
-                        <Button
-                            type="link" size="small" icon={<UserSwitchOutlined />}
-                            disabled={!access.canAssignRoles}
-                            onClick={async () => {
-                                setCurrentUser(record);
-                                await loadRoles();
-                                const userRoleIds = (record.roles || []).map((r: any) => r.id);
-                                setSelectedRoleIds(userRoleIds);
-                                setAssignRoleOpen(true);
-                            }}
+                            onClick={() => history.push(`/system/users/${record.id}/edit`)}
                         />
                     </Tooltip>
                     <Tooltip title="重置密码">
@@ -143,7 +211,7 @@ const UsersPage: React.FC = () => {
                         />
                     </Tooltip>
                     <Popconfirm title="确定要删除此用户吗？" onConfirm={async () => {
-                        try { await deleteUser(record.id); message.success('删除成功'); actionRef.current?.reload(); }
+                        try { await deleteUser(record.id); message.success('删除成功'); triggerRefresh(); }
                         catch { message.error('删除失败'); }
                     }}>
                         <Tooltip title="删除">
@@ -155,183 +223,284 @@ const UsersPage: React.FC = () => {
         },
     ];
 
+    /* ========== 数据请求 ========== */
+    const handleRequest = useCallback(async (params: {
+        page: number;
+        pageSize: number;
+        searchField?: string;
+        searchValue?: string;
+        advancedSearch?: Record<string, any>;
+        sorter?: { field: string; order: 'ascend' | 'descend' };
+    }) => {
+        const apiParams: Record<string, any> = {
+            page: params.page,
+            page_size: params.pageSize,
+        };
+
+        // 简单搜索
+        if (params.searchValue) {
+            if (params.searchField) {
+                apiParams[params.searchField] = params.searchValue;
+            } else {
+                apiParams.search = params.searchValue;
+            }
+        }
+
+        // 高级搜索
+        if (params.advancedSearch) {
+            const adv = params.advancedSearch;
+            if (adv.search) apiParams.search = adv.search;
+            if (adv.username) apiParams.username = adv.username;
+            if (adv.email) apiParams.email = adv.email;
+            if (adv.display_name) apiParams.display_name = adv.display_name;
+            if (adv.user_id) apiParams.search = adv.user_id;
+            if (adv.status) apiParams.status = adv.status;
+            if (adv.roles) apiParams.role_id = adv.roles;
+            if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
+                apiParams.created_from = adv.created_at[0].toISOString();
+                apiParams.created_to = adv.created_at[1].toISOString();
+            }
+        }
+
+        // 排序
+        if (params.sorter) {
+            apiParams.sort_field = params.sorter.field;
+            apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
+        }
+
+        const res = await getUsers(apiParams);
+        const items = res?.data || (res as any)?.items || [];
+        const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? 0;
+        return { data: items, total };
+    }, []);
+
+    /* ========== 头部图标 ========== */
+    const headerIcon = (
+        <svg viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="16" r="8" stroke="currentColor" strokeWidth="2" fill="none" />
+            <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="36" cy="14" r="5" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.5" />
+            <path d="M39 36c0-5-3-9-7-11" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.5" />
+        </svg>
+    );
+
     return (
-        <PageContainer
-            ghost
-            header={{
-                title: <><UserOutlined /> 用户管理 / USERS</>,
-                subTitle: '管理系统用户、角色分配和权限',
-            }}
-        >
-            <ProTable<any>
-                headerTitle="用户列表"
-                actionRef={actionRef}
-                rowKey="id"
-                search={{ labelWidth: 80, span: 6, defaultCollapsed: true }}
-                toolBarRender={() => [
-                    <Button
-                        key="create"
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        disabled={!access.canCreateUser}
-                        onClick={() => { createForm.resetFields(); loadRoles(); setCreateModalOpen(true); }}
-                    >
-                        新建用户
-                    </Button>,
-                ]}
-                request={async (params) => {
-                    const res = await getUsers({
-                        page: params.current || 1,
-                        page_size: params.pageSize || 20,
-                        status: params.status,
-                        search: params.username,
-                    });
-                    const items = res?.data || res?.items || [];
-                    const total = res?.pagination?.total ?? res?.total ?? 0;
-                    return { data: items, total, success: true };
-                }}
+        <>
+            <StandardTable<any>
+                key={refreshCountRef.current}
+                tabs={[{ key: 'list', label: '用户列表' }]}
+                title="用户管理"
+                description="管理系统用户、角色分配及账户状态。支持创建、编辑、禁用用户以及重置密码等操作。"
+                headerIcon={headerIcon}
+                searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
+                primaryActionLabel="创建用户"
+                primaryActionIcon={<PlusOutlined />}
+                primaryActionDisabled={!access.canCreateUser}
+                onPrimaryAction={() => history.push('/system/users/create')}
                 columns={columns}
-                pagination={{
-                    defaultPageSize: 20,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: (total) => `共 ${total} 条`,
-                }}
+                rowKey="id"
+                onRowClick={(record) => openDetailDrawer(record)}
+                request={handleRequest}
+                defaultPageSize={10}
+                preferenceKey="user_list"
             />
 
-            {/* 创建用户弹窗 */}
-            <Modal
-                title="新建用户"
-                open={createModalOpen}
-                onCancel={() => setCreateModalOpen(false)}
-                onOk={async () => {
-                    const values = await createForm.validateFields();
-                    try { await createUser(values); message.success('创建成功'); setCreateModalOpen(false); actionRef.current?.reload(); }
-                    catch { message.error('创建失败'); }
-                }}
-                destroyOnClose
+            {/* 详情 Drawer */}
+            <Drawer
+                title={null}
+                width={520}
+                open={detailDrawerOpen}
+                onClose={() => setDetailDrawerOpen(false)}
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }}
             >
-                <Form form={createForm} layout="vertical">
-                    <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
-                        <Input placeholder="请输入用户名" />
-                    </Form.Item>
-                    <Form.Item name="email" label="邮箱" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
-                        <Input placeholder="请输入邮箱" />
-                    </Form.Item>
-                    <Form.Item name="password" label="密码" rules={[{ required: true, min: 8, message: '密码至少8位' }]}>
-                        <Input.Password placeholder="请输入密码（至少8位）" />
-                    </Form.Item>
-                    <Form.Item name="display_name" label="显示名称">
-                        <Input placeholder="请输入显示名称" />
-                    </Form.Item>
-                    <Form.Item name="role_ids" label="角色">
-                        <Select mode="multiple" placeholder="选择角色" options={allRoles.map(r => ({ label: r.display_name || r.name, value: r.id }))} />
-                    </Form.Item>
-                </Form>
-            </Modal>
+                {detailUser && (
+                    <>
+                        {/* 头部 */}
+                        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f0f0f0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                                <Avatar size={44} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 16, fontWeight: 600 }}>
+                                        {detailUser.display_name || detailUser.username}
+                                    </div>
+                                    <Text type="secondary" style={{ fontSize: 13 }}>@{detailUser.username}</Text>
+                                </div>
+                                <Badge
+                                    status={detailUser.status === 'active' ? 'success' : 'error'}
+                                    text={detailUser.status === 'active' ? '已启用' : '已禁用'}
+                                />
+                            </div>
+                            <Space size={8}>
+                                <Button
+                                    size="small"
+                                    type="primary"
+                                    icon={<EditOutlined />}
+                                    disabled={!access.canUpdateUser}
+                                    onClick={() => { setDetailDrawerOpen(false); history.push(`/system/users/${detailUser.id}/edit`); }}
+                                >
+                                    编辑
+                                </Button>
+                                <Button
+                                    size="small"
+                                    icon={<KeyOutlined />}
+                                    disabled={!access.canResetPassword}
+                                    onClick={() => { setCurrentUser(detailUser); resetPwdForm.resetFields(); setResetPwdModalOpen(true); }}
+                                >
+                                    重置密码
+                                </Button>
+                                <Button
+                                    size="small"
+                                    icon={detailUser.status === 'active' ? <StopOutlined /> : <CheckCircleOutlined />}
+                                    disabled={!access.canUpdateUser}
+                                    onClick={async () => {
+                                        await handleToggleStatus(detailUser);
+                                        setDetailUser({ ...detailUser, status: detailUser.status === 'active' ? 'inactive' : 'active' });
+                                    }}
+                                >
+                                    {detailUser.status === 'active' ? '禁用' : '启用'}
+                                </Button>
+                                <Popconfirm
+                                    title="确定要删除此用户吗？"
+                                    onConfirm={async () => {
+                                        try {
+                                            await deleteUser(detailUser.id);
+                                            message.success('删除成功');
+                                            setDetailDrawerOpen(false);
+                                            triggerRefresh();
+                                        } catch { message.error('删除失败'); }
+                                    }}
+                                >
+                                    <Button size="small" danger icon={<DeleteOutlined />} disabled={!access.canDeleteUser}>
+                                        删除
+                                    </Button>
+                                </Popconfirm>
+                            </Space>
+                        </div>
 
-            {/* 编辑用户弹窗 */}
-            <Modal
-                title={`编辑用户 - ${currentUser?.username}`}
-                open={editModalOpen}
-                onCancel={() => setEditModalOpen(false)}
-                onOk={async () => {
-                    if (!currentUser) return;
-                    const values = await editForm.validateFields();
-                    try { await updateUser(currentUser.id, values); message.success('更新成功'); setEditModalOpen(false); actionRef.current?.reload(); }
-                    catch { message.error('更新失败'); }
-                }}
-                destroyOnClose
-            >
-                <Form form={editForm} layout="vertical">
-                    <Form.Item name="display_name" label="显示名称">
-                        <Input placeholder="请输入显示名称" />
-                    </Form.Item>
-                    <Form.Item name="status" label="状态">
-                        <Select options={[{ label: '启用', value: 'active' }, { label: '禁用', value: 'inactive' }]} />
-                    </Form.Item>
-                </Form>
-            </Modal>
+                        {/* 详细信息 */}
+                        <div style={{ padding: '16px 24px' }}>
+                            {/* 基本信息 */}
+                            <div style={{ marginBottom: 8 }}>
+                                <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>基本信息</Text>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', marginBottom: 16 }}>
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 2 }}>用户名</Text>
+                                    <Text strong>{detailUser.username}</Text>
+                                </div>
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 2 }}>显示名称</Text>
+                                    <Text strong>{detailUser.display_name || '—'}</Text>
+                                </div>
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 2 }}>
+                                        <MailOutlined style={{ marginRight: 4 }} />邮箱
+                                    </Text>
+                                    <Text copyable={!!detailUser.email}>{detailUser.email || '—'}</Text>
+                                </div>
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 2 }}>用户 ID</Text>
+                                    <Text copyable style={{ fontFamily: "'SFMono-Regular', Consolas, monospace", fontSize: 12 }}>
+                                        {detailUser.id}
+                                    </Text>
+                                </div>
+                            </div>
 
-            {/* 重置密码弹窗 */}
+                            <Divider style={{ margin: '12px 0' }} />
+
+                            {/* 角色分配 */}
+                            <div style={{ marginBottom: 8 }}>
+                                <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>角色分配</Text>
+                            </div>
+                            <div style={{ marginBottom: 16 }}>
+                                {detailUser.roles && detailUser.roles.length > 0 ? (
+                                    <Space size={[6, 6]} wrap>
+                                        {detailUser.roles.map((r: any) => (
+                                            <Tag
+                                                key={r.id}
+                                                color={r.is_system ? 'blue' : 'default'}
+                                                style={{ padding: '2px 10px', fontSize: 13 }}
+                                            >
+                                                {r.display_name || r.name}
+                                            </Tag>
+                                        ))}
+                                    </Space>
+                                ) : (
+                                    <Text type="secondary" style={{ fontStyle: 'italic' }}>未分配任何角色</Text>
+                                )}
+                            </div>
+
+                            <Divider style={{ margin: '12px 0' }} />
+
+                            {/* 时间信息 */}
+                            <div style={{ marginBottom: 8 }}>
+                                <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    <ClockCircleOutlined style={{ marginRight: 4 }} />时间信息
+                                </Text>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>创建时间</Text>
+                                    <Text style={{ fontSize: 13 }}>
+                                        {detailUser.created_at ? dayjs(detailUser.created_at).format('YYYY-MM-DD HH:mm') : '—'}
+                                    </Text>
+                                </div>
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>更新时间</Text>
+                                    <Text style={{ fontSize: 13 }}>
+                                        {detailUser.updated_at ? dayjs(detailUser.updated_at).format('YYYY-MM-DD HH:mm') : '—'}
+                                    </Text>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </Drawer>
+
+            {/* 重置密码弹窗 — 新密码 + 确认密码 */}
             <Modal
                 title={`重置密码 - ${currentUser?.username}`}
                 open={resetPwdModalOpen}
+                centered
                 onCancel={() => setResetPwdModalOpen(false)}
                 onOk={async () => {
                     if (!currentUser) return;
                     const values = await resetPwdForm.validateFields();
-                    try { await resetUserPassword(currentUser.id, values); message.success('密码重置成功'); setResetPwdModalOpen(false); }
+                    try { await resetUserPassword(currentUser.id, { new_password: values.new_password }); message.success('密码重置成功'); setResetPwdModalOpen(false); }
                     catch { message.error('重置失败'); }
                 }}
                 destroyOnClose
             >
                 <Form form={resetPwdForm} layout="vertical">
-                    <Form.Item name="new_password" label="新密码" rules={[{ required: true, min: 8, message: '密码至少8位' }]}>
+                    <Form.Item
+                        name="new_password"
+                        label="新密码"
+                        rules={[{ required: true, min: 8, message: '密码至少8位' }]}
+                    >
                         <Input.Password placeholder="请输入新密码（至少8位）" />
+                    </Form.Item>
+                    <Form.Item
+                        name="confirm_password"
+                        label="确认密码"
+                        dependencies={['new_password']}
+                        rules={[
+                            { required: true, message: '请再次输入密码' },
+                            ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (!value || getFieldValue('new_password') === value) {
+                                        return Promise.resolve();
+                                    }
+                                    return Promise.reject(new Error('两次输入的密码不一致'));
+                                },
+                            }),
+                        ]}
+                    >
+                        <Input.Password placeholder="请再次输入密码" />
                     </Form.Item>
                 </Form>
             </Modal>
-
-            {/* 分配角色抽屉 */}
-            <Drawer
-                title={`分配角色 - ${currentUser?.username}`}
-                open={assignRoleOpen}
-                onClose={() => setAssignRoleOpen(false)}
-                width={520}
-                footer={
-                    <Space style={{ float: 'right' }}>
-                        <Button onClick={() => setAssignRoleOpen(false)}>取消</Button>
-                        <Button type="primary" onClick={async () => {
-                            if (!currentUser) return;
-                            try { await assignUserRoles(currentUser.id, { role_ids: selectedRoleIds }); message.success('角色分配成功'); setAssignRoleOpen(false); actionRef.current?.reload(); }
-                            catch { message.error('分配失败'); }
-                        }}>确定</Button>
-                    </Space>
-                }
-            >
-                <Transfer
-                    dataSource={allRoles.map(r => ({ key: r.id, title: r.display_name || r.name, description: r.description || '' }))}
-                    targetKeys={selectedRoleIds}
-                    onChange={(targetKeys) => setSelectedRoleIds(targetKeys as string[])}
-                    render={(item) => item.title || ''}
-                    titles={['可选角色', '已分配角色']}
-                    showSearch
-                    listStyle={{ width: 220, height: 400 }}
-                />
-            </Drawer>
-
-            {/* 用户详情抽屉 */}
-            <Drawer
-                title={`用户详情 - ${currentUser?.username}`}
-                open={detailOpen}
-                onClose={() => setDetailOpen(false)}
-                width={560}
-            >
-                {currentUser && (
-                    <Descriptions column={1} bordered size="small" labelStyle={{ whiteSpace: 'nowrap', width: 80 }}>
-                        <Descriptions.Item label="用户名">{currentUser.username}</Descriptions.Item>
-                        <Descriptions.Item label="显示名称">{currentUser.display_name || '-'}</Descriptions.Item>
-                        <Descriptions.Item label="邮箱">{currentUser.email}</Descriptions.Item>
-                        <Descriptions.Item label="状态">
-                            <Tag color={currentUser.status === 'active' ? 'green' : 'default'}>
-                                {currentUser.status === 'active' ? '启用' : '禁用'}
-                            </Tag>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="角色">
-                            <Space wrap>
-                                {(currentUser.roles || []).map((r: any) => (
-                                    <Tag key={r.id} color="blue">{r.display_name || r.name}</Tag>
-                                ))}
-                            </Space>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="创建时间">
-                            {dayjs(currentUser.created_at).format('YYYY-MM-DD HH:mm:ss')}
-                        </Descriptions.Item>
-                    </Descriptions>
-                )}
-            </Drawer>
-        </PageContainer>
+        </>
     );
 };
 

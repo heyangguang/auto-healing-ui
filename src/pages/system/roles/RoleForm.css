@@ -1,0 +1,170 @@
+/* ===== 角色表单页面样式 ===== */
+
+.role-form-page {
+    padding: 0;
+    min-height: calc(100vh - 120px);
+    background: #f5f5f5;
+}
+
+/* 卡片2：表单内容（独立卡片） */
+.role-form-card {
+    background: #fff;
+    margin: 16px 24px 24px 24px;
+    padding: 32px 40px;
+    border: 1px solid #f0f0f0;
+}
+
+.role-form-card .ant-form-item-label>label {
+    font-weight: 500;
+    color: #262626;
+}
+
+.role-form-card .ant-form-item {
+    margin-bottom: 24px;
+}
+
+.role-form-card .ant-input,
+.role-form-card .ant-input-password,
+.role-form-card textarea.ant-input,
+.role-form-card .ant-select {
+    max-width: 560px;
+}
+
+.role-form-divider {
+    border-top: 1px solid #f0f0f0;
+    margin: 8px 0 24px 0;
+}
+
+.role-form-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #262626;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.role-form-section-count {
+    font-size: 13px;
+    font-weight: 400;
+    color: #8c8c8c;
+}
+
+/* ===== Transfer 穿梭框 ===== */
+.role-form-transfer-wrap {
+    margin-bottom: 24px;
+}
+
+.role-form-transfer-wrap .ant-transfer-list {
+    border-radius: 0;
+}
+
+.role-form-transfer-wrap .ant-transfer-list-header {
+    border-radius: 0;
+}
+
+.role-form-transfer-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.role-form-transfer-name {
+    font-size: 13px;
+    color: #262626;
+}
+
+.role-form-transfer-username {
+    font-size: 12px;
+    color: #8c8c8c;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+/* ===== 权限快捷操作 ===== */
+.role-form-perm-actions {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+
+.role-form-perm-actions a {
+    color: #1677ff;
+    cursor: pointer;
+}
+
+.role-form-perm-actions a:hover {
+    color: #4096ff;
+}
+
+/* ===== 权限平铺容器 ===== */
+.role-form-perm-container {
+    margin-bottom: 24px;
+}
+
+/* 模块块 */
+.role-form-perm-module {
+    margin-bottom: 24px;
+}
+
+.role-form-perm-module:last-child {
+    margin-bottom: 0;
+}
+
+.role-form-perm-module-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.role-form-perm-module-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #262626;
+}
+
+.role-form-perm-module-tag {
+    margin: 0 !important;
+    font-size: 11px;
+    line-height: 18px;
+    padding: 0 6px !important;
+    color: #8c8c8c !important;
+    background: #fafafa !important;
+    border-color: #e8e8e8 !important;
+}
+
+/* 权限项网格 */
+.role-form-perm-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 4px 16px;
+    padding-left: 24px;
+}
+
+.role-form-perm-checkbox {
+    margin: 0 !important;
+    padding: 4px 0;
+}
+
+.role-form-perm-label {
+    font-size: 13px;
+    color: #262626;
+}
+
+.role-form-perm-code {
+    color: #8c8c8c;
+    font-size: 12px;
+    margin-left: 4px;
+}
+
+/* 操作按钮 */
+.role-form-actions {
+    padding: 0;
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}

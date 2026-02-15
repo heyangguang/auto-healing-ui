@@ -39,8 +39,21 @@ export async function createGitRepo(data: AutoHealing.CreateGitRepoRequest) {
  * 获取 Git 仓库列表
  * GET /api/v1/git-repos
  */
-export async function getGitRepos(params?: { status?: string }) {
-    return request<{ data: AutoHealing.GitRepository[] }>('/api/v1/git-repos', {
+export async function getGitRepos(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    name?: string;
+    url?: string;
+    status?: string;
+    auth_type?: string;
+    sync_enabled?: boolean;
+    sort_field?: string;
+    sort_order?: string;
+    created_from?: string;
+    created_to?: string;
+}) {
+    return request<{ data: AutoHealing.GitRepository[]; total: number; page: number; page_size: number }>('/api/v1/git-repos', {
         method: 'GET',
         params,
     });

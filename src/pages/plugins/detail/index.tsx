@@ -12,7 +12,7 @@ const PluginDetail: React.FC = () => {
                     title="插件详情"
                     subTitle="此功能正在开发中，敬请期待"
                     extra={[
-                        <Button type="primary" key="back" onClick={() => history.push('/plugins')}>
+                        <Button type="primary" key="back" onClick={() => history.push('/resources/plugins')}>
                             返回列表
                         </Button>,
                     ]}

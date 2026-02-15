@@ -1,0 +1,200 @@
+/* ========== CMDB 资产管理页面 ========== */
+
+/* ---- 统计栏（对齐审计日志风格） ---- */
+.cmdb-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.cmdb-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+}
+
+.cmdb-stat-item:first-child {
+    padding-left: 0;
+}
+
+.cmdb-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+}
+
+.cmdb-stat-icon {
+    font-size: 22px;
+    opacity: 0.75;
+}
+
+.cmdb-stat-icon-total {
+    color: #1677ff;
+}
+
+.cmdb-stat-icon-active {
+    color: #52c41a;
+}
+
+.cmdb-stat-icon-offline {
+    color: #f5222d;
+}
+
+.cmdb-stat-icon-maintenance {
+    color: #fa8c16;
+}
+
+.cmdb-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.cmdb-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.88);
+    font-variant-numeric: tabular-nums;
+}
+
+.cmdb-stat-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    line-height: 1.4;
+}
+
+
+
+/* ---- 批量操作栏 ---- */
+.cmdb-batch-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+/* ---- 测试结果 Modal ---- */
+.cmdb-test-summary {
+    display: flex;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    margin-bottom: 16px;
+}
+
+.cmdb-test-summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.cmdb-test-summary-value {
+    font-size: 24px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.cmdb-test-summary-label {
+    font-size: 12px;
+    color: #8c8c8c;
+}
+
+/* ---- 详情 Drawer ---- */
+.cmdb-detail-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cmdb-detail-header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.cmdb-detail-header-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: #f0f5ff;
+    color: #1677ff;
+    flex-shrink: 0;
+}
+
+.cmdb-detail-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cmdb-detail-title {
+    font-size: 16px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cmdb-detail-sub {
+    font-size: 13px;
+    color: #8c8c8c;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.cmdb-detail-body {
+    padding: 16px 24px;
+}
+
+.cmdb-detail-section {
+    margin-bottom: 20px;
+}
+
+.cmdb-detail-section-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8c8c8c;
+    margin-bottom: 8px;
+}
+
+.cmdb-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 24px;
+}
+
+.cmdb-detail-field-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.cmdb-detail-field-value {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* ---- 维护日志表格 ---- */
+.cmdb-maintenance-log {
+    margin-top: 12px;
+}
+
+.cmdb-maintenance-log-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.cmdb-maintenance-log-item:last-child {
+    border-bottom: none;
+}

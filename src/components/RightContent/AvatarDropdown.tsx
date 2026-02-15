@@ -21,8 +21,15 @@ export type GlobalHeaderRightProps = {
 export const AvatarName = () => {
   const { initialState } = useModel('@@initialState');
   const { currentUser } = initialState || {};
-  // 优先使用 name，然后 display_name，最后 username
-  return <span className="anticon">{currentUser?.name || currentUser?.display_name || currentUser?.username}</span>;
+  const displayName = currentUser?.name || currentUser?.display_name || currentUser?.username || '';
+  // 头像圆圈内只显示首字母
+  return <span className="anticon">{displayName.charAt(0).toUpperCase()}</span>;
+};
+
+export const AvatarFullName = () => {
+  const { initialState } = useModel('@@initialState');
+  const { currentUser } = initialState || {};
+  return <>{currentUser?.name || currentUser?.display_name || currentUser?.username}</>;
 };
 
 const useStyles = createStyles(({ token }) => {

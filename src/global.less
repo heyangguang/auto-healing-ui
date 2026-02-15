@@ -1,44 +1,5 @@
 @import './global-industrial.css';
-
-@font-face {
-  font-family: "AlibabaSans";
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*1GSgSYDD_aIAAAAAQsAAAAgAegCCAQ/AlibabaSans-Light.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "AlibabaSans";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*2zEUQqnPNesAAAAAQtAAAAgAegCCAQ/AlibabaSans-Regular.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "AlibabaSans";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Medium.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "AlibabaSans";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Bold.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "AlibabaSans";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Heavy.woff2") format("woff2");
-}
+@import url('https://fonts.cdnfonts.com/css/harmonyos-sans');
 
 html {
   height: 100%;
@@ -52,7 +13,7 @@ body,
   margin: 0;
   padding: 0;
   font-family:
-    AlibabaSans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', 'Helvetica Neue', Arial,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
@@ -316,4 +277,56 @@ body[style] {
     display: flex !important;
     flex-direction: column !important;
   }
+}
+
+/* ============================================
+   ProductMenu 下拉面板动画
+   ============================================ */
+@keyframes productMenuSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   自定义布局覆盖 - 适配 TopNavBar + AppLayout
+   ============================================ */
+
+/* 禁用 ProLayout 默认的内容 padding */
+.ant-pro-layout-content {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 确保 ProLayout 容器不添加额外间距 */
+.ant-pro-layout>.ant-layout {
+  min-height: calc(100vh - 58px);
+}
+
+/* RightPanel 内的卡片移除多余圆角（直角工业风） */
+.right-panel-card {
+  border-radius: 0 !important;
+}
+
+/* ProLayout 顶部导航模式下，移除默认 header 的 padding */
+.ant-pro-top-nav-header {
+  padding: 0 !important;
+}
+
+/* 确保自定义 header 不受 ProLayout 高度限制 */
+.ant-pro-layout .ant-layout-header {
+  padding: 0 !important;
+  height: 58px !important;
+  line-height: 58px !important;
+}
+
+/* 隐藏 ProLayout 默认的 PageContainer padding 在 Dashboard 页面 */
+.ant-pro-page-container {
+  padding-block-start: 0 !important;
 }

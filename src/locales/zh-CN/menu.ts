@@ -12,20 +12,20 @@ export default {
   'menu.plugins': '插件管理',
 
 
+  // 资源配置
+  'menu.resources': '资源配置',
+  'menu.resources.cmdb': '资产管理',
+  'menu.resources.incidents': '工单管理',
 
-  // ITSM 工单 (使用中文 name 的路由)
-  'menu.ITSM 工单': 'ITSM 工单',
-
-  // CMDB / 资产管理 (使用中文 name 的路由)
-  'menu.cmdb': 'CMDB 配置',
-  'menu.资产管理': '资产管理',
+  // 待办审批
+  'menu.待办审批': '待办审批',
 
   // 密钥管理 (使用中文 name 的路由)
   'menu.密钥管理': '密钥管理',
 
   // 执行模块
   'menu.execution': '执行管理',
-  'menu.execution.git-repos': 'Git 仓库',
+  'menu.execution.git-repos': '代码仓库',
   'menu.execution.playbooks': 'Playbook 模板',
   'menu.execution.templates': '任务模板',
   'menu.execution.execute': '执行任务',
@@ -52,6 +52,7 @@ export default {
   'menu.system.users': '用户管理',
   'menu.system.roles': '角色管理',
   'menu.system.permissions': '权限目录',
+  'menu.system.audit-logs': '审计日志',
 
   // 个人设置
   'menu.account': '个人中心',

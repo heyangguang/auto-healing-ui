@@ -117,7 +117,7 @@ export default defineConfig({
       theme: {
         cssVar: true,
         token: {
-          fontFamily: 'AlibabaSans, sans-serif',
+          fontFamily: "'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
           borderRadius: 0,
           wireframe: false,
         },
@@ -177,7 +177,6 @@ export default defineConfig({
   mako: {},
   esbuildMinifyIIFE: true,
   requestRecord: {},
-  exportStatic: {},
   define: {
     'process.env.CI': process.env.CI,
   },

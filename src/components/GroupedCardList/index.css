@@ -1,0 +1,137 @@
+/* ===== GroupedCardList 通用样式 ===== */
+
+/* ===== 工具栏 ===== */
+.grouped-card-toolbar {
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 12px;
+}
+
+.grouped-card-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 400px;
+}
+
+.grouped-card-search-input {
+    flex: 1;
+}
+
+.grouped-card-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.grouped-card-stats {
+    font-size: 13px;
+    color: #8c8c8c;
+    white-space: nowrap;
+}
+
+.grouped-card-stats b {
+    color: #262626;
+    font-weight: 600;
+}
+
+.grouped-card-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #e8e8e8;
+    margin: 0 4px;
+}
+
+.grouped-card-refresh {
+    color: #8c8c8c;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.grouped-card-refresh:hover {
+    color: #1677ff;
+}
+
+/* ===== 分组内容 ===== */
+.grouped-card-content {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.grouped-card-empty {
+    color: #bfbfbf;
+    text-align: center;
+    padding: 60px 0;
+    font-size: 14px;
+}
+
+/* ===== 分组块 ===== */
+.grouped-card-block {
+    border: 1px solid #f0f0f0;
+}
+
+.grouped-card-block-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.grouped-card-dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+}
+
+.grouped-card-group-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+}
+
+.grouped-card-count {
+    margin: 0 !important;
+    font-size: 11px;
+    line-height: 18px;
+    padding: 0 6px !important;
+}
+
+.grouped-card-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0;
+}
+
+/* ===== 单项 ===== */
+.grouped-card-item {
+    padding: 10px 16px;
+    border-right: 1px solid #f5f5f5;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.15s;
+}
+
+.grouped-card-item:hover {
+    background: #fafafa;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+    .grouped-card-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .grouped-card-items {
+        grid-template-columns: 1fr;
+    }
+}

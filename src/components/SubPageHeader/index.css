@@ -1,0 +1,49 @@
+/* ===== SubPageHeader 子页面头部组件 ===== */
+
+/* 头部卡片 — Tab + 标题栏在同一个白色卡片 */
+.sub-page-header-card {
+    background: #fff;
+    margin: 24px 24px 0 24px;
+    border: 1px solid #f0f0f0;
+}
+
+/* Tab 区域 */
+.sub-page-header-tabs {
+    padding: 0 24px;
+    background: #fafbfc;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.sub-page-header-tabs .ant-tabs-nav {
+    margin-bottom: 0;
+}
+
+/* 标题栏 */
+.sub-page-header-bar {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sub-page-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sub-page-header-back-btn {
+    color: #595959 !important;
+    padding: 4px !important;
+}
+
+.sub-page-header-back-btn:hover {
+    color: #1677ff !important;
+}
+
+.sub-page-header-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #262626;
+    margin: 0;
+}
