@@ -24,6 +24,7 @@ import {
     AuditOutlined,
     FundProjectionScreenOutlined,
     SolutionOutlined,
+    MessageOutlined,
 } from '@ant-design/icons';
 
 /* ──── 模块分类 ──── */
@@ -76,7 +77,8 @@ export const SERVICES: Record<string, ServiceItem[]> = {
         { id: 'plugins', name: '插件管理', path: '/resources/plugins', desc: '扩展插件安装与配置', icon: <AppstoreOutlined /> },
     ],
     pending: [
-        { id: 'pending-center', name: '待办中心', path: '/pending-center', desc: '审批与待处理事项', icon: <CarryOutOutlined /> },
+        { id: 'pending-triggers', name: '自愈审批', path: '/pending/triggers', desc: '待触发自愈工单', icon: <CarryOutOutlined /> },
+        { id: 'pending-approvals', name: '任务审批', path: '/pending/approvals', desc: '待审批任务处理', icon: <SolutionOutlined /> },
     ],
     notification: [
         { id: 'channels', name: '通知渠道', path: '/notification/channels', desc: '邮件、钉钉等通知方式', icon: <MailOutlined /> },
@@ -88,16 +90,17 @@ export const SERVICES: Record<string, ServiceItem[]> = {
         { id: 'roles', name: '角色管理', path: '/system/roles', desc: 'RBAC 角色定义与分配', icon: <SafetyCertificateOutlined /> },
         { id: 'permissions', name: '权限列表', path: '/system/permissions', desc: '系统功能权限点查询', icon: <LockOutlined /> },
         { id: 'audit', name: '审计日志', path: '/system/audit-logs', desc: '全量操作行为记录', icon: <AuditOutlined /> },
+        { id: 'messages', name: '站内通知', path: '/system/messages', desc: '系统消息与通知管理', icon: <MessageOutlined /> },
     ],
 };
 
-/* ──── 收藏 & 最近 ──── */
-export const FAVORITES = [
-    { id: 'healing', name: '自愈规则', path: '/healing/rules' },
-    { id: 'pending', name: '待办中心', path: '/pending-center' },
-];
-
-export const RECENTS = [
-    { id: 'execution', name: '执行记录', path: '/execution/logs' },
-    { id: 'cmdb', name: '资产管理', path: '/resources/cmdb' },
-];
+/* ──── 根据路径查找菜单项（用于记录最近访问） ──── */
+export function findServiceByPath(pathname: string): ServiceItem | null {
+    for (const items of Object.values(SERVICES)) {
+        const match = items.find(
+            (item) => pathname === item.path || pathname.startsWith(item.path + '/'),
+        );
+        if (match) return match;
+    }
+    return null;
+}

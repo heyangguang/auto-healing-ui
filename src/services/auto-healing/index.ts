@@ -37,3 +37,6 @@ export * from './notification';
 
 // 自愈引擎
 export * from './healing';
+
+// 全局搜索
+export * from './search';

@@ -308,6 +308,11 @@
     border-right: none;
 }
 
+/* 选择列（复选框列）不加右边框 */
+.standard-table-body .ant-table-thead>tr>th.ant-table-cell.ant-table-selection-column {
+    border-right: none !important;
+}
+
 .standard-table-body .ant-table-tbody>tr>td {
     padding: 10px 5px 10px 16px !important;
     font-size: 13px;

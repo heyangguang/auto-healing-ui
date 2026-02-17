@@ -12,6 +12,7 @@ import { history, useLocation } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { AvatarDropdown, AvatarName, AvatarFullName } from '@/components/RightContent/AvatarDropdown';
 import GlobalSearch from '@/components/GlobalSearch';
+import NotificationBell from '@/components/NotificationBell';
 const ProductMenu = lazy(() => import('@/components/ProductMenu'));
 import { CATEGORIES, SERVICES } from '@/config/menu';
 
@@ -259,6 +260,7 @@ const TopNavBar: React.FC = () => {
                             <div className={styles.iconBtn} title="帮助文档">
                                 <QuestionCircleOutlined />
                             </div>
+                            <NotificationBell />
                             <div className={styles.divider} />
                         </>
                     )}

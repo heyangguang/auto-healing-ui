@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocation } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import SideNav from '@/components/SideNav';
+import { findServiceByPath } from '@/config/menu';
+import { recordRecent } from '@/services/auto-healing/userNav';
 
 const NAV_HEIGHT = 58;
 const SIDE_WIDTH = 200;
@@ -65,6 +67,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         setDrawerOpen(false);
     }, [location.pathname]);
 
+    // 路由切换时记录最近访问（静默，不影响页面加载）
+    const lastRecordedPath = useRef('');
+    useEffect(() => {
+        const path = location.pathname;
+        if (path === lastRecordedPath.current) return;
+        lastRecordedPath.current = path;
+        const svc = findServiceByPath(path);
+        if (svc) {
+            recordRecent({ menu_key: svc.id, name: svc.name, path: svc.path }).catch(() => { });
+        }
+    }, [location.pathname]);
+
     // 监听 TopNavBar 的汉堡按钮事件
     useEffect(() => {
         const handler = () => setDrawerOpen(prev => !prev);
@@ -77,7 +91,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         const isWorkbench = p === '/' || p === '/workbench';
         const isDashboard = p.startsWith('/dashboard');
         const isDetailPage = /^\/execution\/(runs|templates)\/[^/]+$/.test(p);
-        return !isWorkbench && !isDashboard && !isDetailPage;
+        const isAccount = p.startsWith('/account');
+        return !isWorkbench && !isDashboard && !isDetailPage && !isAccount;
     }, [location.pathname]);
 
     return (

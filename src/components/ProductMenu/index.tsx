@@ -1,13 +1,23 @@
-import React, { useState, startTransition } from 'react';
+import React, { useState, useEffect, useCallback, startTransition } from 'react';
 import {
     CloseOutlined,
     StarFilled,
+    StarOutlined,
     ClockCircleOutlined,
+    LoadingOutlined,
 } from '@ant-design/icons';
 import { history } from '@umijs/max';
-import { Drawer } from 'antd';
+import { Drawer, message, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
-import { CATEGORIES, SERVICES, FAVORITES, RECENTS } from '@/config/menu';
+import { CATEGORIES, SERVICES } from '@/config/menu';
+import {
+    getFavorites,
+    addFavorite,
+    removeFavorite,
+    getRecents,
+    type FavoriteItem,
+    type RecentItem,
+} from '@/services/auto-healing/userNav';
 
 /* ──── 样式 ──── */
 const useStyles = createStyles(({ token }) => ({
@@ -121,6 +131,10 @@ const useStyles = createStyles(({ token }) => ({
             color: token.colorPrimary,
         },
     },
+    emptyHint: {
+        fontSize: 12,
+        color: '#bfbfbf',
+    },
 
     /* ── 服务区域 ── */
     serviceArea: {
@@ -146,8 +160,12 @@ const useStyles = createStyles(({ token }) => ({
         padding: '16px 16px',
         cursor: 'pointer',
         transition: 'all 0.15s',
+        position: 'relative' as const,
         '&:hover': {
             background: '#f5f9ff',
+        },
+        '&:hover .fav-star': {
+            opacity: 1,
         },
     },
     serviceIcon: {
@@ -168,6 +186,23 @@ const useStyles = createStyles(({ token }) => ({
         lineHeight: '18px',
         marginTop: 2,
     },
+    favStar: {
+        position: 'absolute' as const,
+        right: 12,
+        top: 16,
+        fontSize: 14,
+        cursor: 'pointer',
+        opacity: 0,
+        transition: 'all 0.2s',
+        color: '#d9d9d9',
+        '&:hover': {
+            transform: 'scale(1.2)',
+        },
+    },
+    favStarActive: {
+        opacity: 1,
+        color: '#faad14',
+    },
 }));
 
 /* ──── 组件 ──── */
@@ -179,6 +214,52 @@ interface ProductMenuProps {
 const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
     const { styles, cx } = useStyles();
     const [activeCategory, setActiveCategory] = useState('healing');
+
+    // API 数据
+    const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+    const [recents, setRecents] = useState<RecentItem[]>([]);
+    const [loadingFav, setLoadingFav] = useState(false);
+    const [togglingKey, setTogglingKey] = useState<string | null>(null);
+
+    // 打开时加载数据
+    useEffect(() => {
+        if (!open) return;
+        setLoadingFav(true);
+        Promise.all([
+            getFavorites().then((res) => setFavorites(res?.data || [])),
+            getRecents().then((res) => setRecents(res?.data || [])),
+        ]).finally(() => setLoadingFav(false));
+    }, [open]);
+
+    // 收藏 set 用于快速查找
+    const favKeySet = new Set(favorites.map((f) => f.menu_key));
+
+    // 切换收藏
+    const toggleFavorite = useCallback(
+        async (menuKey: string, name: string, path: string, e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (togglingKey) return;
+            setTogglingKey(menuKey);
+            try {
+                if (favKeySet.has(menuKey)) {
+                    await removeFavorite(menuKey);
+                    setFavorites((prev) => prev.filter((f) => f.menu_key !== menuKey));
+                    message.success('已取消收藏');
+                } else {
+                    const res = await addFavorite({ menu_key: menuKey, name, path });
+                    if (res?.data) {
+                        setFavorites((prev) => [...prev, res.data]);
+                    }
+                    message.success('已添加收藏');
+                }
+            } catch {
+                message.error('操作失败');
+            } finally {
+                setTogglingKey(null);
+            }
+        },
+        [togglingKey, favKeySet],
+    );
 
     const handleNavigate = (path: string) => {
         startTransition(() => {
@@ -235,17 +316,22 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
                         <div className={styles.quickLabel}>
                             <StarFilled className={styles.quickLabelIcon} style={{ color: '#faad14' }} />
                             我的收藏
+                            {loadingFav && <LoadingOutlined style={{ fontSize: 12, marginLeft: 4 }} />}
                         </div>
                         <div className={styles.quickLinks}>
-                            {FAVORITES.map((f) => (
-                                <span
-                                    key={f.id}
-                                    className={styles.quickLink}
-                                    onClick={() => handleNavigate(f.path)}
-                                >
-                                    {f.name}
-                                </span>
-                            ))}
+                            {favorites.length > 0 ? (
+                                favorites.slice(0, 6).map((f) => (
+                                    <span
+                                        key={f.menu_key}
+                                        className={styles.quickLink}
+                                        onClick={() => handleNavigate(f.path)}
+                                    >
+                                        {f.name}
+                                    </span>
+                                ))
+                            ) : (
+                                !loadingFav && <span className={styles.emptyHint}>点击服务卡片上的 ★ 添加收藏</span>
+                            )}
                         </div>
                     </div>
                     <div className={styles.quickSection}>
@@ -254,15 +340,19 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
                             最近访问
                         </div>
                         <div className={styles.quickLinks}>
-                            {RECENTS.map((r) => (
-                                <span
-                                    key={r.id}
-                                    className={styles.quickLink}
-                                    onClick={() => handleNavigate(r.path)}
-                                >
-                                    {r.name}
-                                </span>
-                            ))}
+                            {recents.length > 0 ? (
+                                recents.slice(0, 6).map((r) => (
+                                    <span
+                                        key={r.menu_key}
+                                        className={styles.quickLink}
+                                        onClick={() => handleNavigate(r.path)}
+                                    >
+                                        {r.name}
+                                    </span>
+                                ))
+                            ) : (
+                                !loadingFav && <span className={styles.emptyHint}>浏览页面后自动记录</span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -271,19 +361,36 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
                 <div className={styles.serviceArea}>
                     <div className={styles.serviceTitle}>{activeCat?.label}</div>
                     <div className={styles.serviceGrid}>
-                        {services.map((svc) => (
-                            <div
-                                key={svc.id}
-                                className={styles.serviceCard}
-                                onClick={() => handleNavigate(svc.path)}
-                            >
-                                {svc.icon && <span className={styles.serviceIcon}>{svc.icon}</span>}
-                                <div>
-                                    <div className={styles.serviceName}>{svc.name}</div>
-                                    {svc.desc && <div className={styles.serviceDesc}>{svc.desc}</div>}
+                        {services.map((svc) => {
+                            const isFav = favKeySet.has(svc.id);
+                            return (
+                                <div
+                                    key={svc.id}
+                                    className={styles.serviceCard}
+                                    onClick={() => handleNavigate(svc.path)}
+                                >
+                                    {svc.icon && <span className={styles.serviceIcon}>{svc.icon}</span>}
+                                    <div style={{ flex: 1 }}>
+                                        <div className={styles.serviceName}>{svc.name}</div>
+                                        {svc.desc && <div className={styles.serviceDesc}>{svc.desc}</div>}
+                                    </div>
+                                    <Tooltip title={isFav ? '取消收藏' : '添加收藏'}>
+                                        <span
+                                            className={cx('fav-star', styles.favStar, isFav && styles.favStarActive)}
+                                            onClick={(e) => toggleFavorite(svc.id, svc.name, svc.path, e)}
+                                        >
+                                            {togglingKey === svc.id ? (
+                                                <LoadingOutlined />
+                                            ) : isFav ? (
+                                                <StarFilled />
+                                            ) : (
+                                                <StarOutlined />
+                                            )}
+                                        </span>
+                                    </Tooltip>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </div>

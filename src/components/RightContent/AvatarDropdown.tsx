@@ -1,6 +1,5 @@
 import {
   LogoutOutlined,
-  SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { history, useModel } from '@umijs/max';
@@ -122,14 +121,9 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
     ...(menu
       ? [
         {
-          key: 'center',
+          key: 'profile',
           icon: <UserOutlined />,
           label: '个人中心',
-        },
-        {
-          key: 'settings',
-          icon: <SettingOutlined />,
-          label: '个人设置',
         },
         {
           type: 'divider' as const,
@@ -150,6 +144,8 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
         onClick: onMenuClick,
         items: menuItems,
       }}
+      trigger={['click']}
+      getPopupContainer={() => document.body}
     >
       {children}
     </HeaderDropdown>

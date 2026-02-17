@@ -53,6 +53,8 @@ export default {
   'menu.system.roles': '角色管理',
   'menu.system.permissions': '权限目录',
   'menu.system.audit-logs': '审计日志',
+  'menu.messages': '站内通知',
+  'menu.system.messages': '站内通知',
 
   // 个人设置
   'menu.account': '个人中心',

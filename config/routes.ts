@@ -188,11 +188,26 @@ export default [
   },
   // ==================== 待办审批 ====================
   {
-    path: '/pending-center',
+    path: '/pending',
     name: '待办审批',
     icon: 'carryOut',
-    component: './pending-center',
     access: 'canViewApprovals',
+    routes: [
+      {
+        path: '/pending',
+        redirect: '/pending/triggers',
+      },
+      {
+        path: '/pending/triggers',
+        name: '自愈审批',
+        component: './pending-center/triggers',
+      },
+      {
+        path: '/pending/approvals',
+        name: '任务审批',
+        component: './pending-center/approvals',
+      },
+    ],
   },
   // ==================== 通知模块 ====================
   {
@@ -291,6 +306,7 @@ export default [
       },
     ],
   },
+
   // ==================== 系统管理 ====================
   {
     path: '/system',
@@ -337,10 +353,16 @@ export default [
         name: 'permissions',
         component: './system/permissions',
       },
+
       {
         path: '/system/audit-logs',
         name: 'audit-logs',
         component: './system/audit-logs',
+      },
+      {
+        path: '/system/messages',
+        name: 'messages',
+        component: './system/messages',
       },
     ],
   },
