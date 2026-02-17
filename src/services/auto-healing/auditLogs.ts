@@ -17,6 +17,8 @@ export async function getAuditLogs(params?: {
     created_before?: string;
     sort_by?: string;
     sort_order?: string;
+    exclude_action?: string;
+    exclude_resource_type?: string;
 }) {
     return request<any>('/api/v1/audit-logs', { method: 'GET', params });
 }

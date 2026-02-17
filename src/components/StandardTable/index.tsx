@@ -176,7 +176,7 @@ export interface SearchField {
 export interface AdvancedSearchField {
     key: string;
     label: string;
-    type: 'input' | 'select' | 'dateRange';
+    type: 'input' | 'select' | 'multiSelect' | 'dateRange';
     placeholder?: string;
     /** 字段说明（label 旁显示 ? 图标，hover 展示此说明） */
     description?: string;
@@ -831,6 +831,18 @@ function StandardTable<T extends Record<string, any>>({
                                                         style={{ width: '100%' }}
                                                     />
                                                 )}
+                                                {field.type === 'multiSelect' && (
+                                                    <Select
+                                                        mode="multiple"
+                                                        value={advancedValues[field.key] || []}
+                                                        onChange={v => updateAdvancedField(field.key, v)}
+                                                        placeholder={field.placeholder || `选择${field.label}`}
+                                                        options={field.options}
+                                                        allowClear
+                                                        maxTagCount="responsive"
+                                                        style={{ width: '100%' }}
+                                                    />
+                                                )}
                                                 {field.type === 'dateRange' && (
                                                     <RangePicker
                                                         value={advancedValues[field.key]}
@@ -976,7 +988,14 @@ function StandardTable<T extends Record<string, any>>({
                             <div className="standard-table-advanced-fields">
                                 {advancedSearchFields.map(field => (
                                     <div key={field.key} className="standard-table-advanced-field">
-                                        <label>{field.label}</label>
+                                        <label>
+                                            {field.label}
+                                            {field.description && (
+                                                <Tooltip title={field.description}>
+                                                    <QuestionCircleOutlined style={{ color: '#bfbfbf', fontSize: 12, marginLeft: 3, cursor: 'help' }} />
+                                                </Tooltip>
+                                            )}
+                                        </label>
                                         {field.type === 'input' && (
                                             <Input
                                                 value={advancedValues[field.key] || ''}
@@ -993,6 +1012,18 @@ function StandardTable<T extends Record<string, any>>({
                                                 placeholder={field.placeholder || `选择${field.label}`}
                                                 options={field.options}
                                                 allowClear
+                                                style={{ width: '100%' }}
+                                            />
+                                        )}
+                                        {field.type === 'multiSelect' && (
+                                            <Select
+                                                mode="multiple"
+                                                value={advancedValues[field.key] || []}
+                                                onChange={v => updateAdvancedField(field.key, v)}
+                                                placeholder={field.placeholder || `选择${field.label}`}
+                                                options={field.options}
+                                                allowClear
+                                                maxTagCount="responsive"
                                                 style={{ width: '100%' }}
                                             />
                                         )}

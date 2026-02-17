@@ -12,6 +12,8 @@ import {
     UserOutlined,
     ClockCircleOutlined,
     SafetyCertificateOutlined,
+    DiffOutlined,
+    DeleteOutlined,
 } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
@@ -26,46 +28,72 @@ const { Text } = Typography;
 
 /* ========== 枚举映射 ========== */
 const ACTION_LABELS: Record<string, string> = {
-    create: '创建',
-    update: '更新',
-    patch: '部分更新',
-    delete: '删除',
+    activate: '激活',
+    approve: '审批通过',
+    assign_role: '分配角色',
     batch_create: '批量创建',
+    confirm_review: '确认复核',
+    create: '创建',
+    deactivate: '停用',
+    delete: '删除',
+    disable: '禁用',
+    enable: '启用',
+    execute: '执行',
+    login: '登录',
+    maintenance: '维护',
+    preview: '预览',
+    ready: '就绪',
+    reject: '审批拒绝',
+    resume: '恢复',
+    scan: '扫描',
     sync: '同步',
     test: '测试',
-    activate: '激活',
-    resume: '恢复',
-    maintenance: '维护',
-    reset_scan: '重置扫描',
-    assign_role: '分配角色',
-    assign_permission: '分配权限',
+    trigger: '触发',
+    update: '更新',
+    update_variables: '更新变量',
 };
 
 const ACTION_COLORS: Record<string, string> = {
-    create: 'green',
-    update: 'blue',
-    patch: 'cyan',
-    delete: 'red',
+    activate: 'green',
+    approve: 'green',
+    assign_role: 'magenta',
     batch_create: 'lime',
+    confirm_review: 'cyan',
+    create: 'green',
+    deactivate: 'orange',
+    delete: 'red',
+    disable: 'orange',
+    enable: 'green',
+    execute: 'geekblue',
+    login: 'purple',
+    maintenance: 'orange',
+    preview: 'default',
+    ready: 'cyan',
+    reject: 'red',
+    resume: 'geekblue',
+    scan: 'blue',
     sync: 'purple',
     test: 'default',
-    activate: 'green',
-    resume: 'geekblue',
-    maintenance: 'orange',
-    reset_scan: 'gold',
-    assign_role: 'magenta',
-    assign_permission: 'magenta',
+    trigger: 'gold',
+    update: 'blue',
+    update_variables: 'blue',
 };
 
 const RESOURCE_LABELS: Record<string, string> = {
-    user: '用户偏好',
-    users: '用户管理',
     auth: '认证',
+    channels: '通知渠道',
     cmdb: '资产管理',
+    'execution-schedules': '定时任务',
+    'execution-tasks': '执行任务',
+    'git-repos': 'Git 仓库',
+    healing: '自愈管理',
     incidents: '事件管理',
+    playbooks: 'Playbook',
     plugins: '插件管理',
-    roles: '角色管理',
-    permissions: '权限管理',
+    'secrets-sources': '密钥管理',
+    'site-messages': '站内信',
+    templates: '通知模板',
+    users: '用户管理',
 };
 
 const METHOD_COLORS: Record<string, string> = {
@@ -103,6 +131,16 @@ const advancedSearchFields: AdvancedSearchField[] = [
         options: [{ label: '高危', value: 'high' }, { label: '正常', value: 'normal' }],
     },
     { key: 'created_at', label: '时间范围', type: 'dateRange' },
+    {
+        key: 'exclude_action', label: '排除操作', type: 'multiSelect', placeholder: '选择要排除的操作类型',
+        description: '排除指定的操作类型，如排除登录记录',
+        options: Object.entries(ACTION_LABELS).map(([v, l]) => ({ label: l, value: v })),
+    },
+    {
+        key: 'exclude_resource_type', label: '排除资源', type: 'multiSelect', placeholder: '选择要排除的资源类型',
+        description: '排除指定的资源类型，如排除认证类型',
+        options: Object.entries(RESOURCE_LABELS).map(([v, l]) => ({ label: l, value: v })),
+    },
 ];
 
 /* ========== 页面组件 ========== */
@@ -356,6 +394,20 @@ const AuditLogsPage: React.FC = () => {
             },
         },
         {
+            columnKey: 'changes',
+            columnTitle: '变更',
+            dataIndex: 'changes',
+            width: 100,
+            render: (_: any, record: any) => {
+                if (!record.changes) return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>;
+                if (record.changes.deleted) {
+                    return <Tag color="red" icon={<DeleteOutlined />} style={{ margin: 0 }}>删除详情</Tag>;
+                }
+                const count = Object.keys(record.changes).length;
+                return <Tag color="blue" icon={<DiffOutlined />} style={{ margin: 0 }}>{count} 项变更</Tag>;
+            },
+        },
+        {
             columnKey: 'response_status',
             columnTitle: 'HTTP',
             dataIndex: 'response_status',
@@ -412,6 +464,12 @@ const AuditLogsPage: React.FC = () => {
             if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
                 apiParams.created_after = adv.created_at[0].toISOString();
                 apiParams.created_before = adv.created_at[1].toISOString();
+            }
+            if (adv.exclude_action && Array.isArray(adv.exclude_action) && adv.exclude_action.length > 0) {
+                apiParams.exclude_action = adv.exclude_action.join(',');
+            }
+            if (adv.exclude_resource_type && Array.isArray(adv.exclude_resource_type) && adv.exclude_resource_type.length > 0) {
+                apiParams.exclude_resource_type = adv.exclude_resource_type.join(',');
             }
         }
 
@@ -616,10 +674,46 @@ const AuditLogsPage: React.FC = () => {
                         {/* 变更记录 */}
                         {detail.changes && (
                             <div className="audit-detail-section">
-                                <div className="audit-detail-section-title">变更内容</div>
-                                <pre className="audit-detail-json">
-                                    {JSON.stringify(detail.changes, null, 2)}
-                                </pre>
+                                <div className="audit-detail-section-title">
+                                    {detail.changes.deleted ? '删除资源信息' : '变更内容'}
+                                </div>
+                                {detail.changes.deleted ? (
+                                    <table className="audit-changes-table">
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: 120 }}>属性</th>
+                                                <th>值</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(detail.changes.deleted as Record<string, any>).map(([k, v]) => (
+                                                <tr key={k}>
+                                                    <td className="audit-changes-field">{k}</td>
+                                                    <td className="audit-changes-deleted-val">{String(v ?? '')}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <table className="audit-changes-table">
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: 120 }}>字段</th>
+                                                <th>旧值</th>
+                                                <th>新值</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(detail.changes as Record<string, any>).map(([field, diff]: [string, any]) => (
+                                                <tr key={field}>
+                                                    <td className="audit-changes-field">{field}</td>
+                                                    <td className="audit-changes-old">{String(diff?.old ?? '')}</td>
+                                                    <td className="audit-changes-new">{String(diff?.new ?? '')}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
                         )}
 
