@@ -6,6 +6,8 @@ import { useRequest } from '@umijs/max';
 import ReactFlow, { Background, Controls, Edge, Node, useNodesState, useEdgesState, ProOptions } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
+import { getLayoutedElements } from '../utils/layoutUtils';
+import AutoLayoutButton from './AutoLayoutButton';
 import { getHealingInstanceDetail } from '@/services/auto-healing/instances';
 import dayjs from 'dayjs';
 
@@ -43,8 +45,8 @@ function normalizeNodeState(raw: any): Record<string, any> | undefined {
 }
 
 const STATUS_EDGE_COLOR: Record<string, string> = {
-    success: '#52c41a', completed: '#52c41a',
-    failed: '#ff4d4f', partial: '#faad14',
+    success: '#52c41a', completed: '#52c41a', approved: '#52c41a',
+    failed: '#ff4d4f', rejected: '#ff4d4f', partial: '#faad14',
     running: '#1890ff', waiting_approval: '#fa8c16',
 };
 
@@ -105,37 +107,13 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-    // Auto layout using dagre
-    const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
-        const dagreGraph = new dagre.graphlib.Graph();
-        dagreGraph.setDefaultEdgeLabel(() => ({}));
-        dagreGraph.setGraph({ rankdir: direction });
-
-        nodes.forEach((node) => {
-            const isRuleNode = node.data?.type === 'trigger';
-            dagreGraph.setNode(node.id, { width: isRuleNode ? 240 : 180, height: 60 });
-        });
-
-        edges.forEach((edge) => {
-            dagreGraph.setEdge(edge.source, edge.target);
-        });
-
-        dagre.layout(dagreGraph);
-
-        const layoutedNodes = nodes.map((node) => {
-            const nodeWithPosition = dagreGraph.node(node.id);
-            const isMissingPosition = !node.position || (node.position.x === 0 && node.position.y === 0);
-
-            if (isMissingPosition) {
-                node.position = {
-                    x: nodeWithPosition.x - 90,
-                    y: nodeWithPosition.y - 30,
-                };
-            }
-            return node;
-        });
-
-        return { nodes: layoutedNodes, edges };
+    // Auto layout handler
+    const handleAutoLayout = () => {
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+            nodes.map(n => ({ ...n })), edges.map(e => ({ ...e })), 'TB', true,
+        );
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
     };
 
     const { data: instance, loading, refresh } = useRequest(
@@ -147,13 +125,13 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
             ready: !!instanceId && open,
             refreshDeps: [instanceId],
             onSuccess: (data) => {
-                if (data && data.flow) {
+                if (data && data.flow_nodes && data.flow_edges) {
                     const executedNodes = inferExecutedNodes(
-                        data.flow.nodes, data.flow.edges,
+                        data.flow_nodes, data.flow_edges,
                         data.node_states || {}, data.current_node_id, data.status,
                     );
 
-                    let flowNodes = data.flow.nodes.map((node) => {
+                    let flowNodes = data.flow_nodes.map((node) => {
                         const nodeState = normalizeNodeState(data.node_states?.[node.id]);
                         const effectiveStatus = nodeState?.status || executedNodes[node.id];
                         return {
@@ -172,7 +150,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
                         } as Node;
                     });
 
-                    let flowEdges = data.flow.edges.map((edge: any) => {
+                    let flowEdges = data.flow_edges.map((edge: any) => {
                         const sourceStatus = executedNodes[edge.source];
                         const targetStatus = executedNodes[edge.target];
                         const isExecutedEdge = sourceStatus && targetStatus;
@@ -197,11 +175,14 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
                         const ruleNode: Node = {
                             id: ruleNodeId,
                             type: 'custom',
-                            position: { x: 0, y: 0 },
+                            position: {
+                                x: startNode?.position?.x ?? 0,
+                                y: (startNode?.position?.y ?? 0) - 100,
+                            },
                             data: {
                                 label: `自愈规则: ${data.rule.name}`,
                                 type: 'trigger',
-                                status: 'triggered', // 外部触发源，使用紫色主题区别于标准流程节点
+                                status: 'triggered',
                                 details: data.rule,
                             },
                             draggable: false,
@@ -236,7 +217,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
         <Drawer
             title={
                 <Space>
-                    <span>{instance?.flow?.name || '实例详情'}</span>
+                    <span>{instance?.flow_name || '实例详情'}</span>
                     {instance && (
                         <Tag color={statusConfig.color} style={{ border: 'none' }}>
                             <Space size={4}>
@@ -310,6 +291,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
                         >
                             <Background color="#f5f5f5" gap={20} />
                             <Controls />
+                            <AutoLayoutButton onAutoLayout={handleAutoLayout} />
                         </ReactFlow>
                     </div>
                 </div>

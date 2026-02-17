@@ -2,7 +2,7 @@ import { ExperimentOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/plots';
 import { useRequest } from '@umijs/max';
 import React from 'react';
-import { getExecutionRuns } from '@/services/auto-healing/execution';
+import { getExecutionRunStats } from '@/services/auto-healing/execution';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
@@ -23,22 +23,18 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(() => getExecutionRuns({ page_size: 200 }));
+    const { data: rawData, loading, refresh } = useRequest(() => getExecutionRunStats());
     const { ref, width, height } = useContainerSize();
 
     const data = rawData as any;
     const chartData = React.useMemo(() => {
-        const items = data?.data ?? data?.items ?? [];
-        if (!Array.isArray(items) || items.length === 0) return [];
-        const counts: Record<string, number> = {};
-        items.forEach((item: any) => {
-            const s = item.status || 'unknown';
-            counts[s] = (counts[s] || 0) + 1;
-        });
-        return Object.entries(counts).map(([status, count]) => ({
-            status: STATUS_LABELS[status] || status,
-            count,
-            color: STATUS_COLORS[status] || '#8c8c8c',
+        const statsData = data?.data ?? data ?? {};
+        const byStatus = statsData.by_status ?? [];
+        if (!Array.isArray(byStatus) || byStatus.length === 0) return [];
+        return byStatus.map((item: any) => ({
+            status: STATUS_LABELS[item.status] || item.status,
+            count: item.count,
+            color: STATUS_COLORS[item.status] || '#8c8c8c',
         }));
     }, [data]);
 

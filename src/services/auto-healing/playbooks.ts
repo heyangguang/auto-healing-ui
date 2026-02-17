@@ -140,3 +140,18 @@ export async function getPlaybookFiles(id: string) {
         method: 'GET',
     });
 }
+
+/**
+ * 获取 Playbook 统计数据
+ * GET /api/v1/playbooks/stats
+ */
+export async function getPlaybookStats() {
+    return request<{
+        code: number;
+        data: {
+            total: number;
+            by_status: Array<{ status: string; count: number }>;
+            by_config_mode: Array<{ config_mode: string; count: number }>;
+        };
+    }>('/api/v1/playbooks/stats', { method: 'GET' });
+}

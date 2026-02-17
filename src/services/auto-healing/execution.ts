@@ -3,6 +3,19 @@ import { request } from '@umijs/max';
 // ==================== 任务模板 ====================
 
 /**
+ * 获取任务模板统计数据（需后端实现: GET /api/v1/execution-tasks/stats）
+ */
+export async function getExecutionTaskStats() {
+    return request<{
+        total: number;
+        docker: number;
+        local: number;
+        needs_review: number;
+        changed_playbooks: number;
+    }>('/api/v1/execution-tasks/stats', { method: 'GET' });
+}
+
+/**
  * 获取任务模板列表
  */
 export async function getExecutionTasks(params?: {
@@ -12,6 +25,7 @@ export async function getExecutionTasks(params?: {
     search?: string;
     executor_type?: string;
     status?: string;
+    needs_review?: boolean;
     target_hosts?: string;
     playbook_name?: string;
     repository_name?: string;
@@ -19,6 +33,10 @@ export async function getExecutionTasks(params?: {
     has_runs?: boolean;
     min_run_count?: number;
     last_run_status?: string;
+    sort_by?: string;
+    sort_order?: string;
+    created_from?: string;
+    created_to?: string;
 }) {
     return request<{ data: AutoHealing.ExecutionTask[]; total: number }>('/api/v1/execution-tasks', {
         method: 'GET',
@@ -80,6 +98,16 @@ export async function executeTask(id: string, data?: AutoHealing.ExecuteTaskRequ
 export async function confirmExecutionTaskReview(id: string) {
     return request<{ data: AutoHealing.ExecutionTask }>(`/api/v1/execution-tasks/${id}/confirm-review`, {
         method: 'POST',
+    });
+}
+
+/**
+ * 批量确认任务模板审核
+ */
+export async function batchConfirmReview(params: { task_ids?: string[]; playbook_id?: string }) {
+    return request<{ confirmed_count: number; message: string }>('/api/v1/execution-tasks/batch-confirm-review', {
+        method: 'POST',
+        data: params,
     });
 }
 
@@ -343,5 +371,45 @@ export async function disableExecutionSchedule(id: string) {
     return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/execution-schedules/${id}/disable`, {
         method: 'POST',
     });
+}
+
+/**
+ * 获取调度统计数据
+ * GET /api/v1/execution-schedules/stats
+ */
+export async function getExecutionScheduleStats() {
+    return request<{
+        code: number;
+        data: {
+            total: number;
+            enabled_count: number;
+            disabled_count: number;
+            by_status: Array<{ status: string; count: number }>;
+            by_schedule_type: Array<{ schedule_type: string; count: number }>;
+        };
+    }>('/api/v1/execution-schedules/stats', { method: 'GET' });
+}
+
+/**
+ * 获取时间轴数据（轻量级，不分页）
+ * GET /api/v1/execution-schedules/timeline
+ */
+export async function getScheduleTimeline(params?: { date?: string }) {
+    return request<{
+        code: number;
+        data: Array<{
+            id: string;
+            name: string;
+            schedule_type: string;
+            schedule_expr?: string;
+            scheduled_at?: string;
+            status: string;
+            enabled: boolean;
+            next_run_at: string;
+            last_run_at?: string;
+            task_id: string;
+            task_name: string;
+        }>;
+    }>('/api/v1/execution-schedules/timeline', { method: 'GET', params });
 }
 

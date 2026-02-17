@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Typography, Tooltip } from 'antd';
 import { AuditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { STATUS_CONFIG, getCurrentNodeShadow } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
 
 const { Text } = Typography;
 
@@ -51,17 +51,18 @@ const ApprovalNode = ({ data, isConnectable, selected }: NodeProps) => {
                 background: '#fff',
                 borderRadius: 0,
                 boxShadow: getCurrentNodeShadow(isCurrent, !!selected, color),
-                border: isCurrent ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                border: '1px solid #d9d9d9',
                 borderLeft: `3px solid ${statusColor || color}`,
                 transition: 'all 0.3s',
-                overflow: 'hidden',
+                overflow: 'visible',
                 animation: isCurrent ? 'currentNodePulse 2s ease-in-out infinite' : undefined,
+                ...getNodeOutlineStyle(isCurrent, !!selected),
             }}>
                 <Handle
                     type="target"
                     position={Position.Top}
                     isConnectable={isConnectable}
-                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9' }}
+                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9', ...getActiveHandleStyle('target', data.activeHandles, '#52c41a') }}
                 />
 
                 <div style={{
@@ -94,7 +95,7 @@ const ApprovalNode = ({ data, isConnectable, selected }: NodeProps) => {
                             type="source"
                             position={Position.Bottom}
                             id="approved"
-                            style={{ ...handleStyle, borderColor: '#52c41a', bottom: -4 }}
+                            style={{ ...handleStyle, borderColor: '#52c41a', bottom: -4, ...getActiveHandleStyle('approved', data.activeHandles, '#52c41a') }}
                             isConnectable={isConnectable}
                         />
                     </div>
@@ -108,7 +109,7 @@ const ApprovalNode = ({ data, isConnectable, selected }: NodeProps) => {
                             type="source"
                             position={Position.Bottom}
                             id="rejected"
-                            style={{ ...handleStyle, borderColor: '#ff4d4f', bottom: -4 }}
+                            style={{ ...handleStyle, borderColor: '#ff4d4f', bottom: -4, ...getActiveHandleStyle('rejected', data.activeHandles, '#ff4d4f') }}
                             isConnectable={isConnectable}
                         />
                     </div>

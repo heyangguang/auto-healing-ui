@@ -5,7 +5,7 @@ import { SaveOutlined, UserOutlined } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
 import { createRole, getRole, updateRole, assignRolePermissions } from '@/services/auto-healing/roles';
 import { getPermissionTree } from '@/services/auto-healing/permissions';
-import { getUsers, assignUserRoles } from '@/services/auto-healing/users';
+import { getUsers, getSimpleUsers, getUser, assignUserRoles } from '@/services/auto-healing/users';
 import './RoleForm.css';
 
 const { TextArea } = Input;
@@ -58,11 +58,11 @@ const RoleFormPage: React.FC = () => {
         })();
     }, []);
 
-    /* 加载所有用户 */
+    /* 加载所有用户（轻量接口，不分页） */
     useEffect(() => {
         (async () => {
             try {
-                const res = await getUsers({ page_size: 1000 });
+                const res = await getSimpleUsers();
                 const users = (res as any)?.data || [];
                 setAllUsers(users);
             } catch { /* ignore */ }
@@ -96,13 +96,18 @@ const RoleFormPage: React.FC = () => {
 
     /* 编辑模式：从用户列表中找出已分配该角色的用户 */
     useEffect(() => {
-        if (!isEdit || !roleName || allUsers.length === 0) return;
-        const assigned = allUsers
-            .filter(u => (u.roles || []).some((r: any) => r.name === roleName))
-            .map(u => u.id);
-        setSelectedUserIds(assigned);
-        setOriginalUserIds(assigned);
-    }, [isEdit, roleName, allUsers]);
+        if (!isEdit || !params.id) return;
+        // 通过后端 role_id 筛选获取已分配该角色的用户
+        (async () => {
+            try {
+                const res = await getUsers({ role_id: params.id, page_size: 100 });
+                const users = (res as any)?.data || [];
+                const assigned = users.map((u: any) => u.id);
+                setSelectedUserIds(assigned);
+                setOriginalUserIds(assigned);
+            } catch { /* ignore */ }
+        })();
+    }, [isEdit, params.id]);
 
     /* 所有权限 ID */
     const allPermissionIds = useMemo(() => {
@@ -143,25 +148,29 @@ const RoleFormPage: React.FC = () => {
         }
     };
 
-    /* 更新用户角色分配 */
+    /* 更新用户角色分配（按需获取每个变更用户的当前角色） */
     const updateUserAssignments = async (roleId: string, rName: string) => {
         const added = selectedUserIds.filter(id => !originalUserIds.includes(id));
         const removed = originalUserIds.filter(id => !selectedUserIds.includes(id));
 
         for (const userId of added) {
-            const user = allUsers.find(u => u.id === userId);
-            if (!user) continue;
-            const existingRoleIds = (user.roles || []).map((r: any) => r.id);
-            await assignUserRoles(userId, { role_ids: [...new Set([...existingRoleIds, roleId])] });
+            try {
+                const userRes = await getUser(userId);
+                const user = (userRes as any)?.data || userRes;
+                const existingRoleIds = (user?.roles || []).map((r: any) => r.id);
+                await assignUserRoles(userId, { role_ids: [...new Set([...existingRoleIds, roleId])] });
+            } catch { /* skip failed users */ }
         }
 
         for (const userId of removed) {
-            const user = allUsers.find(u => u.id === userId);
-            if (!user) continue;
-            const newRoleIds = (user.roles || [])
-                .filter((r: any) => r.name !== rName && r.id !== roleId)
-                .map((r: any) => r.id);
-            await assignUserRoles(userId, { role_ids: newRoleIds });
+            try {
+                const userRes = await getUser(userId);
+                const user = (userRes as any)?.data || userRes;
+                const newRoleIds = (user?.roles || [])
+                    .filter((r: any) => r.name !== rName && r.id !== roleId)
+                    .map((r: any) => r.id);
+                await assignUserRoles(userId, { role_ids: newRoleIds });
+            } catch { /* skip failed users */ }
         }
     };
 

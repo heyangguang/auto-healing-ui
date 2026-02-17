@@ -7,6 +7,7 @@ import {
     MoreOutlined, SettingOutlined, UndoOutlined
 } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
+import SortToolbar from '@/components/SortToolbar';
 import './index.css';
 import {
     Button, message, Space, Tag, Typography, Input,
@@ -52,6 +53,12 @@ const FORMAT_COLORS: Record<string, string> = {
     html: 'orange'
 };
 
+const TEMPLATE_SORT_OPTIONS = [
+    { value: 'updated_at', label: '更新时间' },
+    { value: 'created_at', label: '创建时间' },
+    { value: 'name', label: '名称' },
+];
+
 // ==================== Main Page Component ====================
 const NotificationTemplatesPage: React.FC = () => {
     const access = useAccess();
@@ -76,7 +83,7 @@ const NotificationTemplatesPage: React.FC = () => {
     const [filterFormat, setFilterFormat] = useState<string>('all');
     const [filterChannel, setFilterChannel] = useState<string>('all');
     const [sortBy, setSortBy] = useState<string>('updated_at');
-    const [sortOrder, setSortOrder] = useState<string>('desc');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     // Pagination (Infinite Scroll)
     const [page, setPage] = useState(1);
@@ -530,23 +537,13 @@ const NotificationTemplatesPage: React.FC = () => {
                 primaryActionDisabled={!access.canCreateTemplate}
                 onPrimaryAction={handleCreateNew}
                 extraToolbarActions={
-                    <Select
-                        value={`${sortBy}_${sortOrder}`}
-                        onChange={(v) => {
-                            const i = v.lastIndexOf('_');
-                            setSortBy(v.slice(0, i));
-                            setSortOrder(v.slice(i + 1));
-                        }}
-                        style={{ width: 130 }}
-                        variant="borderless"
-                        popupMatchSelectWidth={false}
-                        options={[
-                            { label: '最近更新', value: 'updated_at_desc' },
-                            { label: '最早更新', value: 'updated_at_asc' },
-                            { label: '最近创建', value: 'created_at_desc' },
-                            { label: '名称 A-Z', value: 'name_asc' },
-                            { label: '名称 Z-A', value: 'name_desc' },
-                        ]}
+                    <SortToolbar
+                        sortBy={sortBy}
+                        sortOrder={sortOrder}
+                        onSortByChange={setSortBy}
+                        onSortOrderChange={setSortOrder}
+                        options={TEMPLATE_SORT_OPTIONS}
+                        width={110}
                     />
                 }
             >
@@ -616,23 +613,13 @@ const NotificationTemplatesPage: React.FC = () => {
             primaryActionDisabled={!access.canCreateTemplate}
             onPrimaryAction={handleCreateNew}
             extraToolbarActions={
-                <Select
-                    value={`${sortBy}_${sortOrder}`}
-                    onChange={(v) => {
-                        const i = v.lastIndexOf('_');
-                        setSortBy(v.slice(0, i));
-                        setSortOrder(v.slice(i + 1));
-                    }}
-                    style={{ width: 130 }}
-                    variant="borderless"
-                    popupMatchSelectWidth={false}
-                    options={[
-                        { label: '最近更新', value: 'updated_at_desc' },
-                        { label: '最早更新', value: 'updated_at_asc' },
-                        { label: '最近创建', value: 'created_at_desc' },
-                        { label: '名称 A-Z', value: 'name_asc' },
-                        { label: '名称 Z-A', value: 'name_desc' },
-                    ]}
+                <SortToolbar
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSortByChange={setSortBy}
+                    onSortOrderChange={setSortOrder}
+                    options={TEMPLATE_SORT_OPTIONS}
+                    width={110}
                 />
             }
         >

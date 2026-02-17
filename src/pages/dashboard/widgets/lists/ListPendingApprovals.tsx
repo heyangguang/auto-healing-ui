@@ -38,7 +38,7 @@ const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRem
                         locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
                         renderItem={(item: any, index: number) => {
                             const nodeId = item.node_id || item.id?.slice(0, 8);
-                            const flowName = item.flow_instance?.flow?.name || item.flow_name || '-';
+                            const flowName = item.flow_name || '-';
                             const instanceId = item.flow_instance_id || '-';
 
                             return (

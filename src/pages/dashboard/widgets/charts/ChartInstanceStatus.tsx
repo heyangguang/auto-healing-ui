@@ -2,7 +2,7 @@ import { FundOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import { useRequest } from '@umijs/max';
 import React from 'react';
-import { getHealingInstances } from '@/services/auto-healing/instances';
+import { getHealingInstanceStats } from '@/services/auto-healing/instances';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
@@ -27,25 +27,24 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(() => getHealingInstances({ page_size: 500 }), { formatResult: (r: any) => r });
+    const { data: rawData, loading, refresh } = useRequest(() => getHealingInstanceStats());
     const { ref, width, height } = useContainerSize();
 
     const data = rawData as any;
     const chartData = React.useMemo(() => {
-        const items = data?.data ?? data?.items ?? [];
-        if (!Array.isArray(items) || items.length === 0) return [];
-        const counts: Record<string, number> = {};
-        items.forEach((item: any) => {
-            const s = item.status || 'unknown';
-            counts[s] = (counts[s] || 0) + 1;
-        });
-        return Object.entries(counts).map(([status, count]) => ({
-            type: STATUS_LABELS[status] || status,
-            value: count,
+        const statsData = data?.data ?? data ?? {};
+        const byStatus = statsData.by_status ?? [];
+        if (!Array.isArray(byStatus) || byStatus.length === 0) return [];
+        return byStatus.map((item: any) => ({
+            type: STATUS_LABELS[item.status] || item.status,
+            value: item.count,
         }));
     }, [data]);
 
-    const total = React.useMemo(() => chartData.reduce((s, d) => s + d.value, 0), [chartData]);
+    const total = React.useMemo(() => {
+        const statsData = data?.data ?? data ?? {};
+        return statsData.total ?? chartData.reduce((s: number, d: any) => s + d.value, 0);
+    }, [data, chartData]);
 
     return (
         <WidgetWrapper title="实例状态分布" icon={<FundOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>

@@ -463,17 +463,13 @@ const FlowEditorInner: React.FC = () => {
             const dagreGraph = new dagre.graphlib.Graph();
             dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-            // 自适应布局：节点多时横向，少时垂直
-            const autoDirection = nodes.length > 6 ? 'LR' : 'TB';
-            const isHorizontal = autoDirection === 'LR';
-
             const nodeWidth = 200;
-            const nodeHeight = isHorizontal ? 100 : 80;
+            const nodeHeight = 80;
 
             dagreGraph.setGraph({
-                rankdir: autoDirection,
-                nodesep: isHorizontal ? 40 : 50,  // 横向时垂直间距小
-                ranksep: isHorizontal ? 100 : 60, // 横向时水平间距大
+                rankdir: 'TB',
+                nodesep: 60,
+                ranksep: 80,
                 edgesep: 20,
                 marginx: 40,
                 marginy: 40,
@@ -577,13 +573,11 @@ const FlowEditorInner: React.FC = () => {
         <div className="dndflow" style={{
             display: 'flex',
             flexDirection: 'column',
-            width: 'calc(100% + 48px)',
-            height: 'calc(100vh - 100px)',
-            marginTop: -24,
-            marginLeft: -24,
-            marginRight: -24,
+            width: '100%',
+            height: 'calc(100vh - 140px)',
             padding: 0,
             overflow: 'hidden',
+            border: '1px solid #f0f0f0',
         }}>
             <ReactFlowProvider>
                 <Layout style={{ flex: 1, background: '#fff', overflow: 'hidden' }}>

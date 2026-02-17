@@ -314,96 +314,95 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* 三个触发器区域 */}
-            {TRIGGERS.map(trigger => {
-                const config = getTriggerConfig(trigger.key);
-                const isEnabled = config.enabled ?? false;
-                const configList = getConfigList(trigger.key);
+        <div>
+            {/* 三个触发器区域 - 横排紧凑 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                {TRIGGERS.map(trigger => {
+                    const config = getTriggerConfig(trigger.key);
+                    const isEnabled = config.enabled ?? false;
+                    const configList = getConfigList(trigger.key);
 
-                return (
-                    <div
-                        key={trigger.key}
-                        style={{
-                            border: `1px dashed ${isEnabled ? trigger.color : '#d9d9d9'}`,
-                            borderRadius: 0,
-                            padding: 12,
-                            background: isEnabled ? `${trigger.color}08` : '#fafafa'
-                        }}
-                    >
-                        {/* 标题行 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Space>
-                                <span style={{ color: trigger.color }}>{trigger.icon}</span>
-                                <Text strong style={{ fontSize: 13 }}>{trigger.label}</Text>
-                                {configList.length > 0 && (
-                                    <Tag color={trigger.tagColor} style={{ margin: 0, fontSize: 10 }}>
-                                        {configList.length} 策略
-                                    </Tag>
-                                )}
-                            </Space>
-                            <Switch
-                                size="small"
-                                checked={isEnabled}
-                                onChange={checked => handleTriggerEnableChange(trigger.key, checked)}
-                            />
-                        </div>
+                    return (
+                        <div
+                            key={trigger.key}
+                            style={{
+                                border: `1px dashed ${isEnabled ? trigger.color : '#d9d9d9'}`,
+                                borderRadius: 0,
+                                padding: 12,
+                                background: isEnabled ? `${trigger.color}08` : '#fafafa'
+                            }}
+                        >
+                            {/* 标题行 */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Space size={4}>
+                                    <span style={{ color: trigger.color, fontSize: 13 }}>{trigger.icon}</span>
+                                    <Text strong style={{ fontSize: 13 }}>{trigger.label}</Text>
+                                    {configList.length > 0 && (
+                                        <Tag color={trigger.tagColor} style={{ margin: 0, fontSize: 10 }}>
+                                            {configList.length}
+                                        </Tag>
+                                    )}
+                                </Space>
+                                <Switch
+                                    size="small"
+                                    checked={isEnabled}
+                                    onChange={checked => handleTriggerEnableChange(trigger.key, checked)}
+                                />
+                            </div>
 
-                        {/* 已配置的策略 + 添加按钮 */}
-                        {isEnabled && (
-                            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {configList.map((cfg, idx) => (
-                                    <div
-                                        key={idx}
+                            {/* 已配置的策略 + 添加按钮 */}
+                            {isEnabled && (
+                                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {configList.map((cfg, idx) => (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '4px 8px',
+                                                border: '1px dashed #d9d9d9',
+                                                borderRadius: 0,
+                                                background: '#fff',
+                                                fontSize: 11
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                                                <SendOutlined style={{ color: '#999', fontSize: 10, flexShrink: 0 }} />
+                                                <Text ellipsis={{ tooltip: getChannelName(cfg.channel_id) }} style={{ fontSize: 11, maxWidth: 80 }}>{getChannelName(cfg.channel_id)}</Text>
+                                                <Text type="secondary" style={{ fontSize: 10 }}>→</Text>
+                                                <Text type="secondary" ellipsis={{ tooltip: getTemplateName(cfg.template_id) }} style={{ fontSize: 11, maxWidth: 80 }}>{getTemplateName(cfg.template_id)}</Text>
+                                            </div>
+                                            <CloseOutlined
+                                                style={{ color: '#bfbfbf', cursor: 'pointer', fontSize: 9, flexShrink: 0 }}
+                                                onClick={() => handleRemoveConfig(trigger.key, idx)}
+                                                onMouseEnter={e => e.currentTarget.style.color = '#ff4d4f'}
+                                                onMouseLeave={e => e.currentTarget.style.color = '#bfbfbf'}
+                                            />
+                                        </div>
+                                    ))}
+
+                                    {/* 添加按钮 */}
+                                    <Button
+                                        type="dashed"
+                                        size="small"
+                                        icon={<PlusOutlined />}
+                                        onClick={() => openSelector(trigger.key)}
                                         style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '6px 10px',
-                                            border: '1px dashed #d9d9d9',
                                             borderRadius: 0,
-                                            background: '#fff',
-                                            fontSize: 12
+                                            borderColor: '#d9d9d9',
+                                            color: '#595959',
+                                            fontSize: 11
                                         }}
                                     >
-                                        <Space size={8}>
-                                            <SendOutlined style={{ color: '#999', fontSize: 11 }} />
-                                            <Text style={{ fontSize: 12 }}>{getChannelName(cfg.channel_id)}</Text>
-                                            <Tag style={{ margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 4px' }}>
-                                                {getChannelType(cfg.channel_id)}
-                                            </Tag>
-                                            <Text type="secondary" style={{ fontSize: 11 }}>→</Text>
-                                            <Text type="secondary" style={{ fontSize: 12 }}>{getTemplateName(cfg.template_id)}</Text>
-                                        </Space>
-                                        <CloseOutlined
-                                            style={{ color: '#bfbfbf', cursor: 'pointer', fontSize: 10 }}
-                                            onClick={() => handleRemoveConfig(trigger.key, idx)}
-                                            onMouseEnter={e => e.currentTarget.style.color = '#ff4d4f'}
-                                            onMouseLeave={e => e.currentTarget.style.color = '#bfbfbf'}
-                                        />
-                                    </div>
-                                ))}
-
-                                {/* 添加按钮 */}
-                                <Button
-                                    type="dashed"
-                                    size="small"
-                                    icon={<PlusOutlined />}
-                                    onClick={() => openSelector(trigger.key)}
-                                    style={{
-                                        borderRadius: 0,
-                                        borderColor: '#d9d9d9',
-                                        color: '#595959',
-                                        fontSize: 12
-                                    }}
-                                >
-                                    添加通知策略
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
+                                        添加策略
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
 
             {/* 选择器Modal */}
             <Modal

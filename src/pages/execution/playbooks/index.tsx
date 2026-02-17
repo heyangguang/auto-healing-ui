@@ -20,7 +20,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import {
     getPlaybooks, getPlaybook, createPlaybook, updatePlaybook, deletePlaybook,
     scanPlaybook, updatePlaybookVariables, setPlaybookReady, getPlaybookScanLogs,
-    setPlaybookOffline, getPlaybookFiles,
+    setPlaybookOffline, getPlaybookFiles, getPlaybookStats,
 } from '@/services/auto-healing/playbooks';
 import { getGitRepos, getFiles } from '@/services/auto-healing/git-repos';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
@@ -209,6 +209,7 @@ const PlaybookList: React.FC = () => {
 
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [relatedTaskCount, setRelatedTaskCount] = useState(0);
     const [scanModeModalOpen, setScanModeModalOpen] = useState(false);
     const [scanMode, setScanMode] = useState<'auto' | 'enhanced'>('auto');
 
@@ -234,8 +235,8 @@ const PlaybookList: React.FC = () => {
     const [hasInitialExpanded, setHasInitialExpanded] = useState(false);
     const [initialized, setInitialized] = useState(false); // 等待所有数据加载完成
 
-    // 任务模板数据（用于删除保护检查）
-    const [tasks, setTasks] = useState<AutoHealing.ExecutionTask[]>([]);
+    // 统计数据（来自后端 stats API）
+    const [stats, setStats] = useState({ total: 0, ready: 0, pendingScan: 0, pendingOnline: 0, error: 0 });
 
     // ==================== 数据加载 ====================
     const loadPlaybooks = useCallback(async (params?: Record<string, any>) => {
@@ -254,14 +255,24 @@ const PlaybookList: React.FC = () => {
             if (p.created_from) queryParams.created_from = p.created_from;
             if (p.created_to) queryParams.created_to = p.created_to;
 
-            const [playbooksRes, reposRes, tasksRes] = await Promise.all([
+            const [playbooksRes, reposRes, statsRes] = await Promise.all([
                 getPlaybooks(queryParams),
                 getGitRepos({ status: 'ready' }),
-                getExecutionTasks({ page: 1, page_size: 500 }),
+                getPlaybookStats(),
             ]);
             setPlaybooks(playbooksRes.data || playbooksRes.items || []);
             setRepos(reposRes.data || []);
-            setTasks(tasksRes.data || []);
+            if (statsRes?.data) {
+                const byStatus = statsRes.data.by_status || [];
+                const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
+                setStats({
+                    total: statsRes.data.total || 0,
+                    ready: getCount('ready'),
+                    pendingScan: getCount('pending'),
+                    pendingOnline: getCount('scanned'),
+                    error: getCount('error') + getCount('invalid'),
+                });
+            }
         } catch { /* ignore */ }
         finally { setLoading(false); }
     }, [searchParams]);
@@ -278,14 +289,24 @@ const PlaybookList: React.FC = () => {
             setLoading(true);
             try {
                 // 并行加载所有数据
-                const [playbooksRes, reposRes, tasksRes] = await Promise.all([
+                const [playbooksRes, reposRes, statsRes] = await Promise.all([
                     getPlaybooks({ page: 1, page_size: 100 }),
                     getGitRepos({ status: 'ready' }),
-                    getExecutionTasks({ page: 1, page_size: 500 })
+                    getPlaybookStats()
                 ]);
                 setPlaybooks(playbooksRes.data || playbooksRes.items || []);
                 setRepos(reposRes.data || []);
-                setTasks(tasksRes.data || []);
+                if (statsRes?.data) {
+                    const byStatus = statsRes.data.by_status || [];
+                    const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
+                    setStats({
+                        total: statsRes.data.total || 0,
+                        ready: getCount('ready'),
+                        pendingScan: getCount('pending'),
+                        pendingOnline: getCount('scanned'),
+                        error: getCount('error') + getCount('invalid'),
+                    });
+                }
             } catch { /* ignore */ }
             finally {
                 setLoading(false);
@@ -296,9 +317,7 @@ const PlaybookList: React.FC = () => {
     }, []);
 
     // 获取 Playbook 关联的任务模板
-    const getPlaybookTasks = useCallback((playbookId: string) => {
-        return tasks.filter(t => t.playbook_id === playbookId);
-    }, [tasks]);
+    // getPlaybookTasks removed — 删除保护检查已改用 openDeleteConfirm 中的后端直接查询
 
     // 按仓库分组
     const groupedPlaybooks = useMemo(() => {
@@ -326,14 +345,7 @@ const PlaybookList: React.FC = () => {
         }
     }, [groupedPlaybooks, hasInitialExpanded]);
 
-    // 统计 - 区分 pending 和 scanned 状态
-    const stats = useMemo(() => ({
-        total: playbooks.length,
-        ready: playbooks.filter(p => p.status === 'ready').length,
-        pendingScan: playbooks.filter(p => p.status === 'pending').length,
-        pendingOnline: playbooks.filter(p => p.status === 'scanned').length,
-        error: playbooks.filter(p => p.status === 'error' || p.status === 'invalid').length,
-    }), [playbooks]);
+    // 统计 — 来自后端 /api/v1/playbooks/stats，不再前端计算
 
     // 统计栏（同代码仓库标准）
     const statsBar = useMemo(() => (
@@ -428,11 +440,20 @@ const PlaybookList: React.FC = () => {
         } catch { /* ignore */ }
     }, [selectedPlaybook, loadPlaybooks]);
 
+    // 打开删除确认弹窗 — 从后端获取精确关联数
+    const openDeleteConfirm = useCallback(async () => {
+        if (!selectedPlaybook) return;
+        try {
+            const res = await getExecutionTasks({ playbook_id: selectedPlaybook.id, page: 1, page_size: 1 });
+            setRelatedTaskCount(res.total || 0);
+        } catch { setRelatedTaskCount(0); }
+        setDeleteConfirmOpen(true);
+    }, [selectedPlaybook]);
+
     const handleDelete = useCallback(async () => {
         if (!selectedPlaybook) return;
-        const relatedTasks = getPlaybookTasks(selectedPlaybook.id);
-        if (relatedTasks.length > 0) {
-            message.error(`无法删除：该 Playbook 关联 ${relatedTasks.length} 个任务模板，请先删除任务模板`);
+        if (relatedTaskCount > 0) {
+            message.error(`无法删除：该 Playbook 关联 ${relatedTaskCount} 个任务模板，请先删除任务模板`);
             return;
         }
         try {
@@ -442,7 +463,7 @@ const PlaybookList: React.FC = () => {
             setSelectedPlaybook(undefined);
             loadPlaybooks();
         } catch { /* ignore */ }
-    }, [selectedPlaybook, loadPlaybooks, getPlaybookTasks]);
+    }, [selectedPlaybook, loadPlaybooks, relatedTaskCount]);
 
     const handleSaveVariables = useCallback(async (vars?: AutoHealing.PlaybookVariable[]) => {
         if (!selectedPlaybook) return;
@@ -692,7 +713,7 @@ const PlaybookList: React.FC = () => {
                             <Button icon={<ClockCircleOutlined />} onClick={handleSetOffline} disabled={!access.canManagePlaybook}>下线</Button>
                         )}
                         <Button icon={<EditOutlined />} onClick={() => setEditModalOpen(true)} disabled={!access.canManagePlaybook}>编辑</Button>
-                        <Button danger icon={<DeleteOutlined />} onClick={() => setDeleteConfirmOpen(true)} disabled={!access.canManagePlaybook}>删除</Button>
+                        <Button danger icon={<DeleteOutlined />} onClick={openDeleteConfirm} disabled={!access.canManagePlaybook}>删除</Button>
                     </Space>
                 </div>
 
@@ -1806,14 +1827,14 @@ const PlaybookList: React.FC = () => {
                 okText="删除"
                 okButtonProps={{
                     danger: true,
-                    disabled: selectedPlaybook ? getPlaybookTasks(selectedPlaybook.id).length > 0 : false
+                    disabled: relatedTaskCount > 0
                 }}
             >
-                {selectedPlaybook && getPlaybookTasks(selectedPlaybook.id).length > 0 ? (
+                {relatedTaskCount > 0 ? (
                     <>
                         <Alert
                             type="error"
-                            message={<>无法删除：关联 <b>{getPlaybookTasks(selectedPlaybook.id).length}</b> 个任务模板</>}
+                            message={<>无法删除：关联 <b>{relatedTaskCount}</b> 个任务模板</>}
                             description="请先删除关联的任务模板后再删除此 Playbook"
                             showIcon
                         />

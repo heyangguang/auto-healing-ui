@@ -1,0 +1,156 @@
+/* ========== 任务模板表单 — 多卡片限宽布局 ========== */
+
+.template-form-page {
+    padding: 0;
+    min-height: calc(100vh - 120px);
+    background: #f5f5f5;
+}
+
+/* 卡片容器 */
+.template-form-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 24px 32px;
+    max-width: 860px;
+}
+
+/* 单张卡片 */
+.template-form-card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    padding: 24px 32px;
+}
+
+.template-form-card .ant-form-item-label>label {
+    font-weight: 500;
+    color: #262626;
+}
+
+.template-form-card .ant-form-item {
+    margin-bottom: 20px;
+}
+
+.template-form-card .ant-form-item:last-child {
+    margin-bottom: 0;
+}
+
+.template-form-card .ant-form-item-extra {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-top: 2px;
+}
+
+/* 底部操作按钮 */
+.template-form-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* 卡片标题 */
+.template-form-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    margin: 0 0 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.template-form-section-title .anticon {
+    font-size: 15px;
+    color: #1890ff;
+}
+
+/* ========== 变量配置 ========== */
+
+.template-form-var-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.template-form-var-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 14px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.template-form-var-row:last-child {
+    border-bottom: none;
+}
+
+.template-form-var-label {
+    width: 200px;
+    flex-shrink: 0;
+    padding-right: 16px;
+    padding-top: 4px;
+}
+
+.template-form-var-label .var-name {
+    font-size: 13px;
+    color: #262626;
+    font-weight: 500;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.template-form-var-label .var-required {
+    margin-left: 6px;
+    font-size: 10px;
+    color: #ff4d4f;
+    font-weight: 500;
+}
+
+.template-form-var-label .var-type {
+    font-size: 11px;
+    color: #bfbfbf;
+    margin-top: 2px;
+}
+
+.template-form-var-input {
+    flex: 1;
+    max-width: 480px;
+}
+
+/* 变量卡片空状态 */
+.template-form-var-empty {
+    padding: 48px 0;
+    text-align: center;
+}
+
+/* ========== 凭据选择器展示 ========== */
+.template-form-secrets-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 32px;
+    padding: 4px 0;
+}
+
+.template-form-secrets-display .ant-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+    .template-form-cards {
+        padding: 12px 12px 24px;
+    }
+
+    .template-form-card {
+        padding: 20px;
+    }
+
+    .template-form-var-label {
+        width: 140px;
+    }
+}

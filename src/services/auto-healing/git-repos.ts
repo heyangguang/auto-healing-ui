@@ -165,3 +165,17 @@ export async function getSyncLogs(id: string, params?: { page?: number; page_siz
         params,
     });
 }
+
+/**
+ * 获取 Git 仓库统计数据
+ * GET /api/v1/git-repos/stats
+ */
+export async function getGitRepoStats() {
+    return request<{
+        code: number;
+        data: {
+            total: number;
+            by_status: Array<{ status: string; count: number }>;
+        };
+    }>('/api/v1/git-repos/stats', { method: 'GET' });
+}

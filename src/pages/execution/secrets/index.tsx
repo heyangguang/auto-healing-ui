@@ -21,6 +21,7 @@ import {
     getSecretsSources,
     deleteSecretsSource, testSecretsQuery,
     enableSecretsSource, disableSecretsSource,
+    getSecretsSourcesStats,
 } from '@/services/auto-healing/secrets';
 import './index.css';
 
@@ -102,14 +103,25 @@ const SecretsSourceList: React.FC = () => {
     }, []);
     useEffect(() => { loadSources(); }, [loadSources]);
 
-    /* ---- 统计 ---- */
-    const stats = useMemo(() => ({
-        total: allSources.length,
-        active: allSources.filter(s => s.status === 'active').length,
-        file: allSources.filter(s => s.type === 'file').length,
-        vault: allSources.filter(s => s.type === 'vault').length,
-        webhook: allSources.filter(s => s.type === 'webhook').length,
-    }), [allSources]);
+    /* ---- 统计（来自后端 stats API）---- */
+    const [stats, setStats] = useState({ total: 0, active: 0, file: 0, vault: 0, webhook: 0 });
+    useEffect(() => {
+        getSecretsSourcesStats().then(res => {
+            if (res?.data) {
+                const byStatus = res.data.by_status || [];
+                const byType = res.data.by_type || [];
+                const getStatusCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
+                const getTypeCount = (t: string) => byType.find((x: any) => x.type === t)?.count || 0;
+                setStats({
+                    total: res.data.total || 0,
+                    active: getStatusCount('active'),
+                    file: getTypeCount('file'),
+                    vault: getTypeCount('vault'),
+                    webhook: getTypeCount('webhook'),
+                });
+            }
+        }).catch(() => { });
+    }, [allSources]); // 数据变更时重新加载统计
 
     /* ---- 详情 Drawer ---- */
     const [drawerOpen, setDrawerOpen] = useState(false);

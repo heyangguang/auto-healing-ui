@@ -53,8 +53,7 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                             const st = STATUS_MAP[item.status] || { color: 'default', text: item.status };
                             const displayName = item.title || item.name || (item.id ? `${item.id.slice(0, 8)}...` : '-');
                             // 尝试获取额外信息：流程名称和当前节点
-                            // 优先使用 flow.name，其次 flow_name
-                            const flowName = item.flow?.name || item.flow_name || '-';
+                            const flowName = item.flow_name || '-';
                             const currentNode = item.current_node_id || '-';
 
                             return (

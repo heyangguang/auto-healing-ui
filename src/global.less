@@ -242,17 +242,37 @@ body[style] {
   margin-right: 0 !important;
 }
 
-/* 当前执行节点脉冲高亮动画 */
+/* 当前执行节点脉冲高亮动画 — 中性深灰光晕 */
 @keyframes currentNodePulse {
 
   0%,
   100% {
-    box-shadow: 0 0 0 2px #1890ff, 0 0 12px rgba(24, 144, 255, 0.5);
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.10);
   }
 
   50% {
-    box-shadow: 0 0 0 2px #1890ff, 0 0 20px rgba(24, 144, 255, 0.8);
+    box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.08), 0 4px 20px rgba(0, 0, 0, 0.14);
   }
+}
+
+/* 活跃连接点呼吸动画 — 蓝色光晕 */
+@keyframes handlePulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 3px 1px rgba(22, 119, 255, 0.35);
+  }
+
+  50% {
+    box-shadow: 0 0 6px 2px rgba(22, 119, 255, 0.6);
+  }
+}
+
+/* ReactFlow 默认选中样式覆盖 — 让自定义 outline 成为唯一选中指示器 */
+.react-flow__node.selected,
+.react-flow__node:focus,
+.react-flow__node:focus-visible {
+  outline: none !important;
 }
 
 /* ============================================
@@ -329,4 +349,59 @@ body[style] {
 /* 隐藏 ProLayout 默认的 PageContainer padding 在 Dashboard 页面 */
 .ant-pro-page-container {
   padding-block-start: 0 !important;
+}
+
+/* ============================================
+   节点详情 Drawer — Tabs 自适应高度
+   基于 antd v6 源码分析的完整 Flex 链覆盖。
+   DOM 层级: .ant-drawer → .ant-drawer-content-wrapper
+     → .ant-drawer-section → .ant-drawer-body
+     → .ant-tabs → .ant-tabs-nav + .ant-tabs-content-holder
+     → .ant-tabs-content → .ant-tabs-tabpane
+   ============================================ */
+.node-detail-drawer {
+
+  /* Layer 1: section — v6 新增容器，默认 overflow:auto 导致 body 可无限延伸 */
+  .ant-drawer-section {
+    overflow: hidden !important;
+  }
+
+  /* Layer 2: body — 默认 overflow:auto，改为 flex column + hidden */
+  .ant-drawer-body {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  /* Layer 3: Tabs root — 强制 flex column 填满剩余空间 */
+  .ant-tabs {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Layer 3a: Tabs nav bar — 固定不收缩 */
+  .ant-tabs-nav {
+    flex-shrink: 0 !important;
+  }
+
+  /* Layer 4: content-holder — 填满 Tabs 剩余空间 */
+  .ant-tabs-content-holder {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Layer 5: content — 撑满 holder */
+  .ant-tabs-content {
+    height: 100% !important;
+  }
+
+  /* Layer 6: tabpane — 唯一的滚动容器 */
+  .ant-tabs-tabpane {
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
 }

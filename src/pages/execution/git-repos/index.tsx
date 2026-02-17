@@ -20,7 +20,7 @@ import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import {
     getGitRepos, getGitRepo, deleteGitRepo, syncGitRepo,
-    getFiles, getCommits, getSyncLogs,
+    getFiles, getCommits, getSyncLogs, getGitRepoStats,
 } from '@/services/auto-healing/git-repos';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
 import './index.css';
@@ -155,13 +155,9 @@ const GitRepoList: React.FC = () => {
     const [selectedFilePath, setSelectedFilePath] = useState('');
     const [loadingFiles, setLoadingFiles] = useState(false);
     const [loadingContent, setLoadingContent] = useState(false);
+    const [drawerPlaybooks, setDrawerPlaybooks] = useState<AutoHealing.Playbook[]>([]);
 
-    // Playbook 保护
-    const [playbooks, setPlaybooks] = useState<AutoHealing.Playbook[]>([]);
-    useEffect(() => {
-        getPlaybooks({ page_size: 500 }).then(res => setPlaybooks(res.data || res.items || [])).catch(() => { });
-    }, []);
-    const getRepoPlaybooks = useCallback((repoId: string) => playbooks.filter(p => p.repository_id === repoId), [playbooks]);
+
 
     const triggerRefresh = useCallback(() => setRefreshTrigger(n => n + 1), []);
 
@@ -182,10 +178,16 @@ const GitRepoList: React.FC = () => {
         setActiveTab('info');
         setCommits([]);
         setSyncLogs([]);
+        setDrawerPlaybooks([]);
 
         try {
             const res = await getGitRepo(record.id);
             setCurrentRow(res.data);
+
+            // 按 repository_id 加载关联 Playbook
+            getPlaybooks({ repository_id: record.id, page_size: 50 })
+                .then(pbRes => setDrawerPlaybooks(pbRes.data || []))
+                .catch(() => { });
 
             if (res.data.status === 'ready') {
                 setLoadingCommits(true);
@@ -209,18 +211,17 @@ const GitRepoList: React.FC = () => {
     const openEdit = useCallback((r: AutoHealing.GitRepository) => history.push(`/execution/git-repos/${r.id}/edit`), []);
 
     const handleDelete = useCallback(async (id: string) => {
-        const related = getRepoPlaybooks(id);
-        if (related.length > 0) {
-            message.error(`无法删除：关联 ${related.length} 个 Playbook`);
-            return;
-        }
         try {
             await deleteGitRepo(id);
             message.success('删除成功');
             setDrawerOpen(false);
             triggerRefresh();
-        } catch { }
-    }, [getRepoPlaybooks, triggerRefresh]);
+        } catch (err: any) {
+            // 后端已有关联 Playbook 保护，直接展示错误
+            const msg = err?.response?.data?.message || err?.data?.message || err?.message || '删除失败';
+            message.error(msg);
+        }
+    }, [triggerRefresh]);
 
     // 文件浏览
     const loadFileTree = useCallback(async (id: string) => {
@@ -256,7 +257,6 @@ const GitRepoList: React.FC = () => {
             columnKey: 'name', columnTitle: '仓库', fixedColumn: true, dataIndex: 'name', width: 360, sorter: true,
             render: (_: any, r: AutoHealing.GitRepository) => {
                 const st = statusConfig[r.status] || statusConfig.pending;
-                const pbCount = getRepoPlaybooks(r.id).length;
                 return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {(() => {
@@ -274,9 +274,9 @@ const GitRepoList: React.FC = () => {
                                     onClick={(e) => { e.stopPropagation(); openDetail(r); }}>{r.name}</a>
                                 <Tag color={st.color} style={{ marginLeft: 6, fontSize: 11 }}>{st.text}</Tag>
                                 {r.sync_enabled && <Tooltip title="已启用定时同步"><CloudSyncOutlined style={{ color: '#1890ff', marginLeft: 4 }} /></Tooltip>}
-                                {pbCount > 0 && (
-                                    <Tooltip title={`关联 ${pbCount} 个 Playbook`}>
-                                        <span className="git-playbook-badge"><FileTextOutlined />{pbCount}</span>
+                                {((r as any).playbook_count || 0) > 0 && (
+                                    <Tooltip title={`关联 ${(r as any).playbook_count} 个 Playbook`}>
+                                        <span className="git-playbook-badge"><FileTextOutlined />{(r as any).playbook_count}</span>
                                     </Tooltip>
                                 )}
                             </div>
@@ -359,7 +359,7 @@ const GitRepoList: React.FC = () => {
                 </Space>
             ),
         },
-    ], [openDetail, openEdit, handleSync, handleDelete, syncing, access, loadFileTree, getRepoPlaybooks]);
+    ], [openDetail, openEdit, handleSync, handleDelete, syncing, access, loadFileTree]);
 
     // ======= 数据请求 =======
     const handleRequest = useCallback(async (params: {
@@ -405,15 +405,19 @@ const GitRepoList: React.FC = () => {
             const items = res.data || [];
             const total = (res as any)?.total ?? items.length;
 
-            // 更新统计（用不带分页查询获取全量统计）
-            const statsRes = await getGitRepos({ page: 1, page_size: 1000 });
-            const allItems = statsRes.data || [];
-            setStats({
-                total: allItems.length,
-                ready: allItems.filter(r => r.status === 'ready').length,
-                pending: allItems.filter(r => r.status === 'pending').length,
-                error: allItems.filter(r => r.status === 'error').length,
-            });
+            // 更新统计（使用后端 stats API）
+            getGitRepoStats().then(statsRes => {
+                if (statsRes?.data) {
+                    const byStatus = statsRes.data.by_status || [];
+                    const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
+                    setStats({
+                        total: statsRes.data.total || 0,
+                        ready: getCount('ready'),
+                        pending: getCount('pending'),
+                        error: getCount('error'),
+                    });
+                }
+            }).catch(() => { });
 
             return { data: items, total };
         } catch {
@@ -607,31 +611,29 @@ const GitRepoList: React.FC = () => {
                                     </div>
 
                                     {/* 关联 Playbook */}
-                                    {currentRow && (() => {
-                                        const related = getRepoPlaybooks(currentRow.id);
-                                        return related.length > 0 ? (
-                                            <div className="git-detail-card">
-                                                <div className="git-detail-card-header">
-                                                    <FileTextOutlined className="git-detail-card-header-icon" />
-                                                    <span className="git-detail-card-header-title">关联 Playbook</span>
-                                                    <span className="git-detail-card-header-count">{related.length} 个</span>
-                                                </div>
-                                                <div style={{ padding: 0 }}>
-                                                    {related.map(pb => (
-                                                        <div key={pb.id} className="git-playbook-link"
-                                                            onClick={() => history.push(`/execution/playbooks`)}>
-                                                            <div className="git-playbook-link-icon"><FileTextOutlined /></div>
-                                                            <div className="git-playbook-link-info">
-                                                                <div className="git-playbook-link-name">{pb.name}</div>
-                                                                {pb.playbook_path && <div className="git-playbook-link-path">{pb.playbook_path}</div>}
-                                                            </div>
-                                                            <RightOutlined style={{ color: '#d9d9d9', fontSize: 12 }} />
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                    {drawerPlaybooks.length > 0 && (
+                                        <div className="git-detail-card">
+                                            <div className="git-detail-card-header">
+                                                <FileTextOutlined className="git-detail-card-header-icon" />
+                                                <span className="git-detail-card-header-title">关联 Playbook</span>
+                                                <span className="git-detail-card-header-count">{drawerPlaybooks.length} 个</span>
                                             </div>
-                                        ) : null;
-                                    })()}
+                                            <div style={{ padding: 0 }}>
+                                                {drawerPlaybooks.map(pb => (
+                                                    <div key={pb.id} className="git-playbook-link"
+                                                        onClick={() => history.push(`/execution/playbooks`)}>
+                                                        <div className="git-playbook-link-icon"><FileTextOutlined /></div>
+                                                        <div className="git-playbook-link-info">
+                                                            <div className="git-playbook-link-name">{pb.name}</div>
+                                                            {pb.file_path && <div className="git-playbook-link-path">{pb.file_path}</div>}
+                                                        </div>
+                                                        <RightOutlined style={{ color: '#d9d9d9', fontSize: 12 }} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
                             ),
                         },

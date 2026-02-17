@@ -130,6 +130,16 @@ export default [
         component: './execution/playbooks',
       },
       {
+        path: '/execution/templates/create',
+        component: './execution/templates/TemplateForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/execution/templates/:id/edit',
+        component: './execution/templates/TemplateForm',
+        hideInMenu: true,
+      },
+      {
         path: '/execution/templates',
         name: 'templates',
         component: './execution/templates',
@@ -143,6 +153,16 @@ export default [
         path: '/execution/execute',
         name: 'execute',
         component: './execution/execute',
+      },
+      {
+        path: '/execution/schedules/create',
+        component: './execution/schedules/ScheduleForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/execution/schedules/:id/edit',
+        component: './execution/schedules/ScheduleForm',
+        hideInMenu: true,
       },
       {
         path: '/execution/schedules',
@@ -242,6 +262,16 @@ export default [
       {
         path: '/healing/flows/editor/:id',
         component: './healing/flows/editor',
+        hideInMenu: true,
+      },
+      {
+        path: '/healing/rules/create',
+        component: './healing/rules/RuleForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/healing/rules/:id/edit',
+        component: './healing/rules/RuleForm',
         hideInMenu: true,
       },
       {

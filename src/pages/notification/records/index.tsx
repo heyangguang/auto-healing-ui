@@ -11,7 +11,7 @@ import {
 } from 'antd';
 import React, { useState, useEffect, useCallback, startTransition } from 'react';
 import { history } from '@umijs/max';
-import { getNotifications, retryNotification, getChannels, getTemplates } from '@/services/auto-healing/notification';
+import { getNotifications, retryNotification, getChannels, getTemplates, getNotificationStats } from '@/services/auto-healing/notification';
 import { getExecutionRun } from '@/services/auto-healing/execution';
 import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, AdvancedSearchField } from '@/components/StandardTable';
@@ -60,11 +60,23 @@ const formatFullTime = (timeStr: string) => {
 };
 
 // ==================== Statistics Dashboard ====================
-const StatsDashboard: React.FC<{ data: AutoHealing.Notification[] }> = ({ data }) => {
-    const total = data.length;
-    const sentCount = data.filter(d => d.status === 'sent' || d.status === 'delivered').length;
-    const failedCount = data.filter(d => d.status === 'failed' || d.status === 'bounced').length;
-    const pendingCount = data.filter(d => d.status === 'pending').length;
+const StatsDashboard: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
+    const [statsData, setStatsData] = useState({ total: 0, sentCount: 0, failedCount: 0, pendingCount: 0 });
+    useEffect(() => {
+        getNotificationStats().then(res => {
+            if (res?.data) {
+                const byStatus = res.data.logs_by_status || [];
+                const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
+                setStatsData({
+                    total: res.data.logs_total || 0,
+                    sentCount: getCount('sent') + getCount('delivered'),
+                    failedCount: getCount('failed') + getCount('bounced'),
+                    pendingCount: getCount('pending'),
+                });
+            }
+        }).catch(() => { });
+    }, [refreshKey]);
+    const { total, sentCount, failedCount, pendingCount } = statsData;
     const successRate = total > 0 ? ((sentCount / total) * 100).toFixed(1) : '0';
 
     return (
@@ -314,7 +326,7 @@ const NotificationRecords: React.FC = () => {
                         <path d="M36 12v4M34 14h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                 }
-                headerExtra={<StatsDashboard data={allData} />}
+                headerExtra={<StatsDashboard />}
                 columns={columns}
                 rowKey="id"
                 searchFields={[

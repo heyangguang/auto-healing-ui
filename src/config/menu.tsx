@@ -65,7 +65,7 @@ export const SERVICES: Record<string, ServiceItem[]> = {
         { id: 'git', name: '代码仓库', path: '/execution/git-repos', desc: '代码与配置仓库管理', icon: <CodeOutlined /> },
         { id: 'playbook', name: '剧本管理', path: '/execution/playbooks', desc: 'Ansible Playbook 管理', icon: <BookOutlined /> },
         { id: 'templates', name: '任务模板', path: '/execution/templates', desc: '常用任务参数模板', icon: <FileTextOutlined /> },
-        { id: 'execute', name: '执行控制台', path: '/execution/execute', desc: '任务即时执行', icon: <ThunderboltOutlined /> },
+        { id: 'execute', name: '任务执行', path: '/execution/execute', desc: '任务即时执行', icon: <ThunderboltOutlined /> },
         { id: 'schedules', name: '定时任务', path: '/execution/schedules', desc: '周期性任务调度管理', icon: <ScheduleOutlined /> },
         { id: 'logs', name: '执行记录', path: '/execution/logs', desc: '任务执行历史记录', icon: <HistoryOutlined /> },
     ],

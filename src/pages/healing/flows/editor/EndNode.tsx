@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Typography } from 'antd';
 import { StopOutlined } from '@ant-design/icons';
-import { STATUS_CONFIG, getCurrentNodeShadow } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
 
 const { Text } = Typography;
 
@@ -26,11 +26,8 @@ const EndNode = ({ data, isConnectable, selected }: NodeProps) => {
     const statusColor = statusConfig?.color;
     const isCurrent = !!data.isCurrent;
 
-    // 当有 status 时用 status 颜色做 glow，不叠加蓝色硬边框
+    // 当有 status 时用 status 颜色做左边框
     const effectiveColor = statusColor || color;
-    const currentBorder = isCurrent
-        ? (statusColor ? `2px solid ${statusColor}` : '2px solid #1890ff')
-        : '1px solid #d9d9d9';
 
     return (
         <div style={{
@@ -39,20 +36,19 @@ const EndNode = ({ data, isConnectable, selected }: NodeProps) => {
             height: NODE_HEIGHT,
             background: '#fff',
             borderRadius: 0,
-            boxShadow: isCurrent
-                ? `0 0 0 2px ${effectiveColor}40, 0 4px 16px ${effectiveColor}30`
-                : selected ? `0 0 0 1px ${color}` : '0 2px 6px rgba(0,0,0,0.04)',
-            border: currentBorder,
+            boxShadow: getCurrentNodeShadow(isCurrent, !!selected, color),
+            border: '1px solid #d9d9d9',
             borderLeft: `3px solid ${effectiveColor}`,
             transition: 'all 0.3s',
-            overflow: 'hidden',
+            overflow: 'visible',
             animation: isCurrent && !statusColor ? 'currentNodePulse 2s ease-in-out infinite' : undefined,
+            ...getNodeOutlineStyle(isCurrent, !!selected),
         }}>
             <Handle
                 type="target"
                 position={Position.Top}
                 isConnectable={isConnectable}
-                style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9' }}
+                style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9', ...getActiveHandleStyle('target', data.activeHandles, '#52c41a') }}
             />
 
             <div style={{

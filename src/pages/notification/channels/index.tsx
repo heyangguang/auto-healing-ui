@@ -61,14 +61,10 @@ const NotificationChannelsPage: React.FC = () => {
                 page: currentPage,
                 page_size: pageSize,
                 type: filterType as AutoHealing.ChannelType || undefined,
-            });
-            let data = res.data || [];
-            if (searchText) {
-                const lower = searchText.toLowerCase();
-                data = data.filter(c => c.name.toLowerCase().includes(lower) || c.description?.toLowerCase().includes(lower));
-            }
-            setChannels(data);
-            setTotal(res.total || data.length);
+                search: searchText || undefined,
+            } as any);
+            setChannels(res.data || []);
+            setTotal(res.total || 0);
         } catch (error) {
             console.error('Failed to load channels:', error);
             message.error('加载渠道列表失败');

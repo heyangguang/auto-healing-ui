@@ -183,3 +183,21 @@ export async function retryNotification(id: string) {
         method: 'POST',
     });
 }
+
+/**
+ * 获取通知统计数据
+ * GET /api/v1/notifications/stats
+ */
+export async function getNotificationStats() {
+    return request<{
+        code: number;
+        data: {
+            channels_total: number;
+            channels_by_type: Array<{ type: string; count: number }>;
+            logs_total: number;
+            logs_by_status: Array<{ status: string; count: number }>;
+            templates_total: number;
+            templates_active: number;
+        };
+    }>('/api/v1/notifications/stats', { method: 'GET' });
+}

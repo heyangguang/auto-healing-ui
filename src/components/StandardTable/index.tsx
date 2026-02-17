@@ -208,6 +208,8 @@ export interface StandardTableProps<T extends Record<string, any>> {
     headerIcon?: ReactNode;
     /** 头部卡片底部的额外内容（如统计栏），渲染在 header 卡片内部、title 下方 */
     headerExtra?: ReactNode;
+    /** header 卡片与搜索/表格之间的内容（如可视化卡片），渲染在 header 外部 */
+    afterHeader?: ReactNode;
     /** children 模式下的搜索回调（无 request 时由外部处理数据过滤） */
     onSearch?: (params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => void;
 
@@ -261,6 +263,7 @@ function StandardTable<T extends Record<string, any>>({
     onTabChange,
     headerIcon,
     headerExtra,
+    afterHeader,
     children,
     searchFields,
     advancedSearchFields,
@@ -693,6 +696,9 @@ function StandardTable<T extends Record<string, any>>({
                 </div>
                 {headerExtra}
             </div>
+
+            {/* ===== header 和表格之间的自定义内容 ===== */}
+            {afterHeader}
 
             {/* ===== 自定义内容 or 默认表格 ===== */}
             {children ? (

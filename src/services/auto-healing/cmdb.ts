@@ -32,6 +32,19 @@ export async function getCMDBStats() {
 }
 
 /**
+ * 获取 CMDB 配置项 ID 列表（轻量接口，用于全选）
+ */
+export async function getCMDBItemIds(params?: {
+    status?: AutoHealing.CMDBItemStatus;
+    keyword?: string;
+}) {
+    return request<{ code: number; message: string; data: { items: { id: string; name: string; hostname: string; ip_address: string; status: string }[] } }>(
+        '/api/v1/cmdb/ids',
+        { method: 'GET', params },
+    );
+}
+
+/**
  * 获取 CMDB 配置项详情
  */
 export async function getCMDBItem(id: string) {

@@ -1,0 +1,111 @@
+/* ========== 规则表单页：对齐 TemplateForm 设计 ========== */
+
+/* 页面整体 — 灰色背景 */
+.rule-form-page {
+    padding: 0;
+    min-height: calc(100vh - 120px);
+    background: #f5f5f5;
+}
+
+/* 卡片容器 — 限宽居中 */
+.rule-form-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 24px 32px;
+    max-width: 860px;
+}
+
+/* 单张卡片 — 同 template-form-card */
+.rule-form-card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    padding: 24px 32px;
+}
+
+/* 卡片标题 — 虚线底边 + 图标 */
+.rule-form-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #262626;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rule-form-section-title .anticon {
+    font-size: 16px;
+    color: #1890ff;
+}
+
+/* 条件构建器容器 — 灰底 */
+.rule-form-condition-area {
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    padding: 16px;
+    margin-top: 8px;
+}
+
+/* 模式选择器 — 虚线分割 */
+.rule-form-mode-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #e8e8e8;
+}
+
+.rule-form-mode-selector label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #595959;
+}
+
+/* 加载状态 */
+.rule-form-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+/* 表单项间距微调 */
+.rule-form-card .ant-form-item {
+    margin-bottom: 16px;
+}
+
+.rule-form-card .ant-form-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Select 强制直角边框（同 TemplateForm） */
+.rule-form-card .ant-select .ant-select-selector {
+    border-radius: 0 !important;
+}
+
+.rule-form-card .ant-input,
+.rule-form-card .ant-input-number {
+    border-radius: 0 !important;
+}
+
+/* ===== 已选流程卡片 ===== */
+.rule-form-selected-flow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #f6fbff;
+    border: 1px solid #d6e8fa;
+    border-left: 3px solid #1890ff;
+    margin-top: 8px;
+    gap: 12px;
+}
+
+.rule-form-selected-flow-main {
+    flex: 1;
+    min-width: 0;
+}

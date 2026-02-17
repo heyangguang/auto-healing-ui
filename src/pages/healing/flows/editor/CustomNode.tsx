@@ -61,14 +61,41 @@ export const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNod
     would_send: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '将会发送' },
 };
 
-/** 获取当前执行节点的高亮 boxShadow */
-export function getCurrentNodeShadow(isCurrent: boolean, selected: boolean, baseColor: string, statusColor?: string): string {
+/** 获取当前执行节点的高亮 boxShadow — 仅 current_node_id 触发 */
+export function getCurrentNodeShadow(isCurrent: boolean, _selected: boolean, _baseColor: string, _statusColor?: string): string {
+    if (isCurrent) return '0 0 0 3px #1677ff, 0 0 20px rgba(22, 119, 255, 0.40)';
+    return '0 1px 4px rgba(0,0,0,0.06)';
+}
+
+/** 获取当前节点的边框覆盖 — 仅 current_node_id 触发蓝色边框 */
+export function getNodeOutlineStyle(isCurrent: boolean, _selected: boolean): React.CSSProperties {
     if (isCurrent) {
-        const glowColor = statusColor || '#1890ff';
-        return `0 0 0 2px ${glowColor}40, 0 4px 16px ${glowColor}30`;
+        return {
+            border: '1.5px solid #1677ff',
+            borderLeft: '3px solid #1677ff',
+        };
     }
-    if (selected) return `0 0 0 1px ${baseColor}`;
-    return '0 2px 6px rgba(0,0,0,0.04)';
+    return {};
+}
+
+/**
+ * 获取活跃连接点的增强样式 — 蓝色光晕 + 呼吸动画
+ */
+export function getActiveHandleStyle(
+    handleId: string,
+    activeHandles: string[] | undefined,
+    _color: string = '#52c41a',
+): React.CSSProperties {
+    if (!activeHandles || !activeHandles.includes(handleId)) return {};
+    return {
+        width: 8,
+        height: 8,
+        background: '#fff',
+        borderColor: '#1677ff',
+        borderWidth: 2,
+        boxShadow: '0 0 4px 1px rgba(22, 119, 255, 0.5)',
+        animation: 'handlePulse 2s ease-in-out infinite',
+    };
 }
 
 // 固定节点尺寸
@@ -97,12 +124,6 @@ const CustomNode = ({ data, isConnectable, selected }: NodeProps) => {
         </div>
     ) : null;
 
-    // 当有 status 时，isCurrent 高亮用 status 颜色，不用蓝色
-    const effectiveHighlight = statusColor || config.color;
-    const currentBorder = isCurrent
-        ? (statusColor ? `2px solid ${statusColor}` : '2px solid #1890ff')
-        : '1px solid #d9d9d9';
-
     return (
         <Tooltip
             title={tooltipContent}
@@ -116,17 +137,18 @@ const CustomNode = ({ data, isConnectable, selected }: NodeProps) => {
                 background: '#fff',
                 borderRadius: 0,
                 boxShadow: getCurrentNodeShadow(isCurrent, !!selected, config.color, statusColor),
-                border: currentBorder,
+                border: '1px solid #d9d9d9',
                 borderLeft: `3px solid ${statusColor || config.color}`,
                 transition: 'all 0.3s',
-                overflow: 'hidden',
+                overflow: 'visible',
                 animation: isCurrent && !statusColor ? 'currentNodePulse 2s ease-in-out infinite' : undefined,
+                ...getNodeOutlineStyle(isCurrent, !!selected),
             }}>
                 <Handle
                     type="target"
                     position={Position.Top}
                     isConnectable={isConnectable}
-                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9' }}
+                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9', ...getActiveHandleStyle('target', data.activeHandles, '#52c41a') }}
                 />
 
                 <div style={{
@@ -154,7 +176,7 @@ const CustomNode = ({ data, isConnectable, selected }: NodeProps) => {
                     position={Position.Bottom}
                     id="default"
                     isConnectable={isConnectable}
-                    style={{ ...handleStyle, bottom: -4, borderColor: config.color }}
+                    style={{ ...handleStyle, bottom: -4, borderColor: config.color, ...getActiveHandleStyle('default', data.activeHandles, '#52c41a') }}
                 />
             </div>
         </Tooltip>

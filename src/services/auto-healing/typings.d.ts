@@ -926,7 +926,7 @@ declare namespace AutoHealing {
     type MatchMode = 'all' | 'any';
     type FlowInstanceStatus = 'pending' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled';
     type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
-    type NodeType = 'start' | 'end' | 'host_extractor' | 'cmdb_validator' | 'approval' | 'execution' | 'notification' | 'condition' | 'set_variable';
+    type NodeType = 'start' | 'end' | 'host_extractor' | 'cmdb_validator' | 'approval' | 'execution' | 'notification' | 'condition' | 'set_variable' | 'compute';
     type ConditionOperator = 'equals' | 'contains' | 'in' | 'regex' | 'gt' | 'lt' | 'gte' | 'lte';
 
     interface FlowNodeConfig {
@@ -1153,8 +1153,16 @@ declare namespace AutoHealing {
         completed_at: string | null;
         created_at: string;
         updated_at?: string;
-        // Expanded details
-        flow?: HealingFlow;
+        // Lightweight list fields (pre-computed by backend)
+        flow_name?: string;
+        rule_name?: string;
+        incident_title?: string;
+        node_count?: number;
+        failed_node_count?: number;
+        // Snapshot fields (detail API returns flat fields instead of nested flow object)
+        flow_nodes?: FlowNode[];
+        flow_edges?: FlowEdge[];
+        // Expanded details (only in detail API)
         rule?: HealingRule;
         incident?: Incident;
         node_states?: Record<string, FlowNodeState | string>;

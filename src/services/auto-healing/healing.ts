@@ -9,6 +9,18 @@ export async function getFlows(params?: {
     page?: number;
     page_size?: number;
     is_active?: boolean;
+    search?: string;
+    name?: string;
+    description?: string;
+    node_type?: string;
+    min_nodes?: number;
+    max_nodes?: number;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+    created_from?: string;
+    created_to?: string;
+    updated_from?: string;
+    updated_to?: string;
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.HealingFlow>>('/api/v1/healing/flows', {
         method: 'GET',
@@ -298,4 +310,45 @@ export async function rejectTask(id: string, data?: AutoHealing.ApprovalDecision
         method: 'POST',
         data,
     });
+}
+
+/**
+ * 获取自愈流程统计
+ * GET /api/v1/healing/flows/stats
+ */
+export async function getFlowStats() {
+    return request<{
+        code: number;
+        data: { total: number; active_count: number; inactive_count: number };
+    }>('/api/v1/healing/flows/stats', { method: 'GET' });
+}
+
+/**
+ * 获取自愈规则统计
+ * GET /api/v1/healing/rules/stats
+ */
+export async function getRuleStats() {
+    return request<{
+        code: number;
+        data: {
+            total: number;
+            active_count: number;
+            inactive_count: number;
+            by_trigger_mode: Array<{ trigger_mode: string; count: number }>;
+        };
+    }>('/api/v1/healing/rules/stats', { method: 'GET' });
+}
+
+/**
+ * 获取自愈实例统计
+ * GET /api/v1/healing/instances/stats
+ */
+export async function getInstanceStats() {
+    return request<{
+        code: number;
+        data: {
+            total: number;
+            by_status: Array<{ status: string; count: number }>;
+        };
+    }>('/api/v1/healing/instances/stats', { method: 'GET' });
 }

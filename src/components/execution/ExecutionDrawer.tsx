@@ -36,7 +36,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
         if (!id) return;
         setLoadingLogs(true);
         try {
-            const res = await getExecutionLogs(id, { page: 1, page_size: 10000 });
+            const res = await getExecutionLogs(id, { page: 1, page_size: 200 });
             setLogs(res.data || []);
         } catch { /* ignore */ }
         finally { setLoadingLogs(false); }

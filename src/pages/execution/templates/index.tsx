@@ -1,32 +1,32 @@
 import {
     PlusOutlined, DeleteOutlined, SettingOutlined,
     ThunderboltOutlined, SearchOutlined, ReloadOutlined,
-    CodeOutlined, DesktopOutlined, ContainerOutlined, DockerOutlined, InfoCircleOutlined,
+    DesktopOutlined, InfoCircleOutlined,
     EyeOutlined, PlayCircleOutlined, EditOutlined, FileTextOutlined,
     GlobalOutlined, ProjectOutlined, ClockCircleOutlined, BellOutlined, KeyOutlined, CloseOutlined, CheckOutlined,
-    AlertOutlined, ExclamationCircleOutlined, CheckCircleOutlined
+    AlertOutlined, ExclamationCircleOutlined, CheckCircleOutlined,
+    ContainerOutlined, CodeOutlined, RocketOutlined, StopOutlined, SendOutlined,
 } from '@ant-design/icons';
-import { PageContainer, ProColumns, ProTable, ActionType, StatisticCard } from '@ant-design/pro-components';
 import {
-    Button, message, Space, Tag, Tooltip, Card, Row, Col, Typography, Input,
-    Table, Empty, Modal, Form, Select, Avatar, Popconfirm, Spin, Alert,
-    Drawer, Divider, Tabs, Switch, Steps, Badge, Collapse, Popover,
+    Button, message, Space, Tag, Tooltip, Row, Col, Typography,
+    Table, Empty, Alert, Drawer, Divider, Badge, Input,
+    Avatar, Popconfirm, Modal, Checkbox,
 } from 'antd';
 import { history, useAccess } from '@umijs/max';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-    getExecutionTasks, createExecutionTask, deleteExecutionTask, executeTask, updateExecutionTask,
-    confirmExecutionTaskReview, getExecutionSchedules
+    getExecutionTasks, deleteExecutionTask,
+    confirmExecutionTaskReview,
+    getExecutionTaskStats, batchConfirmReview,
 } from '@/services/auto-healing/execution';
-import { getPlaybooks, getPlaybook } from '@/services/auto-healing/playbooks';
+import { getPlaybooks } from '@/services/auto-healing/playbooks';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
 import { getChannels, getTemplates } from '@/services/auto-healing/notification';
-import HostSelector from '@/components/HostSelector';
-import VariableInput, { extractDefaultValue } from '@/components/VariableInput';
-import PlaybookSelector from '@/components/PlaybookSelector';
-import SecretsSelector from '@/components/SecretsSelector';
-import NotificationSelector from '@/components/NotificationSelector';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
+import StandardTable from '@/components/StandardTable';
+import type { StandardColumnDef, AdvancedSearchField } from '@/components/StandardTable';
+import { ExecutorIcon, DockerExecIcon, LocalExecIcon } from './TemplateIcons';
+import dayjs from 'dayjs';
 import './index.css';
 
 const { Text } = Typography;
@@ -34,9 +34,46 @@ const { Text } = Typography;
 // 执行器配置
 const executorConfig: Record<string, { color: string; text: string }> = {
     local: { color: 'blue', text: 'Local' },
-    docker: { color: 'cyan', text: 'Docker' },
+    docker: { color: 'blue', text: 'Docker' },
     ssh: { color: 'purple', text: 'SSH' },
 };
+
+// ==================== 搜索配置 ====================
+const templateAdvancedSearchFields: AdvancedSearchField[] = [
+    { key: 'playbook_name', label: 'Playbook', type: 'input', placeholder: '输入 Playbook 名称' },
+    { key: 'target_hosts', label: '目标主机', type: 'input', placeholder: '输入主机地址' },
+    {
+        key: 'executor_type', label: '执行器类型', type: 'select', options: [
+            { label: 'SSH / Local', value: 'local' },
+            { label: 'Docker', value: 'docker' },
+        ]
+    },
+    {
+        key: 'needs_review', label: '审核状态', type: 'select', options: [
+            { label: '需审核', value: 'true' },
+            { label: '正常', value: 'false' },
+        ]
+    },
+    {
+        key: 'last_run_status', label: '最后执行状态', type: 'select',
+        description: '按最后一次执行记录的状态筛选',
+        options: [
+            { label: '成功', value: 'success' },
+            { label: '失败', value: 'failed' },
+            { label: '部分成功', value: 'partial' },
+            { label: '取消', value: 'cancelled' },
+        ]
+    },
+    {
+        key: 'has_runs', label: '执行记录', type: 'select',
+        description: '筛选是否有执行记录',
+        options: [
+            { label: '有执行记录', value: 'true' },
+            { label: '无执行记录', value: 'false' },
+        ]
+    },
+    { key: 'created_at', label: '创建时间', type: 'dateRange' },
+];
 
 // ==================== 详情展示组件 ====================
 const TemplateDetailDrawer: React.FC<{
@@ -53,7 +90,6 @@ const TemplateDetailDrawer: React.FC<{
     const [confirming, setConfirming] = useState(false);
 
     if (!template) return null;
-    // Use embedded playbook object from template instead of list lookup
     const playbook = template.playbook;
 
     // 解析变量
@@ -69,6 +105,27 @@ const TemplateDetailDrawer: React.FC<{
 
     const filteredHosts = hosts.filter(h => h.toLowerCase().includes(hostSearch.toLowerCase()));
 
+    // 通知触发器
+    const notifConfig = template.notification_config;
+    const triggers = [
+        { key: 'on_start', label: '开始时', icon: <RocketOutlined />, color: '#1890ff', config: notifConfig?.on_start },
+        { key: 'on_success', label: '成功时', icon: <CheckCircleOutlined />, color: '#52c41a', config: notifConfig?.on_success },
+        { key: 'on_failure', label: '失败时', icon: <StopOutlined />, color: '#ff4d4f', config: notifConfig?.on_failure },
+    ];
+
+    const getChannelName = (cid: string) => notifyChannels.find(c => c.id === cid)?.name || cid?.slice(0, 8);
+    const getTemplateName = (tid: string) => notifyTemplates.find(t => t.id === tid)?.name || tid?.slice(0, 8);
+
+    // 卡片样式
+    const cardStyle: React.CSSProperties = { background: '#fff', border: '1px solid #f0f0f0', padding: '20px 24px' };
+    const sectionTitleStyle: React.CSSProperties = {
+        fontSize: 14, fontWeight: 600, color: '#262626', margin: '0 0 14px 0',
+        paddingBottom: 8, borderBottom: '1px dashed #f0f0f0',
+        display: 'flex', alignItems: 'center', gap: 8,
+    };
+    const fieldLabelStyle: React.CSSProperties = { fontSize: 12, color: '#8c8c8c', fontWeight: 500 };
+    const fieldValueStyle: React.CSSProperties = { fontSize: 13, color: '#262626', fontWeight: 500, marginTop: 4 };
+
     return (
         <Drawer
             title="任务模板详情"
@@ -76,207 +133,262 @@ const TemplateDetailDrawer: React.FC<{
             open={open}
             onClose={() => { onClose(); setHostSearch(''); }}
         >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {/* 1. 头部信息 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingBottom: 24, borderBottom: '1px solid #f0f0f0' }}>
-                    <div style={{ width: 48, height: 48, background: '#e6f7ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <FileTextOutlined style={{ fontSize: 24, color: '#1890ff' }} />
-                    </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* 头部 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 16, borderBottom: '1px dashed #f0f0f0' }}>
+                    <ExecutorIcon executorType={template.executor_type} size={40} iconSize={20} />
                     <div>
-                        <div style={{ fontSize: 18, fontWeight: 600 }}>{template.name}</div>
-                        <div style={{ color: '#8c8c8c', marginTop: 4 }}>ID: {template.id}</div>
+                        <div style={{ fontSize: 18, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {template.name}
+                            <Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>
+                                #{template.id?.substring(0, 8)}
+                            </Text>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>任务模板</Tag>
+                            {template.needs_review && <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>变量待确认</Tag>}
+                        </div>
                     </div>
                 </div>
 
-                {/* 0. 审核警告 (如果需要) - Moved below header */}
+                {/* 审核警告 */}
                 {template.needs_review && (
                     <Alert
-                        message={<span style={{ fontWeight: 600, fontSize: 15 }}>Playbook 变量变更待确认</span>}
+                        message={<span style={{ fontWeight: 600 }}>Playbook 变量变更待确认</span>}
                         description={
-                            <div style={{ marginTop: 12 }}>
-                                <div style={{ color: '#595959', marginBottom: 12 }}>
+                            <div style={{ marginTop: 8 }}>
+                                <div style={{ color: '#595959', marginBottom: 10 }}>
                                     检测到 Playbook 定义已更新，以下变量发生了变更，请确认：
                                 </div>
                                 <div style={{
-                                    background: 'rgba(255, 255, 255, 0.6)',
-                                    border: '1px dashed #ffd591',
-                                    borderRadius: 6,
-                                    padding: '12px',
-                                    marginBottom: 16,
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: 8
+                                    background: 'rgba(255,255,255,0.6)', border: '1px dashed #ffd591',
+                                    padding: 10, marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 6
                                 }}>
                                     {template.changed_variables?.map(v => (
-                                        <Tag key={v} color="orange" style={{ margin: 0, background: '#fff7e6', borderColor: '#ffd591', color: '#d46b08' }}>
-                                            {v}
-                                        </Tag>
+                                        <Tag key={v} color="orange" style={{ margin: 0 }}>{v}</Tag>
                                     ))}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <Button
-                                        type="primary"
-                                        size="middle"
-                                        icon={<CheckCircleOutlined />}
+                                    <Button type="primary" size="small" icon={<CheckCircleOutlined />}
                                         loading={confirming}
-                                        style={{ background: '#fa8c16', borderColor: '#fa8c16' }}
+                                        style={{ background: '#faad14', borderColor: '#faad14' }}
                                         onClick={async () => {
                                             setConfirming(true);
                                             await onConfirmReview(template.id);
                                             setConfirming(false);
                                             onClose();
                                         }}
-                                    >
-                                        确认变更并同步
-                                    </Button>
+                                    >确认变更并同步</Button>
                                 </div>
                             </div>
                         }
-                        type="warning"
-                        showIcon
-                        icon={<ExclamationCircleOutlined style={{ fontSize: 24, marginTop: 4, color: '#fa8c16' }} />}
-                        style={{
-                            border: '1px solid #ffe58f',
-                            background: '#fffbe6',
-                            padding: '16px 24px',
-                            borderRadius: 8
-                        }}
+                        type="warning" showIcon
+                        icon={<ExclamationCircleOutlined style={{ fontSize: 20, marginTop: 2 }} />}
                     />
                 )}
 
-                {/* 2. 基础配置 */}
-
-                {/* 2. 基础配置 */}
-                <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>基础配置</div>
-                    <Row gutter={[24, 16]}>
-                        <Col span={12}>
-                            <div style={{ color: '#8c8c8c', fontSize: 12 }}>关联 Playbook</div>
-                            <div style={{ display: 'flex', alignItems: 'center', marginTop: 4 }}>
-                                <ProjectOutlined style={{ marginRight: 6, color: '#1890ff' }} />
-                                {playbook?.name || template.playbook_id}
+                {/* Card: 基础信息 */}
+                <div style={cardStyle}>
+                    <h4 style={sectionTitleStyle}>
+                        <ThunderboltOutlined style={{ color: '#1890ff' }} />基础信息
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+                        <div>
+                            <div style={fieldLabelStyle}>关联 Playbook</div>
+                            <div style={fieldValueStyle}>
+                                <Space size={6}>
+                                    <FileTextOutlined style={{ color: '#1890ff' }} />
+                                    <span style={{ fontWeight: 600 }}>{playbook?.name || template.playbook_id?.substring(0, 8)}</span>
+                                </Space>
                             </div>
-                        </Col>
-                        <Col span={12}>
-                            <div style={{ color: '#8c8c8c', fontSize: 12 }}>执行环境</div>
-                            <div style={{ marginTop: 4 }}>
-                                {template.executor_type === 'docker'
-                                    ? <Tag icon={<ContainerOutlined />} color="cyan">Docker 容器</Tag>
-                                    : <Tag icon={<DesktopOutlined />} color="blue">本地进程</Tag>
-                                }
+                        </div>
+                        <div>
+                            <div style={fieldLabelStyle}>执行器类型</div>
+                            <div style={fieldValueStyle}>
+                                <Space size={6}>
+                                    {template.executor_type === 'docker'
+                                        ? <DockerExecIcon size={14} />
+                                        : <LocalExecIcon size={14} />
+                                    }
+                                    <span>{template.executor_type === 'docker' ? '容器 (Docker)' : '本地进程 (SSH)'}</span>
+                                </Space>
                             </div>
-                        </Col>
-                        {/* Host List Redesigned */}
-                        <Col span={24}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <div style={{ color: '#8c8c8c', fontSize: 12 }}>
-                                    目标主机 ({hosts.length})
-                                </div>
-                                {hosts.length > 5 && (
-                                    <Input
-                                        placeholder="搜索主机..."
-                                        prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                                        size="small"
-                                        style={{ width: 180, borderRadius: 0 }}
-                                        value={hostSearch}
-                                        onChange={e => setHostSearch(e.target.value)}
-                                        allowClear
-                                    />
-                                )}
+                        </div>
+                        <div>
+                            <div style={fieldLabelStyle}>创建时间</div>
+                            <div style={fieldValueStyle}>
+                                {template.created_at ? dayjs(template.created_at).format('YYYY-MM-DD HH:mm') : '-'}
                             </div>
-
-                            <div style={{
-                                background: '#fcfcfc',
-                                border: '1px solid #f0f0f0',
-                                padding: 12,
-                                borderRadius: 4,
-                                maxHeight: 200,
-                                overflowY: 'auto'
-                            }}>
-                                {filteredHosts.length > 0 ? (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                        {filteredHosts.map(h => (
-                                            <div key={h} style={{
-                                                border: '1px dashed #d9d9d9',
-                                                background: '#fff',
-                                                padding: '4px 12px',
-                                                fontSize: 12,
-                                                color: '#595959',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                borderRadius: 2
-                                            }}>
-                                                <DesktopOutlined style={{ marginRight: 6, color: '#8c8c8c' }} />
-                                                {h}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配主机" />
-                                )}
+                        </div>
+                        <div>
+                            <div style={fieldLabelStyle}>更新时间</div>
+                            <div style={fieldValueStyle}>
+                                {template.updated_at ? dayjs(template.updated_at).format('YYYY-MM-DD HH:mm') : '-'}
                             </div>
-                        </Col>
-                    </Row>
+                        </div>
+                    </div>
+                    {template.description && (
+                        <>
+                            <Divider dashed style={{ margin: '12px 0' }} />
+                            <div>
+                                <div style={fieldLabelStyle}>描述</div>
+                                <div style={{ ...fieldValueStyle, fontWeight: 400, color: '#595959' }}>{template.description}</div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
-                <Divider />
-
-                {/* 3. 变量配置 */}
-                <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center' }}>
-                        变量配置
-                        <Badge count={Object.keys(vars).length} style={{ marginLeft: 8, background: '#52c41a' }} />
-                    </div>
-                    <div style={{ background: '#fafafa', borderRadius: 8, overflow: 'hidden', border: '1px solid #f0f0f0' }}>
-                        {Object.keys(vars).length === 0 ? (
-                            <Empty description="无自定义变量" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                        ) : (
-                            <Table
-                                dataSource={Object.entries(vars).map(([k, v]) => ({ key: k, value: v }))}
-                                columns={[
-                                    { title: '变量名', dataIndex: 'key', width: 200, render: t => <Text strong>{t}</Text> },
-                                    { title: '设定值', dataIndex: 'value', render: t => <Text code copyable>{String(t)}</Text> },
-                                ]}
-                                pagination={false}
+                {/* Card: 执行环境 */}
+                <div style={cardStyle}>
+                    <h4 style={sectionTitleStyle}>
+                        <GlobalOutlined style={{ color: '#1890ff' }} />执行环境
+                    </h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div style={fieldLabelStyle}>目标主机 ({hosts.length})</div>
+                        {hosts.length > 5 && (
+                            <Input
+                                placeholder="搜索主机..."
+                                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
                                 size="small"
-                                showHeader={false}
+                                style={{ width: 160, borderRadius: 0 }}
+                                value={hostSearch}
+                                onChange={e => setHostSearch(e.target.value)}
+                                allowClear
                             />
+                        )}
+                    </div>
+                    <div style={{ background: '#fafafa', border: '1px solid #f0f0f0', padding: 10, maxHeight: 180, overflowY: 'auto' }}>
+                        {filteredHosts.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {filteredHosts.map(h => (
+                                    <div key={h} style={{
+                                        border: '1px dashed #d9d9d9', background: '#fff',
+                                        padding: '3px 10px', fontSize: 12, color: '#595959',
+                                        display: 'flex', alignItems: 'center'
+                                    }}>
+                                        <DesktopOutlined style={{ marginRight: 6, color: '#8c8c8c' }} />{h}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无匹配主机" />
                         )}
                     </div>
                 </div>
 
-                <Divider />
-
-                {/* 4. 密钥与通知 */}
-                <Row gutter={24}>
-                    <Col span={12}>
-                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>密钥源</div>
-                        <Space wrap>
+                {/* Card: 凭据配置 */}
+                <div style={cardStyle}>
+                    <h4 style={sectionTitleStyle}>
+                        <KeyOutlined style={{ color: '#1890ff' }} />凭据配置
+                    </h4>
+                    <div>
+                        <div style={fieldLabelStyle}>密钥源</div>
+                        <div style={{ marginTop: 6 }}>
                             {template.secrets_source_ids && template.secrets_source_ids.length > 0 ? (
-                                template.secrets_source_ids.map(id => {
-                                    const source = secretsSources.find(s => s.id === id);
-                                    return (
-                                        <Tag key={id} icon={<KeyOutlined />} color="orange" style={{ borderRadius: 2 }}>
-                                            {source?.name || id.slice(0, 8)}
-                                        </Tag>
-                                    );
-                                })
+                                <Space size={4} wrap>
+                                    {template.secrets_source_ids.map(sid => {
+                                        const source = secretsSources.find(s => s.id === sid);
+                                        return (
+                                            <Tag key={sid} icon={<KeyOutlined />} color="blue" style={{ margin: 0, fontSize: 11 }}>
+                                                {source?.name || sid.slice(0, 8)}
+                                            </Tag>
+                                        );
+                                    })}
+                                </Space>
                             ) : (
-                                <Text type="secondary">未关联密钥源</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>未指定</Text>
                             )}
-                        </Space>
-                    </Col>
-                    <Col span={12}>
-                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>通知配置</div>
-                        <NotificationConfigDisplay
-                            value={template.notification_config}
-                            channels={notifyChannels}
-                            templates={notifyTemplates}
-                        />
-                    </Col>
-                </Row>
-            </div >
-        </Drawer >
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card: 变量配置 */}
+                <div style={cardStyle}>
+                    <h4 style={sectionTitleStyle}>
+                        <SettingOutlined style={{ color: '#1890ff' }} />变量配置
+                        {Object.keys(vars).length > 0 && (
+                            <Tag style={{ marginLeft: 'auto', fontSize: 10 }}>{Object.keys(vars).length} 已配置</Tag>
+                        )}
+                    </h4>
+
+                    {Object.keys(vars).length > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {Object.entries(vars).map(([k, v]) => (
+                                <div key={k} style={{
+                                    display: 'inline-flex', alignItems: 'center',
+                                    padding: '4px 10px', background: '#fafafa',
+                                    border: '1px solid #f0f0f0', fontSize: 12,
+                                    fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', monospace",
+                                }}>
+                                    <span style={{ color: '#262626', fontWeight: 600 }}>{k}</span>
+                                    <span style={{ color: '#bfbfbf', margin: '0 6px' }}>=</span>
+                                    <span style={{ color: '#8c8c8c' }} title={String(v)}>{String(v)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无变量配置" />
+                        </div>
+                    )}
+                </div>
+
+                {/* Card: 通知配置 */}
+                <div style={cardStyle}>
+                    <h4 style={sectionTitleStyle}>
+                        <BellOutlined style={{ color: '#1890ff' }} />通知配置
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {triggers.map(trigger => {
+                            const isEnabled = trigger.config?.enabled ?? false;
+                            const channelIds = trigger.config?.channel_ids || [];
+                            const templateId = trigger.config?.template_id;
+
+                            return (
+                                <div key={trigger.key} style={{
+                                    border: `1px dashed ${isEnabled ? trigger.color : '#e8e8e8'}`,
+                                    padding: '8px 14px',
+                                    background: isEnabled ? `${trigger.color}06` : '#fafafa',
+                                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                                }}>
+                                    {/* 左侧: 触发器标签 */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, minWidth: 90 }}>
+                                        <span style={{ color: trigger.color, fontSize: 13 }}>{trigger.icon}</span>
+                                        <Text strong style={{ fontSize: 13 }}>{trigger.label}</Text>
+                                        <Tag color={isEnabled ? 'green' : 'default'} style={{ margin: 0, fontSize: 10, lineHeight: '16px' }}>
+                                            {isEnabled ? '启用' : '关闭'}
+                                        </Tag>
+                                    </div>
+                                    {/* 右侧: 策略列表 */}
+                                    {isEnabled && channelIds.length > 0 ? (
+                                        <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                            {channelIds.map((cid: string, idx: number) => (
+                                                <div key={idx} style={{
+                                                    display: 'flex', alignItems: 'center', gap: 4,
+                                                    padding: '2px 8px', background: '#fff', border: '1px dashed #e8e8e8',
+                                                    fontSize: 11,
+                                                }}>
+                                                    <SendOutlined style={{ color: '#999', fontSize: 10, flexShrink: 0 }} />
+                                                    <span style={{ fontSize: 11 }}>{getChannelName(cid)}</span>
+                                                    {templateId && (
+                                                        <>
+                                                            <Text type="secondary" style={{ fontSize: 10, flexShrink: 0 }}>→</Text>
+                                                            <span style={{ fontSize: 11, color: '#8c8c8c' }}>{getTemplateName(templateId)}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : isEnabled ? (
+                                        <Text type="secondary" style={{ fontSize: 11 }}>无策略</Text>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </Drawer>
     );
 };
 
@@ -285,920 +397,552 @@ const TemplateDetailDrawer: React.FC<{
 // ==================== 主组件 ====================
 const ExecutionTemplateList: React.FC = () => {
     const access = useAccess();
-    const [tasks, setTasks] = useState<AutoHealing.ExecutionTask[]>([]);
-    const [loading, setLoading] = useState(true);
     const [playbooks, setPlaybooks] = useState<AutoHealing.Playbook[]>([]);
-    const actionRef = useRef<ActionType>(null);
-
-    // 创建弹窗 State
-    const [createModalOpen, setCreateModalOpen] = useState(false);
-    const [createForm] = Form.useForm();
-    const [creating, setCreating] = useState(false);
-
-    // 创建过程中的 Playbook 相关 State
-    const [selectedPlaybook, setSelectedPlaybook] = useState<AutoHealing.Playbook>();
-    const [loadingPlaybook, setLoadingPlaybook] = useState(false);
-    const [variableValues, setVariableValues] = useState<Record<string, any>>({});
-    const [varSearch, setVarSearch] = useState('');
-    const [showOnlyRequired, setShowOnlyRequired] = useState(false);
 
     // 详情抽屉 State
     const [detailOpen, setDetailOpen] = useState(false);
     const [currentTemplate, setCurrentTemplate] = useState<AutoHealing.ExecutionTask>();
-    // 编辑状态
-    const [editingTemplate, setEditingTemplate] = useState<AutoHealing.ExecutionTask | null>(null);
-    // 抽屉动画完成状态（用于同步便签显示）
-    const [drawerFullyOpen, setDrawerFullyOpen] = useState(false);
 
-    // 搜索与筛选
-    const [searchText, setSearchText] = useState('');
-    const [filterExecutor, setFilterExecutor] = useState<string>('');
-    const [filterStatus, setFilterStatus] = useState<string>('');
-    const [filterPlaybook, setFilterPlaybook] = useState<string>('');
-
-    const filteredTasks = useMemo(() => {
-        let result = tasks;
-
-        // Text search
-        if (searchText) {
-            const lower = searchText.toLowerCase();
-            result = result.filter(t =>
-                t.name?.toLowerCase().includes(lower) ||
-                t.id.includes(lower) ||
-                (t.target_hosts && String(t.target_hosts).toLowerCase().includes(lower))
-            );
-        }
-
-        // Executor filter
-        if (filterExecutor) {
-            result = result.filter(t => t.executor_type === filterExecutor);
-        }
-
-        // Playbook filter
-        if (filterPlaybook) {
-            result = result.filter(t => t.playbook_id === filterPlaybook);
-        }
-
-        // Status filter
-        if (filterStatus === 'ready') {
-            result = result.filter(t => !t.needs_review && t.playbook?.status === 'ready');
-        } else if (filterStatus === 'review') {
-            result = result.filter(t => t.needs_review);
-        } else if (filterStatus === 'offline') {
-            result = result.filter(t => t.playbook?.status !== 'ready');
-        }
-
-        return result;
-    }, [tasks, searchText, filterExecutor, filterPlaybook, filterStatus]);
-
-    const stats = useMemo(() => {
-        return {
-            total: tasks.length,
-            docker: tasks.filter(t => t.executor_type === 'docker').length,
-            local: tasks.filter(t => t.executor_type === 'local').length,
-            // Removed 'withSchedule' as templates don't define schedule
-        };
-    }, [tasks]);
-
-    // 监听 Playbook 选择，自动填充变量
-    const variables = useMemo((): any[] => {
-        if (!selectedPlaybook) return [];
-        const pb = selectedPlaybook as any;
-        // 优先使用已确认的 variables，如果没有则使用 scanned_variables
-        return (pb.variables && pb.variables.length > 0)
-            ? pb.variables
-            : (pb.scanned_variables || []);
-    }, [selectedPlaybook]);
-    const filteredVariables = useMemo(() => {
-        return variables.filter(v => {
-            const matchesSearch = v.name.toLowerCase().includes(varSearch.toLowerCase());
-            const matchesRequired = showOnlyRequired ? v.required : true;
-            return matchesSearch && matchesRequired;
-        });
-    }, [variables, varSearch, showOnlyRequired]);
-
-    // 加载数据
-    const loadTasks = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await getExecutionTasks({ page: 1, page_size: 100 });
-            setTasks(res.data || []);
-        } catch { /* ignore */ }
-        finally { setLoading(false); }
-    }, []);
-
-    const loadPlaybooks = useCallback(async () => {
-        try {
-            const res = await getPlaybooks({ status: 'ready', page_size: 100 });
-            setPlaybooks(res.data || res.items || []);
-        } catch { /* ignore */ }
-    }, []);
-
-    // 密钥源
+    // 引用数据
     const [secretsSources, setSecretsSources] = useState<any[]>([]);
-    const loadSecretsSources = useCallback(async () => {
-        try {
-            const res = await getSecretsSources({ page_size: 100 });
-            setSecretsSources(res.data || []);
-        } catch { /* ignore */ }
-    }, []);
-
-    // 通知渠道和模板
     const [notifyChannels, setNotifyChannels] = useState<AutoHealing.NotificationChannel[]>([]);
     const [notifyTemplates, setNotifyTemplates] = useState<AutoHealing.NotificationTemplate[]>([]);
-    const loadNotifications = useCallback(async () => {
-        try {
-            const [chRes, tplRes] = await Promise.all([
-                getChannels({ page_size: 100 }),
-                getTemplates({ page_size: 100 }),
-            ]);
+
+
+
+    // 统计数据
+    const [stats, setStats] = useState({ total: 0, docker: 0, local: 0, needsReview: 0, changedPlaybooks: 0 });
+
+    // 批量审核状态
+    const [batchReviewOpen, setBatchReviewOpen] = useState(false);
+    const [batchReviewLoading, setBatchReviewLoading] = useState(false);
+    const [reviewGroups, setReviewGroups] = useState<{ playbook_id: string; playbook_name: string; count: number; tasks: AutoHealing.ExecutionTask[] }[]>([]);
+    const [selectedPlaybooks, setSelectedPlaybooks] = useState<string[]>([]);
+
+    // 刷新触发器
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+
+
+    // 加载引用数据
+    useEffect(() => {
+        Promise.all([
+            getPlaybooks({ status: 'ready', page_size: 100 }),
+            getSecretsSources(),
+            getChannels({ page_size: 100 }),
+            getTemplates({ page_size: 100 }),
+
+        ]).then(([pbRes, secRes, chRes, tplRes]) => {
+            setPlaybooks(pbRes.data || pbRes.items || []);
+            setSecretsSources(secRes.data || []);
             setNotifyChannels(chRes.data || []);
             setNotifyTemplates(tplRes.data || []);
-        } catch { /* ignore */ }
+        }).catch(() => { /* ignore */ });
     }, []);
-
-    // 调度数据（用于删除保护检查）- 必须在 useEffect 之前定义
-    const [schedules, setSchedules] = useState<AutoHealing.ExecutionSchedule[]>([]);
-    const loadSchedules = useCallback(async () => {
-        try {
-            const res = await getExecutionSchedules({ page: 1, page_size: 500 });
-            setSchedules(res.data || []);
-        } catch { /* ignore */ }
-    }, []);
-
-    // 获取任务关联的调度
-    const getTaskSchedules = useCallback((taskId: string) => {
-        return schedules.filter(s => s.task_id === taskId);
-    }, [schedules]);
-
-    useEffect(() => {
-        loadTasks();
-        loadPlaybooks();
-        loadSecretsSources();
-        loadNotifications();
-        loadSchedules();
-    }, [loadTasks, loadPlaybooks, loadSecretsSources, loadNotifications, loadSchedules]);
-
-    // 重置状态 - 在 Drawer 关闭动画完成后通过 afterOpenChange 清空
-
-    // 处理 Playbook 选择
-    const handleSelectPlaybook = async (playbookId: string) => {
-        setLoadingPlaybook(true);
-        createForm.setFieldsValue({ playbook_id: playbookId }); // Sync form
-        try {
-            const res = await getPlaybook(playbookId);
-            if (res.data) {
-                setSelectedPlaybook(res.data);
-                const newVariables = (res.data.variables && res.data.variables.length > 0)
-                    ? res.data.variables
-                    : (res.data.scanned_variables || []);
-
-                // 初始化新 Playbook 的默认值
-                const initials: Record<string, any> = {};
-                newVariables.forEach(v => {
-                    const def = extractDefaultValue(v);
-                    if (def !== undefined) initials[v.name] = def;
-                });
-
-                // 只有在切换 Playbook 时才清空并重新初始化变量
-                setVariableValues(initials);
-            }
-        } catch {
-            message.error('加载 Playbook 详情失败');
-        } finally {
-            setLoadingPlaybook(false);
-        }
-    };
-
-    // 处理变量变更
-    const handleVariableChange = (name: string, value: any) => {
-        setVariableValues(prev => ({ ...prev, [name]: value }));
-    };
-
-    // 打开创建/编辑弹窗
-    const handleOpenCreateModal = useCallback(() => {
-        setEditingTemplate(null);
-        createForm.resetFields();
-        setVariableValues({});
-        setSelectedPlaybook(undefined);
-        setCreateModalOpen(true);
-    }, [createForm]);
-
-    // 处理编辑点击
-    const handleEdit = useCallback(async (record: AutoHealing.ExecutionTask) => {
-        setEditingTemplate(record);
-        setLoadingPlaybook(true);
-        setCreateModalOpen(true);
-
-        try {
-            // 首先填充基本表单，避免视觉延迟
-            createForm.setFieldsValue({
-                name: record.name,
-                description: record.description,
-                playbook_id: record.playbook_id,
-                executor_type: record.executor_type,
-                target_hosts: Array.isArray(record.target_hosts)
-                    ? record.target_hosts
-                    : (record.target_hosts ? (record.target_hosts as string).split(',') : []),
-                secrets_source_ids: record.secrets_source_ids || [],
-                notification_config: record.notification_config || {},
-            });
-            setVariableValues(record.extra_vars || {});
-
-            if (record.playbook_id) {
-                const res = await getPlaybook(record.playbook_id);
-                setSelectedPlaybook(res.data);
-            }
-        } catch (e) {
-            console.error('Failed to load playbook details', e);
-            message.error('加载 Playbook 详情失败');
-        } finally {
-            setLoadingPlaybook(false);
-        }
-    }, [createForm]);
-
-
-    // handle Create / Update
-    const handleCreate = async () => {
-        try {
-            const values = await createForm.validateFields();
-
-            // 检查必填变量
-            const missingVars = variables.filter(v => v.required && (variableValues[v.name] === undefined || variableValues[v.name] === ''));
-            if (missingVars.length > 0) {
-                message.error(`缺少必填参数: ${missingVars.map(v => v.name).join(', ')}`);
-                return;
-            }
-
-            setCreating(true);
-
-            // 清理通知配置 - 如果触发器enabled但没有配置策略，自动禁用
-            let cleanedNotificationConfig = values.notification_config;
-            if (cleanedNotificationConfig?.enabled) {
-                const triggers = ['on_start', 'on_success', 'on_failure'] as const;
-                let hasAnyConfig = false;
-                for (const trigger of triggers) {
-                    const triggerConfig = cleanedNotificationConfig[trigger];
-                    if (triggerConfig?.enabled) {
-                        const hasConfigs = (triggerConfig.configs?.length || 0) > 0 ||
-                            ((triggerConfig.channel_ids?.length || 0) > 0 && triggerConfig.template_id);
-                        if (!hasConfigs) {
-                            // 没有配置策略，自动禁用此触发器
-                            cleanedNotificationConfig = {
-                                ...cleanedNotificationConfig,
-                                [trigger]: { ...triggerConfig, enabled: false }
-                            };
-                        } else {
-                            hasAnyConfig = true;
-                        }
-                    }
-                }
-                // 如果所有触发器都没有配置，整体禁用
-                if (!hasAnyConfig) {
-                    cleanedNotificationConfig = undefined;
-                }
-            }
-
-            const commonPayload = {
-                name: values.name,
-                description: values.description,
-                playbook_id: values.playbook_id,
-                target_hosts: Array.isArray(values.target_hosts) ? values.target_hosts.join(',') : values.target_hosts,
-                extra_vars: variableValues,
-                executor_type: values.executor_type,
-                secrets_source_ids: values.secrets_source_ids || [],
-                notification_config: cleanedNotificationConfig,
-            };
-
-            if (editingTemplate) {
-                await updateExecutionTask(editingTemplate.id, commonPayload);
-                message.success('更新成功');
-            } else {
-                await createExecutionTask(commonPayload as any);
-                message.success('创建成功');
-            }
-
-            setCreateModalOpen(false);
-            loadTasks();
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setCreating(false);
-        }
-    };
 
     // 确认审核
     const handleConfirmReview = async (id: string) => {
         try {
             await confirmExecutionTaskReview(id);
             message.success('已确认变更');
-            setDetailOpen(false); // 先关闭抽屉
-            loadTasks(); // 再刷新数据（异步，不阻塞关闭动画）
+            setDetailOpen(false);
+            setRefreshTrigger(v => v + 1);
         } catch (error) {
             console.error(error);
         }
     };
 
-    // 删除保护检查
+    // 打开批量审核 Modal
+    const openBatchReview = async () => {
+        try {
+            const res = await getExecutionTasks({ needs_review: true as any, page_size: 100 });
+            const tasks = res.data || [];
+            // 按 playbook 分组
+            const groups = new Map<string, { playbook_id: string; playbook_name: string; count: number; tasks: AutoHealing.ExecutionTask[] }>();
+            tasks.forEach(t => {
+                const pbId = t.playbook_id;
+                const pb = playbooks?.find(p => p.id === pbId);
+                if (!groups.has(pbId)) {
+                    groups.set(pbId, { playbook_id: pbId, playbook_name: pb?.name || pbId.slice(0, 8), count: 0, tasks: [] });
+                }
+                const g = groups.get(pbId)!;
+                g.count++;
+                g.tasks.push(t);
+            });
+            setReviewGroups(Array.from(groups.values()));
+            setSelectedPlaybooks(Array.from(groups.keys()));
+            setBatchReviewOpen(true);
+        } catch { message.error('获取待审核列表失败'); }
+    };
+
+    // 执行批量审核
+    const handleBatchReview = async () => {
+        if (selectedPlaybooks.length === 0) { message.warning('请选择至少一个 Playbook'); return; }
+        setBatchReviewLoading(true);
+        try {
+            let totalConfirmed = 0;
+            for (const pbId of selectedPlaybooks) {
+                const res = await batchConfirmReview({ playbook_id: pbId });
+                const r = (res as any)?.data || res;
+                totalConfirmed += r.confirmed_count || 0;
+            }
+            message.success(`已批量确认 ${totalConfirmed} 个任务模板`);
+            setBatchReviewOpen(false);
+            setRefreshTrigger(v => v + 1);
+        } catch { message.error('批量审核失败'); }
+        setBatchReviewLoading(false);
+    };
+
     const handleDelete = async (id: string) => {
-        const relatedSchedules = getTaskSchedules(id);
-        if (relatedSchedules.length > 0) {
-            message.error(`无法删除：该模板关联 ${relatedSchedules.length} 个调度任务，请先删除调度`);
-            return;
-        }
         try {
             await deleteExecutionTask(id);
             message.success('已删除');
-            loadTasks();
+            setRefreshTrigger(v => v + 1);
         } catch { /* ignore */ }
     };
 
-    // 表格列定义
-    const columns: ProColumns<AutoHealing.ExecutionTask>[] = [
+    // StandardTable 列定义
+    const columns: StandardColumnDef<AutoHealing.ExecutionTask>[] = [
         {
-            title: '模板信息',
-            // 不设宽度，自动占满剩余空间
-            width: 250,
-            render: (_, record) => (
-                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <div style={{
-                        width: 32, height: 32, background: '#e6f7ff', borderRadius: 4,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 12,
-                        flexShrink: 0, marginTop: 2
-                    }}>
-                        <FileTextOutlined style={{ fontSize: 18, color: '#1890ff' }} />
-                    </div>
-                    <div style={{ overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
-                            <span style={{ fontWeight: 600, color: '#262626', fontSize: 14 }}>{record.name}</span>
-                            {record.needs_review && (
-                                <Tooltip title={
-                                    <div>
-                                        Playbook 变量发生变更
-                                        <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-                                            变更变量: {record.changed_variables?.join(', ') || '无数据'}
-                                        </div>
-                                    </div>
-                                }>
-                                    <Tag color="error" style={{ margin: 0, fontSize: 12, lineHeight: '20px', cursor: 'help' }}>
-                                        <ExclamationCircleOutlined style={{ marginRight: 4 }} />
-                                        需审核
-                                    </Tag>
-                                </Tooltip>
-                            )}
-                        </div>
-                        {record.description && (
-                            <div style={{ fontSize: 13, color: '#8c8c8c', lineHeight: '20px' }} className="text-ellipsis-2">
-                                {record.description}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            ),
-        },
-        {
-            title: 'ID',
-            width: 100,
-            render: (_, record) => (
-                <Text copyable={{ text: record.id }} style={{ fontSize: 13, color: '#8c8c8c' }}>
-                    {record.id.slice(0, 8)}
-                </Text>
-            ),
-        },
-        {
-            title: '关联 Playbook',
-            width: 180,
+            columnKey: 'name',
+            columnTitle: '模板',
+            sorter: true,
+            width: 340,
             render: (_, record) => {
                 const pb = playbooks?.find(p => p.id === record.playbook_id);
-                return (
-                    <Tag icon={<ProjectOutlined />} color="blue" bordered={false} style={{ fontSize: 13, padding: '2px 8px' }}>
-                        {pb?.name || record.playbook_id}
-                    </Tag>
-                );
-            }
-        },
-        {
-            title: '目标主机',
-            width: 150,
-            render: (_, record) => {
-                // target_hosts might be string or array
+                const isDocker = record.executor_type === 'docker';
                 const hosts = Array.isArray(record.target_hosts)
                     ? record.target_hosts
                     : (record.target_hosts ? (record.target_hosts as string).split(',') : []);
+                const configuredCount = Object.keys(record.extra_vars || {}).length;
+                const scheduleCount = (record as any).schedule_count || 0;
 
-                if (hosts.length === 0) return <span style={{ color: '#bfbfbf' }}>未指定</span>;
                 return (
-                    <Avatar.Group maxCount={3} size="small">
-                        {hosts.map(host => (
-                            <Tooltip title={host} key={host}>
-                                <Avatar style={{ backgroundColor: '#87d068' }} icon={<DesktopOutlined />} />
-                            </Tooltip>
-                        ))}
-                    </Avatar.Group>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Tooltip title={isDocker ? 'Docker 容器执行' : '本地 / SSH 执行'}>
+                            <ExecutorIcon executorType={record.executor_type} />
+                        </Tooltip>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                <span style={{ fontWeight: 600, color: '#262626', fontSize: 13.5 }}>{record.name}</span>
+                                {record.needs_review && (
+                                    <Tooltip title={
+                                        <div>
+                                            Playbook 变量发生变更
+                                            <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>
+                                                变更变量: {record.changed_variables?.join(', ') || '—'}
+                                            </div>
+                                        </div>
+                                    }>
+                                        <Tag color="error" style={{ margin: 0, fontSize: 11, lineHeight: '18px', cursor: 'help', padding: '0 6px' }}>
+                                            <ExclamationCircleOutlined style={{ marginRight: 3 }} />需审核
+                                        </Tag>
+                                    </Tooltip>
+                                )}
+                                {scheduleCount > 0 && (
+                                    <Tooltip title={`关联 ${scheduleCount} 个调度任务`}>
+                                        <Tag color="purple" bordered={false} style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 6px', cursor: 'default' }}>
+                                            <ClockCircleOutlined style={{ marginRight: 3 }} />{scheduleCount}
+                                        </Tag>
+                                    </Tooltip>
+                                )}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <ProjectOutlined style={{ marginRight: 3 }} />{pb?.name || record.playbook_id?.slice(0, 8)}
+                                {hosts.length > 0 && <> · <DesktopOutlined style={{ marginRight: 3 }} />{hosts.length} 主机</>}
+                                {configuredCount > 0 && <> · <SettingOutlined style={{ marginRight: 3 }} />{configuredCount} 参数</>}
+                            </div>
+                        </div>
+                    </div>
                 );
             },
         },
         {
-            title: '执行配置',
-            width: 140,
+            columnKey: 'executor',
+            columnTitle: '执行环境',
+            width: 150,
+            headerFilters: [
+                { label: 'SSH / Local', value: 'local' },
+                { label: 'Docker', value: 'docker' },
+            ],
             render: (_, record) => {
-                const configuredCount = Object.keys(record.extra_vars || {}).length;
-                // 优先从 playbook_variables_snapshot 获取，或者从 playbooks 列表查找
-                const pb = playbooks?.find(p => p.id === record.playbook_id);
-                const totalCount = record.playbook_variables_snapshot?.length
-                    ?? pb?.variables?.length
-                    ?? pb?.variables_count
-                    ?? configuredCount;
+                const isDocker = record.executor_type === 'docker';
+                const hosts = Array.isArray(record.target_hosts)
+                    ? record.target_hosts
+                    : (record.target_hosts ? (record.target_hosts as string).split(',') : []);
+                const hasNotify = !!record.notification_config?.enabled;
+                const hasSecrets = (record.secrets_source_ids?.length ?? 0) > 0;
 
                 return (
                     <Space direction="vertical" size={0}>
-                        <Space size={4}>
-                            {record.executor_type === 'docker' ? <DockerOutlined style={{ color: '#13c2c2' }} /> : <CodeOutlined style={{ color: '#1890ff' }} />}
-                            <span style={{ fontSize: 13 }}>{record.executor_type === 'docker' ? 'Docker 环境' : '本地执行'}</span>
-                        </Space>
-                        <Tooltip title={`已配置 ${configuredCount} 个参数，Playbook 共定义 ${totalCount} 个变量`}>
-                            <span style={{ fontSize: 12, color: '#8c8c8c', cursor: 'help' }}>
-                                <SettingOutlined style={{ marginRight: 4, fontSize: 11 }} />
-                                {configuredCount}/{totalCount} 个参数
-                            </span>
-                        </Tooltip>
+                        <Tag
+                            icon={isDocker ? <ContainerOutlined /> : <CodeOutlined />}
+                            color={isDocker ? 'blue' : 'purple'}
+                            style={{ fontSize: 12, margin: 0 }}
+                        >
+                            {isDocker ? 'Docker 容器' : 'SSH / Local'}
+                        </Tag>
+                        <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {hosts.length > 0 && (
+                                <Tooltip title={hosts.join(', ')}>
+                                    <Tag bordered={false} style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#52c41a', background: '#f6ffed', cursor: 'default' }}>
+                                        <DesktopOutlined /> {hosts.length}
+                                    </Tag>
+                                </Tooltip>
+                            )}
+                            {hasSecrets && (
+                                <Tooltip title="已配置凭据">
+                                    <Tag bordered={false} style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#fa8c16', background: '#fff7e6', cursor: 'default' }}>
+                                        <KeyOutlined />
+                                    </Tag>
+                                </Tooltip>
+                            )}
+                            {hasNotify && (
+                                <Tooltip title="已配置通知">
+                                    <Tag bordered={false} style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#1890ff', background: '#e6f7ff', cursor: 'default' }}>
+                                        <BellOutlined />
+                                    </Tag>
+                                </Tooltip>
+                            )}
+                        </div>
                     </Space>
+                );
+            },
+        },
+        {
+            columnKey: 'playbook',
+            columnTitle: 'Playbook',
+            width: 180,
+            render: (_, record) => {
+                const pb = playbooks?.find(p => p.id === record.playbook_id);
+                const varsCount = record.playbook_variables_snapshot?.length ?? pb?.variables?.length ?? pb?.variables_count ?? 0;
+                const configuredCount = Object.keys(record.extra_vars || {}).length;
+                const isReady = pb?.status === 'ready';
+
+                return (
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{
+                                width: 7, height: 7, borderRadius: '50%',
+                                background: isReady ? '#52c41a' : '#faad14',
+                                display: 'inline-block', flexShrink: 0,
+                            }} />
+                            <Text style={{ fontSize: 13, fontWeight: 500 }} ellipsis={{ tooltip: pb?.name || record.playbook_id }}>
+                                {pb?.name || record.playbook_id?.slice(0, 8)}
+                            </Text>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2, paddingLeft: 13 }}>
+                            <SettingOutlined style={{ marginRight: 3, fontSize: 10 }} />
+                            {configuredCount}/{varsCount} 参数已配置
+                        </div>
+                    </div>
                 );
             }
         },
         {
-            title: '更新时间',
-            dataIndex: 'updated_at',
-            valueType: 'fromNow',
-            width: 140,
+            columnKey: 'needs_review',
+            columnTitle: '状态',
+            width: 100,
+            headerFilters: [
+                { label: '需审核', value: 'true' },
+                { label: '正常', value: 'false' },
+            ],
+            render: (_, record) => (
+                record.needs_review ? (
+                    <Tooltip title={`变更变量: ${record.changed_variables?.join(', ') || '—'}`}>
+                        <Tag color="error" style={{ margin: 0, fontSize: 11, cursor: 'help' }}>
+                            <ExclamationCircleOutlined style={{ marginRight: 3 }} />需审核
+                        </Tag>
+                    </Tooltip>
+                ) : (
+                    <Tag color="success" style={{ margin: 0, fontSize: 11 }}>
+                        <CheckCircleOutlined style={{ marginRight: 3 }} />正常
+                    </Tag>
+                )
+            ),
         },
         {
-            title: '操作',
-            valueType: 'option',
-            width: 160,
-            fixed: 'right', // 钉在右侧，减少留白尴尬
-            render: (_, record) => [
-                <a key="view" onClick={() => {
-                    setCurrentTemplate(record);
-                    setDetailOpen(true);
-                }}>
-                    <Tooltip title="查看详情"><EyeOutlined style={{ fontSize: 16 }} /></Tooltip>
-                </a>,
-                <Divider type="vertical" key="d1" />,
-                <a key="execute" onClick={() => {
-                    const pb = playbooks?.find(p => p.id === record.playbook_id);
-                    const isPlaybookReady = pb?.status === 'ready';
-                    if (!record.needs_review && isPlaybookReady) {
-                        history.push(`/execution/execute?template=${record.id}`);
+            columnKey: 'updated_at',
+            columnTitle: '更新',
+            dataIndex: 'updated_at',
+            width: 110,
+            sorter: true,
+            render: (val: string) => {
+                if (!val) return '-';
+                const d = new Date(val);
+                const now = new Date();
+                const diff = now.getTime() - d.getTime();
+                const minutes = Math.floor(diff / 60000);
+                let text = '';
+                if (minutes < 1) text = '刚刚';
+                else if (minutes < 60) text = `${minutes} 分钟前`;
+                else {
+                    const hours = Math.floor(minutes / 60);
+                    if (hours < 24) text = `${hours} 小时前`;
+                    else {
+                        const days = Math.floor(hours / 24);
+                        text = days < 30 ? `${days} 天前` : d.toLocaleDateString();
                     }
-                }} style={{ cursor: (record.needs_review || !playbooks?.find(p => p.id === record.playbook_id && p.status === 'ready')) ? 'not-allowed' : 'pointer' }}>
-                    <Tooltip title={
-                        record.needs_review
-                            ? "需确认变更后方可执行"
-                            : !playbooks?.find(p => p.id === record.playbook_id && p.status === 'ready')
-                                ? "Playbook 未上线，无法执行"
-                                : "跳转执行"
-                    }>
-                        <PlayCircleOutlined style={{
-                            fontSize: 16,
-                            color: (record.needs_review || !playbooks?.find(p => p.id === record.playbook_id && p.status === 'ready'))
-                                ? '#d9d9d9'
-                                : '#52c41a'
-                        }} />
+                }
+                return (
+                    <Tooltip title={d.toLocaleString()}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            <ClockCircleOutlined style={{ marginRight: 4, fontSize: 11 }} />{text}
+                        </Text>
                     </Tooltip>
-                </a>,
-                <Divider type="vertical" key="d2" />,
-                <a key="edit" onClick={() => handleEdit(record)} style={{ color: !access.canUpdateTask ? '#d9d9d9' : undefined, pointerEvents: !access.canUpdateTask ? 'none' : undefined }}>
-                    <Tooltip title="编辑"><EditOutlined style={{ fontSize: 16 }} /></Tooltip>
-                </a>,
-                <Divider type="vertical" key="d3" />,
-                <Popconfirm
-                    key="delete"
-                    title={
-                        getTaskSchedules(record.id).length > 0
-                            ? <span>无法删除：关联 <b>{getTaskSchedules(record.id).length}</b> 个调度任务</span>
-                            : "确定删除该模板？"
-                    }
-                    onConfirm={() => handleDelete(record.id)}
-                    okButtonProps={{ disabled: getTaskSchedules(record.id).length > 0 }}
-                    description={getTaskSchedules(record.id).length > 0 ? "请先删除关联的调度任务" : undefined}
-                >
-                    <a style={{ color: getTaskSchedules(record.id).length > 0 ? '#d9d9d9' : '#ff4d4f' }}>
-                        <Tooltip title={getTaskSchedules(record.id).length > 0 ? `关联 ${getTaskSchedules(record.id).length} 个调度` : "删除"}>
-                            <DeleteOutlined style={{ fontSize: 16 }} />
+                );
+            },
+        },
+        {
+            columnKey: 'actions',
+            columnTitle: '操作',
+            width: 160,
+
+            render: (_, record) => {
+                const pb = playbooks?.find(p => p.id === record.playbook_id);
+                const canExecute = !record.needs_review && pb?.status === 'ready';
+                const hasSchedules = ((record as any).schedule_count || 0) > 0;
+                return (
+                    <Space size="small" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="查看详情">
+                            <Button type="link" size="small" icon={<EyeOutlined />}
+                                onClick={() => { setCurrentTemplate(record); setDetailOpen(true); }} />
                         </Tooltip>
-                    </a>
-                </Popconfirm>,
-            ],
+                        <Tooltip title={record.needs_review ? '需确认变更后方可执行' : !pb || pb.status !== 'ready' ? 'Playbook 未就绪' : '执行'}>
+                            <Button type="link" size="small"
+                                icon={<PlayCircleOutlined style={{ color: canExecute ? '#52c41a' : undefined }} />}
+                                disabled={!canExecute}
+                                onClick={() => history.push(`/execution/execute?template=${record.id}`)} />
+                        </Tooltip>
+                        <Tooltip title="编辑">
+                            <Button type="link" size="small" icon={<EditOutlined />}
+                                disabled={!access.canUpdateTask}
+                                onClick={() => history.push(`/execution/templates/${record.id}/edit`)} />
+                        </Tooltip>
+                        <Popconfirm
+                            title={hasSchedules ? <span>无法删除：关联 <b>{(record as any).schedule_count}</b> 个调度</span> : '确定删除该模板？'}
+                            onConfirm={() => handleDelete(record.id)}
+                            okButtonProps={{ disabled: hasSchedules }}
+                            description={hasSchedules ? '请先删除关联的调度任务' : undefined}
+                        >
+                            <Button type="link" size="small" danger icon={<DeleteOutlined />}
+                                disabled={hasSchedules} />
+                        </Popconfirm>
+                    </Space>
+                );
+            },
         },
     ];
 
-    console.log('Template page rendered', { editingTemplate });
+    // StandardTable request
+    const handleRequest = useCallback(async (params: {
+        page: number;
+        pageSize: number;
+        searchField?: string;
+        searchValue?: string;
+        advancedSearch?: Record<string, any>;
+        sorter?: { field: string; order: 'ascend' | 'descend' };
+    }) => {
+        const { page, pageSize, advancedSearch, sorter } = params;
+
+        const apiParams: any = {
+            page,
+            page_size: pageSize,
+        };
+
+        // 搜索参数
+        if (advancedSearch) {
+            // 去掉 __enum__ 前缀，统一 key 格式
+            const cleanedSearch: Record<string, any> = {};
+            for (const [k, v] of Object.entries(advancedSearch)) {
+                cleanedSearch[k.replace(/^__enum__/, '')] = v;
+            }
+            const adv = cleanedSearch;
+            // 全局搜索
+            if (adv.search) apiParams.search = adv.search;
+            // 执行器类型 — 兼容快速筛选 (executor) 和高级搜索 (executor_type)
+            if (adv.executor) apiParams.executor_type = adv.executor;
+            if (adv.executor_type) apiParams.executor_type = adv.executor_type;
+            // 审核状态 — 兼容快速筛选 (needs_review) 和高级搜索
+            if (adv.needs_review !== undefined && adv.needs_review !== null) {
+                apiParams.needs_review = adv.needs_review === 'true' || adv.needs_review === true;
+            }
+            // Playbook 名称
+            if (adv.playbook_name) apiParams.playbook_name = adv.playbook_name;
+            // 目标主机
+            if (adv.target_hosts) apiParams.target_hosts = adv.target_hosts;
+            // 最后执行状态
+            if (adv.last_run_status) apiParams.last_run_status = adv.last_run_status;
+            // 有执行记录
+            if (adv.has_runs !== undefined && adv.has_runs !== null) {
+                apiParams.has_runs = adv.has_runs === 'true' || adv.has_runs === true;
+            }
+            // 创建时间范围 (dateRange → created_from / created_to)
+            if (adv.created_at && Array.isArray(adv.created_at) && adv.created_at.length === 2) {
+                apiParams.created_from = adv.created_at[0].toISOString();
+                apiParams.created_to = adv.created_at[1].toISOString();
+            }
+        }
+
+        // 排序
+        if (sorter) {
+            apiParams.sort_by = sorter.field;
+            apiParams.sort_order = sorter.order === 'ascend' ? 'asc' : 'desc';
+        }
+
+        const res = await getExecutionTasks(apiParams);
+        const tasks = res.data || [];
+        const total = res.total || tasks.length;
+
+        // 更新统计 — 调用后端 GET /api/v1/execution-tasks/stats
+        if (page === 1) {
+            try {
+                const statsRes = await getExecutionTaskStats();
+                const s = (statsRes as any)?.data || statsRes;
+                setStats({
+                    total: s.total ?? (res.total || 0),
+                    docker: s.docker ?? 0,
+                    local: s.local ?? 0,
+                    needsReview: s.needs_review ?? 0,
+                    changedPlaybooks: s.changed_playbooks ?? 0,
+                });
+            } catch {
+                // stats 接口异常时，使用列表 total 兜底
+                setStats(prev => ({ ...prev, total: res.total || 0 }));
+            }
+        }
+
+        return { data: tasks, total };
+    }, []);
 
     return (
-        <PageContainer header={{ title: <><ThunderboltOutlined /> 任务模板 / TEMPLATES</> }}>
-            <Row gutter={16} style={{ marginBottom: 24 }}>
-                <Col span={8}>
-                    <StatisticCard
-                        statistic={{
-                            title: '全部模板',
-                            value: stats.total,
-                            icon: <ThunderboltOutlined style={{ color: '#1890ff', fontSize: 24 }} />,
-                        }}
-                    />
-                </Col>
-                <Col span={8}>
-                    <StatisticCard
-                        statistic={{
-                            title: 'Docker 执行环境',
-                            value: stats.docker,
-                            icon: <DockerOutlined style={{ color: '#13c2c2', fontSize: 24 }} />,
-                        }}
-                    />
-                </Col>
-                <Col span={8}>
-                    <StatisticCard
-                        statistic={{
-                            title: 'Local / SSH 执行',
-                            value: stats.local,
-                            icon: <CodeOutlined style={{ color: '#722ed1', fontSize: 24 }} />,
-                        }}
-                    />
-                </Col>
-            </Row>
-
-            <ProTable<AutoHealing.ExecutionTask>
-                columns={columns}
-                dataSource={filteredTasks}
-                toolBarRender={() => [
-                    <Input.Search
-                        key="search"
-                        placeholder="搜索 模板 / ID / 主机"
-                        onSearch={val => setSearchText(val)}
-                        onChange={e => setSearchText(e.target.value)}
-                        style={{ width: 240 }}
-                        allowClear
-                    />,
-                    <Select
-                        key="executor"
-                        placeholder="执行器"
-                        allowClear
-                        style={{ width: 100 }}
-                        value={filterExecutor || undefined}
-                        onChange={v => setFilterExecutor(v || '')}
-                        options={[
-                            { label: 'SSH', value: 'local' },
-                            { label: 'Docker', value: 'docker' }
-                        ]}
-                    />,
-                    <Select
-                        key="status"
-                        placeholder="状态"
-                        allowClear
-                        style={{ width: 110 }}
-                        value={filterStatus || undefined}
-                        onChange={v => setFilterStatus(v || '')}
-                        options={[
-                            { label: '就绪', value: 'ready' },
-                            { label: '需审核', value: 'review' },
-                            { label: '未上线', value: 'offline' }
-                        ]}
-                    />,
-                    <Select
-                        key="playbook"
-                        placeholder="Playbook"
-                        allowClear
-                        showSearch
-                        optionFilterProp="label"
-                        style={{ width: 160 }}
-                        value={filterPlaybook || undefined}
-                        onChange={v => setFilterPlaybook(v || '')}
-                        options={playbooks.map(p => ({ label: p.name, value: p.id }))}
-                    />,
-                    <Button key="create" type="primary" icon={<PlusOutlined />} disabled={!access.canCreateTask} onClick={handleOpenCreateModal}>
-                        创建任务模板
-                    </Button>
+        <>
+            <StandardTable<AutoHealing.ExecutionTask>
+                tabs={[{ key: 'list', label: '模板列表' }]}
+                title="任务模板"
+                description="管理可复用的自动化任务蓝图，配置 Playbook、执行环境和变量参数。"
+                headerIcon={<ThunderboltOutlined style={{ fontSize: 32, color: '#1890ff' }} />}
+                headerExtra={
+                    <div className="template-stats-bar">
+                        {[
+                            { icon: <ThunderboltOutlined />, cls: 'total', val: stats.total, lbl: '全部模板' },
+                            { icon: <ContainerOutlined />, cls: 'docker', val: stats.docker, lbl: 'Docker' },
+                            { icon: <CodeOutlined />, cls: 'local', val: stats.local, lbl: 'Local / SSH' },
+                            {
+                                icon: <ExclamationCircleOutlined />, cls: 'review', val: stats.needsReview, lbl: '待审核模板',
+                                tip: stats.needsReview > 0 ? `${stats.needsReview} 个模板需审核（涉及 ${stats.changedPlaybooks} 个 Playbook 变更）` : undefined
+                            },
+                        ].map((s: any, i: number) => (
+                            <React.Fragment key={i}>
+                                {i > 0 && <div className="template-stat-divider" />}
+                                <Tooltip title={s.tip} placement="bottom">
+                                    <div className="template-stat-item" style={{ cursor: s.tip ? 'help' : undefined }}>
+                                        <span className={`template-stat-icon template-stat-icon-${s.cls}`}>{s.icon}</span>
+                                        <div className="template-stat-content">
+                                            <div className="template-stat-value">{s.val}</div>
+                                            <div className="template-stat-label">{s.lbl}</div>
+                                        </div>
+                                    </div>
+                                </Tooltip>
+                            </React.Fragment>
+                        ))}
+                    </div>
+                }
+                searchFields={[
+                    { key: 'search', label: '名称 / ID', placeholder: '搜索模板名称或 ID' },
+                    {
+                        key: '__enum__executor', label: '执行器类型', options: [
+                            { label: 'SSH / Local', value: 'local' },
+                            { label: 'Docker', value: 'docker' },
+                        ]
+                    },
+                    {
+                        key: '__enum__needs_review', label: '审核状态', options: [
+                            { label: '需审核', value: 'true' },
+                            { label: '正常', value: 'false' },
+                        ]
+                    },
                 ]}
-                loading={loading}
+                advancedSearchFields={templateAdvancedSearchFields}
+                columns={columns}
                 rowKey="id"
-                search={false}
-                options={{
-                    reload: loadTasks,
-                    density: true,
-                }}
-                pagination={{
-                    defaultPageSize: 16,
-                    showSizeChanger: true,
-                    pageSizeOptions: ['16', '32', '64'],
-                    showQuickJumper: true,
-                    showTotal: (total) => `共 ${total} 条`,
-                    size: 'default',
+                request={handleRequest}
+                defaultPageSize={16}
+                preferenceKey="execution_templates"
+                refreshTrigger={refreshTrigger}
+                primaryActionLabel="创建任务模板"
+                primaryActionIcon={<PlusOutlined />}
+                primaryActionDisabled={!access.canCreateTask}
+                onPrimaryAction={() => history.push('/execution/templates/create')}
+                extraToolbarActions={stats.needsReview > 0 ? (
+                    <Tooltip title={`${stats.needsReview} 个模板待审核，点击批量确认`}>
+                        <Badge dot offset={[-4, 4]}>
+                            <Button icon={<AlertOutlined />} onClick={openBatchReview} />
+                        </Badge>
+                    </Tooltip>
+                ) : undefined}
+                onRowClick={(record) => {
+                    setCurrentTemplate(record);
+                    setDetailOpen(true);
                 }}
             />
 
-            {/* 详情抽屉 */}
             <TemplateDetailDrawer
                 open={detailOpen}
                 template={currentTemplate}
-                onClose={() => setDetailOpen(false)}
+                onClose={() => { setDetailOpen(false); setCurrentTemplate(undefined); }}
                 playbooks={playbooks}
                 secretsSources={secretsSources}
                 notifyChannels={notifyChannels}
                 notifyTemplates={notifyTemplates}
                 onConfirmReview={handleConfirmReview}
             />
-
-            {/* ========== 浮动便签 - 跟随抽屉滑动 ========== */}
-            {editingTemplate?.needs_review && (
-                <div style={{
-                    position: 'fixed',
-                    right: createModalOpen ? 1120 : -280,  // 打开时在抽屉左侧，关闭时滑出屏幕
-                    top: 120,
-                    width: 260,
-                    zIndex: 1001,
-                    background: 'linear-gradient(135deg, #fffbe6 0%, #fff7e6 100%)',
-                    border: '1px solid #ffe58f',
-                    borderRadius: 0,
-                    padding: 16,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    transition: 'right 0.3s cubic-bezier(0.7, 0.3, 0.1, 1)',  // 与 Ant Design Drawer 动画曲线一致
-                    pointerEvents: createModalOpen ? 'auto' : 'none',
-                    opacity: createModalOpen ? 1 : 0,
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <BellOutlined style={{ color: '#faad14', fontSize: 18, marginTop: 2 }} />
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: 14, color: '#d48806', marginBottom: 8 }}>
-                                变量变更待确认
-                            </div>
-                            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>
-                                Playbook 已更新，保存将自动确认变更
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                {editingTemplate.changed_variables?.map(v => (
-                                    <Tag key={v} color="orange" style={{ margin: 0, fontSize: 11 }}>{v}</Tag>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* 创建/编辑抽屉 */}
-            <Drawer
-                title={editingTemplate ? "编辑任务模板" : "创建任务模板"}
-                width={1100}
-                open={createModalOpen}
-                onClose={() => setCreateModalOpen(false)}
-                afterOpenChange={(open) => {
-                    setDrawerFullyOpen(open);
-                    // 关闭动画完成后清空表单数据
-                    if (!open) {
-                        setVarSearch('');
-                        setShowOnlyRequired(false);
-                        setVariableValues({});
-                        setSelectedPlaybook(undefined);
-                        createForm.resetFields();
-                    }
-                }}
-                destroyOnClose
-                maskClosable={false}
-                styles={{ body: { padding: 0 } }}
-                footer={
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Button onClick={() => setCreateModalOpen(false)}>取消</Button>
-                        <Button type="primary" onClick={handleCreate} loading={creating} size="large">
-                            {editingTemplate ? "保存修改" : "立即创建"}
-                        </Button>
-                    </div>
-                }
+            {/* 批量审核 Modal */}
+            <Modal
+                title={<><CheckOutlined style={{ color: '#52c41a', marginRight: 8 }} />批量确认审核</>}
+                open={batchReviewOpen}
+                onCancel={() => setBatchReviewOpen(false)}
+                onOk={handleBatchReview}
+                confirmLoading={batchReviewLoading}
+                okText={`确认 ${selectedPlaybooks.length} 个 Playbook（${reviewGroups.filter(g => selectedPlaybooks.includes(g.playbook_id)).reduce((s, g) => s + g.count, 0)} 个模板）`}
+                width={520}
             >
-                <Form form={createForm} layout="vertical" requiredMark="optional" style={{ height: '100%' }}>
-
-                    {/* ========== 主内容区：左右分栏（统一白色背景）========== */}
-                    <div style={{ display: 'flex', height: '100%', minHeight: 'calc(100vh - 108px)', background: '#fff' }}>
-
-                        {/* 左侧：基础配置 (固定440px) */}
-                        <div style={{
-                            width: 440,
-                            flexShrink: 0,
-                            borderRight: '1px solid #e8e8e8',
-                            overflowY: 'auto',
-                            padding: '24px 24px'
-                        }}>
-                            {/* 标题栏 - 与右侧保持一致 */}
-                            <div style={{ marginBottom: 24 }}>
-                                <Space size={12}>
-                                    <div style={{
-                                        width: 32, height: 32, borderRadius: '50%', background: '#e6f7ff',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        <ContainerOutlined style={{ fontSize: 18, color: '#1890ff' }} />
-                                    </div>
-                                    <div>
-                                        <Text strong style={{ fontSize: 16 }}>基础配置</Text>
-                                        <div style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1 }}>配置任务的基本属性和运行环境</div>
-                                    </div>
-                                </Space>
+                <div style={{ marginBottom: 12, color: '#8c8c8c', fontSize: 13 }}>
+                    选择要批量确认审核的 Playbook，确认后其下所有待审核的任务模板将标记为已审核。
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                    <Button type="link" size="small" onClick={() => setSelectedPlaybooks(
+                        selectedPlaybooks.length === reviewGroups.length ? [] : reviewGroups.map(g => g.playbook_id)
+                    )}>
+                        {selectedPlaybooks.length === reviewGroups.length ? '取消全选' : '全选'}
+                    </Button>
+                </div>
+                {reviewGroups.map(g => (
+                    <div key={g.playbook_id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', marginBottom: 6,
+                        border: `1px solid ${selectedPlaybooks.includes(g.playbook_id) ? '#1890ff' : '#f0f0f0'}`,
+                        borderRadius: 6, cursor: 'pointer',
+                        background: selectedPlaybooks.includes(g.playbook_id) ? '#f0f7ff' : '#fafafa',
+                        transition: 'all 0.2s',
+                    }} onClick={() => setSelectedPlaybooks(prev =>
+                        prev.includes(g.playbook_id) ? prev.filter(id => id !== g.playbook_id) : [...prev, g.playbook_id]
+                    )}>
+                        <Checkbox checked={selectedPlaybooks.includes(g.playbook_id)} />
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13 }}>
+                                <ProjectOutlined style={{ marginRight: 6, color: '#1890ff' }} />
+                                {g.playbook_name}
                             </div>
-
-                            <Form.Item
-                                name="name"
-                                label="模板名称"
-                                rules={[{ required: true, message: '请输入模板名称' }]}
-                            >
-                                <Input size="large" prefix={<ThunderboltOutlined style={{ color: '#bfbfbf' }} />} placeholder="例如：生产环境 Nginx 日志轮转" style={{ fontSize: 14 }} />
-                            </Form.Item>
-
-                            <Form.Item name="description" label="任务描述">
-                                <Input.TextArea size="large" placeholder="请输入任务描述" rows={2} style={{ fontSize: 14 }} />
-                            </Form.Item>
-
-                            <Form.Item
-                                name="playbook_id"
-                                label="关联 Playbook"
-                                rules={[{ required: true, message: '请选择 Playbook' }]}
-                                tooltip="选择要执行的自动化脚本蓝图"
-                            >
-                                <PlaybookSelector
-                                    playbooks={playbooks}
-                                    value={createForm.getFieldValue('playbook_id')}
-                                    onChange={handleSelectPlaybook}
-                                />
-                            </Form.Item>
-
-                            <Form.Item name="executor_type" label="执行环境" initialValue="local">
-                                <Select size="large" style={{ fontSize: 14 }} options={[
-                                    { label: <span><DesktopOutlined /> 本地进程 (Local)</span>, value: 'local' },
-                                    { label: <span><ContainerOutlined /> 容器环境 (Docker)</span>, value: 'docker' },
-                                ]} />
-                            </Form.Item>
-
-                            <Divider style={{ margin: '16px 0 12px' }} />
-
-                            <Collapse
-                                ghost
-                                defaultActiveKey={['targets', 'secrets', 'notify']}
-                                expandIconPosition="end"
-                                style={{ marginLeft: -16, marginRight: -16 }}
-                                items={[
-                                    {
-                                        key: 'targets',
-                                        label: <Text strong><GlobalOutlined /> 目标主机</Text>,
-                                        children: (
-                                            <div style={{ paddingLeft: 16, paddingRight: 16 }}>
-                                                <Form.Item
-                                                    name="target_hosts"
-                                                    rules={[{ required: true, message: '请至少选择一台目标主机' }]}
-                                                    noStyle
-                                                >
-                                                    <HostSelector />
-                                                </Form.Item>
-                                            </div>
-                                        )
-                                    },
-                                    {
-                                        key: 'secrets',
-                                        label: <Text strong><KeyOutlined /> 密钥源</Text>,
-                                        children: (
-                                            <div style={{ paddingLeft: 16, paddingRight: 16 }}>
-                                                <Form.Item name="secrets_source_ids" noStyle>
-                                                    <SecretsSelector dataSource={secretsSources} />
-                                                </Form.Item>
-                                            </div>
-                                        )
-                                    },
-                                    {
-                                        key: 'notify',
-                                        label: <Text strong><BellOutlined /> 通知配置</Text>,
-                                        children: (
-                                            <div style={{ paddingLeft: 16, paddingRight: 16 }}>
-                                                <Form.Item name="notification_config" noStyle>
-                                                    <NotificationSelector
-                                                        channels={notifyChannels}
-                                                        templates={notifyTemplates}
-                                                    />
-                                                </Form.Item>
-                                            </div>
-                                        )
-                                    }
-                                ]}
-                            />
-                        </div>
-
-                        {/* 右侧：变量配置 (自适应宽度) */}
-                        <div style={{
-                            flex: 1,
-                            minWidth: 0,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            background: '#fff',
-                            padding: '24px 24px',
-                            overflow: 'hidden'
-                        }}>
-                            {/* 标题栏 */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexShrink: 0 }}>
-                                <Space size={12}>
-                                    <div style={{
-                                        width: 32, height: 32, borderRadius: '50%', background: '#e6f7ff',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        <CodeOutlined style={{ fontSize: 18, color: '#1890ff' }} />
-                                    </div>
-                                    <div>
-                                        <Text strong style={{ fontSize: 16 }}>变量配置</Text>
-                                        <div style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1 }}>
-                                            {selectedPlaybook ? `Playbook: ${selectedPlaybook.name}` : '请先选择 Playbook'}
-                                        </div>
-                                    </div>
-                                </Space>
-
-                                {variables.length > 0 && (
-                                    <Space size={16}>
-                                        <Input
-                                            placeholder="搜索变量名/描述"
-                                            prefix={<SearchOutlined style={{ color: 'rgba(0,0,0,.25)' }} />}
-                                            value={varSearch}
-                                            onChange={e => setVarSearch(e.target.value)}
-                                            allowClear
-                                            style={{ width: 200 }}
-                                        />
-                                        <Space>
-                                            <Text style={{ fontSize: 14 }}>仅显示必填</Text>
-                                            <Switch checked={showOnlyRequired} onChange={setShowOnlyRequired} />
-                                        </Space>
-                                    </Space>
-                                )}
-                            </div>
-
-                            {/* 变量列表 - Form风格，无表格感 */}
-                            <div style={{ flex: 1, overflow: 'auto', padding: '0 4px' }}>
-                                {!selectedPlaybook ? (
-                                    <Empty
-                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                        description="请先在左侧选择 Playbook"
-                                        style={{ marginTop: 80 }}
-                                    />
-                                ) : loadingPlaybook ? (
-                                    <div style={{ textAlign: 'center', marginTop: 80 }}>
-                                        <Spin tip="正在解析变量..." />
-                                    </div>
-                                ) : filteredVariables.length === 0 ? (
-                                    <Empty
-                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                        description={variables.length === 0 ? "该 Playbook 无可配置变量" : "未找到匹配的变量"}
-                                        style={{ marginTop: 80 }}
-                                    />
-                                ) : (
-                                    <div>
-                                        {filteredVariables.map((record, index) => (
-                                            <div
-                                                key={record.name}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'flex-start',
-                                                    padding: '16px 0',
-                                                    borderBottom: index < filteredVariables.length - 1 ? '1px solid #f5f5f5' : 'none'
-                                                }}
-                                            >
-                                                {/* 左侧：变量名和描述 */}
-                                                <div style={{ width: 200, flexShrink: 0, paddingRight: 16, paddingTop: 4 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-                                                        <Text style={{ fontSize: 13, color: '#262626' }}>{record.name}</Text>
-                                                        {record.required && (
-                                                            <span style={{
-                                                                marginLeft: 6,
-                                                                fontSize: 10,
-                                                                color: '#ff4d4f',
-                                                                fontWeight: 500
-                                                            }}>*</span>
-                                                        )}
-                                                    </div>
-                                                    <Text type="secondary" style={{ fontSize: 11 }}>{record.type}</Text>
-                                                </div>
-                                                {/* 右侧：输入控件 - 限制最大宽度 */}
-                                                <div style={{ flex: 1, maxWidth: 400 }}>
-                                                    <Form.Item
-                                                        style={{ marginBottom: 0 }}
-                                                        rules={[{ required: record.required, message: '必填' }]}
-                                                    >
-                                                        <VariableInput
-                                                            variable={record}
-                                                            value={variableValues[record.name]}
-                                                            onChange={val => handleVariableChange(record.name, val)}
-                                                        />
-                                                    </Form.Item>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                            <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>
+                                {g.count} 个待审核模板
                             </div>
                         </div>
+                        <Tag color="error" style={{ margin: 0 }}>{g.count}</Tag>
                     </div>
-                </Form>
-            </Drawer >
-        </PageContainer >
+                ))}
+            </Modal>
+        </>
     );
 };
 

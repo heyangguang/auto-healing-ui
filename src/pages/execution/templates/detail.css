@@ -1,0 +1,175 @@
+/* ========== 任务模板详情页 — 多卡片限宽布局 ========== */
+
+.tpl-detail-page {
+    min-height: calc(100vh - 120px);
+    background: #f5f5f5;
+}
+
+.tpl-detail-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 卡片容器 — 限宽居中 */
+.tpl-detail-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 24px 32px;
+    max-width: 860px;
+}
+
+.tpl-detail-card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    padding: 24px 28px;
+}
+
+/* 分区标题 */
+.tpl-detail-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tpl-detail-section-title .anticon {
+    font-size: 14px;
+    color: #1890ff;
+}
+
+/* 字段网格 (2列) */
+.tpl-detail-field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 24px;
+}
+
+/* 单个字段 */
+.tpl-detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tpl-detail-field-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    font-weight: 500;
+}
+
+.tpl-detail-field-value {
+    font-size: 13px;
+    color: #262626;
+    font-weight: 500;
+    line-height: 22px;
+}
+
+/* 子区块标题 */
+.tpl-detail-subsection-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #595959;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 代码块 */
+.tpl-detail-code-block {
+    margin: 0;
+    font-size: 12px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    overflow: auto;
+    max-height: 320px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+/* 变量列表 */
+.tpl-detail-var-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tpl-detail-var-item {
+    padding: 10px 14px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    font-size: 12px;
+}
+
+/* 漂移提醒 */
+.tpl-detail-drift-alert {
+    padding: 12px 16px;
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    margin-bottom: 16px;
+}
+
+/* 通知配置横排 */
+.tpl-detail-notif-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+
+.tpl-detail-notif-trigger {
+    border: 1px dashed #d9d9d9;
+    padding: 10px 12px;
+    background: #fafafa;
+}
+
+.tpl-detail-notif-trigger.active-start {
+    border-color: #1890ff;
+    background: rgba(24, 144, 255, 0.03);
+}
+
+.tpl-detail-notif-trigger.active-success {
+    border-color: #52c41a;
+    background: rgba(82, 196, 26, 0.03);
+}
+
+.tpl-detail-notif-trigger.active-failure {
+    border-color: #ff4d4f;
+    background: rgba(255, 77, 79, 0.03);
+}
+
+/* 密钥源+通知 并列布局 */
+.tpl-detail-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .tpl-detail-cards {
+        padding: 12px 12px 24px;
+    }
+
+    .tpl-detail-card {
+        padding: 16px;
+    }
+
+    .tpl-detail-field-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tpl-detail-notif-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tpl-detail-two-col {
+        grid-template-columns: 1fr;
+    }
+}

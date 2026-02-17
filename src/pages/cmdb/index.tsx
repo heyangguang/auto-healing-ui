@@ -16,7 +16,7 @@ import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
 
 import {
-    getCMDBItems, getCMDBStats, getCMDBItem, testCMDBConnection, batchTestCMDBConnection,
+    getCMDBItems, getCMDBItemIds, getCMDBStats, getCMDBItem, testCMDBConnection, batchTestCMDBConnection,
     enterMaintenance, resumeFromMaintenance, batchEnterMaintenance, batchResumeFromMaintenance,
     getCMDBMaintenanceLogs,
 } from '@/services/auto-healing/cmdb';
@@ -493,10 +493,10 @@ const CMDBList: React.FC = () => {
     /* ========== 全选所有 ========== */
     const handleSelectAll = useCallback(async () => {
         try {
-            const res = await getCMDBItems({ page: 1, page_size: 9999 });
-            const items: AutoHealing.CMDBItem[] = (res as any)?.data || [];
+            const res = await getCMDBItemIds();
+            const items = res?.data?.items || [];
             const newMap = new Map<string, AutoHealing.CMDBItem>();
-            items.forEach(item => newMap.set(item.id, item));
+            items.forEach((item: any) => newMap.set(item.id, item as AutoHealing.CMDBItem));
             setSelectedRowMap(newMap);
             message.success(`已全选 ${items.length} 项`);
         } catch { message.error('全选失败'); }

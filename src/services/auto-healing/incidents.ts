@@ -6,6 +6,7 @@ import { request } from '@umijs/max';
 export async function getIncidents(params?: {
     page?: number;
     page_size?: number;
+    search?: string;
     plugin_id?: string;
     source_plugin_name?: string;
     status?: AutoHealing.IncidentStatus;

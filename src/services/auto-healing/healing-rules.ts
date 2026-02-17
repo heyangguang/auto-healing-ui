@@ -7,8 +7,12 @@ export async function getHealingRules(
         // query
         page?: number;
         page_size?: number;
+        search?: string;
         is_active?: boolean;
         flow_id?: string;
+        trigger_mode?: string;
+        sort_by?: string;
+        sort_order?: string;
     },
     options?: { [key: string]: any },
 ) {

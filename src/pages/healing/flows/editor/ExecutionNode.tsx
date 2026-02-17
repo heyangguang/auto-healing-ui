@@ -5,7 +5,7 @@ import {
     CodeOutlined, CheckOutlined, CloseOutlined,
     ExclamationCircleOutlined
 } from '@ant-design/icons';
-import { STATUS_CONFIG, getCurrentNodeShadow } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
 
 const { Text } = Typography;
 
@@ -54,17 +54,18 @@ const ExecutionNode = ({ data, isConnectable, selected }: NodeProps) => {
                 background: '#fff',
                 borderRadius: 0,
                 boxShadow: getCurrentNodeShadow(isCurrent, !!selected, color),
-                border: isCurrent ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                border: '1px solid #d9d9d9',
                 borderLeft: `3px solid ${statusColor || color}`,
                 transition: 'all 0.3s',
-                overflow: 'hidden',
+                overflow: 'visible',
                 animation: isCurrent ? 'currentNodePulse 2s ease-in-out infinite' : undefined,
+                ...getNodeOutlineStyle(isCurrent, !!selected),
             }}>
                 <Handle
                     type="target"
                     position={Position.Top}
                     isConnectable={isConnectable}
-                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9' }}
+                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9', ...getActiveHandleStyle('target', data.activeHandles, '#52c41a') }}
                 />
 
                 <div style={{
@@ -92,15 +93,15 @@ const ExecutionNode = ({ data, isConnectable, selected }: NodeProps) => {
                 }}>
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRight: '1px solid #f5f5f5', position: 'relative' }}>
                         <CheckOutlined style={{ fontSize: 12, color: '#52c41a' }} />
-                        <Handle type="source" position={Position.Bottom} id="success" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#52c41a', bottom: -4 }} />
+                        <Handle type="source" position={Position.Bottom} id="success" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#52c41a', bottom: -4, ...getActiveHandleStyle('success', data.activeHandles, '#52c41a') }} />
                     </div>
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRight: '1px solid #f5f5f5', position: 'relative' }}>
                         <ExclamationCircleOutlined style={{ fontSize: 12, color: '#faad14' }} />
-                        <Handle type="source" position={Position.Bottom} id="partial" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#faad14', bottom: -4 }} />
+                        <Handle type="source" position={Position.Bottom} id="partial" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#faad14', bottom: -4, ...getActiveHandleStyle('partial', data.activeHandles, '#faad14') }} />
                     </div>
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                         <CloseOutlined style={{ fontSize: 12, color: '#ff4d4f' }} />
-                        <Handle type="source" position={Position.Bottom} id="failed" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#ff4d4f', bottom: -4 }} />
+                        <Handle type="source" position={Position.Bottom} id="failed" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#ff4d4f', bottom: -4, ...getActiveHandleStyle('failed', data.activeHandles, '#ff4d4f') }} />
                     </div>
                 </div>
             </div>

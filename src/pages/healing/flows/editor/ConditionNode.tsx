@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Typography, Tooltip } from 'antd';
 import { BranchesOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { STATUS_CONFIG } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
 
 const { Text } = Typography;
 
@@ -24,6 +24,7 @@ const NODE_HEIGHT = NODE_HEADER_HEIGHT + NODE_FOOTER_HEIGHT;
 
 const ConditionNode = ({ data, isConnectable, selected }: NodeProps) => {
     const status = data.status;
+    const isCurrent = data.isCurrent;
     const color = '#722ed1';
     const statusConfig = status ? STATUS_CONFIG[status] : null;
     const statusColor = statusConfig?.color;
@@ -50,18 +51,20 @@ const ConditionNode = ({ data, isConnectable, selected }: NodeProps) => {
                 height: NODE_HEIGHT,
                 background: '#fff',
                 borderRadius: 0,
-                boxShadow: statusColor ? `0 0 0 2px ${statusColor}` : (selected ? `0 0 0 1px ${color}` : '0 2px 6px rgba(0,0,0,0.04)'),
-                border: statusColor ? `1px solid ${statusColor}` : '1px solid #d9d9d9',
+                boxShadow: getCurrentNodeShadow(isCurrent, !!selected, color, statusColor),
+                border: '1px solid #d9d9d9',
                 borderLeft: `3px solid ${statusColor || color}`,
                 transition: 'all 0.3s',
                 overflow: 'hidden',
+                animation: isCurrent ? 'currentNodePulse 2s ease-in-out infinite' : undefined,
+                ...getNodeOutlineStyle(isCurrent, !!selected),
             }}>
                 {/* 输入连接点 */}
                 <Handle
                     type="target"
                     position={Position.Top}
                     isConnectable={isConnectable}
-                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9' }}
+                    style={{ ...handleStyle, top: -4, borderColor: '#d9d9d9', ...getActiveHandleStyle('target', data.activeHandles, '#52c41a') }}
                 />
 
                 {/* 主内容 */}
@@ -96,7 +99,7 @@ const ConditionNode = ({ data, isConnectable, selected }: NodeProps) => {
                             type="source"
                             position={Position.Bottom}
                             id="true"
-                            style={{ ...handleStyle, borderColor: '#52c41a', bottom: -4 }}
+                            style={{ ...handleStyle, borderColor: '#52c41a', bottom: -4, ...getActiveHandleStyle('true', data.activeHandles, '#52c41a') }}
                             isConnectable={isConnectable}
                         />
                     </div>
@@ -111,7 +114,7 @@ const ConditionNode = ({ data, isConnectable, selected }: NodeProps) => {
                             type="source"
                             position={Position.Bottom}
                             id="false"
-                            style={{ ...handleStyle, borderColor: '#ff4d4f', bottom: -4 }}
+                            style={{ ...handleStyle, borderColor: '#ff4d4f', bottom: -4, ...getActiveHandleStyle('false', data.activeHandles, '#ff4d4f') }}
                             isConnectable={isConnectable}
                         />
                     </div>

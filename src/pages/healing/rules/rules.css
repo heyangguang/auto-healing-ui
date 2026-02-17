@@ -1,0 +1,365 @@
+/* ===== 自愈规则 — Launchpad 风格卡片 ===== */
+
+/* ===== 卡片网格 ===== */
+.rules-grid {
+    padding: 20px 24px;
+}
+
+/* ===== 规则卡片 ===== */
+.rule-card {
+    display: flex;
+    border: 1px solid #e8e8e8;
+    overflow: hidden;
+    background: #fff;
+    transition: all 0.25s ease;
+    position: relative;
+    cursor: pointer;
+    border-radius: 0;
+}
+
+/* 左侧优先级色条 — 短窄样式(对齐 Playbook 卡片) */
+.rule-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 3px;
+    height: 24%;
+    max-height: 36px;
+    background: #52c41a;
+    border-radius: 0;
+}
+
+/* === 高优先级 — 红色系，视觉突出 === */
+.rule-card-priority-high::before {
+    width: 3px;
+    background: linear-gradient(180deg, #ff4d4f 0%, #cf1322 100%);
+}
+
+.rule-card-priority-high {
+    border-color: #ffccc7;
+    background: linear-gradient(135deg, #fff1f0 0%, #fff 40%);
+}
+
+.rule-card-priority-high:hover {
+    border-color: #ff4d4f;
+    box-shadow: 0 4px 12px rgba(255, 77, 79, 0.18);
+}
+
+/* === 中优先级 — 橙色系 === */
+.rule-card-priority-medium::before {
+    background: linear-gradient(180deg, #faad14 0%, #d48806 100%);
+}
+
+.rule-card-priority-medium {
+    border-color: #ffe7ba;
+    background: linear-gradient(135deg, #fffbe6 0%, #fff 40%);
+}
+
+.rule-card-priority-medium:hover {
+    border-color: #faad14;
+    box-shadow: 0 4px 12px rgba(250, 173, 20, 0.15);
+}
+
+/* === 低优先级 — 绿色系，柔和淡化 === */
+.rule-card-priority-low::before {
+    background: #b7eb8f;
+}
+
+.rule-card-priority-low {
+    border-color: #e8e8e8;
+}
+
+.rule-card-priority-low:hover {
+    border-color: #1890ff;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.12);
+}
+
+/* 已停用 — 轻度灰化 */
+.rule-card-inactive {
+    opacity: 0.55;
+    filter: grayscale(20%);
+}
+
+.rule-card-inactive::before {
+    background: #bfbfbf !important;
+}
+
+.rule-card-inactive:hover {
+    border-color: #d9d9d9 !important;
+    box-shadow: none !important;
+}
+
+/* ===== 触发模式 Tag（内联在标题行）===== */
+.rule-trigger-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 0 6px;
+    line-height: 18px;
+    border-radius: 0;
+    flex-shrink: 0;
+}
+
+.rule-trigger-tag-auto {
+    background: #e6f4ff;
+    color: #1677ff;
+    border: 1px solid #91caff;
+}
+
+.rule-trigger-tag-manual {
+    background: #fff7e6;
+    color: #d46b08;
+    border: 1px solid #ffe58f;
+}
+
+/* ===== 右侧内容区 — 紧凑高密度 ===== */
+.rule-card-body {
+    flex: 1;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 4px;
+}
+
+/* 标题行 */
+.rule-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.rule-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #262626;
+    margin: 0;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+/* 状态标记 */
+.rule-card-status-active {
+    font-size: 10px;
+    color: #52c41a;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.rule-card-status-inactive {
+    font-size: 10px;
+    font-weight: 600;
+    color: #8c8c8c;
+    border: 1px solid #d9d9d9;
+    padding: 0px 5px;
+    line-height: 16px;
+    background: #fafafa;
+    flex-shrink: 0;
+}
+
+/* 描述 */
+.rule-card-desc {
+    font-size: 11px;
+    color: #8c8c8c;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 流程引用条 */
+.rule-card-flow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #8c8c8c;
+    font-size: 11px;
+    background: #fafafa;
+    padding: 2px 6px;
+    border: 1px solid #f0f0f0;
+}
+
+.rule-card-flow-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rule-card-flow-warning {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #faad14;
+    font-size: 11px;
+    padding: 2px 6px;
+    background: #fffbe6;
+    border: 1px solid #fff1b8;
+}
+
+/* 2x2 信息网格 */
+.rule-card-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 8px;
+    font-size: 11px;
+    color: #595959;
+}
+
+.rule-card-info-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.6;
+}
+
+.rule-card-info-item .anticon {
+    font-size: 10px;
+    color: #8c8c8c;
+    flex-shrink: 0;
+}
+
+.rule-card-info-item .info-value {
+    color: #262626;
+    font-weight: 500;
+}
+
+/* 底部操作条 */
+.rule-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 4px;
+    margin-top: auto;
+    gap: 4px;
+}
+
+.rule-card-footer-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 10px;
+    color: #bfbfbf;
+}
+
+/* ===== 分页 ===== */
+.rules-pagination {
+    margin: 0 24px;
+    padding: 16px 0;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* ===== Detail Drawer ===== */
+.rule-detail-card {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+}
+
+.rule-detail-card h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #e8e8e8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rule-detail-card h4 .anticon {
+    color: #1890ff;
+}
+
+.rule-detail-row {
+    display: flex;
+    padding: 6px 0;
+    font-size: 13px;
+}
+
+.rule-detail-label {
+    width: 80px;
+    flex-shrink: 0;
+    color: #8c8c8c;
+}
+
+.rule-detail-value {
+    flex: 1;
+    color: #262626;
+    word-break: break-all;
+}
+
+/* 条件详情 */
+.rule-condition-group {
+    padding: 8px;
+    margin: 4px 0;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+}
+
+.rule-condition-group-header {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8c8c8c;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.rule-condition-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: 12px;
+}
+
+/* ===== 优先级 Badge — 彩色版 ===== */
+.rule-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 8px;
+    line-height: 18px;
+    border-radius: 0;
+    letter-spacing: 0.5px;
+}
+
+.rule-priority-badge-high {
+    background: #fff1f0;
+    color: #cf1322;
+    border: 1px solid #ffa39e;
+}
+
+.rule-priority-badge-medium {
+    background: #fffbe6;
+    color: #d46b08;
+    border: 1px solid #ffe58f;
+}
+
+.rule-priority-badge-low {
+    background: #f6ffed;
+    color: #389e0d;
+    border: 1px solid #b7eb8f;
+}
+
+/* ===== 统计栏 — 直接复用 git-stats-bar 标准类 ===== */
+/* 图标颜色覆盖：自动和人工使用自定义色 */

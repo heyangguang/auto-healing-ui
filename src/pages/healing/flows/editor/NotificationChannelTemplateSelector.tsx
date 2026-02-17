@@ -11,7 +11,9 @@ const { Text, Paragraph } = Typography;
 // 单个渠道+模板配置
 interface ChannelTemplateConfig {
     channel_id: string;
+    channel_name?: string;
     template_id: string;
+    template_name?: string;
 }
 
 interface ChannelInfo {
@@ -217,7 +219,9 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
 
         const newConfig: ChannelTemplateConfig = {
             channel_id: selectedChannel.id,
-            template_id: templateId
+            channel_name: selectedChannel.name,
+            template_id: templateId,
+            template_name: templates.find(t => t.id === templateId)?.name,
         };
 
         // 检查是否已存在相同配置

@@ -49,3 +49,17 @@ export async function retryHealingInstance(
         ...(options || {}),
     });
 }
+
+/**
+ * 获取自愈实例统计
+ * GET /api/v1/healing/instances/stats
+ */
+export async function getHealingInstanceStats() {
+    return request<{
+        code: number;
+        data: {
+            total: number;
+            by_status: Array<{ status: string; count: number }>;
+        };
+    }>('/api/v1/healing/instances/stats', { method: 'GET' });
+}

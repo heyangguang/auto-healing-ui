@@ -101,3 +101,18 @@ export async function querySecret(data: AutoHealing.SecretQuery) {
         data,
     });
 }
+
+/**
+ * 获取密钥源统计数据
+ * GET /api/v1/secrets-sources/stats
+ */
+export async function getSecretsSourcesStats() {
+    return request<{
+        code: number;
+        data: {
+            total: number;
+            by_status: Array<{ status: string; count: number }>;
+            by_type: Array<{ type: string; count: number }>;
+        };
+    }>('/api/v1/secrets-sources/stats', { method: 'GET' });
+}

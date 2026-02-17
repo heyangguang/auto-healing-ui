@@ -3,14 +3,16 @@ import {
     getHealingInstanceDetail,
     retryHealingInstance,
 } from '@/services/auto-healing/instances';
+import { getExecutionLogs } from '@/services/auto-healing/execution';
 import { createInstanceEventStream, NodeStatus } from '@/services/auto-healing/sse';
-import { PageContainer, ProDescriptions } from '@ant-design/pro-components';
+
 import { history, useParams, useRequest } from '@umijs/max';
-import { Button, Card, Col, Drawer, Empty, Row, Space, Spin, Steps, Tabs, Tag, Typography, message, Descriptions, Statistic, Result, Timeline, Alert } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined, EyeOutlined, ClockCircleOutlined, BugOutlined, FileTextOutlined, WarningOutlined, ThunderboltOutlined, AimOutlined, AppstoreOutlined, TagOutlined, DashboardOutlined, AlertOutlined, NodeIndexOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Button, Card, Drawer, Empty, Space, Spin, Steps, Tabs, Tag, Typography, message, Descriptions, Result, Timeline, Alert } from 'antd';
+import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined, EyeOutlined, ClockCircleOutlined, BugOutlined, FileTextOutlined, WarningOutlined, ThunderboltOutlined, AimOutlined, AppstoreOutlined, TagOutlined, DashboardOutlined, AlertOutlined, NodeIndexOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
     Background,
+    BackgroundVariant,
     Controls,
     Edge,
     Node,
@@ -20,6 +22,8 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
+import { getLayoutedElements } from '../utils/layoutUtils';
+import AutoLayoutButton from '../components/AutoLayoutButton';
 import LogConsole, { LogEntry } from '@/components/execution/LogConsole';
 
 // Import node types from the editor
@@ -30,6 +34,7 @@ import EndNode from '../../flows/editor/EndNode';
 import ExecutionNode from '../../flows/editor/ExecutionNode';
 import StartNode from '../../flows/editor/StartNode';
 import JsonPrettyView from '../components/JsonPrettyView';
+import SubPageHeader from '@/components/SubPageHeader';
 
 // Define node types
 const nodeTypes = {
@@ -57,10 +62,69 @@ function normalizeNodeState(raw: any): Record<string, any> | undefined {
 
 // 节点状态对应的边颜色
 const STATUS_EDGE_COLOR: Record<string, string> = {
-    success: '#52c41a', completed: '#52c41a',
-    failed: '#ff4d4f', partial: '#faad14',
+    success: '#52c41a', completed: '#52c41a', approved: '#52c41a',
+    failed: '#ff4d4f', rejected: '#ff4d4f', partial: '#faad14',
     running: '#1890ff', waiting_approval: '#fa8c16',
 };
+
+// 节点类型中文标签
+const NODE_TYPE_LABELS: Record<string, string> = {
+    start: '开始', end: '结束', execution: '执行', approval: '审批',
+    condition: '条件分支', notification: '通知', host_extractor: '主机提取',
+    cmdb_validator: 'CMDB 校验', set_variable: '变量设置',
+    compute: '计算', trigger: '触发器', custom: '自定义',
+};
+
+// 状态中文标签
+const STATUS_LABELS: Record<string, string> = {
+    pending: '等待中', running: '执行中', waiting_approval: '待审批',
+    completed: '已完成', success: '成功', approved: '已通过',
+    failed: '失败', rejected: '已拒绝', error: '错误',
+    partial: '部分成功', cancelled: '已取消', skipped: '已跳过',
+    simulated: '模拟通过', triggered: '已触发',
+};
+
+// 配置参数中文标签
+const CONFIG_LABELS: Record<string, string> = {
+    label: '节点名称', type: '节点类型', description: '描述',
+    task_template_id: '任务模板 ID', task_template_name: '任务模板',
+    playbook_id: 'Playbook ID', playbook_name: 'Playbook',
+    extra_vars: '额外变量', hosts: '目标主机',
+    timeout: '超时', timeout_seconds: '超时(秒)',
+    condition: '条件表达式', expression: '表达式',
+    title: '审批标题', approval_title: '审批标题',
+    notification_template_id: '通知模板 ID',
+    notification_channel_id: '通知渠道 ID',
+    on_success: '成功时', on_failure: '失败时',
+    retry_count: '重试次数', retry_interval: '重试间隔',
+};
+
+/**
+ * 根据节点类型和状态，返回实际走过的 sourceHandle 名称
+ */
+function getActiveBranchHandle(
+    nodeType: string,
+    nodeStatus: string | undefined,
+): string | null {
+    if (!nodeStatus) return null;
+    switch (nodeType) {
+        case 'approval':
+            if (['approved', 'completed', 'success', 'simulated'].includes(nodeStatus)) return 'approved';
+            if (['rejected'].includes(nodeStatus)) return 'rejected';
+            return null;
+        case 'execution':
+            if (['completed', 'success'].includes(nodeStatus)) return 'success';
+            if (['partial'].includes(nodeStatus)) return 'partial';
+            if (['failed'].includes(nodeStatus)) return 'failed';
+            return null;
+        case 'condition':
+            if (['completed', 'success', 'true'].includes(nodeStatus)) return 'true';
+            if (['failed', 'false'].includes(nodeStatus)) return 'false';
+            return null;
+        default:
+            return null;
+    }
+}
 
 /** 根据 node_states + current_node_id 推算所有已执行节点 */
 function inferExecutedNodes(
@@ -99,6 +163,57 @@ function inferExecutedNodes(
     return result;
 }
 
+// 执行日志 Tab - 异步加载 API 日志
+const ExecutionLogTab: React.FC<{ runId?: string; fallbackLogs: LogEntry[] }> = ({ runId, fallbackLogs }) => {
+    const [apiLogs, setApiLogs] = useState<LogEntry[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        if (!runId || loaded) return;
+        setLoading(true);
+        getExecutionLogs(runId, { page: 1, page_size: 500 })
+            .then((res: any) => {
+                const logs = res?.data || [];
+                if (logs.length > 0) {
+                    setApiLogs(logs.map((l: any) => ({
+                        id: l.id,
+                        sequence: l.sequence,
+                        log_level: l.log_level || 'info',
+                        message: l.message,
+                        created_at: l.created_at,
+                    })));
+                }
+            })
+            .catch(() => {/* 静默回退到 fallbackLogs */ })
+            .finally(() => { setLoading(false); setLoaded(true); });
+    }, [runId, loaded]);
+
+    const displayLogs = apiLogs.length > 0 ? apiLogs : fallbackLogs;
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 160px)' }}>
+                <Spin tip="加载执行日志中..." />
+            </div>
+        );
+    }
+
+    if (displayLogs.length === 0) {
+        return <Empty description="暂无执行日志" style={{ marginTop: 60 }} />;
+    }
+
+    return (
+        <div style={{ height: 'calc(100vh - 160px)', background: '#1e1e1e' }}>
+            <LogConsole
+                logs={displayLogs}
+                height="100%"
+                theme="dark"
+            />
+        </div>
+    );
+};
+
 const HealingInstanceDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -113,42 +228,13 @@ const HealingInstanceDetail: React.FC = () => {
     // Map<NodeID, LogEntry[]>
     const [nodeLogs, setNodeLogs] = useState<Record<string, LogEntry[]>>({});
 
-    // Auto layout using dagre
-    const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
-        const dagreGraph = new dagre.graphlib.Graph();
-        dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-        const isHorizontal = direction === 'LR';
-        dagreGraph.setGraph({ rankdir: direction });
-
-        nodes.forEach((node) => {
-            const isRuleNode = node.data?.type === 'trigger';
-            dagreGraph.setNode(node.id, { width: isRuleNode ? 240 : 180, height: 60 });
-        });
-
-        edges.forEach((edge) => {
-            dagreGraph.setEdge(edge.source, edge.target);
-        });
-
-        dagre.layout(dagreGraph);
-
-        const layoutedNodes = nodes.map((node) => {
-            const nodeWithPosition = dagreGraph.node(node.id);
-
-            // Only apply auto-layout if position is missing (0,0) or invalid
-            const isMissingPosition = !node.position || (node.position.x === 0 && node.position.y === 0);
-
-            if (isMissingPosition) {
-                node.position = {
-                    x: nodeWithPosition.x - 90, // center anchor
-                    y: nodeWithPosition.y - 30,
-                };
-            }
-
-            return node;
-        });
-
-        return { nodes: layoutedNodes, edges };
+    // Auto layout handler
+    const handleAutoLayout = () => {
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+            nodes.map(n => ({ ...n })), edges.map(e => ({ ...e })), 'TB', true,
+        );
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
     };
 
     // Helper to update node status in the graph locally
@@ -183,18 +269,18 @@ const HealingInstanceDetail: React.FC = () => {
             ready: !!id,
             refreshDeps: [id],
             onSuccess: (data) => {
-                if (data && data.flow) {
+                if (data && data.flow_nodes && data.flow_edges) {
                     setInstanceStatus(data.status);
                     setContextData(data.context || {});
 
                     // 推算所有已执行节点的状态
                     const executedNodes = inferExecutedNodes(
-                        data.flow.nodes, data.flow.edges,
+                        data.flow_nodes, data.flow_edges,
                         data.node_states || {}, data.current_node_id, data.status,
                     );
 
                     // Transform nodes with status
-                    let flowNodes = data.flow.nodes.map((node) => {
+                    let flowNodes = data.flow_nodes.map((node: any) => {
                         const nodeState = normalizeNodeState(data.node_states?.[node.id]);
                         const effectiveStatus = nodeState?.status || executedNodes[node.id];
                         return {
@@ -204,7 +290,7 @@ const HealingInstanceDetail: React.FC = () => {
                             selectable: true,
                             data: {
                                 ...node.config,
-                                label: node.name,
+                                label: node.name || node.config?.label || NODE_TYPE_LABELS[node.type] || node.type,
                                 type: node.type,
                                 status: effectiveStatus,
                                 dryRunMessage: nodeState?.error_message || nodeState?.message || nodeState?.description,
@@ -214,20 +300,42 @@ const HealingInstanceDetail: React.FC = () => {
                         } as Node;
                     });
 
-                    // 边着色：已执行路径用状态色
-                    let flowEdges = data.flow.edges.map((edge: any) => {
+                    // 边着色：分支感知 — 只高亮实际走过的分支
+                    const nodeTypeMap: Record<string, string> = {};
+                    for (const node of data.flow_nodes as any[]) {
+                        nodeTypeMap[node.id] = node.type;
+                    }
+
+                    let flowEdges = data.flow_edges.map((edge: any) => {
                         const sourceStatus = executedNodes[edge.source];
                         const targetStatus = executedNodes[edge.target];
-                        const isExecutedEdge = sourceStatus && targetStatus;
-                        const edgeColor = isExecutedEdge
-                            ? (STATUS_EDGE_COLOR[targetStatus] || '#52c41a') : '#d9d9d9';
+                        const bothExecuted = !!sourceStatus && !!targetStatus;
+
+                        // 分支判断：有 sourceHandle 的边需要匹配实际走过的分支
+                        let isActiveBranch = true;
+                        if (edge.sourceHandle) {
+                            const srcType = nodeTypeMap[edge.source] || '';
+                            const nodeState = normalizeNodeState(data.node_states?.[edge.source]);
+                            const activeHandle = getActiveBranchHandle(srcType, nodeState?.status || sourceStatus);
+                            isActiveBranch = activeHandle === edge.sourceHandle;
+                        }
+
+                        const isExecutedEdge = bothExecuted && isActiveBranch;
+                        const inactiveBranchColor = edge.sourceHandle
+                            ? (edge.sourceHandle === 'rejected' || edge.sourceHandle === 'failed' || edge.sourceHandle === 'false'
+                                ? '#ff4d4f' : edge.sourceHandle === 'partial' ? '#faad14' : '#52c41a')
+                            : '#d9d9d9';
+
                         return {
                             ...edge,
                             animated: isExecutedEdge,
                             style: {
-                                stroke: edgeColor,
+                                stroke: isExecutedEdge
+                                    ? (STATUS_EDGE_COLOR[targetStatus] || '#52c41a')
+                                    : (edge.sourceHandle && bothExecuted ? inactiveBranchColor : '#d9d9d9'),
                                 strokeWidth: isExecutedEdge ? 2 : 1,
-                                opacity: isExecutedEdge ? 1 : 0.4,
+                                opacity: isExecutedEdge ? 1 : (edge.sourceHandle && bothExecuted ? 0.2 : 0.4),
+                                strokeDasharray: (!isExecutedEdge && edge.sourceHandle && bothExecuted) ? '5 3' : undefined,
                             },
                         };
                     }) as Edge[];
@@ -235,17 +343,20 @@ const HealingInstanceDetail: React.FC = () => {
                     // Inject Virtual Rule Node if Rule exists
                     if (data.rule) {
                         const ruleNodeId = 'virtual-rule-trigger';
-                        const startNode = flowNodes.find(n => n.type === 'start') || flowNodes[0];
+                        const startNode = flowNodes.find((n: any) => n.type === 'start') || flowNodes[0];
 
                         const ruleNode: Node = {
                             id: ruleNodeId,
-                            type: 'custom', // Use CustomNode generic type
-                            position: { x: 0, y: 0 }, // Layout will handle this
+                            type: 'custom',
+                            position: {
+                                x: startNode?.position?.x ?? 0,
+                                y: (startNode?.position?.y ?? 0) - 100,
+                            },
                             data: {
                                 label: `自愈规则: ${data.rule.name}`,
-                                type: 'trigger', // Icon selection logic in CustomNode needs to handle this or fallback
-                                status: 'triggered', // 外部触发源，使用紫色主题区别于标准流程节点
-                                details: data.rule, // Store rule data for click handler
+                                type: 'trigger',
+                                status: 'triggered',
+                                details: data.rule,
                             },
                             draggable: false,
                             connectable: false,
@@ -264,6 +375,22 @@ const HealingInstanceDetail: React.FC = () => {
                             }, ...flowEdges];
                         }
                     }
+
+                    // 计算每个节点的活跃连接点（在虚拟节点注入之后）
+                    const activeHandlesMap: Record<string, string[]> = {};
+                    for (const edge of flowEdges) {
+                        if (edge.animated) {
+                            const srcH = (edge as any).sourceHandle || 'default';
+                            if (!activeHandlesMap[edge.source]) activeHandlesMap[edge.source] = [];
+                            activeHandlesMap[edge.source].push(srcH);
+                            if (!activeHandlesMap[edge.target]) activeHandlesMap[edge.target] = [];
+                            activeHandlesMap[edge.target].push('target');
+                        }
+                    }
+                    flowNodes = flowNodes.map((node: any) => ({
+                        ...node,
+                        data: { ...node.data, activeHandles: activeHandlesMap[node.id] || [] },
+                    }));
 
                     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
                         flowNodes,
@@ -393,120 +520,127 @@ const HealingInstanceDetail: React.FC = () => {
     };
 
     return (
-        <PageContainer
-            header={{
-                title: instance?.flow?.name || '自愈实例详情',
-                subTitle: <Typography.Text copyable style={{ fontFamily: 'monospace', fontSize: 12, color: '#8c8c8c' }}>{id}</Typography.Text>,
-                breadcrumb: {
-                    items: [
-                        { title: '自愈引擎' },
-                        { title: '流程实例', href: '/healing/instances', onClick: (e) => { e.preventDefault(); history.push('/healing/instances'); } },
-                        { title: instance?.flow?.name || '实例详情' },
-                    ],
-                },
-                onBack: () => history.push('/healing/instances'),
-                extra: [
-                    <Button key="context" icon={<EyeOutlined />} onClick={() => setContextDrawerVisible(true)}>
-                        执行概况
-                    </Button>,
-                    instanceStatus === 'running' || instanceStatus === 'waiting_approval' || instanceStatus === 'pending' ? (
-                        <Button key="cancel" danger onClick={handleCancel}>
-                            取消执行
-                        </Button>
-                    ) : null,
-                    instanceStatus === 'failed' ? (
-                        <Button key="retry" type="primary" onClick={handleRetry}>
-                            重试
-                        </Button>
-                    ) : null,
-                ],
-                tags: (() => {
-                    const tags = [
-                        <Tag key="status" color={
+        <div style={{ padding: 0, minHeight: 'calc(100vh - 120px)', background: '#f5f5f5' }}>
+            {/* ==================== SubPageHeader（跟添加代码仓库页面对齐）==================== */}
+            <SubPageHeader
+                title={instance?.flow_name || '自愈实例详情'}
+                titleExtra={
+                    <>
+                        <Tag color={
                             instanceStatus === 'completed' ? 'success' :
                                 instanceStatus === 'failed' ? 'error' :
                                     instanceStatus === 'running' ? 'processing' :
                                         instanceStatus === 'waiting_approval' ? 'warning' : 'default'
                         }>
-                            {instanceStatus === 'waiting_approval' ? '待审批' :
-                                instanceStatus === 'running' ? '执行中' :
-                                    instanceStatus === 'completed' ? '已完成' :
-                                        instanceStatus === 'failed' ? '失败' : instanceStatus}
+                            {STATUS_LABELS[instanceStatus] || instanceStatus}
                         </Tag>
-                    ];
-                    // 检测是否有失败节点（流程完成但执行异常）
-                    if (instanceStatus === 'completed' && instance?.node_states) {
-                        const failedEntries = Object.entries(instance.node_states)
-                            .filter(([, state]: [string, any]) => {
+                        {instanceStatus === 'completed' && instance?.node_states && (() => {
+                            const hasFailed = Object.values(instance.node_states).some((state: any) => {
                                 const ns = normalizeNodeState(state);
                                 return ns?.status === 'failed' || ns?.status === 'error';
                             });
-                        if (failedEntries.length > 0) {
-                            tags.push(
-                                <Tag key="warning" color="warning" icon={<WarningOutlined />}>
-                                    执行异常
-                                </Tag>
-                            );
-                        }
-                    }
-                    return tags;
-                })()
-            }}
-            content={
-                instance ? (
-                    <div>
-                        {/* 异常警告横幅 */}
-                        {instanceStatus === 'completed' && instance.node_states && (() => {
-                            const failedEntries = Object.entries(instance.node_states)
-                                .filter(([, state]: [string, any]) => {
-                                    const ns = normalizeNodeState(state);
-                                    return ns?.status === 'failed' || ns?.status === 'error';
-                                });
-                            if (failedEntries.length > 0) {
-                                const failedDetails = failedEntries.map(([nodeId, state]: [string, any]) => {
-                                    const ns = normalizeNodeState(state);
-                                    // 查找节点名称
-                                    const nodeName = instance.flow?.nodes?.find((n: any) => n.id === nodeId)?.name || nodeId;
-                                    return `${nodeName}: ${ns?.message || ns?.error_message || '执行失败'}`;
-                                });
-                                return (
-                                    <Alert
-                                        type="warning"
-                                        showIcon
-                                        icon={<WarningOutlined />}
-                                        message={<span>流程已走完，但有 <strong>{failedEntries.length}</strong> 个节点执行异常</span>}
-                                        description={failedDetails.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#8c8c8c' }}>• {d}</div>)}
-                                        style={{ marginBottom: 12, borderRadius: 6 }}
-                                        closable
-                                    />
-                                );
-                            }
-                            return null;
+                            return hasFailed ? <Tag color="warning" icon={<WarningOutlined />}>执行异常</Tag> : null;
                         })()}
-                        <ProDescriptions column={3} size="small">
-                            <ProDescriptions.Item label="关联工单">
-                                {instance.incident ? (
-                                    <a onClick={() => setIncidentDrawerVisible(true)} style={{ color: '#1890ff' }}>
-                                        {instance.incident.title}
-                                    </a>
-                                ) : '-'}
-                            </ProDescriptions.Item>
-                            <ProDescriptions.Item label="匹配规则">
-                                {instance.rule ? (
-                                    <a onClick={() => setRuleDrawerVisible(true)} style={{ color: '#1890ff' }}>
-                                        {instance.rule.name}
-                                    </a>
-                                ) : '-'}
-                            </ProDescriptions.Item>
-                            <ProDescriptions.Item label="触发时间">
-                                {instance.created_at}
-                            </ProDescriptions.Item>
-                        </ProDescriptions>
-                    </div>
-                ) : null
-            }
-        >
-            <Card bordered={false} bodyStyle={{ padding: 0, height: 'calc(100vh - 280px)' }}>
+                        <Typography.Text type="secondary" copyable style={{ fontFamily: 'monospace', fontSize: 11 }}>#{id?.substring(0, 8)}</Typography.Text>
+                        {instance?.created_at && <span style={{ fontSize: 12, color: '#8c8c8c' }}><ClockCircleOutlined style={{ marginRight: 4 }} />{new Date(instance.created_at).toLocaleString('zh-CN')}</span>}
+                        {instance?.incident && (
+                            <a onClick={() => setIncidentDrawerVisible(true)} style={{ color: '#1890ff', fontSize: 12 }}>
+                                <WarningOutlined style={{ marginRight: 4 }} />{instance.incident.title}
+                            </a>
+                        )}
+                        {instance?.rule && (
+                            <a onClick={() => setRuleDrawerVisible(true)} style={{ color: '#722ed1', fontSize: 12 }}>
+                                <ThunderboltOutlined style={{ marginRight: 4 }} />{instance.rule.name}
+                            </a>
+                        )}
+                    </>
+                }
+                onBack={() => history.push('/healing/instances')}
+                actions={
+                    <Space>
+                        <Button icon={<EyeOutlined />} onClick={() => setContextDrawerVisible(true)}>执行概况</Button>
+                        {(instanceStatus === 'running' || instanceStatus === 'waiting_approval' || instanceStatus === 'pending') && (
+                            <Button danger onClick={handleCancel}>取消执行</Button>
+                        )}
+                        {instanceStatus === 'failed' && (
+                            <Button type="primary" onClick={handleRetry}>重试</Button>
+                        )}
+                    </Space>
+                }
+            />
+
+            {/* ========== 醒目错误横幅：一进来就能看到失败原因 ========== */}
+            {instanceStatus === 'failed' && (
+                <div style={{ margin: '0 24px' }}>
+                    <Alert
+                        type="error"
+                        showIcon
+                        message={<span style={{ fontSize: 15, fontWeight: 600 }}>流程执行失败</span>}
+                        description={
+                            <div style={{ marginTop: 4 }}>
+                                {instance?.error_message && (
+                                    <div style={{ fontSize: 14, color: '#434343', marginBottom: 8 }}>{instance.error_message}</div>
+                                )}
+                                {instance?.node_states && (() => {
+                                    const failedEntries = Object.entries(instance.node_states)
+                                        .filter(([, state]: [string, any]) => {
+                                            const ns = normalizeNodeState(state);
+                                            return ns?.status === 'failed' || ns?.status === 'error' || ns?.status === 'rejected';
+                                        });
+                                    if (failedEntries.length > 0) {
+                                        return failedEntries.map(([nodeId, state]: [string, any]) => {
+                                            const ns = normalizeNodeState(state);
+                                            const nodeName = instance.flow_nodes?.find((n: any) => n.id === nodeId)?.name || nodeId;
+                                            const errMsg = ns?.message || ns?.error_message || ns?.error || '执行失败';
+                                            return (
+                                                <div key={nodeId} style={{ fontSize: 13, color: '#595959', padding: '2px 0' }}>
+                                                    <span style={{ color: '#ff4d4f', marginRight: 6 }}>●</span>
+                                                    <strong>{nodeName}</strong>：{errMsg}
+                                                </div>
+                                            );
+                                        });
+                                    }
+                                    return null;
+                                })()}
+                            </div>
+                        }
+                        style={{ borderRadius: 0, borderLeft: '4px solid #ff4d4f' }}
+                    />
+                </div>
+            )}
+            {instanceStatus === 'completed' && instance?.node_states && (() => {
+                const failedEntries = Object.entries(instance.node_states)
+                    .filter(([, state]: [string, any]) => {
+                        const ns = normalizeNodeState(state);
+                        return ns?.status === 'failed' || ns?.status === 'error';
+                    });
+                if (failedEntries.length > 0) {
+                    return (
+                        <div style={{ margin: '0 24px' }}>
+                            <Alert
+                                type="warning"
+                                showIcon
+                                message={<span>流程已完成，但有 <strong>{failedEntries.length}</strong> 个节点执行异常</span>}
+                                description={failedEntries.map(([nodeId, state]: [string, any]) => {
+                                    const ns = normalizeNodeState(state);
+                                    const nodeName = instance.flow_nodes?.find((n: any) => n.id === nodeId)?.name || nodeId;
+                                    return (
+                                        <div key={nodeId} style={{ fontSize: 12, color: '#8c8c8c', padding: '1px 0' }}>
+                                            • {nodeName}: {ns?.message || ns?.error_message || '执行失败'}
+                                        </div>
+                                    );
+                                })}
+                                style={{ borderRadius: 0, borderLeft: '4px solid #faad14' }}
+                                closable
+                            />
+                        </div>
+                    );
+                }
+                return null;
+            })()}
+
+            {/* ==================== 流程画布卡（对齐 git-form-card）==================== */}
+            <div style={{ background: '#fff', margin: '16px 24px 24px', border: '1px solid #f0f0f0', height: 'calc(100vh - 200px)' }}>
                 {loading && !instance ? (
                     <div style={{ padding: 50, textAlign: 'center' }}><Spin /></div>
                 ) : instance ? (
@@ -522,13 +656,14 @@ const HealingInstanceDetail: React.FC = () => {
                         attributionPosition="bottom-right"
                         onNodeClick={handleNodeClick}
                     >
-                        <Background color="#f5f5f5" gap={20} />
+                        <Background variant={BackgroundVariant.Dots} gap={16} size={1.5} color="#bfbfbf" />
                         <Controls />
+                        <AutoLayoutButton onAutoLayout={handleAutoLayout} />
                     </ReactFlow>
                 ) : (
                     <Empty description="未找到实例数据" />
                 )}
-            </Card>
+            </div>
 
             <Drawer
                 title={null}
@@ -539,49 +674,47 @@ const HealingInstanceDetail: React.FC = () => {
                 headerStyle={{ display: 'none' }}
                 bodyStyle={{ padding: 0 }}
             >
-                {/* 动态颜色头部 */}
-                <div style={{
-                    background: instanceStatus === 'failed'
-                        ? 'linear-gradient(135deg, #cf1322 0%, #ff4d4f 100%)'
-                        : instanceStatus === 'completed'
-                            ? 'linear-gradient(135deg, #389e0d 0%, #52c41a 100%)'
-                            : instanceStatus === 'running'
-                                ? 'linear-gradient(135deg, #096dd9 0%, #1890ff 100%)'
-                                : 'linear-gradient(135deg, #d48806 0%, #faad14 100%)',
-                    padding: '24px 24px 20px',
-                    color: '#fff',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span onClick={() => setContextDrawerVisible(false)} style={{ cursor: 'pointer', opacity: 0.8, fontSize: 16 }}>✕</span>
-                        <span style={{ fontSize: 12, opacity: 0.7, letterSpacing: 1 }}>执行概况</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* 动态颜色头部 - 若隐若现渐变 */}
+                {(() => {
+                    const statusColor = instanceStatus === 'failed' ? '#ff4d4f'
+                        : instanceStatus === 'completed' ? '#52c41a'
+                            : instanceStatus === 'running' ? '#1890ff'
+                                : '#faad14';
+                    return (
                         <div style={{
-                            width: 40, height: 40, borderRadius: 10,
-                            background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 20,
+                            background: `linear-gradient(135deg, ${statusColor}12 0%, #ffffff 100%)`,
+                            padding: '24px 24px 20px',
+                            color: '#262626',
+                            borderBottom: `2px solid ${statusColor}30`,
                         }}>
-                            <DashboardOutlined />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 18, fontWeight: 600 }}>{instance?.flow?.name || '未知流程'}</div>
-                            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                                {instance?.created_at ? new Date(instance.created_at).toLocaleString('zh-CN') : ''}
-                                {instance?.completed_at ? ` → ${new Date(instance.completed_at).toLocaleString('zh-CN')}` : ''}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{
+                                    width: 40, height: 40, borderRadius: 10,
+                                    background: `${statusColor}15`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 20, color: statusColor,
+                                }}>
+                                    <DashboardOutlined />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 18, fontWeight: 600, color: '#262626' }}>{instance?.flow_name || '未知流程'}</div>
+                                    <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>
+                                        {instance?.created_at ? new Date(instance.created_at).toLocaleString('zh-CN') : ''}
+                                        {instance?.completed_at ? ` → ${new Date(instance.completed_at).toLocaleString('zh-CN')}` : ''}
+                                    </div>
+                                </div>
+                                <Tag color={
+                                    instanceStatus === 'completed' ? 'success' :
+                                        instanceStatus === 'failed' ? 'error' :
+                                            instanceStatus === 'running' ? 'processing' : 'warning'
+                                } style={{ borderRadius: 12, fontSize: 12 }}>
+                                    {STATUS_LABELS[instanceStatus] || instanceStatus}
+                                </Tag>
                             </div>
                         </div>
-                        <Tag
-                            color={instanceStatus === 'completed' ? '#fff' : instanceStatus === 'failed' ? '#fff' : 'rgba(255,255,255,0.3)'}
-                            style={{
-                                borderRadius: 12, fontSize: 12, border: 'none',
-                                color: instanceStatus === 'completed' ? '#389e0d' : instanceStatus === 'failed' ? '#cf1322' : '#fff',
-                            }}
-                        >
-                            {instanceStatus === 'completed' ? '已完成' : instanceStatus === 'failed' ? '失败' : instanceStatus === 'running' ? '执行中' : instanceStatus === 'waiting_approval' ? '待审批' : instanceStatus}
-                        </Tag>
-                    </div>
-                </div>
+                    );
+                })()}
                 <Tabs
                     defaultActiveKey="result"
                     tabBarStyle={{ padding: '0 24px', marginBottom: 0 }}
@@ -659,7 +792,7 @@ const HealingInstanceDetail: React.FC = () => {
                                                 <Typography.Text strong style={{ display: 'block', marginBottom: 12 }}>节点执行记录</Typography.Text>
                                                 <Timeline items={Object.entries(instance.node_states).map(([nodeId, rawState]) => {
                                                     const ns = normalizeNodeState(rawState);
-                                                    const nodeName = instance.flow?.nodes?.find((n: any) => n.id === nodeId)?.name || nodeId;
+                                                    const nodeName = instance.flow_nodes?.find((n: any) => n.id === nodeId)?.name || nodeId;
                                                     const isFail = ns?.status === 'failed' || ns?.status === 'error';
                                                     return {
                                                         color: isFail ? 'red' : ns?.status === 'success' ? 'green' : 'blue',
@@ -745,38 +878,41 @@ const HealingInstanceDetail: React.FC = () => {
             >
                 {instance?.incident ? (
                     <div>
-                        {/* 红/橙色主题头部 */}
-                        <div style={{
-                            background: instance.incident.severity === 'critical'
-                                ? 'linear-gradient(135deg, #cf1322 0%, #ff4d4f 100%)'
-                                : instance.incident.severity === 'high'
-                                    ? 'linear-gradient(135deg, #d4380d 0%, #ff7a45 100%)'
-                                    : 'linear-gradient(135deg, #d48806 0%, #ffc53d 100%)',
-                            padding: '24px 24px 20px',
-                            color: '#fff',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                <span onClick={() => setIncidentDrawerVisible(false)} style={{ cursor: 'pointer', opacity: 0.8, fontSize: 16 }}>✕</span>
-                                <span style={{ fontSize: 12, opacity: 0.7, letterSpacing: 1 }}>关联工单详情</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {/* 若隐若现工单头部 */}
+                        {(() => {
+                            const sColor = instance.incident.severity === 'critical' ? '#ff4d4f'
+                                : instance.incident.severity === 'high' ? '#ff7a45' : '#faad14';
+                            return (
                                 <div style={{
-                                    width: 40, height: 40, borderRadius: 10,
-                                    background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 20,
+                                    background: `linear-gradient(135deg, ${sColor}12 0%, #ffffff 100%)`,
+                                    padding: '24px 24px 20px',
+                                    color: '#262626',
+                                    borderBottom: `2px solid ${sColor}30`,
                                 }}>
-                                    <AlertOutlined />
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <div style={{
+                                            width: 40, height: 40, borderRadius: 10,
+                                            background: `${sColor}15`,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 20, color: sColor,
+                                        }}>
+                                            <AlertOutlined />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 18, fontWeight: 600, color: '#262626' }}>{instance.incident.title}</div>
+                                            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{instance.incident.id || '无 ID'}</div>
+                                        </div>
+                                        <Tag color={
+                                            instance.incident.severity === 'critical' ? 'red'
+                                                : instance.incident.severity === 'high' ? 'orange' : 'gold'
+                                        } style={{ borderRadius: 12, fontSize: 12 }}>
+                                            {instance.incident.severity || 'Unknown'}
+                                        </Tag>
+                                    </div>
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 600 }}>{instance.incident.title}</div>
-                                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{instance.incident.id || '无 ID'}</div>
-                                </div>
-                                <Tag color="rgba(255,255,255,0.3)" style={{ borderRadius: 12, fontSize: 12, border: 'none' }}>
-                                    {instance.incident.severity || 'Unknown'}
-                                </Tag>
-                            </div>
-                        </div>
+                            );
+                        })()}
 
                         {/* 工单信息卡片 */}
                         <div style={{ padding: '16px 24px' }}>
@@ -845,32 +981,29 @@ const HealingInstanceDetail: React.FC = () => {
             >
                 {instance?.rule ? (
                     <div>
-                        {/* 紫色主题头部 */}
+                        {/* 若隐若现规则头部 */}
                         <div style={{
-                            background: 'linear-gradient(135deg, #722ed1 0%, #9254de 100%)',
+                            background: 'linear-gradient(135deg, #722ed112 0%, #ffffff 100%)',
                             padding: '24px 24px 20px',
-                            color: '#fff',
-                            position: 'relative',
+                            color: '#262626',
+                            borderBottom: '2px solid #722ed130',
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                <span onClick={() => setRuleDrawerVisible(false)} style={{ cursor: 'pointer', opacity: 0.8, fontSize: 16 }}>✕</span>
-                                <span style={{ fontSize: 12, opacity: 0.7, letterSpacing: 1 }}>匹配规则详情</span>
-                            </div>
+
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <div style={{
                                     width: 40, height: 40, borderRadius: 10,
-                                    background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)',
+                                    background: '#722ed115',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 20,
+                                    fontSize: 20, color: '#722ed1',
                                 }}>
                                     <ThunderboltOutlined />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 600 }}>{instance.rule.name}</div>
-                                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{instance.rule.description || '暂无描述'}</div>
+                                    <div style={{ fontSize: 18, fontWeight: 600, color: '#262626' }}>{instance.rule.name}</div>
+                                    <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>{instance.rule.description || '暂无描述'}</div>
                                 </div>
-                                <Tag color={instance.rule.is_active !== false ? '#52c41a' : '#d9d9d9'}
-                                    style={{ borderRadius: 12, fontSize: 12, border: 'none' }}>
+                                <Tag color={instance.rule.is_active !== false ? 'success' : 'default'}
+                                    style={{ borderRadius: 12, fontSize: 12 }}>
                                     {instance.rule.is_active !== false ? '已启用' : '已禁用'}
                                 </Tag>
                             </div>
@@ -999,62 +1132,73 @@ const HealingInstanceDetail: React.FC = () => {
                 headerStyle={{ display: 'none' }}
                 bodyStyle={{ padding: 0 }}
             >
-                {/* 动态颜色节点头部 */}
+                {/* 若隐若现节点头部 */}
                 {(() => {
                     const s = selectedNodeData?.state?.status || selectedNodeData?.status;
                     const nodeType = selectedNodeData?.type;
-                    const bgGradient = s === 'success' || s === 'completed'
-                        ? 'linear-gradient(135deg, #389e0d 0%, #52c41a 100%)'
-                        : s === 'failed' || s === 'error'
-                            ? 'linear-gradient(135deg, #cf1322 0%, #ff4d4f 100%)'
+                    const statusColor = s === 'success' || s === 'completed' || s === 'approved'
+                        ? '#52c41a'
+                        : s === 'failed' || s === 'error' || s === 'rejected'
+                            ? '#ff4d4f'
                             : s === 'running'
-                                ? 'linear-gradient(135deg, #096dd9 0%, #1890ff 100%)'
-                                : s === 'skipped'
-                                    ? 'linear-gradient(135deg, #595959 0%, #8c8c8c 100%)'
-                                    : s === 'triggered'
-                                        ? 'linear-gradient(135deg, #722ed1 0%, #9254de 100%)'
-                                        : 'linear-gradient(135deg, #d48806 0%, #faad14 100%)';
+                                ? '#1890ff'
+                                : s === 'waiting_approval'
+                                    ? '#faad14'
+                                    : s === 'skipped'
+                                        ? '#8c8c8c'
+                                        : s === 'triggered'
+                                            ? '#722ed1'
+                                            : '#faad14';
                     const nodeIcon = nodeType === 'execution' ? <PlayCircleOutlined />
                         : nodeType === 'approval' ? <EyeOutlined />
                             : nodeType === 'condition' ? <NodeIndexOutlined />
                                 : nodeType === 'trigger' ? <ThunderboltOutlined />
                                     : <InfoCircleOutlined />;
                     return (
-                        <div style={{ background: bgGradient, padding: '24px 24px 20px', color: '#fff' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                <span onClick={() => setNodeDetailVisible(false)} style={{ cursor: 'pointer', opacity: 0.8, fontSize: 16 }}>✕</span>
-                                <span style={{ fontSize: 12, opacity: 0.7, letterSpacing: 1 }}>节点详情</span>
-                            </div>
+                        <div style={{
+                            background: `linear-gradient(135deg, ${statusColor}12 0%, #ffffff 100%)`,
+                            padding: '20px 24px',
+                            borderBottom: `2px solid ${statusColor}30`,
+                        }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <div style={{
-                                    width: 40, height: 40, borderRadius: 10,
-                                    background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)',
+                                    width: 36, height: 36, borderRadius: 8,
+                                    background: `${statusColor}12`,
+                                    border: `1px solid ${statusColor}30`,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 20,
+                                    fontSize: 18, color: statusColor,
                                 }}>
                                     {nodeIcon}
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 600 }}>{selectedNodeData?.name || selectedNodeData?.id || '-'}</div>
-                                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                                        类型: {nodeType || '未知'} · ID: {selectedNodeData?.id || '-'}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ fontSize: 16, fontWeight: 600, color: '#262626' }}>{selectedNodeData?.name || selectedNodeData?.id || '-'}</span>
+                                        {s && (
+                                            <Tag color={
+                                                s === 'success' || s === 'completed' || s === 'approved' ? 'success'
+                                                    : s === 'failed' || s === 'error' || s === 'rejected' ? 'error'
+                                                        : s === 'running' ? 'processing'
+                                                            : s === 'waiting_approval' ? 'warning' : 'default'
+                                            } style={{ borderRadius: 4, fontSize: 12 }}>
+                                                {STATUS_LABELS[s] || s}
+                                            </Tag>
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>
+                                        {NODE_TYPE_LABELS[nodeType] || nodeType || '未知'} · {selectedNodeData?.id || '-'}
                                     </div>
                                 </div>
-                                {s && (
-                                    <Tag color="rgba(255,255,255,0.3)" style={{ borderRadius: 12, fontSize: 12, border: 'none' }}>
-                                        {s}
-                                    </Tag>
-                                )}
                             </div>
                         </div>
                     );
                 })()}
                 {selectedNodeData && (() => {
                     const ns = selectedNodeData.state;
-                    const effectiveStatus = ns?.status || selectedNodeData.status; // Fallback to inferred status
+                    const effectiveStatus = ns?.status || selectedNodeData.status;
                     const nodeType = selectedNodeData.type;
                     const isExecution = nodeType === 'execution';
                     const isApproval = nodeType === 'approval';
+                    const runId = ns?.run?.run_id;
 
                     // Build stdout logs for LogConsole
                     const stdoutLogs: LogEntry[] = ns?.stdout
@@ -1071,89 +1215,190 @@ const HealingInstanceDetail: React.FC = () => {
                         }))
                         : [];
 
+                    // 用于「配置参数」Tab 的过滤和格式化
+                    const configData = selectedNodeData.config || {};
+                    const filteredConfig = Object.fromEntries(
+                        Object.entries(configData).filter(([k]) => !['nodeState', 'dryRunMessage', '_nodeState', 'isCurrent', 'status'].includes(k))
+                    );
+                    const configEntries = Object.entries(filteredConfig);
+
+                    // 用于「节点上下文」Tab 的数据（从运行时状态中提取，排除大段文本）
+                    const contextEntries = ns
+                        ? Object.entries(ns).filter(([k]) => !['stdout', 'stderr', 'status', 'error_message', 'message'].includes(k))
+                        : [];
+
+                    // Descriptions 统一样式
+                    const descLabelStyle = { background: '#fafafa', fontWeight: 500, fontSize: 12, width: 80 };
+                    const descContentStyle = { fontSize: 12 };
+
                     return (
                         <Tabs defaultActiveKey="overview" tabBarStyle={{ padding: '0 16px' }} items={[
                             {
                                 key: 'overview',
                                 label: '概览',
                                 children: (
-                                    <div style={{ padding: 24 }}>
-                                        <Descriptions column={2} bordered size="small">
+                                    <div style={{ padding: '16px 20px' }}>
+                                        <Descriptions column={1} size="small" bordered
+                                            labelStyle={descLabelStyle}
+                                            contentStyle={descContentStyle}
+                                        >
                                             <Descriptions.Item label="节点 ID">
-                                                <Typography.Text copyable style={{ fontFamily: 'monospace', fontSize: 12 }}>{selectedNodeData.id}</Typography.Text>
+                                                <Typography.Text copyable={{ text: selectedNodeData.id }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{selectedNodeData.id}</span></Typography.Text>
                                             </Descriptions.Item>
-                                            <Descriptions.Item label="节点类型">
-                                                <Tag>{nodeType}</Tag>
+                                            <Descriptions.Item label="类型">
+                                                <Tag style={{ margin: 0 }}>{NODE_TYPE_LABELS[nodeType] || nodeType}</Tag>
                                             </Descriptions.Item>
-                                            <Descriptions.Item label="执行状态">
+                                            <Descriptions.Item label="状态">
                                                 {effectiveStatus ? (
                                                     <Tag color={
-                                                        effectiveStatus === 'completed' || effectiveStatus === 'success' ? 'success' :
-                                                            effectiveStatus === 'failed' || effectiveStatus === 'error' ? 'error' :
+                                                        effectiveStatus === 'completed' || effectiveStatus === 'success' || effectiveStatus === 'approved' ? 'success' :
+                                                            effectiveStatus === 'failed' || effectiveStatus === 'error' || effectiveStatus === 'rejected' ? 'error' :
                                                                 effectiveStatus === 'running' ? 'processing' :
                                                                     effectiveStatus === 'skipped' ? 'default' : 'warning'
-                                                    }>
-                                                        {effectiveStatus}
+                                                    } style={{ margin: 0 }}>
+                                                        {STATUS_LABELS[effectiveStatus] || effectiveStatus}
                                                     </Tag>
-                                                ) : <Typography.Text type="secondary">未开始</Typography.Text>}
+                                                ) : <Typography.Text type="secondary">未执行</Typography.Text>}
                                             </Descriptions.Item>
                                             {ns?.started_at && (
-                                                <Descriptions.Item label="开始时间">
-                                                    {ns.started_at}
+                                                <Descriptions.Item label="开始">
+                                                    {new Date(ns.started_at).toLocaleString('zh-CN')}
                                                 </Descriptions.Item>
                                             )}
-                                            {(ns?.finished_at || ns?.completed_at) && (
-                                                <Descriptions.Item label="结束时间">
-                                                    {ns.finished_at || ns.completed_at}
+                                            {(ns?.finished_at || ns?.updated_at) && (
+                                                <Descriptions.Item label="结束">
+                                                    {new Date(ns.finished_at || ns.updated_at).toLocaleString('zh-CN')}
                                                 </Descriptions.Item>
                                             )}
                                             {ns?.duration_ms != null && (
                                                 <Descriptions.Item label="耗时">
-                                                    {ns.duration_ms >= 1000 ? `${(ns.duration_ms / 1000).toFixed(1)}s` : `${ns.duration_ms}ms`}
-                                                </Descriptions.Item>
-                                            )}
-                                            {(ns?.error_message || ns?.message) && (
-                                                <Descriptions.Item label="消息" span={2}>
-                                                    <span style={{ color: ns?.status === 'failed' ? '#ff4d4f' : undefined }}>
-                                                        {ns.error_message || ns.message}
+                                                    <span style={{ fontWeight: 600, color: '#595959' }}>
+                                                        {ns.duration_ms >= 1000 ? `${(ns.duration_ms / 1000).toFixed(1)}s` : `${ns.duration_ms}ms`}
                                                     </span>
                                                 </Descriptions.Item>
                                             )}
                                         </Descriptions>
 
-                                        {/* Execution stats */}
-                                        {isExecution && ns?.stats && (
-                                            <div style={{ marginTop: 16 }}>
-                                                <Typography.Text strong style={{ marginBottom: 8, display: 'block' }}>执行统计</Typography.Text>
-                                                <Row gutter={16}>
-                                                    <Col span={4}><Statistic title="OK" value={ns.stats.ok || 0} valueStyle={{ color: '#52c41a', fontSize: 20 }} /></Col>
-                                                    <Col span={4}><Statistic title="Changed" value={ns.stats.changed || 0} valueStyle={{ color: '#faad14', fontSize: 20 }} /></Col>
-                                                    <Col span={5}><Statistic title="Unreachable" value={ns.stats.unreachable || 0} valueStyle={{ color: '#ff4d4f', fontSize: 20 }} /></Col>
-                                                    <Col span={4}><Statistic title="Failed" value={ns.stats.failed || 0} valueStyle={{ color: '#ff4d4f', fontSize: 20 }} /></Col>
-                                                    <Col span={4}><Statistic title="Skipped" value={ns.stats.skipped || 0} valueStyle={{ color: '#8c8c8c', fontSize: 20 }} /></Col>
-                                                </Row>
+                                        {/* 执行关键信息 - run_id / exit_code / task_id */}
+                                        {isExecution && runId && (
+                                            <div style={{ marginTop: 12 }}>
+                                                <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>执行信息</Typography.Text>
+                                                <Descriptions column={1} size="small" bordered
+                                                    labelStyle={descLabelStyle}
+                                                    contentStyle={descContentStyle}
+                                                >
+                                                    <Descriptions.Item label="Run ID">
+                                                        <Typography.Text copyable={{ text: runId }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{runId}</span></Typography.Text>
+                                                    </Descriptions.Item>
+                                                    {ns?.run?.exit_code != null && (
+                                                        <Descriptions.Item label="退出码">
+                                                            <Tag color={ns.run.exit_code === 0 ? 'success' : 'error'} style={{ margin: 0 }}>{ns.run.exit_code}</Tag>
+                                                        </Descriptions.Item>
+                                                    )}
+                                                    {ns?.task_id && (
+                                                        <Descriptions.Item label="任务 ID">
+                                                            <Typography.Text copyable={{ text: ns.task_id }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{ns.task_id}</span></Typography.Text>
+                                                        </Descriptions.Item>
+                                                    )}
+                                                </Descriptions>
                                             </div>
                                         )}
 
-                                        {/* Execution hosts */}
-                                        {isExecution && ns?.hosts && ns.hosts.length > 0 && (
-                                            <div style={{ marginTop: 16 }}>
-                                                <Typography.Text strong style={{ marginBottom: 8, display: 'block' }}>目标主机</Typography.Text>
-                                                <Space wrap>{ns.hosts.map((h: string) => <Tag key={h}>{h}</Tag>)}</Space>
+                                        {/* 错误/消息 */}
+                                        {(ns?.error_message || ns?.message) && (
+                                            <div style={{
+                                                marginTop: 12, padding: '8px 12px', borderRadius: 4,
+                                                background: ns?.status === 'failed' || ns?.status === 'rejected' ? '#fff2f0' : '#f6ffed',
+                                                border: `1px solid ${ns?.status === 'failed' || ns?.status === 'rejected' ? '#ffccc7' : '#b7eb8f'}`,
+                                                fontSize: 12,
+                                            }}>
+                                                <Typography.Text type={ns?.status === 'failed' || ns?.status === 'rejected' ? 'danger' : undefined} style={{ fontSize: 12 }}>
+                                                    {ns.error_message || ns.message}
+                                                </Typography.Text>
                                             </div>
                                         )}
 
-                                        {/* Approval info */}
+                                        {/* 审批通过/拒绝提示 */}
+                                        {isApproval && effectiveStatus === 'rejected' && (
+                                            <Alert type="error" showIcon message="审批被拒绝" description={ns?.error_message} style={{ marginTop: 12 }} />
+                                        )}
+                                        {isApproval && effectiveStatus === 'approved' && (
+                                            <Alert type="success" showIcon message="审批已通过" style={{ marginTop: 12 }} />
+                                        )}
+
+                                        {/* 执行统计 - 指标卡片网格 */}
+                                        {isExecution && (ns?.run?.stats || ns?.stats) && (() => {
+                                            const stats = ns.run?.stats || ns.stats;
+                                            const total = (stats.ok || 0) + (stats.changed || 0) + (stats.unreachable || 0) + (stats.failed || 0) + (stats.skipped || 0);
+                                            const statItems = [
+                                                { key: 'ok', label: '成功', value: stats.ok || 0, color: '#52c41a' },
+                                                { key: 'changed', label: '已变更', value: stats.changed || 0, color: '#faad14' },
+                                                { key: 'unreachable', label: '不可达', value: stats.unreachable || 0, color: '#ff4d4f' },
+                                                { key: 'failed', label: '失败', value: stats.failed || 0, color: '#cf1322' },
+                                                { key: 'skipped', label: '跳过', value: stats.skipped || 0, color: '#8c8c8c' },
+                                            ];
+                                            const okRate = total > 0 ? Math.round(((stats.ok || 0) / total) * 100) : 0;
+                                            return (
+                                                <div style={{ marginTop: 12 }}>
+                                                    <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>执行统计</Typography.Text>
+                                                    {/* 汇总条 */}
+                                                    <div style={{
+                                                        display: 'flex', alignItems: 'center', gap: 8,
+                                                        padding: '6px 10px', background: '#fafafa', border: '1px solid #f0f0f0', marginBottom: 8,
+                                                    }}>
+                                                        <span style={{ fontSize: 11, color: '#8c8c8c' }}>共 <b style={{ color: '#262626' }}>{total}</b> 台</span>
+                                                        <div style={{ flex: 1, height: 4, background: '#f0f0f0', overflow: 'hidden' }}>
+                                                            <div style={{ width: `${okRate}%`, height: '100%', background: '#52c41a', transition: 'width 0.3s' }} />
+                                                        </div>
+                                                        <span style={{ fontSize: 11, color: okRate === 100 ? '#52c41a' : '#8c8c8c', fontWeight: 500 }}>{okRate}%</span>
+                                                    </div>
+                                                    {/* 指标卡片网格 */}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                                                        {statItems.map(item => (
+                                                            <Card key={item.key} size="small" style={{
+                                                                borderLeft: `3px solid ${item.value > 0 ? item.color : '#e8e8e8'}`,
+                                                                background: item.value > 0 ? `${item.color}08` : undefined,
+                                                            }} styles={{ body: { padding: '6px 8px' } }}>
+                                                                <div style={{
+                                                                    fontSize: 18, fontWeight: 600, lineHeight: 1.2,
+                                                                    color: item.value > 0 ? item.color : '#bfbfbf',
+                                                                }}>{item.value}</div>
+                                                                <div style={{
+                                                                    fontSize: 10, color: '#8c8c8c', marginTop: 2,
+                                                                }}>{item.label}</div>
+                                                            </Card>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* 目标主机 */}
+                                        {isExecution && (ns?.target_hosts || ns?.hosts) && (() => {
+                                            const hostsStr = ns.target_hosts || '';
+                                            const hostsArr = ns.hosts || (hostsStr ? hostsStr.split(',').map((h: string) => h.trim()).filter(Boolean) : []);
+                                            return hostsArr.length > 0 ? (
+                                                <div style={{ marginTop: 12 }}>
+                                                    <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>目标主机</Typography.Text>
+                                                    <Space size={4} wrap>{hostsArr.map((h: string) => <Tag key={h} style={{ margin: 0 }}>{h}</Tag>)}</Space>
+                                                </div>
+                                            ) : null;
+                                        })()}
+
+                                        {/* 审批信息 */}
                                         {isApproval && ns && (
-                                            <div style={{ marginTop: 16 }}>
-                                                <Typography.Text strong style={{ marginBottom: 8, display: 'block' }}>审批信息</Typography.Text>
-                                                <Descriptions column={1} size="small" bordered>
-                                                    {ns.title && <Descriptions.Item label="审批标题">{ns.title}</Descriptions.Item>}
-                                                    {ns.description && <Descriptions.Item label="审批说明">{ns.description}</Descriptions.Item>}
-                                                    {ns.timeout_at && <Descriptions.Item label="超时时间">{ns.timeout_at}</Descriptions.Item>}
+                                            <div style={{ marginTop: 12 }}>
+                                                <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>审批信息</Typography.Text>
+                                                <Descriptions column={1} size="small" bordered
+                                                    labelStyle={descLabelStyle}
+                                                    contentStyle={descContentStyle}
+                                                >
+                                                    {ns.title && <Descriptions.Item label="标题">{ns.title}</Descriptions.Item>}
+                                                    {ns.description && <Descriptions.Item label="说明">{ns.description}</Descriptions.Item>}
+                                                    {ns.timeout_at && <Descriptions.Item label="超时">{new Date(ns.timeout_at).toLocaleString('zh-CN')}</Descriptions.Item>}
                                                     {ns.task_id && (
-                                                        <Descriptions.Item label="审批任务 ID">
-                                                            <Typography.Text copyable style={{ fontFamily: 'monospace', fontSize: 12 }}>{ns.task_id}</Typography.Text>
+                                                        <Descriptions.Item label="任务 ID">
+                                                            <Typography.Text copyable={{ text: ns.task_id }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{ns.task_id}</span></Typography.Text>
                                                         </Descriptions.Item>
                                                     )}
                                                 </Descriptions>
@@ -1162,21 +1407,15 @@ const HealingInstanceDetail: React.FC = () => {
                                     </div>
                                 )
                             },
-                            // Execution log tab
-                            ...(isExecution && stdoutLogs.length > 0 ? [{
+                            // 执行日志 tab - 优先用 API 日志，否则用 stdout
+                            ...(isExecution && (runId || stdoutLogs.length > 0) ? [{
                                 key: 'execution_log',
                                 label: '执行日志',
                                 children: (
-                                    <div style={{ height: 'calc(100vh - 160px)', background: '#1e1e1e' }}>
-                                        <LogConsole
-                                            logs={stdoutLogs}
-                                            height="100%"
-                                            theme="dark"
-                                        />
-                                    </div>
+                                    <ExecutionLogTab runId={runId} fallbackLogs={stdoutLogs} />
                                 )
                             }] : []),
-                            // Live SSE logs tab
+                            // 实时日志 tab
                             ...(selectedNodeData.logs && selectedNodeData.logs.length > 0 ? [{
                                 key: 'live_logs',
                                 label: '实时日志',
@@ -1188,25 +1427,60 @@ const HealingInstanceDetail: React.FC = () => {
                                     />
                                 )
                             }] : []),
-                            {
+                            // 节点上下文 tab（仅显示当前节点的运行时数据）
+                            ...(contextEntries.length > 0 ? [{
                                 key: 'context',
-                                label: '全局上下文',
+                                label: '节点上下文',
                                 children: (
-                                    <div style={{ padding: 16, height: 'calc(100vh - 160px)', overflow: 'auto' }}>
-                                        <JsonPrettyView data={instance?.context || {}} />
+                                    <div style={{ padding: '16px 20px', height: 'calc(100vh - 160px)', overflow: 'auto' }}>
+                                        <Descriptions column={1} size="small" bordered
+                                            labelStyle={{ ...descLabelStyle, width: 130 }}
+                                            contentStyle={descContentStyle}
+                                        >
+                                            {contextEntries.map(([key, value]) => (
+                                                <Descriptions.Item key={key} label={key}>
+                                                    {typeof value === 'object' && value !== null ? (
+                                                        <pre style={{ background: '#f6f8fa', padding: 8, borderRadius: 4, fontSize: 11, fontFamily: 'Menlo, Monaco, Consolas, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, maxHeight: 200, overflow: 'auto' }}>
+                                                            {JSON.stringify(value, null, 2)}
+                                                        </pre>
+                                                    ) : typeof value === 'boolean' ? (
+                                                        <Tag color={value ? 'success' : 'default'} style={{ margin: 0 }}>{String(value)}</Tag>
+                                                    ) : (
+                                                        <span>{String(value)}</span>
+                                                    )}
+                                                </Descriptions.Item>
+                                            ))}
+                                        </Descriptions>
                                     </div>
                                 )
-                            },
+                            }] : []),
+                            // 配置参数 tab
                             {
                                 key: 'config',
                                 label: '配置参数',
                                 children: (
-                                    <div style={{ padding: 16, height: 'calc(100vh - 160px)', overflow: 'auto' }}>
-                                        <JsonPrettyView data={selectedNodeData.config || {}} />
+                                    <div style={{ padding: '16px 20px', height: 'calc(100vh - 160px)', overflow: 'auto' }}>
+                                        {configEntries.length === 0 ? <Empty description="暂无配置参数" style={{ marginTop: 40 }} /> : (
+                                            <Descriptions column={1} size="small" bordered
+                                                labelStyle={{ ...descLabelStyle, width: 110 }}
+                                                contentStyle={descContentStyle}
+                                            >
+                                                {configEntries.map(([k, v]) => (
+                                                    <Descriptions.Item key={k} label={CONFIG_LABELS[k] || k}>
+                                                        {typeof v === 'object' && v !== null
+                                                            ? <pre style={{ background: '#f6f8fa', padding: 8, borderRadius: 4, fontSize: 11, fontFamily: 'Menlo, Monaco, Consolas, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, maxHeight: 150, overflow: 'auto' }}>{JSON.stringify(v, null, 2)}</pre>
+                                                            : typeof v === 'boolean'
+                                                                ? <Tag color={v ? 'success' : 'default'} style={{ margin: 0 }}>{String(v)}</Tag>
+                                                                : <span>{String(v)}</span>
+                                                        }
+                                                    </Descriptions.Item>
+                                                ))}
+                                            </Descriptions>
+                                        )}
                                     </div>
                                 )
                             },
-                            // 原始状态 tab - 仅对有运行时状态数据的节点显示
+                            // 原始状态 tab
                             ...(ns ? [{
                                 key: 'state',
                                 label: '原始状态',
@@ -1220,7 +1494,7 @@ const HealingInstanceDetail: React.FC = () => {
                     );
                 })()}
             </Drawer>
-        </PageContainer>
+        </div>
     );
 };
 

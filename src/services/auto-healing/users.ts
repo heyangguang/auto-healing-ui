@@ -12,6 +12,7 @@ export async function getUsers(params?: {
     email?: string;
     display_name?: string;
     user_id?: string;
+    role_id?: string;
     sort_by?: string;
     sort_order?: 'asc' | 'desc';
     created_at_start?: string;
@@ -79,4 +80,20 @@ export async function assignUserRoles(id: string, data: AutoHealing.AssignRolesR
         method: 'PUT',
         data,
     });
+}
+
+/**
+ * 获取轻量用户列表（不分页，仅含基础字段）
+ * GET /api/v1/users/simple
+ */
+export async function getSimpleUsers() {
+    return request<{
+        code: number;
+        data: Array<{
+            id: string;
+            username: string;
+            display_name: string;
+            status: string;
+        }>;
+    }>('/api/v1/users/simple', { method: 'GET' });
 }
