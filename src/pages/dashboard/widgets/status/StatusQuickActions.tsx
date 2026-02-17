@@ -20,7 +20,7 @@ const QUICK_ACTIONS = [
     { icon: <DeploymentUnitOutlined />, label: '自愈实例', path: '/healing/instances', color: '#722ed1' },
     { icon: <ForkOutlined />, label: '自愈流程', path: '/healing/flows', color: '#2f54eb' },
     { icon: <FileTextOutlined />, label: '执行记录', path: '/execution/runs', color: '#eb2f96' },
-    { icon: <ScheduleOutlined />, label: '待办中心', path: '/pending-center', color: '#faad14' },
+    { icon: <ScheduleOutlined />, label: '待办审批', path: '/pending/triggers', color: '#faad14' },
     { icon: <ApiOutlined />, label: '插件管理', path: '/resources/plugins', color: '#531dab' },
     { icon: <CodeOutlined />, label: 'Playbook', path: '/execution/playbooks', color: '#13c2c2' },
     { icon: <BellOutlined />, label: '通知管理', path: '/notification/logs', color: '#fa541c' },

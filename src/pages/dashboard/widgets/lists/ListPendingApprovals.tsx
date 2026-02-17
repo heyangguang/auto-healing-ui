@@ -55,7 +55,7 @@ const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRem
                                         transition: 'background 0.3s',
                                         alignItems: 'center'
                                     }}
-                                    onClick={() => history.push('/pending-center')}
+                                    onClick={() => history.push('/pending/approvals')}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                                         <Badge status="warning" />

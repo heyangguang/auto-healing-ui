@@ -64,7 +64,7 @@ const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                                         transition: 'background 0.3s',
                                         alignItems: 'center'
                                     }}
-                                    onClick={() => history.push('/pending-center')}
+                                    onClick={() => history.push('/pending/triggers')}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                                         <Badge status="processing" />
