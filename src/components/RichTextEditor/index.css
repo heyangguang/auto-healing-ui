@@ -1,0 +1,92 @@
+/* ========== RichTextEditor — Quill 主题覆盖 ========== */
+
+/* 容器 */
+.rich-text-editor-wrap .ql-container {
+    font-size: 14px;
+    font-family: inherit;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.rich-text-editor-wrap .ql-toolbar {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+/* 编辑区默认高度 */
+.rich-text-editor-wrap .ql-editor {
+    min-height: 180px;
+    line-height: 1.8;
+}
+
+/* placeholder 颜色 */
+.rich-text-editor-wrap .ql-editor.ql-blank::before {
+    color: rgba(0, 0, 0, 0.25);
+    font-style: normal;
+}
+
+/* ---- 暗色模式适配 ---- */
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar,
+.dark .rich-text-editor-wrap .ql-toolbar {
+    border-color: #424242;
+    background: #1f1f1f;
+}
+
+[data-theme='dark'] .rich-text-editor-wrap .ql-container,
+.dark .rich-text-editor-wrap .ql-container {
+    border-color: #424242;
+    background: #141414;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+[data-theme='dark'] .rich-text-editor-wrap .ql-editor.ql-blank::before,
+.dark .rich-text-editor-wrap .ql-editor.ql-blank::before {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* 暗色模式工具栏图标颜色 */
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar button .ql-stroke,
+.dark .rich-text-editor-wrap .ql-toolbar button .ql-stroke {
+    stroke: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar button .ql-fill,
+.dark .rich-text-editor-wrap .ql-toolbar button .ql-fill {
+    fill: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar button:hover .ql-stroke,
+.dark .rich-text-editor-wrap .ql-toolbar button:hover .ql-stroke {
+    stroke: #1677ff;
+}
+
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar button:hover .ql-fill,
+.dark .rich-text-editor-wrap .ql-toolbar button:hover .ql-fill {
+    fill: #1677ff;
+}
+
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar .ql-picker-label,
+.dark .rich-text-editor-wrap .ql-toolbar .ql-picker-label {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar .ql-picker-label .ql-stroke,
+.dark .rich-text-editor-wrap .ql-toolbar .ql-picker-label .ql-stroke {
+    stroke: rgba(255, 255, 255, 0.65);
+}
+
+/* 暗色 picker 下拉 */
+[data-theme='dark'] .rich-text-editor-wrap .ql-toolbar .ql-picker-options,
+.dark .rich-text-editor-wrap .ql-toolbar .ql-picker-options {
+    background: #1f1f1f;
+    border-color: #424242;
+}
+
+/* focus 边框 */
+.rich-text-editor-wrap .ql-container:focus-within {
+    border-color: #1677ff;
+}
+
+.rich-text-editor-wrap .ql-toolbar:has(+ .ql-container:focus-within) {
+    border-color: #1677ff;
+}
