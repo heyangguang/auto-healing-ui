@@ -276,7 +276,7 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
             open={open}
             onClose={onClose}
             placement="left"
-            width={800}
+            size={800}
             closable={false}
             mask={true}
             styles={{

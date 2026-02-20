@@ -139,7 +139,7 @@ const SideNav: React.FC<SideNavProps> = ({ isMobile, drawerOpen, onDrawerClose }
                 placement="left"
                 open={drawerOpen}
                 onClose={onDrawerClose}
-                width={SIDE_WIDTH}
+                size={SIDE_WIDTH}
                 styles={{
                     body: { padding: 0 },
                     header: { display: 'none' },

@@ -13,6 +13,7 @@ import { createStyles } from 'antd-style';
 import { AvatarDropdown, AvatarName, AvatarFullName } from '@/components/RightContent/AvatarDropdown';
 import GlobalSearch from '@/components/GlobalSearch';
 import NotificationBell from '@/components/NotificationBell';
+import TenantSwitcher from '@/components/TenantSwitcher';
 const ProductMenu = lazy(() => import('@/components/ProductMenu'));
 import { CATEGORIES, SERVICES } from '@/config/menu';
 
@@ -261,6 +262,7 @@ const TopNavBar: React.FC = () => {
                                 <QuestionCircleOutlined />
                             </div>
                             <NotificationBell />
+                            <TenantSwitcher />
                             <div className={styles.divider} />
                         </>
                     )}
