@@ -104,6 +104,13 @@ const METHOD_COLORS: Record<string, string> = {
     DELETE: '#f93e3e',
 };
 
+/* ========== 工具函数 ========== */
+const formatChangeValue = (v: any): string => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') return JSON.stringify(v, null, 2);
+    return String(v);
+};
+
 /* ========== 搜索字段配置 ========== */
 const searchFields: SearchField[] = [
     { key: 'search', label: '全局搜索' },
@@ -582,7 +589,7 @@ const AuditLogsPage: React.FC = () => {
                 title="审计日志详情"
                 open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setDetail(null); }}
-                width={640}
+                size={640}
                 loading={detailLoading}
             >
                 {detail && (
@@ -689,7 +696,7 @@ const AuditLogsPage: React.FC = () => {
                                             {Object.entries(detail.changes.deleted as Record<string, any>).map(([k, v]) => (
                                                 <tr key={k}>
                                                     <td className="audit-changes-field">{k}</td>
-                                                    <td className="audit-changes-deleted-val">{String(v ?? '')}</td>
+                                                    <td className="audit-changes-deleted-val">{formatChangeValue(v)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -707,8 +714,8 @@ const AuditLogsPage: React.FC = () => {
                                             {Object.entries(detail.changes as Record<string, any>).map(([field, diff]: [string, any]) => (
                                                 <tr key={field}>
                                                     <td className="audit-changes-field">{field}</td>
-                                                    <td className="audit-changes-old">{String(diff?.old ?? '')}</td>
-                                                    <td className="audit-changes-new">{String(diff?.new ?? '')}</td>
+                                                    <td className="audit-changes-old">{formatChangeValue(diff?.old)}</td>
+                                                    <td className="audit-changes-new">{formatChangeValue(diff?.new)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -766,7 +773,7 @@ const AuditLogsPage: React.FC = () => {
                     </Space>
                 }
                 width={520}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Alert
                     type="info"

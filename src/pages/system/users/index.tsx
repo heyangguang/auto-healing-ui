@@ -309,7 +309,7 @@ const UsersPage: React.FC = () => {
             {/* 详情 Drawer */}
             <Drawer
                 title={null}
-                width={520}
+                size={520}
                 open={detailDrawerOpen}
                 onClose={() => setDetailDrawerOpen(false)}
                 styles={{ header: { display: 'none' }, body: { padding: 0 } }}
@@ -470,7 +470,7 @@ const UsersPage: React.FC = () => {
                     try { await resetUserPassword(currentUser.id, { new_password: values.new_password }); message.success('密码重置成功'); setResetPwdModalOpen(false); }
                     catch { message.error('重置失败'); }
                 }}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Form form={resetPwdForm} layout="vertical">
                     <Form.Item

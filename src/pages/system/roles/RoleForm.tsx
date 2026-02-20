@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { history, useParams } from '@umijs/max';
 import { Form, Input, Button, message, Spin, Checkbox, Tag, Transfer } from 'antd';
-import { SaveOutlined, UserOutlined } from '@ant-design/icons';
+import { SaveOutlined, UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
 import { createRole, getRole, updateRole, assignRolePermissions } from '@/services/auto-healing/roles';
 import { getPermissionTree } from '@/services/auto-healing/permissions';
 import { getUsers, getSimpleUsers, getUser, assignUserRoles } from '@/services/auto-healing/users';
+import { listSystemWorkspaces, getRoleWorkspaces, assignRoleWorkspaces } from '@/services/auto-healing/dashboard';
 import './RoleForm.css';
 
 const { TextArea } = Input;
@@ -33,8 +34,9 @@ const RoleFormPage: React.FC = () => {
     /* 整体加载状态 */
     const [permLoading, setPermLoading] = useState(true);
     const [roleLoading, setRoleLoading] = useState(isEdit);
+    const [wsLoading, setWsLoading] = useState(true);
     const [usersLoading, setUsersLoading] = useState(true);
-    const pageLoading = permLoading || roleLoading || usersLoading;
+    const pageLoading = permLoading || roleLoading || usersLoading || wsLoading;
 
     /* 权限树 */
     const [permissionTree, setPermissionTree] = useState<AutoHealing.PermissionTree>({});
@@ -46,6 +48,11 @@ const RoleFormPage: React.FC = () => {
     const [originalUserIds, setOriginalUserIds] = useState<string[]>([]);
     const [roleName, setRoleName] = useState('');
 
+    /* 工作区列表 & 分配 */
+    const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
+    const [selectedWsIds, setSelectedWsIds] = useState<string[]>([]);
+    const [originalWsIds, setOriginalWsIds] = useState<string[]>([]);
+
     /* 加载权限树 */
     useEffect(() => {
         (async () => {
@@ -55,6 +62,23 @@ const RoleFormPage: React.FC = () => {
                 setPermissionTree(tree);
             } catch { /* ignore */ }
             finally { setPermLoading(false); }
+        })();
+    }, []);
+
+    /* 加载所有系统工作区 */
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await listSystemWorkspaces();
+                const list = (res as any)?.data || [];
+                setAllWorkspaces(list);
+                // 默认工作区自动勾选
+                const defaultIds = list.filter((w: any) => w.is_default).map((w: any) => w.id);
+                if (!isEdit) {
+                    setSelectedWsIds(defaultIds);
+                }
+            } catch { /* ignore */ }
+            finally { setWsLoading(false); }
         })();
     }, []);
 
@@ -105,6 +129,20 @@ const RoleFormPage: React.FC = () => {
                 const assigned = users.map((u: any) => u.id);
                 setSelectedUserIds(assigned);
                 setOriginalUserIds(assigned);
+            } catch { /* ignore */ }
+        })();
+    }, [isEdit, params.id]);
+
+    /* 编辑模式：加载角色已分配的工作区 */
+    useEffect(() => {
+        if (!isEdit || !params.id) return;
+        (async () => {
+            try {
+                const res = await getRoleWorkspaces(params.id!);
+                const data = (res as any)?.data || res;
+                const ids = (data?.workspace_ids || []).map((id: string) => id);
+                setSelectedWsIds(ids);
+                setOriginalWsIds(ids);
             } catch { /* ignore */ }
         })();
     }, [isEdit, params.id]);
@@ -174,6 +212,15 @@ const RoleFormPage: React.FC = () => {
         }
     };
 
+    /* 工作区勾选 */
+    const handleWsToggle = (wsId: string, checked: boolean) => {
+        if (checked) {
+            setSelectedWsIds(prev => [...new Set([...prev, wsId])]);
+        } else {
+            setSelectedWsIds(prev => prev.filter(id => id !== wsId));
+        }
+    };
+
     /* 提交 */
     const handleSubmit = async () => {
         try {
@@ -188,6 +235,11 @@ const RoleFormPage: React.FC = () => {
                     await assignRolePermissions(params.id, { permission_ids: checkedKeys });
                 }
                 await updateUserAssignments(params.id, roleName);
+                // 保存工作区分配（排除默认工作区，默认工作区自动包含）
+                const nonDefaultIds = selectedWsIds.filter(
+                    id => !allWorkspaces.find((w: any) => w.id === id && w.is_default)
+                );
+                await assignRoleWorkspaces(params.id, nonDefaultIds);
                 message.success('更新成功');
             } else {
                 const res = await createRole(values);
@@ -199,6 +251,13 @@ const RoleFormPage: React.FC = () => {
                     }
                     if (selectedUserIds.length > 0) {
                         await updateUserAssignments(newRoleId, values.name);
+                    }
+                    // 保存工作区分配
+                    const nonDefaultIds = selectedWsIds.filter(
+                        id => !allWorkspaces.find((w: any) => w.id === id && w.is_default)
+                    );
+                    if (nonDefaultIds.length > 0) {
+                        await assignRoleWorkspaces(newRoleId, nonDefaultIds);
                     }
                 }
                 message.success('创建成功');
@@ -215,7 +274,7 @@ const RoleFormPage: React.FC = () => {
     return (
         <div className="role-form-page">
             <SubPageHeader
-                title={isSystemRole ? '分配用户' : isEdit ? '编辑角色' : '创建角色'}
+                title={isSystemRole ? '分配用户与工作区' : isEdit ? '编辑角色' : '创建角色'}
                 onBack={() => history.back()}
             />
 
@@ -281,6 +340,44 @@ const RoleFormPage: React.FC = () => {
                                         </span>
                                     )}
                                 />
+                            </div>
+
+                            {/* 分配工作区 — Checkbox 列表 */}
+                            <div className="role-form-divider" />
+                            <div className="role-form-section-title">
+                                <AppstoreOutlined style={{ marginRight: 6 }} />
+                                分配工作区
+                                <span className="role-form-section-count">
+                                    已选择 {selectedWsIds.length} / {allWorkspaces.length} 个工作区
+                                </span>
+                            </div>
+                            <div className="role-form-ws-container">
+                                {allWorkspaces.length === 0 && (
+                                    <div style={{ color: '#bfbfbf', textAlign: 'center', padding: 40 }}>
+                                        暂无系统工作区
+                                    </div>
+                                )}
+                                {allWorkspaces.map((ws: any) => {
+                                    const isDefault = ws.is_default;
+                                    const isChecked = selectedWsIds.includes(ws.id);
+                                    return (
+                                        <div key={ws.id} className="role-form-ws-item">
+                                            <Checkbox
+                                                checked={isChecked || isDefault}
+                                                disabled={isDefault}
+                                                onChange={(e) => handleWsToggle(ws.id, e.target.checked)}
+                                            >
+                                                <span className="role-form-ws-name">{ws.name}</span>
+                                                {isDefault && (
+                                                    <Tag className="role-form-ws-default-tag">默认</Tag>
+                                                )}
+                                            </Checkbox>
+                                            {ws.description && (
+                                                <span className="role-form-ws-desc">{ws.description}</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {/* 权限分配 — 仅非系统角色 */}

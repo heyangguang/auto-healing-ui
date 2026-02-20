@@ -1,10 +1,11 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAccess, history } from '@umijs/max';
 import { Tag, Space, message, Popconfirm, Tooltip, Typography, Button, Badge, Drawer, Descriptions, Spin, Avatar, Divider } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyCertificateOutlined, ClockCircleOutlined, SecurityScanOutlined, UsergroupAddOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyCertificateOutlined, ClockCircleOutlined, SecurityScanOutlined, UsergroupAddOutlined, AppstoreOutlined } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, SearchField } from '@/components/StandardTable';
 import { getRoles, deleteRole, getRole } from '@/services/auto-healing/roles';
+import { getRoleWorkspaces, listSystemWorkspaces } from '@/services/auto-healing/dashboard';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -43,8 +44,20 @@ const RolesPage: React.FC = () => {
         setDetailDrawerOpen(true);
         setDetailLoading(true);
         try {
-            const res = await getRole(record.id);
-            setDetailRole((res as any)?.data || res);
+            const [roleRes, wsIdsRes, wsListRes] = await Promise.all([
+                getRole(record.id),
+                getRoleWorkspaces(record.id).catch(() => null),
+                listSystemWorkspaces().catch(() => null),
+            ]);
+            const roleData = (roleRes as any)?.data || roleRes;
+            // 解析工作区名称
+            const wsIds: string[] = (wsIdsRes as any)?.data?.workspace_ids || [];
+            const wsList: any[] = (wsListRes as any)?.data || [];
+            const wsNames = wsIds
+                .map((id: string) => wsList.find((w: any) => w.id === id)?.name)
+                .filter(Boolean);
+            roleData._workspaceNames = wsNames;
+            setDetailRole(roleData);
         } catch {
             message.error('加载角色详情失败');
         } finally {
@@ -148,9 +161,25 @@ const RolesPage: React.FC = () => {
             columnKey: 'actions',
             columnTitle: '操作',
             fixedColumn: true,
-            width: 80,
+            width: 140,
             render: (_: any, record: any) => (
                 <Space size="small">
+                    <Tooltip title="分配用户">
+                        <Button
+                            type="link" size="small"
+                            icon={<UsergroupAddOutlined />}
+                            disabled={!access.canUpdateRole}
+                            onClick={(e) => { e.stopPropagation(); history.push(`/system/roles/${record.id}/edit`); }}
+                        />
+                    </Tooltip>
+                    <Tooltip title="分配工作区">
+                        <Button
+                            type="link" size="small"
+                            icon={<AppstoreOutlined />}
+                            disabled={!access.canUpdateRole}
+                            onClick={(e) => { e.stopPropagation(); history.push(`/system/roles/${record.id}/edit`); }}
+                        />
+                    </Tooltip>
                     {!record.is_system && (
                         <>
                             <Tooltip title="编辑">
@@ -286,7 +315,7 @@ const RolesPage: React.FC = () => {
             {/* 详情 Drawer */}
             <Drawer
                 title={null}
-                width={560}
+                size={560}
                 open={detailDrawerOpen}
                 onClose={() => setDetailDrawerOpen(false)}
                 styles={{ header: { display: 'none' }, body: { padding: 0 } }}
@@ -316,6 +345,14 @@ const RolesPage: React.FC = () => {
                                         onClick={() => { setDetailDrawerOpen(false); history.push(`/system/roles/${detailRole.id}/edit`); }}
                                     >
                                         分配用户
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        icon={<AppstoreOutlined />}
+                                        disabled={!access.canUpdateRole}
+                                        onClick={() => { setDetailDrawerOpen(false); history.push(`/system/roles/${detailRole.id}/edit`); }}
+                                    >
+                                        分配工作区
                                     </Button>
                                     {!detailRole.is_system && (
                                         <>
@@ -424,6 +461,27 @@ const RolesPage: React.FC = () => {
                                     ))
                                 ) : (
                                     <Text type="secondary" style={{ fontStyle: 'italic' }}>未分配任何权限</Text>
+                                )}
+
+                                <Divider style={{ margin: '12px 0' }} />
+
+                                {/* 工作区分配 */}
+                                <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <AppstoreOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
+                                    <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+                                        工作区分配 ({detailRole._workspaceNames?.length || 0})
+                                    </Text>
+                                </div>
+                                {detailRole._workspaceNames && detailRole._workspaceNames.length > 0 ? (
+                                    <Space size={[4, 4]} wrap>
+                                        {detailRole._workspaceNames.map((name: string, idx: number) => (
+                                            <Tag key={idx} style={{ fontSize: 12, margin: 0, padding: '1px 8px' }}>
+                                                {name}
+                                            </Tag>
+                                        ))}
+                                    </Space>
+                                ) : (
+                                    <Text type="secondary" style={{ fontStyle: 'italic' }}>未分配工作区</Text>
                                 )}
 
                                 <Divider style={{ margin: '12px 0' }} />

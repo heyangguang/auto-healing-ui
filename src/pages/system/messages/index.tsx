@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Tag, Space, message, Button, Tooltip, Drawer, Typography, Badge } from 'antd';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Tag, Space, message, Button, Tooltip, Drawer, Typography } from 'antd';
 import {
     CheckOutlined, CheckCircleOutlined,
     BellOutlined, MailOutlined, ClockCircleOutlined,
@@ -10,22 +10,46 @@ import {
     getSiteMessages,
     markAsRead,
     markAllAsRead,
-    deleteSiteMessages,
+    getSiteMessageCategories,
     type SiteMessage,
+    type SiteMessageCategory,
 } from '@/services/auto-healing/siteMessage';
 import dayjs from 'dayjs';
 import './index.css';
 
 const { Text } = Typography;
 
-/* ========== 搜索字段配置 ========== */
-const searchFields: SearchField[] = [
-    { key: 'title', label: '标题' },
-    { key: 'category', label: '分类' },
-];
-
 /* ========== 站内通知页面 ========== */
 const SystemMessages: React.FC = () => {
+    /* ---- 分类映射 ---- */
+    const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+    const [searchFields, setSearchFields] = useState<SearchField[]>([
+        { key: 'keyword', label: '关键字' },
+    ]);
+    useEffect(() => {
+        getSiteMessageCategories()
+            .then((res) => {
+                const map: Record<string, string> = {};
+                const opts: { label: string; value: string }[] = [];
+                (res?.data || []).forEach((c: SiteMessageCategory) => {
+                    map[c.value] = c.label;
+                    opts.push({ label: c.label, value: c.value });
+                });
+                setCategoryMap(map);
+                setSearchFields([
+                    { key: 'keyword', label: '关键字' },
+                    { key: '__enum__category', label: '分类', options: opts },
+                    {
+                        key: '__enum__is_read', label: '状态', options: [
+                            { label: '未读', value: 'false' },
+                            { label: '已读', value: 'true' },
+                        ]
+                    },
+                ]);
+            })
+            .catch(() => { });
+    }, []);
+
     /* ---- 选中行 ---- */
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
     const [selectedRows, setSelectedRows] = useState<SiteMessage[]>([]);
@@ -46,24 +70,29 @@ const SystemMessages: React.FC = () => {
     const openDetail = useCallback((msg: SiteMessage) => {
         setCurrentMsg(msg);
         setDetailOpen(true);
-        if (!msg.isRead) {
-            markAsRead([msg.id]).then(() => triggerRefresh());
+        if (!msg.is_read) {
+            markAsRead([msg.id]).then(() => {
+                triggerRefresh();
+                window.dispatchEvent(new Event('site-messages:read'));
+            });
         }
     }, [triggerRefresh]);
 
     /* ---- 批量操作 ---- */
 
     const handleBatchMarkRead = useCallback(async () => {
-        if (selectedRowKeys.length === 0) return message.warning('请先选择消息');
+        if (selectedRowKeys.length === 0) { message.warning('请先选择消息'); return; }
         await markAsRead(selectedRowKeys as string[]);
         message.success('已标记为已读');
         triggerRefresh();
+        window.dispatchEvent(new Event('site-messages:read'));
     }, [selectedRowKeys, triggerRefresh]);
 
     const handleMarkAllRead = useCallback(async () => {
         await markAllAsRead();
         message.success('全部已读');
         triggerRefresh();
+        window.dispatchEvent(new Event('site-messages:read'));
     }, [triggerRefresh]);
 
     /* ========== 列定义 ========== */
@@ -76,13 +105,15 @@ const SystemMessages: React.FC = () => {
             ellipsis: true,
             render: (_: any, record: SiteMessage) => (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Tooltip title={record.isRead ? '已读' : '未读'}>
+                    <Tooltip title={record.is_read ? '已读' : '未读'}>
                         <span style={{
                             display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-                            background: record.isRead ? '#d9d9d9' : '#1677ff', flexShrink: 0,
+                            background: record.is_read ? '#d9d9d9' : '#1677ff', flexShrink: 0,
                         }} />
                     </Tooltip>
-                    <Text type="secondary" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{record.category}</Text>
+                    <Text type="secondary" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {categoryMap[record.category] || record.category}
+                    </Text>
                 </span>
             ),
         },
@@ -96,7 +127,7 @@ const SystemMessages: React.FC = () => {
             render: (_: any, record: SiteMessage) => (
                 <a
                     style={{
-                        fontWeight: record.isRead ? 400 : 600,
+                        fontWeight: record.is_read ? 400 : 600,
                         color: '#1677ff',
                         cursor: 'pointer',
                     }}
@@ -123,14 +154,14 @@ const SystemMessages: React.FC = () => {
             },
         },
         {
-            columnKey: 'date',
+            columnKey: 'created_at',
             columnTitle: '时间',
-            dataIndex: 'date',
-            width: 110,
+            dataIndex: 'created_at',
+            width: 160,
             sorter: true,
             render: (_: any, record: SiteMessage) => (
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                    {record.date}
+                    {dayjs(record.created_at).format('YYYY-MM-DD HH:mm')}
                 </Text>
             ),
         },
@@ -140,7 +171,7 @@ const SystemMessages: React.FC = () => {
             fixedColumn: true,
             width: 50,
             render: (_: any, record: SiteMessage) => (
-                !record.isRead ? (
+                !record.is_read ? (
                     <Tooltip title="标记已读">
                         <Button
                             type="link" size="small" icon={<CheckOutlined />}
@@ -149,6 +180,7 @@ const SystemMessages: React.FC = () => {
                                 await markAsRead([record.id]);
                                 message.success('已标记');
                                 triggerRefresh();
+                                window.dispatchEvent(new Event('site-messages:read'));
                             }}
                         />
                     </Tooltip>
@@ -166,10 +198,29 @@ const SystemMessages: React.FC = () => {
         advancedSearch?: Record<string, any>;
         sorter?: { field: string; order: 'ascend' | 'descend' };
     }) => {
-        const res = await getSiteMessages({
+        const apiParams: any = {
             page: params.page,
             page_size: params.pageSize,
-        });
+        };
+        // 搜索关键字
+        if (params.searchValue) {
+            apiParams.keyword = params.searchValue;
+        }
+        // 枚举筛选（category, is_read）
+        if (params.advancedSearch) {
+            if (params.advancedSearch.category) {
+                apiParams.category = params.advancedSearch.category;
+            }
+            if (params.advancedSearch.is_read !== undefined && params.advancedSearch.is_read !== '') {
+                apiParams.is_read = params.advancedSearch.is_read;
+            }
+        }
+        // 排序
+        if (params.sorter) {
+            apiParams.sort = params.sorter.field;
+            apiParams.order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
+        }
+        const res = await getSiteMessages(apiParams);
         const items = res?.data || [];
         const total = res?.total ?? 0;
         return { data: items, total };
@@ -223,7 +274,7 @@ const SystemMessages: React.FC = () => {
                     },
                 }}
                 request={handleRequest}
-                defaultPageSize={10}
+                defaultPageSize={20}
                 preferenceKey="site_messages"
                 refreshTrigger={refreshTrigger}
             />
@@ -231,7 +282,7 @@ const SystemMessages: React.FC = () => {
             {/* 消息详情 Drawer */}
             <Drawer
                 title={null}
-                width={520}
+                size={520}
                 open={detailOpen}
                 onClose={() => setDetailOpen(false)}
                 styles={{ header: { display: 'none' }, body: { padding: 0 } }}
@@ -240,7 +291,7 @@ const SystemMessages: React.FC = () => {
                     <>
                         {/* 头部 */}
                         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f0f0f0' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <div style={{
                                     width: 44, height: 44, borderRadius: '50%',
                                     background: '#e6f4ff', display: 'flex',
@@ -253,29 +304,10 @@ const SystemMessages: React.FC = () => {
                                         {currentMsg.title}
                                     </div>
                                     <Text type="secondary" style={{ fontSize: 13 }}>
-                                        {currentMsg.category}
+                                        {categoryMap[currentMsg.category] || currentMsg.category}
                                     </Text>
                                 </div>
-                                <Badge
-                                    status={currentMsg.isRead ? 'default' : 'processing'}
-                                    text={currentMsg.isRead ? '已读' : '未读'}
-                                />
                             </div>
-                            {!currentMsg.isRead && (
-                                <Button
-                                    size="small"
-                                    type="primary"
-                                    icon={<CheckOutlined />}
-                                    onClick={async () => {
-                                        await markAsRead([currentMsg.id]);
-                                        message.success('已标记为已读');
-                                        setCurrentMsg({ ...currentMsg, isRead: true });
-                                        triggerRefresh();
-                                    }}
-                                >
-                                    标记已读
-                                </Button>
-                            )}
                         </div>
 
                         {/* 详细信息 */}
@@ -286,8 +318,13 @@ const SystemMessages: React.FC = () => {
                                 </Text>
                             </div>
                             <Text style={{ fontSize: 13 }}>
-                                {currentMsg.date} {currentMsg.time}
+                                {dayjs(currentMsg.created_at).format('YYYY-MM-DD HH:mm:ss')}
                             </Text>
+                            {currentMsg.expires_at && (
+                                <Text type="secondary" style={{ fontSize: 12, marginLeft: 12 }}>
+                                    （过期：{dayjs(currentMsg.expires_at).format('YYYY-MM-DD')}）
+                                </Text>
+                            )}
 
                             <div style={{ margin: '16px 0 8px' }}>
                                 <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
