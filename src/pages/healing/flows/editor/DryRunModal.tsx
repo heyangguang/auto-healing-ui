@@ -146,7 +146,7 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
             onCancel={handleClose}
             width={600}
             footer={null}
-            destroyOnClose
+            destroyOnHidden
             maskClosable={!loading}
         >
             <div style={{ marginBottom: 16 }}>

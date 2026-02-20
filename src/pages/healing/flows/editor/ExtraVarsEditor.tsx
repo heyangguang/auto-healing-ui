@@ -715,7 +715,7 @@ const ExtraVarsEditor = forwardRef<ExtraVarsEditorRef, ExtraVarsEditorProps>(({
                 okText="确定"
                 cancelText="取消"
                 width={600}
-                destroyOnClose
+                destroyOnHidden
             >
                 {optionalVars.length === 0 ? (
                     <Empty description="该任务模板没有可选变量" />

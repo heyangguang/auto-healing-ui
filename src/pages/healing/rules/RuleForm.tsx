@@ -126,7 +126,7 @@ const RuleFormPage: React.FC = () => {
     if (loading) {
         return (
             <div className="rule-form-loading">
-                <Spin size="large" tip="加载中..." />
+                <Spin size="large" tip="加载中..."><div /></Spin>
             </div>
         );
     }

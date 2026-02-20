@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Modal, Input, List, Tree, Typography, Tag, Empty, Spin, Space, Row, Col, Tooltip, Select, Skeleton } from 'antd';
+import { Modal, Input, Tree, Typography, Tag, Empty, Spin, Space, Row, Col, Tooltip, Select, Skeleton } from 'antd';
 import { SearchOutlined, CodeOutlined, FolderOutlined, CheckCircleOutlined, ExclamationCircleOutlined, BookOutlined, LoadingOutlined } from '@ant-design/icons';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
@@ -291,7 +291,7 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
             okText="确定选择"
             okButtonProps={{ disabled: !selectedTaskId || !selectedTask || initLoading }}
             width={1000}
-            destroyOnClose
+            destroyOnHidden
         >
             <Spin spinning={initLoading} tip="加载中...">
                 {/* 搜索和筛选栏 */}
@@ -376,15 +376,14 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
                                 <Empty description="暂无任务模板" style={{ marginTop: 100 }} />
                             ) : (
                                 <>
-                                    <List
-                                        size="small"
-                                        dataSource={displayTasks}
-                                        renderItem={(task) => {
+                                    <div>
+                                        {displayTasks.map((task) => {
                                             const disabled = isDisabled(task);
                                             const isSelected = task.id === selectedTaskId;
 
                                             return (
-                                                <List.Item
+                                                <div
+                                                    key={task.id}
                                                     onClick={() => handleTaskSelect(task)}
                                                     style={{
                                                         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -393,6 +392,7 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
                                                         borderLeft: isSelected ? '3px solid #1890ff' : '3px solid transparent',
                                                         padding: '8px 12px',
                                                         marginBottom: 4,
+                                                        borderBottom: '1px solid #f0f0f0',
                                                         borderRadius: 4
                                                     }}
                                                 >
@@ -421,10 +421,10 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
                                                             )}
                                                         </div>
                                                     </div>
-                                                </List.Item>
+                                                </div>
                                             );
-                                        }}
-                                    />
+                                        })}
+                                    </div>
                                     {tasksLoading && (
                                         <div style={{ textAlign: 'center', padding: 12 }}>
                                             <Space>

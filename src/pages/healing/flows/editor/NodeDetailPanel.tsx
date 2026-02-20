@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Drawer, Alert, Space, Divider, Typography, Button, Input, Tabs, Empty, List, Badge, Tree, Collapse } from 'antd';
+import { Drawer, Alert, Space, Divider, Typography, Button, Input, Tabs, Empty, Badge, Tree, Collapse } from 'antd';
 import { ProForm, ProFormText, ProFormSelect, ProFormDigit, ProFormTextArea, ProFormDependency } from '@ant-design/pro-components';
 import { SelectOutlined, SettingOutlined, FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, ClockCircleOutlined, ExclamationCircleOutlined, ReloadOutlined, StopOutlined, CodeOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { Node, Edge } from 'reactflow';
@@ -726,9 +726,9 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
             placement="right"
             onClose={onClose}
             open={open}
-            width={activeTab === 'logs' ? 720 : 640}
+            size={activeTab === 'logs' ? 720 : 640}
             mask={false}
-            bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column' }}
+            styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' } }}
         >
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 {/* 左侧节点树列表 */}

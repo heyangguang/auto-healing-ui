@@ -133,7 +133,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
             width: 250,
             ellipsis: true,
             render: (text: string, record: AutoHealing.Incident) => (
-                <Space direction="vertical" size={0}>
+                <Space orientation="vertical" size={0}>
                     <Text strong style={{ fontSize: 13 }}>{text}</Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>
                         {record.external_id || record.id.slice(0, 8)}
@@ -223,7 +223,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                     确定选择
                 </Button>
             ]}
-            destroyOnClose
+            destroyOnHidden
         >
             {/* Filters */}
             <div style={{ marginBottom: 16, padding: 16, background: '#fafafa', borderRadius: 8 }}>

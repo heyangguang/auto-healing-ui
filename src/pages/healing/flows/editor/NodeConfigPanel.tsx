@@ -493,12 +493,12 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, open, onClose, 
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>({node?.data?.type || node?.type})</Typography.Text>
                 </Space>
             }
-            width={820}
+            size={820}
             onClose={onClose}
             open={open}
             mask={false}
             style={{ top: 64 }}
-            bodyStyle={{ paddingBottom: 80 }}
+            styles={{ body: { paddingBottom: 80 } }}
             maskClosable={false}
         >
             {node && (

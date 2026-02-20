@@ -229,7 +229,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
                 </Space>
             }
             placement="right"
-            width={800}
+            size={800}
             open={open}
             onClose={onClose}
             extra={
@@ -244,7 +244,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
                     全屏查看
                 </Button>
             }
-            bodyStyle={{ padding: 0 }}
+            styles={{ body: { padding: 0 } }}
         >
             {loading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Modal, Input, List, Typography, Tag, Empty, Spin, Space, Row, Col,
+    Modal, Input, Typography, Tag, Empty, Spin, Space, Row, Col,
     Select, Badge, Tooltip, Pagination,
 } from 'antd';
 import {
@@ -161,7 +161,7 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
             okText="确定选择"
             okButtonProps={{ disabled: !selectedId || !selectedFlow }}
             width={720}
-            destroyOnClose
+            destroyOnHidden
         >
             {/* ===== Search & Filter Bar ===== */}
             <Row gutter={12} style={{ marginBottom: 16 }}>
@@ -203,7 +203,7 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
             <div style={{ height: 380, overflow: 'auto' }}>
                 {loading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                        <Spin size="large" tip="加载流程..." />
+                        <Spin size="large" tip="加载流程..."><div /></Spin>
                     </div>
                 ) : flows.length === 0 ? (
                     <Empty
@@ -211,17 +211,16 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                         style={{ marginTop: 100 }}
                     />
                 ) : (
-                    <List
-                        size="small"
-                        dataSource={flows}
-                        renderItem={flow => {
+                    <div>
+                        {flows.map(flow => {
                             const isSelected = flow.id === selectedId;
                             const { counts: nodeCounts, functional: functionalCount } = countNodes(flow.nodes || []);
                             const nodeTypes = Object.entries(nodeCounts);
                             const totalEdges = (flow.edges || []).length;
 
                             return (
-                                <List.Item
+                                <div
+                                    key={flow.id}
                                     onClick={() => handleSelect(flow)}
                                     style={{
                                         cursor: 'pointer',
@@ -230,6 +229,7 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                                         borderLeft: isSelected ? '3px solid #1890ff' : '3px solid transparent',
                                         padding: '10px 12px',
                                         marginBottom: 4,
+                                        borderBottom: '1px solid #f0f0f0',
                                         transition: 'all 0.15s',
                                     }}
                                 >
@@ -310,10 +310,10 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                                             </Text>
                                         </div>
                                     </div>
-                                </List.Item>
+                                </div>
                             );
-                        }}
-                    />
+                        })}
+                    </div>
                 )}
             </div>
 

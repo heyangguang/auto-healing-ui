@@ -442,10 +442,10 @@ const HealingRulesPage: React.FC = () => {
                         }
                     </Space>
                 }
-                width={600}
+                size={600}
                 open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setSelectedRule(null); }}
-                destroyOnClose
+                destroyOnHidden
                 extra={
                     <Button
                         icon={<EditOutlined />}
@@ -609,7 +609,7 @@ const HealingRulesPage: React.FC = () => {
                 {/* ===== Card Grid ===== */}
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: 80 }}>
-                        <Spin size="large" tip="加载自愈规则..." />
+                        <Spin size="large" tip="加载自愈规则..."><div /></Spin>
                     </div>
                 ) : rules.length === 0 ? (
                     <Empty

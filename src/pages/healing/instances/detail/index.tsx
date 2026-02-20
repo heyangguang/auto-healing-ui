@@ -194,7 +194,7 @@ const ExecutionLogTab: React.FC<{ runId?: string; fallbackLogs: LogEntry[] }> = 
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 160px)' }}>
-                <Spin tip="加载执行日志中..." />
+                <Spin tip="加载执行日志中..."><div /></Spin>
             </div>
         );
     }
@@ -668,11 +668,11 @@ const HealingInstanceDetail: React.FC = () => {
             <Drawer
                 title={null}
                 placement="right"
-                width={600}
+                size={600}
                 onClose={() => setContextDrawerVisible(false)}
                 open={contextDrawerVisible}
-                headerStyle={{ display: 'none' }}
-                bodyStyle={{ padding: 0 }}
+                styles={{ header: { display: 'none' } }}
+                styles={{ body: { padding: 0 } }}
             >
                 {/* 动态颜色头部 - 若隐若现渐变 */}
                 {(() => {
@@ -870,11 +870,11 @@ const HealingInstanceDetail: React.FC = () => {
             <Drawer
                 title={null}
                 placement="right"
-                width={600}
+                size={600}
                 onClose={() => setIncidentDrawerVisible(false)}
                 open={incidentDrawerVisible}
-                headerStyle={{ display: 'none' }}
-                bodyStyle={{ padding: 0 }}
+                styles={{ header: { display: 'none' } }}
+                styles={{ body: { padding: 0 } }}
             >
                 {instance?.incident ? (
                     <div>
@@ -973,11 +973,11 @@ const HealingInstanceDetail: React.FC = () => {
             <Drawer
                 title={null}
                 placement="right"
-                width={600}
+                size={600}
                 onClose={() => setRuleDrawerVisible(false)}
                 open={ruleDrawerVisible}
-                headerStyle={{ display: 'none' }}
-                bodyStyle={{ padding: 0 }}
+                styles={{ header: { display: 'none' } }}
+                styles={{ body: { padding: 0 } }}
             >
                 {instance?.rule ? (
                     <div>
@@ -1126,11 +1126,11 @@ const HealingInstanceDetail: React.FC = () => {
             <Drawer // Professional Node Detail Drawer
                 title={null}
                 placement="right"
-                width={600}
+                size={600}
                 onClose={() => setNodeDetailVisible(false)}
                 open={nodeDetailVisible}
-                headerStyle={{ display: 'none' }}
-                bodyStyle={{ padding: 0 }}
+                styles={{ header: { display: 'none' } }}
+                styles={{ body: { padding: 0 } }}
             >
                 {/* 若隐若现节点头部 */}
                 {(() => {

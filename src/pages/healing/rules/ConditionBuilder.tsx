@@ -61,7 +61,7 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ value = [], 
                             <Card
                                 size="small"
                                 style={{ background: '#f9f9f9', border: '1px dashed #d9d9d9' }}
-                                bodyStyle={{ padding: 8 }}
+                                styles={{ body: { padding: 8 } }}
                             >
                                 <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <GroupOutlined />

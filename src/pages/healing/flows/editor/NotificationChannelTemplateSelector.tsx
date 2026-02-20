@@ -609,8 +609,8 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
                 onCancel={() => setSelectorOpen(false)}
                 footer={null}
                 width={600}
-                destroyOnClose
-                bodyStyle={{ padding: '16px 24px' }}
+                destroyOnHidden
+                styles={{ body: { padding: '16px 24px' } }}
             >
                 {step === 'channel' ? renderChannelContent() : renderTemplateContent()}
             </Modal>

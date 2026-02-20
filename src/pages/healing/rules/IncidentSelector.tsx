@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Modal, Input, List, Typography, Tag, Empty, Spin, Space, Row, Col,
+    Modal, Input, Typography, Tag, Empty, Spin, Space, Row, Col,
     Select, Badge, Tooltip, Pagination,
 } from 'antd';
 import {
@@ -159,7 +159,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
             okText="确定选择"
             okButtonProps={{ disabled: !selectedIncident }}
             width={780}
-            destroyOnClose
+            destroyOnHidden
         >
             {/* ===== Search & Filter Bar ===== */}
             <Row gutter={12} style={{ marginBottom: 16 }}>
@@ -218,7 +218,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
             <div style={{ height: 400, overflow: 'auto' }}>
                 {loading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                        <Spin size="large" tip="加载工单..." />
+                        <Spin size="large" tip="加载工单..."><div /></Spin>
                     </div>
                 ) : incidents.length === 0 ? (
                     <Empty
@@ -226,17 +226,16 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                         style={{ marginTop: 100 }}
                     />
                 ) : (
-                    <List
-                        size="small"
-                        dataSource={incidents}
-                        renderItem={incident => {
+                    <div>
+                        {incidents.map(incident => {
                             const isSelected = incident.id === selectedId;
                             const sevMeta = SEVERITY_META[incident.severity] || { label: incident.severity, color: '#8c8c8c' };
                             const statusMeta = STATUS_META[incident.status] || { label: incident.status, color: 'default' };
                             const healMeta = HEALING_STATUS_META[incident.healing_status] || null;
 
                             return (
-                                <List.Item
+                                <div
+                                    key={incident.id}
                                     onClick={() => handleSelect(incident)}
                                     style={{
                                         cursor: 'pointer',
@@ -244,6 +243,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                                         borderLeft: isSelected ? '3px solid #1890ff' : '3px solid transparent',
                                         padding: '8px 12px',
                                         marginBottom: 4,
+                                        borderBottom: '1px solid #f0f0f0',
                                         transition: 'all 0.15s',
                                     }}
                                 >
@@ -322,10 +322,10 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                                             </Text>
                                         </div>
                                     </div>
-                                </List.Item>
+                                </div>
                             );
-                        }}
-                    />
+                        })}
+                    </div>
                 )}
             </div>
 

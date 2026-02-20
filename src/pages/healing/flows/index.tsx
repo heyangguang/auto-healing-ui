@@ -439,10 +439,10 @@ const HealingFlowsPage: React.FC = () => {
                         }
                     </Space>
                 }
-                width={600}
+                size={600}
                 open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setSelectedFlow(null); }}
-                destroyOnClose
+                destroyOnHidden
                 extra={
                     <Button
                         icon={<EditOutlined />}
@@ -833,7 +833,7 @@ const HealingFlowsPage: React.FC = () => {
                 {/* ===== Card Grid ===== */}
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: 80 }}>
-                        <Spin size="large" tip="加载自愈流程..." />
+                        <Spin size="large" tip="加载自愈流程..."><div /></Spin>
                     </div>
                 ) : flows.length === 0 ? (
                     <Empty
