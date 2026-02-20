@@ -109,12 +109,12 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
     return (
         <Drawer
             title={Title}
-            width={1000}
+            size={1000}
             open={open}
             onClose={onClose}
-            bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column' }}
-            headerStyle={{ padding: '16px 24px' }}
-            destroyOnClose
+            styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' } }}
+            styles={{ header: { padding: '16px 24px' } }}
+            destroyOnHidden
             extra={
                 <Space>
                     <Button icon={<ReloadOutlined />} size="small" onClick={loadData}>刷新</Button>

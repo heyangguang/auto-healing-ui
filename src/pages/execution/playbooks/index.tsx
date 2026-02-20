@@ -547,7 +547,7 @@ const PlaybookList: React.FC = () => {
             <div ref={parentRef} style={{ flex: 1, overflowY: 'auto' }}>
                 {!initialized ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                        <Spin tip="加载中..." />
+                        <Spin tip="加载中..."><div /></Spin>
                     </div>
                 ) : flattenedList.length === 0 ? (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 Playbook" style={{ marginTop: 40 }} />
@@ -1614,20 +1614,20 @@ const PlaybookList: React.FC = () => {
                                                 <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
                                                     <Row gutter={24}>
                                                         <Col span={6}>
-                                                            <Statistic title="总扫描次数" value={scanLogs.length} valueStyle={{ fontSize: 20 }} />
+                                                            <Statistic title="总扫描次数" value={scanLogs.length} styles={{ content: { fontSize: 20 } }} />
                                                         </Col>
                                                         <Col span={6}>
                                                             <Statistic
                                                                 title="最近扫描"
                                                                 value={scanLogs[0] ? new Date(scanLogs[0].created_at).toLocaleDateString() : '-'}
-                                                                valueStyle={{ fontSize: 14 }}
+                                                                styles={{ content: { fontSize: 14 } }}
                                                             />
                                                         </Col>
                                                         <Col span={6}>
                                                             <Statistic
                                                                 title="新增变量"
                                                                 value={scanLogs.reduce((sum, log) => sum + (log.new_count || 0), 0)}
-                                                                valueStyle={{ fontSize: 20, color: '#52c41a' }}
+                                                                styles={{ content: { fontSize: 20, color: '#52c41a' } }}
                                                                 prefix="+"
                                                             />
                                                         </Col>
@@ -1635,7 +1635,7 @@ const PlaybookList: React.FC = () => {
                                                             <Statistic
                                                                 title="移除变量"
                                                                 value={scanLogs.reduce((sum, log) => sum + (log.removed_count || 0), 0)}
-                                                                valueStyle={{ fontSize: 20, color: '#ff4d4f' }}
+                                                                styles={{ content: { fontSize: 20, color: '#ff4d4f' } }}
                                                                 prefix="-"
                                                             />
                                                         </Col>
@@ -1763,7 +1763,7 @@ const PlaybookList: React.FC = () => {
                     {(activeTab === 'variables' || activeTab === 'files') ? (
                         // 收缩模式：垂直工具条
                         <Card
-                            bodyStyle={{ padding: '12px 8px' }}
+                            styles={{ body: { padding: '12px 8px' } }}
                             style={{ height: '100%', textAlign: 'center', overflow: 'hidden' }}
                         >
                             <Tooltip title={selectedPlaybook?.name} placement="right">
@@ -1805,14 +1805,14 @@ const PlaybookList: React.FC = () => {
                         </Card>
                     ) : (
                         // 正常模式：完整列表
-                        <Card bodyStyle={{ padding: 0 }} style={{ height: '100%' }}>
+                        <Card styles={{ body: { padding: 0 } }} style={{ height: '100%' }}>
                             {renderLeftPanel()}
                         </Card>
                     )}
                 </div>
                 {/* 右侧面板 - 带过渡动画 */}
                 <div style={{ flex: 1, minWidth: 0, transition: 'opacity 0.15s ease-out' }}>
-                    <Card bodyStyle={{ padding: 0, height: '100%', overflow: 'hidden' }} style={{ height: '100%', overflow: 'hidden' }}>
+                    <Card styles={{ body: { padding: 0, height: '100%', overflow: 'hidden' } }} style={{ height: '100%', overflow: 'hidden' }}>
                         {renderRightPanel()}
                     </Card>
                 </div>
@@ -1852,7 +1852,7 @@ const PlaybookList: React.FC = () => {
                 title={<><EditOutlined style={{ marginRight: 8 }} />编辑 Playbook</>}
                 open={editModalOpen}
                 onOpenChange={setEditModalOpen}
-                modalProps={{ destroyOnClose: true, width: 520 }}
+                modalProps={{ destroyOnHidden: true, width: 520 }}
                 initialValues={selectedPlaybook}
                 layout="vertical"
                 onFinish={async (values) => {

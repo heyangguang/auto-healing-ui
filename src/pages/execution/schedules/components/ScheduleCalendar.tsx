@@ -129,7 +129,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, template
                         <Tooltip
                             key={idx}
                             title={density ? (
-                                <Space direction="vertical" size={2}>
+                                <Space orientation="vertical" size={2}>
                                     <Text style={{ color: '#fff', fontWeight: 600 }}>{day.format('M月D日')}</Text>
                                     <Text style={{ color: 'rgba(255,255,255,.85)' }}>
                                         {density.count} 个调度 · {density.names.length} 个任务

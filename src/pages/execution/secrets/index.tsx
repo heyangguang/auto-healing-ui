@@ -514,11 +514,11 @@ const SecretsSourceList: React.FC = () => {
             {/* ====== 详情 Drawer ====== */}
             <Drawer
                 title={null}
-                width={560}
+                size={560}
                 open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setCurrentSource(null); }}
                 styles={{ header: { display: 'none' }, body: { padding: 0 } }}
-                destroyOnClose
+                destroyOnHidden
             >
                 {currentSource && (() => {
                     const typeConfig = getSourceTypeConfig(currentSource.type);
@@ -741,8 +741,8 @@ const SecretsSourceList: React.FC = () => {
                     <>
                         <Row gutter={12} style={{ marginBottom: 12 }}>
                             <Col span={8}><Card size="small"><Statistic title="总数" value={testResults.success_count + testResults.fail_count} /></Card></Col>
-                            <Col span={8}><Card size="small"><Statistic title="成功" value={testResults.success_count} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-                            <Col span={8}><Card size="small"><Statistic title="失败" value={testResults.fail_count} valueStyle={{ color: '#ff4d4f' }} /></Card></Col>
+                            <Col span={8}><Card size="small"><Statistic title="成功" value={testResults.success_count} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
+                            <Col span={8}><Card size="small"><Statistic title="失败" value={testResults.fail_count} styles={{ content: { color: '#ff4d4f' } }} /></Card></Col>
                         </Row>
                         <div style={{ maxHeight: 350, overflow: 'auto' }}>
                             {testResults.results.map((r, i) => (

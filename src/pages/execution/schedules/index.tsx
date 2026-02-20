@@ -234,7 +234,7 @@ const ExecutionSchedulePage: React.FC = () => {
             fixedColumn: true,
             sorter: true,
             render: (name: string, record: AutoHealing.ExecutionSchedule) => (
-                <Space direction="vertical" size={0}>
+                <Space orientation="vertical" size={0}>
                     <Text strong style={{ fontSize: 13 }}>{name || '未命名'}</Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>
                         {templateMap[record.task_id]?.name || record.task_id?.slice(0, 8)}
@@ -303,7 +303,7 @@ const ExecutionSchedulePage: React.FC = () => {
             fixed: 'right',
             fixedColumn: true,
             render: (_: any, record: AutoHealing.ExecutionSchedule) => (
-                <Space split={<Divider type="vertical" />}>
+                <Space separator={<Divider orientation="vertical" />}>
                     <a onClick={() => { setSelectedSchedule(record); setDrawerVisible(true); }}>
                         <Tooltip title="查看详情"><EyeOutlined style={{ fontSize: 16 }} /></Tooltip>
                     </a>
@@ -491,7 +491,7 @@ const ExecutionSchedulePage: React.FC = () => {
                 title="调度详情"
                 open={drawerVisible}
                 onClose={() => { setDrawerVisible(false); setSelectedSchedule(null); }}
-                width={600}
+                size={600}
                 extra={
                     <Button
                         icon={<EditOutlined />}

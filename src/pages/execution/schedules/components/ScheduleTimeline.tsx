@@ -166,7 +166,7 @@ const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({ schedules, template
                                     <Tooltip
                                         key={pi}
                                         title={
-                                            <Space direction="vertical" size={2}>
+                                            <Space orientation="vertical" size={2}>
                                                 <Text style={{ color: '#fff', fontWeight: 600 }}>{row.name}</Text>
                                                 <Text style={{ color: 'rgba(255,255,255,.85)' }}>
                                                     {p.type === 'next' ? '预计执行' : p.type === 'past' ? '已执行' : '已禁用'}

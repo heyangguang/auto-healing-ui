@@ -457,9 +457,9 @@ const GitRepoList: React.FC = () => {
         const auth = authLabels[currentRow.auth_type] || authLabels.none;
 
         return (
-            <Drawer title={null} width={680} open={drawerOpen}
+            <Drawer title={null} size={680} open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setActiveTab('info'); }}
-                styles={{ header: { display: 'none' }, body: { padding: 0 } }} destroyOnClose>
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }} destroyOnHidden>
 
                 {/* Header */}
                 <div className="git-detail-header">

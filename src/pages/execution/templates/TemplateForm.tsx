@@ -435,7 +435,7 @@ const TemplateFormPage: React.FC = () => {
                                 </div>
                             ) : loadingPlaybook ? (
                                 <div className="template-form-var-empty">
-                                    <Spin tip="正在解析变量..." />
+                                    <Spin tip="正在解析变量..."><div /></Spin>
                                 </div>
                             ) : filteredVariables.length === 0 ? (
                                 <div className="template-form-var-empty">

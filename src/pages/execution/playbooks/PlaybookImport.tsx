@@ -188,7 +188,7 @@ const PlaybookImport: React.FC = () => {
 
                     {loadingRepos ? (
                         <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                            <Spin tip="加载仓库列表..." />
+                            <Spin tip="加载仓库列表..."><div /></Spin>
                         </div>
                     ) : repos.length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 Git 仓库">
@@ -265,7 +265,7 @@ const PlaybookImport: React.FC = () => {
 
                             {loadingFiles ? (
                                 <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                                    <Spin tip="加载仓库文件..." />
+                                    <Spin tip="加载仓库文件..."><div /></Spin>
                                 </div>
                             ) : (
                                 <>

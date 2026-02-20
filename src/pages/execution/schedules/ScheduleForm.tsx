@@ -238,7 +238,7 @@ const ScheduleForm: React.FC = () => {
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-                <Spin size="large" tip="加载中..." />
+                <Spin size="large" tip="加载中..."><div /></Spin>
             </div>
         );
     }
@@ -560,7 +560,7 @@ const ScheduleForm: React.FC = () => {
                         </h4>
                         {loadingPlaybook ? (
                             <div className="template-form-var-empty">
-                                <Spin tip="加载变量..." />
+                                <Spin tip="加载变量..."><div /></Spin>
                             </div>
                         ) : (templatePlaybook?.variables || []).length === 0 ? (
                             <div className="template-form-var-empty">

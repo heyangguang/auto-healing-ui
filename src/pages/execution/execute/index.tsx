@@ -511,7 +511,7 @@ const ExecuteTaskPage: React.FC = () => {
             {/* ===== Card Grid ===== */}
             {loading || !initialized ? (
                 <div style={{ textAlign: 'center', padding: 80 }}>
-                    <Spin size="large" tip="加载任务模板..." />
+                    <Spin size="large" tip="加载任务模板..."><div /></Spin>
                 </div>
             ) : filteredTemplates.length === 0 ? (
                 <Empty
@@ -724,7 +724,7 @@ const ExecuteTaskPage: React.FC = () => {
                                     <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
                                         <Text strong style={{ fontSize: 16 }}>{selectedTemplate.name}</Text>
                                         <Text type="secondary" style={{ display: 'block', margin: '4px 0 8px', fontSize: 12 }}>{selectedTemplate.description || '无描述'}</Text>
-                                        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                                        <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Space size={4} className="text-secondary"><PlayCircleOutlined /> 关联剧本</Space>
                                                 <Text ellipsis style={{ maxWidth: 120 }}>{templatePlaybook?.name || '-'}</Text>
@@ -901,7 +901,7 @@ const ExecuteTaskPage: React.FC = () => {
 
                                 {/* Variables Section */}
                                 {loadingPlaybook ? (
-                                    <div style={{ textAlign: 'center', padding: 40 }}><Spin tip="Loading Blueprint Variables..." /></div>
+                                    <div style={{ textAlign: 'center', padding: 40 }}><Spin tip="Loading Blueprint Variables..."><div /></Spin></div>
                                 ) : variables.length === 0 ? (
                                     <Alert message="此任务无需额外变量配置，可直接执行。" type="success" showIcon banner />
                                 ) : (

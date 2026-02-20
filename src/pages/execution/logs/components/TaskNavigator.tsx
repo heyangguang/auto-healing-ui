@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { List, Card, Typography, Space, Badge, Tag, Tooltip } from 'antd';
+import { Card, Typography, Space, Badge, Tag, Tooltip } from 'antd';
 import {
     AuditOutlined, RocketOutlined, FileTextOutlined,
     DesktopOutlined, CloudServerOutlined,
@@ -181,94 +181,92 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
                     </Space>
                 </Card>
 
-                <List
-                    dataSource={tasks}
-                    renderItem={(item) => {
-                        const isSelected = selectedTaskId === item.id;
-                        const exec = executorConfig[item.executor_type] || executorConfig.local;
-                        const hosts = parseHosts(item.target_hosts);
-                        const playbookName = item.playbook?.name || '-';
-                        const filePath = item.playbook?.file_path;
+                {tasks.map((item) => {
+                    const isSelected = selectedTaskId === item.id;
+                    const exec = executorConfig[item.executor_type] || executorConfig.local;
+                    const hosts = parseHosts(item.target_hosts);
+                    const playbookName = item.playbook?.name || '-';
+                    const filePath = item.playbook?.file_path;
 
-                        return (
-                            <Card
-                                hoverable
-                                size="small"
-                                className={`task-nav-card${isSelected ? ' task-nav-card-selected' : ''}`}
-                                style={{
-                                    borderRadius: 0,
-                                    marginBottom: 6,
-                                    background: isSelected ? '#e6f7ff' : undefined,
-                                    borderColor: isSelected ? '#1890ff' : '#f0f0f0',
-                                }}
-                                onClick={() => onSelectTask(item.id)}
-                            >
-                                {/* Row 1: Task Name + Executor Tag */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
-                                        <RocketOutlined style={{ color: '#1677ff', fontSize: 13, flexShrink: 0 }} />
-                                        <Text strong ellipsis className="task-nav-name" style={{ fontSize: 13 }}>
-                                            {item.name}
-                                        </Text>
-                                    </div>
-                                    <Tag
-                                        color={exec.color}
-                                        style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', flexShrink: 0 }}
-                                    >
-                                        {exec.label}
-                                    </Tag>
-                                </div>
-
-                                {/* Row 2: Playbook ID */}
-                                <div style={{ paddingLeft: 19, marginBottom: 2 }}>
-                                    <Text type="secondary" copyable={{ text: item.playbook_id, tooltips: ['复制 Playbook ID', '已复制'] }} style={{ fontSize: 11, fontFamily: 'SFMono-Regular, Consolas, monospace' }}>
-                                        <span style={{ color: '#8c8c8c', fontFamily: 'inherit', marginRight: 4 }}>Playbook</span>{item.playbook_id.slice(0, 12)}...
+                    return (
+                        <Card
+                            key={item.id}
+                            hoverable
+                            size="small"
+                            className={`task-nav-card${isSelected ? ' task-nav-card-selected' : ''}`}
+                            style={{
+                                borderRadius: 0,
+                                marginBottom: 6,
+                                background: isSelected ? '#e6f7ff' : undefined,
+                                borderColor: isSelected ? '#1890ff' : '#f0f0f0',
+                            }}
+                            onClick={() => onSelectTask(item.id)}
+                        >
+                            {/* Row 1: Task Name + Executor Tag */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
+                                    <RocketOutlined style={{ color: '#1677ff', fontSize: 13, flexShrink: 0 }} />
+                                    <Text strong ellipsis className="task-nav-name" style={{ fontSize: 13 }}>
+                                        {item.name}
                                     </Text>
                                 </div>
+                                <Tag
+                                    color={exec.color}
+                                    style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', flexShrink: 0 }}
+                                >
+                                    {exec.label}
+                                </Tag>
+                            </div>
 
-                                {/* Row 3: Playbook Name + File Path */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, paddingLeft: 19 }}>
-                                    <FileTextOutlined style={{ fontSize: 11, color: '#8c8c8c', flexShrink: 0 }} />
-                                    <Text type="secondary" ellipsis style={{ fontSize: 11 }}>
-                                        {playbookName}
+                            {/* Row 2: Playbook ID */}
+                            <div style={{ paddingLeft: 19, marginBottom: 2 }}>
+                                <Text type="secondary" copyable={{ text: item.playbook_id, tooltips: ['复制 Playbook ID', '已复制'] }} style={{ fontSize: 11, fontFamily: 'SFMono-Regular, Consolas, monospace' }}>
+                                    <span style={{ color: '#8c8c8c', fontFamily: 'inherit', marginRight: 4 }}>Playbook</span>{item.playbook_id.slice(0, 12)}...
+                                </Text>
+                            </div>
+
+                            {/* Row 3: Playbook Name + File Path */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, paddingLeft: 19 }}>
+                                <FileTextOutlined style={{ fontSize: 11, color: '#8c8c8c', flexShrink: 0 }} />
+                                <Text type="secondary" ellipsis style={{ fontSize: 11 }}>
+                                    {playbookName}
+                                </Text>
+                                {filePath && (
+                                    <Text type="secondary" style={{ fontSize: 10, fontFamily: 'SFMono-Regular, Consolas, monospace', flexShrink: 0 }}>
+                                        ({filePath})
                                     </Text>
-                                    {filePath && (
-                                        <Text type="secondary" style={{ fontSize: 10, fontFamily: 'SFMono-Regular, Consolas, monospace', flexShrink: 0 }}>
-                                            ({filePath})
-                                        </Text>
-                                    )}
-                                </div>
+                                )}
+                            </div>
 
-                                {/* Row 3: Target Hosts */}
-                                <div style={{ paddingLeft: 19 }}>
-                                    {hosts.length > 0 ? (
-                                        <Tooltip title={hosts.join(', ')}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                <DesktopOutlined style={{ fontSize: 10, color: '#8c8c8c' }} />
-                                                <Text type="secondary" style={{ fontSize: 11, fontFamily: 'SFMono-Regular, Consolas, monospace' }}>
-                                                    {hosts.length <= 2
-                                                        ? hosts.join(', ')
-                                                        : `${hosts[0]}, ${hosts[1]} +${hosts.length - 2}`
-                                                    }
-                                                </Text>
-                                                {hosts.length > 2 && (
-                                                    <span style={{
-                                                        fontSize: 10, color: '#1677ff', background: '#e6f4ff',
-                                                        padding: '0 4px', lineHeight: '16px',
-                                                    }}>
-                                                        {hosts.length} 台
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </Tooltip>
-                                    ) : (
-                                        <Text type="secondary" style={{ fontSize: 11, color: '#d9d9d9' }}>未配置主机</Text>
-                                    )}
-                                </div>
-                            </Card>
-                        );
-                    }}
-                />
+                            {/* Row 3: Target Hosts */}
+                            <div style={{ paddingLeft: 19 }}>
+                                {hosts.length > 0 ? (
+                                    <Tooltip title={hosts.join(', ')}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                            <DesktopOutlined style={{ fontSize: 10, color: '#8c8c8c' }} />
+                                            <Text type="secondary" style={{ fontSize: 11, fontFamily: 'SFMono-Regular, Consolas, monospace' }}>
+                                                {hosts.length <= 2
+                                                    ? hosts.join(', ')
+                                                    : `${hosts[0]}, ${hosts[1]} +${hosts.length - 2}`
+                                                }
+                                            </Text>
+                                            {hosts.length > 2 && (
+                                                <span style={{
+                                                    fontSize: 10, color: '#1677ff', background: '#e6f4ff',
+                                                    padding: '0 4px', lineHeight: '16px',
+                                                }}>
+                                                    {hosts.length} 台
+                                                </span>
+                                            )}
+                                        </div>
+                                    </Tooltip>
+                                ) : (
+                                    <Text type="secondary" style={{ fontSize: 11, color: '#d9d9d9' }}>未配置主机</Text>
+                                )}
+                            </div>
+                        </Card>
+                    );
+                })}
                 {loading && (
                     <div style={{ textAlign: 'center', padding: 8, color: '#999' }}>
                         <Space><div className="ant-spin-dot ant-spin-dot-spin"><i className="ant-spin-dot-item"></i><i className="ant-spin-dot-item"></i><i className="ant-spin-dot-item"></i><i className="ant-spin-dot-item"></i></div> 加载中...</Space>

@@ -129,7 +129,7 @@ const TemplateDetailDrawer: React.FC<{
     return (
         <Drawer
             title="任务模板详情"
-            width={700}
+            size={700}
             open={open}
             onClose={() => { onClose(); setHostSearch(''); }}
         >
@@ -541,7 +541,7 @@ const ExecutionTemplateList: React.FC = () => {
                                 )}
                                 {scheduleCount > 0 && (
                                     <Tooltip title={`关联 ${scheduleCount} 个调度任务`}>
-                                        <Tag color="purple" bordered={false} style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 6px', cursor: 'default' }}>
+                                        <Tag color="purple" variant="filled" style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 6px', cursor: 'default' }}>
                                             <ClockCircleOutlined style={{ marginRight: 3 }} />{scheduleCount}
                                         </Tag>
                                     </Tooltip>
@@ -574,7 +574,7 @@ const ExecutionTemplateList: React.FC = () => {
                 const hasSecrets = (record.secrets_source_ids?.length ?? 0) > 0;
 
                 return (
-                    <Space direction="vertical" size={0}>
+                    <Space orientation="vertical" size={0}>
                         <Tag
                             icon={isDocker ? <ContainerOutlined /> : <CodeOutlined />}
                             color={isDocker ? 'blue' : 'purple'}
@@ -585,21 +585,21 @@ const ExecutionTemplateList: React.FC = () => {
                         <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {hosts.length > 0 && (
                                 <Tooltip title={hosts.join(', ')}>
-                                    <Tag bordered={false} style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#52c41a', background: '#f6ffed', cursor: 'default' }}>
+                                    <Tag variant="filled" style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#52c41a', background: '#f6ffed', cursor: 'default' }}>
                                         <DesktopOutlined /> {hosts.length}
                                     </Tag>
                                 </Tooltip>
                             )}
                             {hasSecrets && (
                                 <Tooltip title="已配置凭据">
-                                    <Tag bordered={false} style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#fa8c16', background: '#fff7e6', cursor: 'default' }}>
+                                    <Tag variant="filled" style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#fa8c16', background: '#fff7e6', cursor: 'default' }}>
                                         <KeyOutlined />
                                     </Tag>
                                 </Tooltip>
                             )}
                             {hasNotify && (
                                 <Tooltip title="已配置通知">
-                                    <Tag bordered={false} style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#1890ff', background: '#e6f7ff', cursor: 'default' }}>
+                                    <Tag variant="filled" style={{ fontSize: 11, margin: 0, padding: '0 4px', color: '#1890ff', background: '#e6f7ff', cursor: 'default' }}>
                                         <BellOutlined />
                                     </Tag>
                                 </Tooltip>

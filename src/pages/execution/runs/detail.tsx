@@ -304,15 +304,15 @@ const ExecutionRunDetail: React.FC = () => {
                         <SectionTitle icon={<DashboardOutlined />} title="执行统计 / STATS" />
                         <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
                             <Statistic title="成功率" value={successRate} suffix="%"
-                                valueStyle={{ fontSize: 22, color: successRate === 100 ? '#3f8600' : successRate < 60 ? '#cf1322' : '#faad14' }} />
-                            <Statistic title="总任务" value={totalTasks} valueStyle={{ fontSize: 22 }} />
+                                styles={{ content: { fontSize: 22, color: successRate === 100 ? '#3f8600' : successRate < 60 ? '#cf1322' : '#faad14' } }} />
+                            <Statistic title="总任务" value={totalTasks} styles={{ content: { fontSize: 22 } }} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px 0', borderTop: '1px dashed #e0e0e0', paddingTop: 8 }}>
-                            <Statistic title="成功" value={stats.ok} valueStyle={{ color: '#52c41a', fontSize: 14 }} />
-                            <Statistic title="变更" value={stats.changed} valueStyle={{ color: '#faad14', fontSize: 14 }} />
-                            <Statistic title="失败" value={stats.failed} valueStyle={{ color: '#ff4d4f', fontSize: 14 }} />
-                            <Statistic title="跳过" value={stats.skipped} valueStyle={{ color: '#1890ff', fontSize: 14 }} />
-                            <Statistic title="不可达" value={stats.unreachable} valueStyle={{ color: '#cf1322', fontSize: 14 }} />
+                            <Statistic title="成功" value={stats.ok} styles={{ content: { color: '#52c41a', fontSize: 14 } }} />
+                            <Statistic title="变更" value={stats.changed} styles={{ content: { color: '#faad14', fontSize: 14 } }} />
+                            <Statistic title="失败" value={stats.failed} styles={{ content: { color: '#ff4d4f', fontSize: 14 } }} />
+                            <Statistic title="跳过" value={stats.skipped} styles={{ content: { color: '#1890ff', fontSize: 14 } }} />
+                            <Statistic title="不可达" value={stats.unreachable} styles={{ content: { color: '#cf1322', fontSize: 14 } }} />
                         </div>
                     </div>
                 </div>
@@ -345,7 +345,7 @@ const ExecutionRunDetail: React.FC = () => {
                             theme="dark"
                             emptyText={
                                 <div style={{ padding: 40, textAlign: 'center' }}>
-                                    <Space direction="vertical">
+                                    <Space orientation="vertical">
                                         <ClockCircleOutlined style={{ fontSize: 24, color: '#d9d9d9' }} />
                                         <Text type="secondary">暂无日志输出</Text>
                                     </Space>
@@ -360,7 +360,7 @@ const ExecutionRunDetail: React.FC = () => {
             <Drawer
                 open={drawerType !== null}
                 onClose={() => setDrawerType(null)}
-                width={520}
+                size={520}
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {drawerType === 'task' ? <SettingOutlined /> : <FileTextOutlined />}
