@@ -63,6 +63,26 @@ export default function access(
     hasPermission,
     hasAnyPermission,
 
+    // 🆕 平台管理员 (多租户专用)
+    isPlatformAdmin: currentUser?.is_platform_admin === true,
+
+    // ===============================
+    // 平台管理 (platform:*)
+    // ===============================
+    canViewPlatformTenants: hasAnyPermission('platform:tenants:manage', 'platform:tenants:list'),
+    canManagePlatformTenants: hasPermission('platform:tenants:manage'),
+    canViewPlatformUsers: hasPermission('platform:users:list'),
+    canCreatePlatformUser: hasPermission('platform:users:create'),
+    canUpdatePlatformUser: hasPermission('platform:users:update'),
+    canDeletePlatformUser: hasPermission('platform:users:delete'),
+    canResetPlatformPassword: hasPermission('platform:users:reset_password'),
+    canViewPlatformRoles: hasPermission('platform:roles:list'),
+    canManagePlatformRoles: hasPermission('platform:roles:manage'),
+    canViewPlatformAudit: hasPermission('platform:audit:list'),
+    canExportPlatformAudit: hasPermission('platform:audit:export'),
+    canSendPlatformMessage: hasPermission('platform:messages:send'),
+    canManagePlatformSettings: hasPermission('platform:settings:manage'),
+
     // ===============================
     // 路由级 (页面可见性)
     // ===============================

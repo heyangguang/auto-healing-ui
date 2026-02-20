@@ -83,6 +83,17 @@ const doRefreshToken = async (): Promise<string | null> => {
     if (data.access_token) {
       TokenManager.setTokens(data.access_token, data.refresh_token);
       console.log('[Auth] Token 已自动刷新');
+
+      // 🆕 更新租户信息
+      if (data.tenants && data.current_tenant_id) {
+        const tenantStorage = {
+          currentTenantId: data.current_tenant_id,
+          tenants: data.tenants,
+        };
+        localStorage.setItem('tenant-storage', JSON.stringify(tenantStorage));
+        console.log('[Auth] 租户信息已更新');
+      }
+
       return data.access_token;
     }
     return null;
@@ -189,6 +200,20 @@ export const errorConfig: RequestConfig = {
         const status = error.response.status;
         const data = error.response.data;
 
+        // 🆕 处理租户权限错误 (40300)
+        if (data?.code === 40300) {
+          const errorMsg = data?.message || '无权访问该租户';
+          message.error(errorMsg);
+
+          // 如果用户未分配任何租户,跳转到提示页
+          if (errorMsg.includes('未分配任何租户')) {
+            // 清除租户信息
+            localStorage.removeItem('tenant-storage');
+            history.push('/no-tenant');
+          }
+          return;
+        }
+
         // 401 未授权 - 尝试刷新 token 并重试
         if (status === 401) {
           const url = error.config?.url || '';
@@ -227,7 +252,7 @@ export const errorConfig: RequestConfig = {
     },
   },
 
-  // 请求拦截器 - 注入 JWT Token，并主动检查刷新
+  // 请求拦截器 - 注入 JWT Token、X-Tenant-ID,并主动检查刷新
   requestInterceptors: [
     async (config: RequestOptions) => {
       // 跳过认证相关接口
@@ -242,6 +267,25 @@ export const errorConfig: RequestConfig = {
 
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // 🆕 注入 X-Tenant-ID (排除平台级 API 和认证 API)
+      const isPlatformAPI = url.startsWith('/api/v1/platform/') ||
+        url.startsWith('/auth/');
+
+      if (!isPlatformAPI) {
+        // 从 localStorage 读取当前租户 ID
+        const tenantStorage = localStorage.getItem('tenant-storage');
+        if (tenantStorage) {
+          try {
+            const { currentTenantId } = JSON.parse(tenantStorage);
+            if (currentTenantId) {
+              headers['X-Tenant-ID'] = currentTenantId;
+            }
+          } catch (error) {
+            console.error('[Request] 解析租户信息失败:', error);
+          }
+        }
       }
 
       return { ...config, headers };

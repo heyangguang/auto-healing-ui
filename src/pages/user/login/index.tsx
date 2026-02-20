@@ -145,26 +145,41 @@ const Login: React.FC = () => {
         password: values.password,
       });
 
+      // 保存 Token
       TokenManager.setTokens(response.access_token, response.refresh_token);
 
-      message.success(
-        intl.formatMessage({
-          id: 'pages.login.success',
-          defaultMessage: '登录成功！',
-        })
-      );
+      // 🆕 保存租户信息
+      if (response.tenants && response.tenants.length > 0) {
+        const tenantStorage = {
+          currentTenantId: response.current_tenant_id,
+          tenants: response.tenants,
+        };
+        localStorage.setItem('tenant-storage', JSON.stringify(tenantStorage));
+        console.log('[Login] 租户信息已保存:', tenantStorage);
 
-      await fetchUserInfo();
+        message.success(
+          intl.formatMessage({
+            id: 'pages.login.success',
+            defaultMessage: '登录成功！',
+          })
+        );
 
-      const urlParams = new URL(window.location.href).searchParams;
-      const redirect = urlParams.get('redirect') || '/';
-      history.push(redirect);
+        await fetchUserInfo();
+
+        const urlParams = new URL(window.location.href).searchParams;
+        const redirect = urlParams.get('redirect') || '/';
+        history.push(redirect);
+      } else {
+        // 🆕 无租户: 跳转提示页
+        message.warning('您暂无租户权限,请联系管理员分配');
+        history.push('/no-tenant');
+      }
     } catch (error: any) {
       const errorMessage = error?.response?.data?.error?.message
         || error?.message
         || intl.formatMessage({
           id: 'pages.login.failure',
-          defaultMessage: '登录失败，请重试！',
+          defaultMessage: '登录失败,请重试！',
         });
       setLoginError(errorMessage);
     } finally {
