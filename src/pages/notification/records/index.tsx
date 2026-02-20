@@ -427,7 +427,7 @@ const NotificationRecords: React.FC = () => {
                         )}
                     </Space>
                 }
-                width={700}
+                size={700}
                 open={detailOpen}
                 onClose={() => setDetailOpen(false)}
                 extra={
@@ -611,7 +611,7 @@ const NotificationRecords: React.FC = () => {
                         )}
                     </Space>
                 }
-                width={600}
+                size={600}
                 open={execDetailOpen}
                 onClose={() => { setExecDetailOpen(false); setExecDetail(null); }}
                 loading={execLoading}

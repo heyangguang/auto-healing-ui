@@ -574,7 +574,7 @@ const PendingCenter: React.FC = () => {
                 title={activeTab === 'triggers' ? '工单详情' : '审批任务详情'}
                 open={drawerOpen}
                 onClose={closeDrawer}
-                width={600}
+                size={600}
                 extra={activeTab === 'triggers' && detail ? (
                     <Button
                         type="primary"

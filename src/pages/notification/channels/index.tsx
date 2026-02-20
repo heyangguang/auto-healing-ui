@@ -152,7 +152,7 @@ const NotificationChannelsPage: React.FC = () => {
                         {detailChannel.is_default && <Tag color="gold">默认</Tag>}
                     </Space>
                 }
-                width={600}
+                size={600}
                 open={detailDrawerOpen}
                 onClose={() => setDetailDrawerOpen(false)}
                 extra={
@@ -377,7 +377,7 @@ const NotificationChannelsPage: React.FC = () => {
                                                     <span>{channel.retry_config?.max_retries ?? 3} 次</span>
                                                 </div>
                                             </Tooltip>
-                                            <Divider type="vertical" style={{ margin: 0, height: 10 }} />
+                                            <Divider orientation="vertical" style={{ margin: 0, height: 10 }} />
                                             <Tooltip title="速率限制">
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                     <ThunderboltOutlined />

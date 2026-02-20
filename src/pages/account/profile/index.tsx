@@ -224,7 +224,7 @@ const ProfilePage: React.FC = () => {
                                 </h2>
                                 <div className="profile-hero-meta">
                                     <span>@{profile.username}</span>
-                                    <Divider type="vertical" style={{ margin: '0 4px' }} />
+                                    <Divider orientation="vertical" style={{ margin: '0 4px' }} />
                                     {profile.roles.map(r => (
                                         <Tag key={r.id} color={r.is_system ? 'blue' : 'default'}
                                             icon={r.is_system ? <CrownOutlined /> : undefined}
@@ -232,7 +232,7 @@ const ProfilePage: React.FC = () => {
                                             {r.display_name || r.name}
                                         </Tag>
                                     ))}
-                                    <Divider type="vertical" style={{ margin: '0 4px' }} />
+                                    <Divider orientation="vertical" style={{ margin: '0 4px' }} />
                                     <span>已加入 {accountAge} 天</span>
                                 </div>
                             </div>
@@ -423,7 +423,7 @@ const ProfilePage: React.FC = () => {
             </div >
 
             {/* ── 修改密码弹窗 ── */}
-            < Modal title="修改密码" open={pwdOpen} onCancel={() => setPwdOpen(false)} onOk={handlePwd} destroyOnClose >
+            < Modal title="修改密码" open={pwdOpen} onCancel={() => setPwdOpen(false)} onOk={handlePwd} destroyOnHidden >
                 <Form form={pwdForm} layout="vertical" style={{ marginTop: 16 }}>
                     <Form.Item name="old_password" label="当前密码" rules={[{ required: true, message: '请输入当前密码' }]}>
                         <Input.Password placeholder="请输入当前密码" />

@@ -577,12 +577,12 @@ const CMDBList: React.FC = () => {
             {/* ====== 详情 Drawer ====== */}
             <Drawer
                 title={null}
-                width={560}
+                size={560}
                 open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setCurrentRow(null); setMaintenanceLogs([]); }}
                 styles={{ header: { display: 'none' }, body: { padding: 0 } }}
                 loading={detailLoading}
-                destroyOnClose
+                destroyOnHidden
             >
                 {currentRow && (
                     <>
@@ -836,7 +836,7 @@ const CMDBList: React.FC = () => {
                 okText="确认进入"
                 okButtonProps={{ disabled: !maintenanceReason, icon: <ToolOutlined /> }}
                 onOk={handleEnterMaintenance}
-                destroyOnClose
+                destroyOnHidden
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     {/* 操作说明 */}

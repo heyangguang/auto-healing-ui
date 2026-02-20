@@ -357,9 +357,9 @@ const PluginList: React.FC = () => {
             />
 
             {/* 详情 Drawer */}
-            <Drawer title={null} width={640} open={drawerOpen}
+            <Drawer title={null} size={640} open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setCurrentPlugin(null); setSyncLogs([]); }}
-                styles={{ header: { display: 'none' }, body: { padding: 0 } }} destroyOnClose>
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }} destroyOnHidden>
                 {currentPlugin && (() => {
                     const tc = getTypeConfig(currentPlugin.type);
                     const authLabel = currentPlugin.config?.auth_type === 'basic' ? '用户名密码' :

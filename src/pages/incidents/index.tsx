@@ -493,12 +493,12 @@ const IncidentList: React.FC = () => {
             {/* ====== 详情 Drawer ====== */}
             <Drawer
                 title={null}
-                width={560}
+                size={560}
                 open={drawerOpen}
                 onClose={() => { setDrawerOpen(false); setCurrentRow(null); }}
                 styles={{ header: { display: 'none' }, body: { padding: 0 } }}
                 loading={detailLoading}
-                destroyOnClose
+                destroyOnHidden
             >
                 {currentRow && (
                     <>

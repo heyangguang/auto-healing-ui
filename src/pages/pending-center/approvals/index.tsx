@@ -296,7 +296,7 @@ const PendingApprovals: React.FC = () => {
                 title="审批任务详情"
                 open={drawerOpen}
                 onClose={closeDrawer}
-                width={600}
+                size={600}
                 extra={detail ? (
                     <Space>
                         <Button

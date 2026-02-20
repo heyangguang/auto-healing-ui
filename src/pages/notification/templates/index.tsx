@@ -13,7 +13,7 @@ import {
     Button, message, Space, Tag, Typography, Input,
     Empty, Switch, Spin, Popconfirm, Row, Col, Pagination, Avatar,
     Form, Select, Modal, Drawer, Alert, Badge, Card, Tooltip, Divider,
-    List, Flex, Layout, Menu, Dropdown, Segmented
+    Flex, Layout, Menu, Dropdown, Segmented
 } from 'antd';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAccess } from '@umijs/max';
@@ -548,7 +548,7 @@ const NotificationTemplatesPage: React.FC = () => {
                 }
             >
                 <div className="templates-body" style={{ alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
-                    <Spin size="large" tip="加载中..." />
+                    <Spin size="large" tip="加载中..."><div /></Spin>
                 </div>
             </StandardTable>
         );
@@ -641,13 +641,13 @@ const NotificationTemplatesPage: React.FC = () => {
                         {loading ? <div style={{ padding: 20, textAlign: 'center' }}><Spin /></div> : (
                             templates.length > 0 ? (
                                 <>
-                                    <List
-                                        dataSource={templates}
-                                        renderItem={item => {
+                                    <div>
+                                        {templates.map(item => {
                                             const typeConfig = EVENT_TYPE_CONFIG[item.event_type] || {};
                                             const isSelected = item.id === selectedId;
                                             return (
                                                 <div
+                                                    key={item.id}
                                                     onClick={() => handleSelect(item.id)}
                                                     className={`templates-sidebar-item ${isSelected ? 'templates-sidebar-item-selected' : ''}`}
                                                 >
@@ -660,17 +660,17 @@ const NotificationTemplatesPage: React.FC = () => {
                                                     </div>
                                                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                                                         {typeConfig.icon && <span style={{ color: typeConfig.color, fontSize: 12 }}>{typeConfig.icon}</span>}
-                                                        <Tag bordered={false} style={{ margin: 0, fontSize: 10, padding: '0 4px' }}>
+                                                        <Tag variant="filled" style={{ margin: 0, fontSize: 10, padding: '0 4px' }}>
                                                             {typeConfig.label || item.event_type}
                                                         </Tag>
-                                                        <Tag bordered={false} color="default" style={{ margin: 0, fontSize: 10, padding: '0 4px' }}>
+                                                        <Tag variant="filled" color="default" style={{ margin: 0, fontSize: 10, padding: '0 4px' }}>
                                                             {item.format}
                                                         </Tag>
                                                     </div>
                                                 </div>
                                             )
-                                        }}
-                                    />
+                                        })}
+                                    </div>
                                     {loadingMore && <div style={{ padding: 12, textAlign: 'center' }}><Spin size="small" /></div>}
                                     {!hasMore && templates.length > 0 && (
                                         <div className="templates-sidebar-footer">
@@ -1086,7 +1086,7 @@ const NotificationTemplatesPage: React.FC = () => {
                 <Drawer
                     title="可用变量"
                     placement="right"
-                    width={340}
+                    size={340}
                     onClose={() => setVariablesDrawerOpen(false)}
                     open={variablesDrawerOpen}
                     styles={{ body: { padding: 16 } }}

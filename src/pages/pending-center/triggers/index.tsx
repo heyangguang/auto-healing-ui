@@ -367,7 +367,7 @@ const PendingTriggers: React.FC = () => {
                 title="工单详情"
                 open={drawerOpen}
                 onClose={closeDrawer}
-                width={600}
+                size={600}
                 extra={detail ? (
                     <Button
                         type="primary"
