@@ -1,3 +1,16 @@
+/**
+ * 全站导航配置（顶部"产品与服务"弹窗 + 全站搜索数据源）
+ *
+ * ⚠️  维护须知：
+ * 每次在 config/routes.ts 中新增或删除路由时，必须同步更新本文件中对应的 SERVICES 数组，
+ * 否则新路由不会出现在全站导航和搜索中。
+ *
+ * 对应关系：
+ *   routes.ts /platform/xxx  →  SERVICES.platform[]
+ *   routes.ts /system/xxx    →  SERVICES.system[]
+ *   routes.ts /execution/xxx →  SERVICES.execution[]
+ *   ... 以此类推
+ */
 import React from 'react';
 import {
     DashboardOutlined,
@@ -22,6 +35,10 @@ import {
     UserOutlined,
     LockOutlined,
     AuditOutlined,
+    ClusterOutlined,
+    TeamOutlined,
+    GlobalOutlined,
+    ControlOutlined,
     FundProjectionScreenOutlined,
     SolutionOutlined,
     MessageOutlined,
@@ -42,6 +59,7 @@ export const CATEGORIES: Category[] = [
     { id: 'notification', label: '通知中心', icon: <BellOutlined /> },
     { id: 'pending', label: '待办审批', icon: <CarryOutOutlined /> },
     { id: 'system', label: '系统管理', icon: <SettingOutlined /> },
+    { id: 'platform', label: '平台管理', icon: <ClusterOutlined /> },
 ];
 
 /* ──── 服务列表 ──── */
@@ -84,6 +102,14 @@ export const SERVICES: Record<string, ServiceItem[]> = {
         { id: 'channels', name: '通知渠道', path: '/notification/channels', desc: '邮件、钉钉等通知方式', icon: <MailOutlined /> },
         { id: 'templates', name: '通知模板', path: '/notification/templates', desc: '告警消息模板配置', icon: <FileTextOutlined /> },
         { id: 'records', name: '通知记录', path: '/notification/records', desc: '历史通知发送记录', icon: <HistoryOutlined /> },
+    ],
+    platform: [
+        { id: 'tenants', name: '租户管理', path: '/platform/tenants', desc: '多租户创建与配置', icon: <GlobalOutlined /> },
+        { id: 'platform-users', name: '平台用户', path: '/platform/users', desc: '跨租户用户管理', icon: <TeamOutlined /> },
+        { id: 'platform-roles', name: '平台角色', path: '/platform/roles', desc: '平台级角色与权限管理', icon: <SafetyCertificateOutlined /> },
+        { id: 'platform-messages', name: '平台消息', path: '/platform/messages', desc: '平台级消息推送', icon: <MailOutlined /> },
+        { id: 'platform-settings', name: '平台设置', path: '/platform/settings', desc: '全局平台参数配置', icon: <ControlOutlined /> },
+        { id: 'platform-audit-logs', name: '平台审计日志', path: '/platform/audit-logs', desc: '平台管理员操作审计', icon: <AuditOutlined /> },
     ],
     system: [
         { id: 'users', name: '用户管理', path: '/system/users', desc: '系统账户与登录管理', icon: <UserOutlined /> },

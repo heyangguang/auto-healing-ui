@@ -179,5 +179,6 @@ export default defineConfig({
   requestRecord: {},
   define: {
     'process.env.CI': process.env.CI,
+    'process.env.SSE_API_BASE': process.env.SSE_API_BASE || '',
   },
 });

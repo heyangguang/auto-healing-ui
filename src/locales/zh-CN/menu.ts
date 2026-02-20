@@ -5,6 +5,9 @@ export default {
   'menu.register': '注册',
   'menu.account.logout': '退出登录',
 
+  // 工作台
+  'menu.工作台': '工作台',
+
   // 仪表板
   'menu.dashboard': '仪表板',
 
@@ -16,9 +19,13 @@ export default {
   'menu.resources': '资源配置',
   'menu.resources.cmdb': '资产管理',
   'menu.resources.incidents': '工单管理',
+  'menu.resources.secrets': '密钥管理',
+  'menu.resources.plugins': '插件管理',
 
   // 待办审批
   'menu.待办审批': '待办审批',
+  'menu.待办审批.自愈审批': '自愈审批',
+  'menu.待办审批.任务审批': '任务审批',
 
   // 密钥管理 (使用中文 name 的路由)
   'menu.密钥管理': '密钥管理',
@@ -47,7 +54,15 @@ export default {
   'menu.healing.instances': '流程实例',
   'menu.healing.approvals': '审批任务',
 
-  // 系统管理
+  // 🆕 平台功能 (仅平台管理员可见)
+  'menu.platform': '平台功能',
+  'menu.platform.tenants': '租户管理',
+  'menu.platform.platformUsers': '平台用户管理',
+  'menu.platform.platformMessages': '发送平台消息',
+  'menu.platform.platformSettings': '平台设置',
+  'menu.platform.platformAuditLogs': '平台审计日志',
+
+  // 系统管理 (租户级)
   'menu.system': '系统管理',
   'menu.system.users': '用户管理',
   'menu.system.roles': '角色管理',

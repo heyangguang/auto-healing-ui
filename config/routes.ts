@@ -24,6 +24,12 @@ export default [
       },
     ],
   },
+  // ==================== 无租户提示页 ====================
+  {
+    path: '/no-tenant',
+    layout: false,
+    component: './NoTenant',
+  },
   // ==================== 工作台 ====================
   {
     path: '/workbench',
@@ -307,7 +313,81 @@ export default [
     ],
   },
 
-  // ==================== 系统管理 ====================
+
+  // ==================== 平台功能 (Platform Features) 🆕 ====================
+  // ⚠️  重要：新增或删除平台路由后，必须同步更新 src/config/menu.tsx 中的 platform 数组，
+  //    否则全站导航（顶部"产品与服务"弹窗）不会显示新菜单项！
+  {
+    path: '/platform',
+    name: 'platform',
+    icon: 'cluster',
+    access: 'isPlatformAdmin',
+    routes: [
+      {
+        path: '/platform',
+        redirect: '/platform/tenants',
+      },
+      {
+        path: '/platform/tenants',
+        name: 'tenants',
+        component: './platform/tenants',
+      },
+      {
+        path: '/platform/tenants/create',
+        component: './platform/tenants/TenantForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/platform/tenants/:id/edit',
+        component: './platform/tenants/TenantForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/platform/tenants/:id/members',
+        component: './platform/tenants/TenantMembers',
+        hideInMenu: true,
+      },
+
+      {
+        path: '/platform/users',
+        name: 'platformUsers',
+        component: './platform/users',
+      },
+      {
+        path: '/platform/users/create',
+        component: './platform/users/UserForm',
+        hideInMenu: true,
+      },
+      {
+        path: '/platform/users/:id/edit',
+        component: './platform/users/UserForm',
+        hideInMenu: true,
+      },
+
+      {
+        path: '/platform/roles',
+        name: 'platformRoles',
+        component: './platform/roles',
+      },
+
+      {
+        path: '/platform/messages',
+        name: 'platformMessages',
+        component: './platform/messages', // 平台消息发送页面
+      },
+      {
+        path: '/platform/settings',
+        name: 'platformSettings',
+        component: './platform/settings',
+      },
+      {
+        path: '/platform/audit-logs',
+        name: 'platformAuditLogs',
+        component: './platform/audit-logs',
+      },
+    ],
+  },
+  // ==================== 系统管理 (租户级) ====================
   {
     path: '/system',
     name: 'system',
