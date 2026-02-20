@@ -103,7 +103,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
         <Drawer
             title={run ? `任务详情 #${run.id.slice(0, 8)}` : '加载中...'}
             placement="right"
-            width={900}
+            size={900}
             onClose={onClose}
             open={open}
             extra={
@@ -120,7 +120,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
             }
         >
             {run && (
-                <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                <Space orientation="vertical" size="large" style={{ width: '100%' }}>
                     {/* 头部信息 */}
                     <Card size="small" bordered={false} style={{ background: '#f5f5f5' }}>
                         <Row gutter={24}>
@@ -167,10 +167,10 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
                                 label: '任务统计',
                                 children: (
                                     <Row gutter={16}>
-                                        <Col span={6}><Card><Statistic title="成功 (OK)" value={stats.ok} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} /></Card></Col>
-                                        <Col span={6}><Card><Statistic title="变更 (Changed)" value={stats.changed} valueStyle={{ color: '#faad14' }} /></Card></Col>
-                                        <Col span={6}><Card><Statistic title="失败 (Failed)" value={stats.failed} valueStyle={{ color: '#ff4d4f' }} prefix={<CloseCircleOutlined />} /></Card></Col>
-                                        <Col span={6}><Card><Statistic title="跳过 (Skipped)" value={stats.skipped} valueStyle={{ color: '#bfbfbf' }} /></Card></Col>
+                                        <Col span={6}><Card><Statistic title="成功 (OK)" value={stats.ok} styles={{ content: { color: '#52c41a' } }} prefix={<CheckCircleOutlined />} /></Card></Col>
+                                        <Col span={6}><Card><Statistic title="变更 (Changed)" value={stats.changed} styles={{ content: { color: '#faad14' } }} /></Card></Col>
+                                        <Col span={6}><Card><Statistic title="失败 (Failed)" value={stats.failed} styles={{ content: { color: '#ff4d4f' } }} prefix={<CloseCircleOutlined />} /></Card></Col>
+                                        <Col span={6}><Card><Statistic title="跳过 (Skipped)" value={stats.skipped} styles={{ content: { color: '#bfbfbf' } }} /></Card></Col>
                                     </Row>
                                 )
                             }

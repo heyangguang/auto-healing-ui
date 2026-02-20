@@ -109,7 +109,7 @@ const SecretsSelector: React.FC<SecretsSelectorProps> = ({ value = [], onChange,
                 onCancel={() => setOpen(false)}
                 footer={null}
                 width={600}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Input
                     placeholder="搜索密钥源..."

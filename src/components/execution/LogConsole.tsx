@@ -230,7 +230,7 @@ const LogConsole: React.FC<LogConsoleProps> = ({ logs, loading, streaming, heigh
             <div style={{ padding: '8px 16px', borderBottom: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: headerBg, borderRadius: 0 }}>
                 <Space>
                     <Badge status={streaming ? 'processing' : 'default'} text={<span style={{ color: textColor }}>{streaming ? '实时接收中' : '执行完成'}</span>} />
-                    <Divider type="vertical" style={{ borderColor: isDark ? '#444' : '#e8e8e8' }} />
+                    <Divider orientation="vertical" style={{ borderColor: isDark ? '#444' : '#e8e8e8' }} />
                     <Text type="secondary" style={{ fontSize: 12, color: isDark ? '#8c8c8c' : undefined }}>{logs.length} 条日志</Text>
                 </Space>
                 <Space>
@@ -243,7 +243,7 @@ const LogConsole: React.FC<LogConsoleProps> = ({ logs, loading, streaming, heigh
                     >
                         下载日志
                     </Button>
-                    <Divider type="vertical" style={{ borderColor: isDark ? '#444' : '#e8e8e8' }} />
+                    <Divider orientation="vertical" style={{ borderColor: isDark ? '#444' : '#e8e8e8' }} />
                     <Button
                         type={autoScroll ? 'link' : 'text'}
                         size="small"

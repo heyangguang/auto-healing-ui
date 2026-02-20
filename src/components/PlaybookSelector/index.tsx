@@ -144,8 +144,8 @@ const PlaybookSelector: React.FC<PlaybookSelectorProps> = ({ value, onChange, pl
                 onCancel={() => setOpen(false)}
                 footer={null}
                 width={1000}
-                bodyStyle={{ padding: 0, height: 600, display: 'flex' }}
-                destroyOnClose
+                styles={{ body: { padding: 0, height: 600, display: 'flex' } }}
+                destroyOnHidden
             >
                 {/* Left Sidebar - New Design: Unified White + Custom List */}
                 <div style={{
@@ -259,7 +259,7 @@ const PlaybookSelector: React.FC<PlaybookSelectorProps> = ({ value, onChange, pl
                     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', background: '#fff' }}>
                         <Spin spinning={loading}>
                             {filteredPlaybooks.length > 0 ? (
-                                <Space direction="vertical" style={{ width: '100%' }} size={12}>
+                                <Space orientation="vertical" style={{ width: '100%' }} size={12}>
                                     {filteredPlaybooks.map(record => {
                                         const isSelected = value === record.id;
                                         return (

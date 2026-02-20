@@ -205,7 +205,7 @@ const SecretsSourceSelector: React.FC<SecretsSourceSelectorProps> = ({
             okText="开始测试"
             okButtonProps={{ disabled: !selectedId, loading, icon: <ApiOutlined /> }}
             width={560}
-            destroyOnClose
+            destroyOnHidden
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
                 {/* ─── 搜索 + 筛选 ─── */}

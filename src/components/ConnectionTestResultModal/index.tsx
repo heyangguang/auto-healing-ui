@@ -358,7 +358,7 @@ const ConnectionTestResultModal: React.FC<ConnectionTestResultModalProps> = ({
             open={open}
             onCancel={onClose}
             width={780}
-            destroyOnClose
+            destroyOnHidden
             footer={
                 <div className={styles.footer}>
                     <div>
