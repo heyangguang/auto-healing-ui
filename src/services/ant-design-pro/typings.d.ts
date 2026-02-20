@@ -27,6 +27,7 @@ declare namespace API {
     id?: string;
     roles?: string[];
     permissions?: string[];
+    is_platform_admin?: boolean;
   };
 
   type LoginResult = {

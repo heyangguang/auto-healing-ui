@@ -246,16 +246,15 @@ export function createLogStream(
     onLog: (log: AutoHealing.ExecutionLog) => void,
     onDone: (result: { status: string; exit_code: number; stats?: AutoHealing.ExecutionRun['stats'] }) => void,
 ): () => void {
-    // SSE 直接连接后端，绕过 dev server 代理（代理会缓冲 SSE 响应）
-    // 在开发环境使用后端端口 8080，生产环境使用当前 origin
-    const isDev = window.location.port === '8000';
-    const baseUrl = isDev ? `${window.location.protocol}//${window.location.hostname}:8080` : window.location.origin;
+    // SSE 连接地址：通过 .env.local 中的 SSE_API_BASE 配置
+    // 绕过 dev proxy 的 SSE 缓冲问题
+    const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
 
     // 浏览器 EventSource API 不支持自定义请求头，需通过 URL 参数传递 JWT Token
     const token = localStorage.getItem('auto_healing_token');
     const url = token
-        ? `${baseUrl}/api/v1/execution-runs/${id}/stream?token=${encodeURIComponent(token)}`
-        : `${baseUrl}/api/v1/execution-runs/${id}/stream`;
+        ? `${sseBase}/api/v1/execution-runs/${id}/stream?token=${encodeURIComponent(token)}`
+        : `${sseBase}/api/v1/execution-runs/${id}/stream`;
 
     console.log('[SSE] Creating EventSource:', url);
     const eventSource = new EventSource(url);

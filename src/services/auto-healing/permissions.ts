@@ -4,7 +4,7 @@ import { request } from '@umijs/max';
  * 获取权限列表
  */
 export async function getPermissions() {
-    return request<{ data: AutoHealing.Permission[] }>('/api/v1/permissions', {
+    return request<{ data: AutoHealing.Permission[] }>('/api/v1/platform/permissions', {
         method: 'GET',
     });
 }
@@ -13,7 +13,7 @@ export async function getPermissions() {
  * 获取权限树（按模块分组）
  */
 export async function getPermissionTree() {
-    return request<{ data: AutoHealing.PermissionTree }>('/api/v1/permissions/tree', {
+    return request<{ data: AutoHealing.PermissionTree }>('/api/v1/platform/permissions/tree', {
         method: 'GET',
     });
 }

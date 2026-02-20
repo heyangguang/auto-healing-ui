@@ -18,7 +18,7 @@ export async function getUsers(params?: {
     created_at_start?: string;
     created_at_end?: string;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.User>>('/api/v1/users', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.User>>('/api/v1/platform/users', {
         method: 'GET',
         params,
     });
@@ -28,7 +28,7 @@ export async function getUsers(params?: {
  * 获取用户详情
  */
 export async function getUser(id: string) {
-    return request<AutoHealing.User>(`/api/v1/users/${id}`, {
+    return request<AutoHealing.User>(`/api/v1/platform/users/${id}`, {
         method: 'GET',
     });
 }
@@ -37,7 +37,7 @@ export async function getUser(id: string) {
  * 创建用户
  */
 export async function createUser(data: AutoHealing.CreateUserRequest) {
-    return request<AutoHealing.User>('/api/v1/users', {
+    return request<AutoHealing.User>('/api/v1/platform/users', {
         method: 'POST',
         data,
     });
@@ -47,7 +47,7 @@ export async function createUser(data: AutoHealing.CreateUserRequest) {
  * 更新用户
  */
 export async function updateUser(id: string, data: AutoHealing.UpdateUserRequest) {
-    return request<AutoHealing.User>(`/api/v1/users/${id}`, {
+    return request<AutoHealing.User>(`/api/v1/platform/users/${id}`, {
         method: 'PUT',
         data,
     });
@@ -57,7 +57,7 @@ export async function updateUser(id: string, data: AutoHealing.UpdateUserRequest
  * 删除用户
  */
 export async function deleteUser(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/users/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/users/${id}`, {
         method: 'DELETE',
     });
 }
@@ -66,7 +66,7 @@ export async function deleteUser(id: string) {
  * 重置用户密码
  */
 export async function resetUserPassword(id: string, data: AutoHealing.ResetPasswordRequest) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/users/${id}/reset-password`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/users/${id}/reset-password`, {
         method: 'POST',
         data,
     });
@@ -76,7 +76,7 @@ export async function resetUserPassword(id: string, data: AutoHealing.ResetPassw
  * 分配用户角色
  */
 export async function assignUserRoles(id: string, data: AutoHealing.AssignRolesRequest) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/users/${id}/roles`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/users/${id}/roles`, {
         method: 'PUT',
         data,
     });
@@ -95,5 +95,5 @@ export async function getSimpleUsers() {
             display_name: string;
             status: string;
         }>;
-    }>('/api/v1/users/simple', { method: 'GET' });
+    }>('/api/v1/platform/users/simple', { method: 'GET' });
 }

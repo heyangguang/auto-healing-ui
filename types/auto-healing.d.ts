@@ -3,6 +3,188 @@
  * 与后端 OpenAPI 文档保持一致
  */
 declare namespace AutoHealing {
+    // ==================== 多租户相关 ====================
+
+    /** 租户简要信息 */
+    interface TenantBrief {
+        id: string;
+        name: string;
+        code: string;
+    }
+
+    /** 租户详细信息 */
+    interface Tenant extends TenantBrief {
+        description?: string;
+        status?: 'active' | 'inactive';
+        created_at: string;
+        updated_at: string;
+    }
+
+    /** 创建租户请求 */
+    interface CreateTenantRequest {
+        name: string;
+        code: string;
+        description?: string;
+    }
+
+    /** 更新租户请求 */
+    interface UpdateTenantRequest {
+        name?: string;
+        description?: string;
+        status?: 'active' | 'inactive';
+    }
+
+    // ==================== 认证相关 ====================
+
+    /** 登录请求 */
+    interface LoginRequest {
+        username: string;
+        password: string;
+    }
+
+    /** 登录响应 */
+    interface LoginResponse {
+        access_token: string;
+        refresh_token: string;
+        token_type: string;
+        expires_in: number;
+        user: UserInfo;
+        tenants: TenantBrief[];        // 🆕 用户所属租户列表
+        current_tenant_id: string;     // 🆕 默认租户ID
+    }
+
+    /** 刷新Token请求 */
+    interface RefreshTokenRequest {
+        refresh_token: string;
+    }
+
+    /** 刷新Token响应 */
+    interface RefreshTokenResponse {
+        access_token: string;
+        token_type: string;
+        expires_in: number;
+        tenants: TenantBrief[];        // 🆕 用户所属租户列表
+        current_tenant_id: string;     // 🆕 当前租户ID
+    }
+
+    /** 修改密码请求 */
+    interface ChangePasswordRequest {
+        old_password: string;
+        new_password: string;
+    }
+
+    /** 用户基本信息 */
+    interface UserInfo {
+        id: string;
+        username: string;
+        email: string;
+        display_name?: string;
+        status: 'active' | 'inactive';
+        is_platform_admin?: boolean;   // 🆕 是否平台管理员
+        roles?: Role[];
+        permissions?: string[];
+    }
+
+    /** 用户详细资料 */
+    interface UserProfile extends UserInfo {
+        created_at: string;
+        updated_at: string;
+        last_login_at?: string;
+    }
+
+    /** 更新个人资料请求 */
+    interface UpdateProfileRequest {
+        display_name?: string;
+        email?: string;
+    }
+
+    // ==================== 用户管理相关 ====================
+
+    /** 用户实体 */
+    interface User {
+        id: string;
+        username: string;
+        email: string;
+        display_name?: string;
+        status: 'active' | 'inactive';
+        is_platform_admin?: boolean;
+        roles?: Role[];
+        tenants?: TenantBrief[];       // 🆕 用户所属租户列表
+        created_at: string;
+        updated_at: string;
+        last_login_at?: string;
+    }
+
+    /** 平台级创建用户请求 */
+    interface CreatePlatformUserRequest {
+        username: string;
+        password: string;
+        email: string;
+        tenant_id: string;              // 🆕 必填,指定所属租户
+        display_name?: string;
+        role_ids?: string[];
+    }
+
+    /** 租户级创建用户请求 */
+    interface CreateTenantUserRequest {
+        username: string;
+        password: string;
+        email: string;
+        display_name?: string;
+        role_ids?: string[];
+        // 不需要 tenant_id,自动从 X-Tenant-ID 获取
+    }
+
+    /** 创建用户请求 (兼容旧版,将逐步废弃) */
+    interface CreateUserRequest {
+        username: string;
+        password: string;
+        email: string;
+        display_name?: string;
+        role_ids?: string[];
+        tenant_id?: string;             // 可选,平台管理员使用
+    }
+
+    /** 更新用户请求 */
+    interface UpdateUserRequest {
+        email?: string;
+        display_name?: string;
+        status?: 'active' | 'inactive';
+        role_ids?: string[];
+    }
+
+    /** 重置密码请求 */
+    interface ResetPasswordRequest {
+        new_password: string;
+    }
+
+    /** 分配角色请求 */
+    interface AssignRolesRequest {
+        role_ids: string[];
+    }
+
+    // ==================== 角色权限相关 ====================
+
+    /** 角色实体 */
+    interface Role {
+        id: string;
+        name: string;
+        description?: string;
+        permissions?: Permission[];
+        created_at: string;
+        updated_at: string;
+    }
+
+    /** 权限实体 */
+    interface Permission {
+        id: string;
+        name: string;
+        resource: string;
+        action: string;
+        description?: string;
+    }
+
+
     // ==================== 通用类型 ====================
 
     /** 分页响应 */
