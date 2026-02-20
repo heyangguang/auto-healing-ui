@@ -1,5 +1,5 @@
 import { ScheduleOutlined } from '@ant-design/icons';
-import { Badge, Empty, List, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
 import { useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -33,16 +33,18 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto' }}>
-                    <List
-                        size="small"
-                        dataSource={Array.isArray(items) ? items : []}
-                        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
-                        renderItem={(item: any, index: number) => {
+                    {(!Array.isArray(items) || items.length === 0) ? (
+                        <div style={{ padding: '24px 0' }}>
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                        </div>
+                    ) : (
+                        items.map((item: any, index: number) => {
                             const taskName = item.task?.name || item.task_name || '-';
                             const nextRun = item.next_run_at ? dayjs(item.next_run_at).format('MM-DD HH:mm') : '-';
 
                             return (
                                 <div
+                                    key={item.id || index}
                                     className="list-item-hover"
                                     style={{
                                         display: 'grid',
@@ -90,8 +92,8 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                                     </div>
                                 </div>
                             );
-                        }}
-                    />
+                        })
+                    )}
                 </div>
             </div>
         </WidgetWrapper>

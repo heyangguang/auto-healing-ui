@@ -3,7 +3,7 @@
  * 用于展示来自 Dashboard section 的列表数据
  */
 import { UnorderedListOutlined } from '@ant-design/icons';
-import { Badge, Empty, List, Tag, Typography } from 'antd';
+import { Badge, Empty, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
 import { useDashboardSection } from '../useDashboardSection';
@@ -41,18 +41,18 @@ const DashboardListWidget: React.FC<DashboardListWidgetProps> = ({ section, fiel
     return (
         <WidgetWrapper title={title} icon={icon || <UnorderedListOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
             <div style={{ height: '100%', overflowY: 'auto', display: items.length === 0 ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center' }}>
-                <List
-                    size="small"
-                    dataSource={items}
-                    locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
-                    renderItem={(item: any) => {
+                {items.length === 0 ? (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                ) : (
+                    items.map((item: any, index: number) => {
                         const displayTitle = item.title || item.name || item.username || item.subject || item.playbook_name || item.plugin_name || item.repo_name || item.flow_name || item.task_name || item.cmdb_item_name || item.display_name || item.id?.slice?.(0, 8) || '-';
                         const statusVal = item.status || item.severity || '';
                         const badgeStatus = STATUS_COLORS[statusVal] || 'default';
                         const timeVal = item.created_at || item.started_at || item.last_login_at || item.last_sync_at;
                         return (
-                            <List.Item
-                                style={{ padding: '6px 12px', cursor: onItemClick ? 'pointer' : 'default' }}
+                            <div
+                                key={item.id || index}
+                                style={{ padding: '6px 12px', cursor: onItemClick ? 'pointer' : 'default', borderBottom: '1px solid #f0f0f0' }}
                                 onClick={() => onItemClick?.(item)}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -71,10 +71,10 @@ const DashboardListWidget: React.FC<DashboardListWidgetProps> = ({ section, fiel
                                         </Typography.Text>
                                     )}
                                 </div>
-                            </List.Item>
+                            </div>
                         );
-                    }}
-                />
+                    })
+                )}
             </div>
         </WidgetWrapper>
     );

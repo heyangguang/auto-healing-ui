@@ -1,5 +1,5 @@
 import { NodeIndexOutlined } from '@ant-design/icons';
-import { Badge, Empty, List, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
 import { useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -45,19 +45,20 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
 
                 {/* 列表内容 */}
                 <div style={{ flex: 1, overflow: 'auto' }}>
-                    <List
-                        size="small"
-                        dataSource={Array.isArray(items) ? items : []}
-                        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
-                        renderItem={(item: any, index: number) => {
+                    {(!Array.isArray(items) || items.length === 0) ? (
+                        <div style={{ padding: '24px 0' }}>
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                        </div>
+                    ) : (
+                        items.map((item: any, index: number) => {
                             const st = STATUS_MAP[item.status] || { color: 'default', text: item.status };
                             const displayName = item.title || item.name || (item.id ? `${item.id.slice(0, 8)}...` : '-');
-                            // 尝试获取额外信息：流程名称和当前节点
                             const flowName = item.flow_name || '-';
                             const currentNode = item.current_node_id || '-';
 
                             return (
                                 <div
+                                    key={item.id || index}
                                     className="list-item-hover"
                                     style={{
                                         display: 'grid',
@@ -65,7 +66,7 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                                         gap: 8,
                                         padding: '8px 12px',
                                         cursor: 'pointer',
-                                        background: index % 2 === 1 ? '#fafafa' : '#fff', // 斑马纹
+                                        background: index % 2 === 1 ? '#fafafa' : '#fff',
                                         borderBottom: '1px solid #f0f0f0',
                                         transition: 'background 0.3s',
                                         alignItems: 'center'
@@ -102,7 +103,7 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
 
                                     {/* Column 3: Status */}
                                     <div style={{ textAlign: 'center' }}>
-                                        <Tag bordered={false} color={st.color} style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>
+                                        <Tag variant="filled" color={st.color} style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>
                                             {st.text}
                                         </Tag>
                                     </div>
@@ -115,8 +116,8 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                                     </div>
                                 </div>
                             );
-                        }}
-                    />
+                        })
+                    )}
                 </div>
             </div>
         </WidgetWrapper>

@@ -1,5 +1,5 @@
 import { ForkOutlined } from '@ant-design/icons';
-import { Badge, List, Typography, Empty, Button } from 'antd';
+import { Badge, Typography, Empty, Button } from 'antd';
 import { useRequest } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -41,38 +41,32 @@ const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                 </div>
             ) : (
                 <div style={{ height: '100%', overflowY: 'auto' }}>
-                    <List
-                        size="small"
-                        dataSource={items}
-                        split={false}
-                        className="dashboard-list-widget"
-                        renderItem={(item: any) => (
-                            <List.Item style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                                    <Badge status={item.status === 'error' ? 'error' : (item.sync_enabled ? 'processing' : 'default')} />
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                                            <Typography.Text ellipsis strong style={{ fontSize: 13, color: '#262626' }}>
-                                                {item.name}
-                                            </Typography.Text>
-                                            <Typography.Text type="secondary" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
-                                                {item.last_synced_at ? dayjs(item.last_synced_at).fromNow() : '未同步'}
-                                            </Typography.Text>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                                                {item.branch || item.default_branch || 'HEAD'}
-                                            </Typography.Text>
-                                            <div style={{ height: 8, width: 1, background: '#f0f0f0' }} />
-                                            <Typography.Text type={item.status === 'ready' ? 'success' : item.status === 'error' ? 'danger' : 'secondary'} style={{ fontSize: 11 }}>
-                                                {item.status || 'unknown'}
-                                            </Typography.Text>
-                                        </div>
+                    {items.map((item: any, index: number) => (
+                        <div key={item.id || index} style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                <Badge status={item.status === 'error' ? 'error' : (item.sync_enabled ? 'processing' : 'default')} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                                        <Typography.Text ellipsis strong style={{ fontSize: 13, color: '#262626' }}>
+                                            {item.name}
+                                        </Typography.Text>
+                                        <Typography.Text type="secondary" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                                            {item.last_synced_at ? dayjs(item.last_synced_at).fromNow() : '未同步'}
+                                        </Typography.Text>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                            {item.branch || item.default_branch || 'HEAD'}
+                                        </Typography.Text>
+                                        <div style={{ height: 8, width: 1, background: '#f0f0f0' }} />
+                                        <Typography.Text type={item.status === 'ready' ? 'success' : item.status === 'error' ? 'danger' : 'secondary'} style={{ fontSize: 11 }}>
+                                            {item.status || 'unknown'}
+                                        </Typography.Text>
                                     </div>
                                 </div>
-                            </List.Item>
-                        )}
-                    />
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </WidgetWrapper>

@@ -1,0 +1,12 @@
+/* Dashboard 页面特殊样式覆盖 */
+
+/* 消除 header 和 main 之间的 gap，让 header 卡片和 grid 画布紧密连接 */
+.dashboard-page .standard-table-container {
+    gap: 0;
+}
+
+/* 让 grid 画布紧贴 header 卡片底部，共享边框 */
+.dashboard-page .standard-table-main {
+    border: 1px solid #e8e8e8;
+    border-top: none;
+}

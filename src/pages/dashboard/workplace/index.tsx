@@ -1,7 +1,7 @@
 import { Radar } from '@ant-design/plots';
 import { PageContainer } from '@ant-design/pro-components';
 import { Link, useRequest } from '@umijs/max';
-import { Avatar, Card, Col, List, Row, Skeleton, Statistic } from 'antd';
+import { Avatar, Card, Col, Row, Skeleton, Statistic } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import type { FC } from 'react';
@@ -108,23 +108,21 @@ const Workplace: FC = () => {
       return key;
     });
     return (
-      <List.Item key={item.id}>
-        <List.Item.Meta
-          avatar={<Avatar src={item.user.avatar} />}
-          title={
-            <span>
-              <a className={styles.username}>{item.user.name}</a>
-              &nbsp;
-              <span className={styles.event}>{events}</span>
-            </span>
-          }
-          description={
+      <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '16px 24px', borderBottom: '1px solid #f0f0f0' }}>
+        <Avatar src={item.user.avatar} />
+        <div>
+          <div>
+            <a className={styles.username}>{item.user.name}</a>
+            &nbsp;
+            <span className={styles.event}>{events}</span>
+          </div>
+          <div>
             <span className={styles.datetime} title={item.updatedAt}>
               {dayjs(item.updatedAt).fromNow()}
             </span>
-          }
-        />
-      </List.Item>
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -194,13 +192,9 @@ const Workplace: FC = () => {
             title="动态"
             loading={activitiesLoading}
           >
-            <List<ActivitiesType>
-              loading={activitiesLoading}
-              renderItem={(item) => renderActivities(item)}
-              dataSource={activities}
-              className={styles.activitiesList}
-              size="large"
-            />
+            <div className={styles.activitiesList}>
+              {activities.map((item) => renderActivities(item))}
+            </div>
           </Card>
         </Col>
         <Col xl={8} lg={24} md={24} sm={24} xs={24}>
@@ -212,7 +206,7 @@ const Workplace: FC = () => {
             variant="borderless"
           >
             <EditableLinkGroup
-              onAdd={() => {}}
+              onAdd={() => { }}
               links={links}
               linkElement={Link}
             />

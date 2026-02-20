@@ -161,7 +161,6 @@ const activityIcon: Record<string, React.ReactNode> = {
 const useStyles = createStyles(({ token }) => ({
     page: {
         padding: 24,
-        background: '#f4f5f7',
         minHeight: 'calc(100vh - 48px)',
     },
     container: {
@@ -768,7 +767,7 @@ const WorkbenchPage: React.FC = () => {
                     {/* ── 顶部行：系统健康 + 待办审批 ── */}
                     <div className={styles.topRow}>
                         {/* 系统健康 */}
-                        <Card className={styles.card} style={{ flex: 1 }} bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <CheckCircleOutlined className={styles.cardTitleIcon} style={{ color: '#52c41a' }} /> 系统健康状态
@@ -822,7 +821,7 @@ const WorkbenchPage: React.FC = () => {
                         </Card>
 
                         {/* 待办审批（紧凑+更多条目） */}
-                        <Card className={styles.card} style={{ flex: 1 }} bodyStyle={{ padding: 0 }}>
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <ScheduleOutlined className={styles.cardTitleIcon} /> 待办审批
@@ -855,7 +854,7 @@ const WorkbenchPage: React.FC = () => {
                     </div>
 
                     {/* ── 我的收藏 ── */}
-                    <Card className={styles.card} bodyStyle={{ padding: 0 }}>
+                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <AppstoreOutlined className={styles.cardTitleIcon} /> 我的收藏
@@ -873,7 +872,7 @@ const WorkbenchPage: React.FC = () => {
 
                     {/* ── 指标行 ── */}
                     <div className={styles.metricsRow}>
-                        <Card className={styles.card} style={{ flex: 1 }} bodyStyle={{ padding: 0 }}>
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <BugOutlined className={styles.cardTitleIcon} /> 自愈执行
@@ -891,7 +890,7 @@ const WorkbenchPage: React.FC = () => {
                             </div>
                         </Card>
 
-                        <Card className={styles.card} style={{ flex: 1 }} bodyStyle={{ padding: 0 }}>
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <AlertOutlined className={styles.cardTitleIcon} /> 工单统计
@@ -909,7 +908,7 @@ const WorkbenchPage: React.FC = () => {
                             </div>
                         </Card>
 
-                        <Card className={styles.card} style={{ flex: 1 }} bodyStyle={{ padding: 0 }}>
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <CloudServerOutlined className={styles.cardTitleIcon} /> 纳管主机
@@ -929,7 +928,7 @@ const WorkbenchPage: React.FC = () => {
                     </div>
 
                     {/* ── 平台资源概览 ── */}
-                    <Card className={styles.card} bodyStyle={{ padding: 0 }}>
+                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <AppstoreOutlined className={styles.cardTitleIcon} /> 平台资源概览
@@ -949,7 +948,7 @@ const WorkbenchPage: React.FC = () => {
 
                     {/* ── 变更记录 + 帮助指南 ── */}
                     <div className={styles.flowRuleRow}>
-                        <Card className={styles.card} style={{ flex: 1 }} bodyStyle={{ padding: 0 }}>
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <HistoryOutlined className={styles.cardTitleIcon} /> 变更记录
@@ -974,7 +973,7 @@ const WorkbenchPage: React.FC = () => {
                             </div>
                         </Card>
 
-                        <Card className={styles.card} style={{ flex: 1 }} bodyStyle={{ padding: 0 }}>
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <ReadOutlined className={styles.cardTitleIcon} /> 快速指南
@@ -999,7 +998,7 @@ const WorkbenchPage: React.FC = () => {
                 {/* ══════ 右栏 ══════ */}
                 <div className={styles.rightCol}>
                     {/* 快速操作 */}
-                    <Card className={styles.card} bodyStyle={{ padding: 0 }}>
+                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <ThunderboltOutlined className={styles.cardTitleIcon} /> 快速操作
@@ -1025,7 +1024,7 @@ const WorkbenchPage: React.FC = () => {
                     </Card>
 
                     {/* 用户信息 */}
-                    <Card className={styles.card} bodyStyle={{ padding: 16 }}>
+                    <Card className={styles.card} styles={{ body: { padding: 16 } }}>
                         <div className={styles.userHeader}>
                             <Avatar size={44} style={{ background: '#0f62fe', fontWeight: 600 }}>{firstChar}</Avatar>
                             <div>
@@ -1037,7 +1036,7 @@ const WorkbenchPage: React.FC = () => {
 
 
                     {/* 活动动态（紧凑） */}
-                    <Card className={styles.card} bodyStyle={{ padding: 0 }}>
+                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <FieldTimeOutlined className={styles.cardTitleIcon} /> 活动动态
@@ -1055,7 +1054,7 @@ const WorkbenchPage: React.FC = () => {
                     </Card>
 
                     {/* 系统公告 */}
-                    <Card className={styles.card} bodyStyle={{ padding: 0 }}>
+                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>系统公告</span>
                         </div>
@@ -1072,7 +1071,7 @@ const WorkbenchPage: React.FC = () => {
                     </Card>
 
                     {/* 定时任务日历 */}
-                    <Card className={styles.card} bodyStyle={{ padding: 0 }}>
+                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <ScheduleOutlined className={styles.cardTitleIcon} /> 定时任务

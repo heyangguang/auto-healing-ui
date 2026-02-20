@@ -14,7 +14,7 @@ interface StatCardContentProps {
     description?: string;
     trend?: { value: number; isUp: boolean };
     color?: string;
-    valueStyle?: React.CSSProperties;
+    contentStyle?: React.CSSProperties;
 }
 
 const StatCardContent: React.FC<StatCardContentProps> = ({
@@ -25,7 +25,7 @@ const StatCardContent: React.FC<StatCardContentProps> = ({
     description,
     trend,
     color,
-    valueStyle,
+    contentStyle,
 }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1, minHeight: 0 }}>
@@ -34,12 +34,14 @@ const StatCardContent: React.FC<StatCardContentProps> = ({
                 suffix={suffix}
                 prefix={prefix}
                 precision={precision}
-                valueStyle={{
-                    fontSize: 28,
-                    fontWeight: 700,
-                    color: color || '#1677ff',
-                    lineHeight: 1.1,
-                    ...valueStyle,
+                styles={{
+                    content: {
+                        fontSize: 28,
+                        fontWeight: 700,
+                        color: color || '#1677ff',
+                        lineHeight: 1.1,
+                        ...contentStyle,
+                    }
                 }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>

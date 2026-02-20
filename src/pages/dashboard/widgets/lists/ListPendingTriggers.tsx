@@ -1,5 +1,5 @@
 import { RocketOutlined } from '@ant-design/icons';
-import { Badge, Empty, List, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
 import { useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -41,17 +41,17 @@ const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto' }}>
-                    <List
-                        size="small"
-                        dataSource={items.slice(0, 15)}
-                        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
-                        renderItem={(item: any, index: number) => {
+                    {items.slice(0, 15).length === 0 ? (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                    ) : (
+                        items.slice(0, 15).map((item: any, index: number) => {
                             const title = item.title || item.external_id || item.id?.slice(0, 8);
                             const source = item.source_plugin_name || item.plugin?.name || '-';
                             const category = item.category || '-';
 
                             return (
                                 <div
+                                    key={item.id || index}
                                     className="list-item-hover"
                                     style={{
                                         display: 'grid',
@@ -103,8 +103,8 @@ const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                                     </div>
                                 </div>
                             );
-                        }}
-                    />
+                        })
+                    )}
                 </div>
             </div>
         </WidgetWrapper>

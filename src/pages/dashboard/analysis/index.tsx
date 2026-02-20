@@ -21,10 +21,11 @@ import {
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { PageContainer } from '@ant-design/pro-components';
+import StandardTable from '@/components/StandardTable';
 import { useModel } from '@umijs/max';
 import { Button, Collapse, Drawer, Empty, Input, message, Modal, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd';
-import React, { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import './index.css';
 import { ResponsiveGridLayout, useContainerWidth, verticalCompactor } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -276,7 +277,9 @@ const DashboardBuilder: React.FC = () => {
       if (sysWorkspaces.length === 0) return;
 
       setState(prev => {
-        const userWorkspaces = prev.workspaces.filter(ws => !ws.isSystem);
+        // 过滤掉系统工作区 AND 内置默认工作区 (id='default')
+        // 因为后端已有同名系统工作区，不再需要前端硬编码的默认工作区
+        const userWorkspaces = prev.workspaces.filter(ws => !ws.isSystem && ws.id !== 'default');
         const newSystemWs: DashboardWorkspace[] = sysWorkspaces.map((sws: any) => ({
           id: `sys-${sws.id}`,
           name: sws.name,
@@ -287,11 +290,14 @@ const DashboardBuilder: React.FC = () => {
           isDefault: sws.is_default || false,
         } as any));
         const merged = [...newSystemWs, ...userWorkspaces];
+        // 如果之前激活的是默认工作区，切换到系统默认工作区
+        const activeId = prev.activeWorkspaceId === 'default'
+          ? (newSystemWs[0]?.id || prev.activeWorkspaceId)
+          : (merged.find(ws => ws.id === prev.activeWorkspaceId) ? prev.activeWorkspaceId : newSystemWs[0]?.id);
         return {
           ...prev,
           workspaces: merged,
-          // 默认显示第一个系统工作区（默认工作区排最前）
-          activeWorkspaceId: newSystemWs[0]?.id || prev.activeWorkspaceId,
+          activeWorkspaceId: activeId,
         };
       });
     }).catch(() => { /* silently ignore */ });
@@ -412,7 +418,7 @@ const DashboardBuilder: React.FC = () => {
       const data = configRes?.data || configRes;
       const sysWorkspaces = data?.system_workspaces || [];
       setState(prev => {
-        const userWorkspaces = prev.workspaces.filter(ws => !ws.isSystem);
+        const userWorkspaces = prev.workspaces.filter(ws => !ws.isSystem && ws.id !== 'default');
         const newSystemWs: DashboardWorkspace[] = sysWorkspaces.map((sws: any) => ({
           id: `sys-${sws.id}`,
           name: sws.name,
@@ -635,82 +641,21 @@ const DashboardBuilder: React.FC = () => {
     }).filter((s) => s.widgets.length > 0);
   }, [search]);
 
-  return (
-    <PageContainer
-      header={{ title: <><DashboardOutlined /> 运维监控中心 / DASHBOARD</>, subTitle: `${state.workspaces.length} 个工作区 · ${activeWorkspace.widgets.length} 个组件` }}
-    >
-      {/* ========== 顶部控制栏 ========== */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginBottom: 0,
-        padding: '0 0 12px 0',
-        borderBottom: '1px solid #f0f0f0',
-      }}>
-
-        {/* 右侧：操作按钮 */}
-        <Space size={6}>
-          {isEditing && (
-            <>
-              <Button
-                type="primary"
-                icon={<AppstoreAddOutlined />}
-                onClick={() => setDrawerOpen(true)}
-                style={{ borderRadius: 0 }}
-                size="small"
-              >
-                添加组件
-              </Button>
-              <Tooltip title="按类别自动排列所有组件">
-                <Button
-                  icon={<BlockOutlined />}
-                  onClick={handleAutoLayout}
-                  style={{ borderRadius: 0 }}
-                  size="small"
-                >
-                  整理布局
-                </Button>
-              </Tooltip>
-            </>
-          )}
-          <Button
-            type={isEditing ? 'primary' : 'default'}
-            icon={isEditing ? <LockOutlined /> : <EditOutlined />}
-            onClick={handleToggleEdit}
-            ghost={isEditing}
-            size="small"
-            style={{ borderRadius: 0, minWidth: 72 }}
-          >
-            {isEditing ? '锁定' : '编辑'}
-          </Button>
-          {hasWsManage && activeWorkspace.widgets.length > 0 && !activeWorkspace.isSystem && (
-            <Button
-              size="small"
-              style={{ borderRadius: 0 }}
-              onClick={() => { setSystemWsName(activeWorkspace.name); setSaveSystemModalOpen(true); }}
-            >
-              保存为系统工作区
-            </Button>
-          )}
-        </Space>
-      </div>
-
-      {/* ========== 工作区 Tab Bar — 卡片分组风格 ========== */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'stretch',
-        borderBottom: '2px solid #e8e8e8',
-        marginBottom: 12,
-        marginTop: 0,
-        background: '#f5f5f5',
-        gap: 1,
-      }}>
+  // ========== headerExtra: workspace tabs (左) + action buttons (右) ==========
+  const headerExtra = (
+    <div style={{
+      display: 'flex',
+      alignItems: 'stretch',
+      borderTop: '1px solid #f0f0f0',
+      background: '#fafbfc',
+      padding: '0 16px 0 0',
+    }}>
+      {/* 左侧：工作区 tabs */}
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 1, flex: 1, minWidth: 0 }}>
         {state.workspaces.map((ws, idx) => {
           const isActive = ws.id === state.activeWorkspaceId;
           const isSys = ws.isSystem;
           const isDef = (ws as any).isDefault;
-          // 系统/默认工作区和个人工作区之间添加分组分隔
           const prevWs = idx > 0 ? state.workspaces[idx - 1] : null;
           const showGroupDivider = prevWs && (prevWs.isSystem !== ws.isSystem);
           return (
@@ -743,16 +688,10 @@ const DashboardBuilder: React.FC = () => {
                   borderBottom: isActive
                     ? `2px solid ${isSys ? (isDef ? '#1677ff' : '#722ed1') : '#1677ff'}`
                     : '2px solid transparent',
-                  borderTop: isActive
-                    ? `2px solid ${isSys ? (isDef ? '#1677ff' : '#722ed1') : '#1677ff'}`
-                    : '2px solid transparent',
-                  borderLeft: isSys && !isActive ? `2px solid ${isDef ? '#91caff' : '#d3adf7'}` : '2px solid transparent',
-                  borderRight: '1px solid transparent',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                   position: 'relative',
-                  borderRadius: isActive ? '4px 4px 0 0' : 0,
-                  marginBottom: isActive ? -2 : 0,
+                  marginBottom: isActive ? -1 : 0,
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
@@ -842,7 +781,7 @@ const DashboardBuilder: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '8px 12px',
+              padding: '0 12px',
               cursor: 'pointer',
               color: '#bfbfbf',
               borderBottom: '2px solid transparent',
@@ -856,231 +795,289 @@ const DashboardBuilder: React.FC = () => {
         </Tooltip>
       </div>
 
-      {/* ========== 网格画布 ========== */}
-      {activeWorkspace.widgets.length === 0 ? (
-        <div style={{
-          minHeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#fafafa',
-          border: '2px dashed #e0e0e0',
-        }}>
-          <Empty
-            description={
-              <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-                工作区为空，点击添加组件开始构建仪表盘
-              </Typography.Text>
-            }
+      {/* 右侧：操作按钮 */}
+      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 0 0 12px' }}>
+        <Space size={6}>
+          {isEditing && (
+            <>
+              <Button
+                type="primary"
+                icon={<AppstoreAddOutlined />}
+                onClick={() => setDrawerOpen(true)}
+                style={{ borderRadius: 0 }}
+                size="small"
+              >
+                添加组件
+              </Button>
+              <Tooltip title="按类别自动排列所有组件">
+                <Button
+                  icon={<BlockOutlined />}
+                  onClick={handleAutoLayout}
+                  style={{ borderRadius: 0 }}
+                  size="small"
+                >
+                  整理布局
+                </Button>
+              </Tooltip>
+            </>
+          )}
+          <Button
+            type={isEditing ? 'primary' : 'default'}
+            icon={isEditing ? <LockOutlined /> : <EditOutlined />}
+            onClick={handleToggleEdit}
+            ghost={isEditing}
+            size="small"
+            style={{ borderRadius: 0, minWidth: 72 }}
           >
+            {isEditing ? '锁定' : '编辑'}
+          </Button>
+          {hasWsManage && activeWorkspace.widgets.length > 0 && !activeWorkspace.isSystem && (
             <Button
-              type="primary"
-              size="large"
-              icon={<AppstoreAddOutlined />}
-              onClick={() => { setIsEditing(true); setDrawerOpen(true); }}
+              size="small"
               style={{ borderRadius: 0 }}
+              onClick={() => { setSystemWsName(activeWorkspace.name); setSaveSystemModalOpen(true); }}
             >
-              添加组件
+              保存为系统工作区
             </Button>
-          </Empty>
-        </div>
-      ) : (
-        <div
-          ref={containerRef}
-          style={{
-            border: isEditing ? '2px dashed rgba(22,119,255,0.25)' : 'none',
-            padding: isEditing ? 4 : 0,
-            background: isEditing ? 'rgba(22,119,255,0.015)' : 'transparent',
-            transition: 'border 0.15s, background 0.15s',
-            minHeight: 400,
-          }}
-        >
-          <ResponsiveGridLayout
-            className={`dashboard-grid${isEditing ? ' editing' : ''}`}
-            width={width || 1200}
-            layouts={responsiveLayouts}
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
-            cols={BREAKPOINT_COLS}
-            rowHeight={60}
-            dragConfig={{ enabled: isEditing, handle: '.ant-card-head' }}
-            resizeConfig={{ enabled: isEditing }}
-            compactor={verticalCompactor}
-            onLayoutChange={handleLayoutChange}
-            margin={[6, 6] as const}
-          >
-            {activeWorkspace.widgets.map((widget, index) => (
-              <div key={widget.instanceId}>
-                {index < visibleCount ? (
-                  <MemoizedWidget
-                    widget={widget}
-                    isEditing={isEditing}
-                    onRemove={handleRemoveWidget}
-                  />
-                ) : (
-                  <div style={{
-                    height: '100%',
-                    background: '#fafafa',
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#d9d9d9',
-                    fontSize: 12,
-                  }}>
-                    加载中...
-                  </div>
-                )}
-              </div>
-            ))}
-          </ResponsiveGridLayout>
-        </div>
-      )
-      }
+          )}
+        </Space>
+      </div>
+    </div>
+  );
 
-      {/* ========== 组件库抽屉 ========== */}
-      <Drawer
-        title={
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>组件库</div>
+  return (
+    <div className="dashboard-page">
+      <StandardTable<any>
+        title="运维监控中心"
+        description={`${state.workspaces.length} 个工作区 · ${activeWorkspace.widgets.length} 个组件`}
+        headerIcon={<DashboardOutlined />}
+        headerExtra={headerExtra}
+      >
+        {/* ========== 网格画布 ========== */}
+        {activeWorkspace.widgets.length === 0 ? (
+          <div style={{
+            minHeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#fafafa',
+            border: '2px dashed #e0e0e0',
+          }}>
+            <Empty
+              description={
+                <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+                  工作区为空，点击添加组件开始构建仪表盘
+                </Typography.Text>
+              }
+            >
+              <Button
+                type="primary"
+                size="large"
+                icon={<AppstoreAddOutlined />}
+                onClick={() => { setIsEditing(true); setDrawerOpen(true); }}
+                style={{ borderRadius: 0 }}
+              >
+                添加组件
+              </Button>
+            </Empty>
+          </div>
+        ) : (
+          <div
+            ref={containerRef}
+            style={{
+              border: isEditing ? '2px dashed rgba(22,119,255,0.25)' : 'none',
+              padding: isEditing ? 4 : 0,
+              background: isEditing ? 'rgba(22,119,255,0.015)' : 'transparent',
+              transition: 'border 0.15s, background 0.15s',
+              minHeight: 400,
+            }}
+          >
+            <ResponsiveGridLayout
+              className={`dashboard-grid${isEditing ? ' editing' : ''}`}
+              width={width || 1200}
+              layouts={responsiveLayouts}
+              breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480 }}
+              cols={BREAKPOINT_COLS}
+              rowHeight={60}
+              dragConfig={{ enabled: isEditing, handle: '.ant-card-head' }}
+              resizeConfig={{ enabled: isEditing }}
+              compactor={verticalCompactor}
+              onLayoutChange={handleLayoutChange}
+              margin={[6, 6] as const}
+            >
+              {activeWorkspace.widgets.map((widget, index) => (
+                <div key={widget.instanceId}>
+                  {index < visibleCount ? (
+                    <MemoizedWidget
+                      widget={widget}
+                      isEditing={isEditing}
+                      onRemove={handleRemoveWidget}
+                    />
+                  ) : (
+                    <div style={{
+                      height: '100%',
+                      background: '#fafafa',
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#d9d9d9',
+                      fontSize: 12,
+                    }}>
+                      加载中...
+                    </div>
+                  )}
+                </div>
+              ))}
+            </ResponsiveGridLayout>
+          </div>
+        )
+        }
+
+        {/* ========== 组件库抽屉 ========== */}
+        <Drawer
+          title={
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>组件库</div>
+              <Input
+                placeholder="搜索组件名称..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                allowClear
+                prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+                style={{ borderRadius: 0 }}
+              />
+            </div>
+          }
+          placement="right"
+          size={460}
+          open={drawerOpen}
+          onClose={() => { setDrawerOpen(false); setSearch(''); }}
+          styles={{ body: { padding: '0 0 16px 0' } }}
+        >
+          <Collapse
+            defaultActiveKey={filteredSections.slice(0, 3).map((s) => s.key)}
+            ghost
+            size="small"
+            items={filteredSections.map((sec) => ({
+              key: sec.key,
+              label: (
+                <span style={{ fontWeight: 600, fontSize: 13 }}>
+                  {sec.label}
+                  <Tag style={{ marginLeft: 8, fontSize: 11, borderRadius: 0 }}>{sec.widgets.length}</Tag>
+                </span>
+              ),
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0 4px' }}>
+                  {sec.widgets.map((def) => {
+                    const alreadyAdded = addedWidgetIds.has(def.id);
+                    return (
+                      <div
+                        key={def.id}
+                        onClick={() => handleToggleWidget(def.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 12px',
+                          borderRadius: 0,
+                          background: alreadyAdded ? '#f6ffed' : '#fafafa',
+                          border: `1px solid ${alreadyAdded ? '#b7eb8f' : '#f0f0f0'}`,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (alreadyAdded) {
+                            e.currentTarget.style.borderColor = '#ff4d4f';
+                            e.currentTarget.style.background = '#fff2f0';
+                          } else {
+                            e.currentTarget.style.borderColor = '#1677ff';
+                            e.currentTarget.style.background = '#e6f4ff';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = alreadyAdded ? '#b7eb8f' : '#f0f0f0';
+                          e.currentTarget.style.background = alreadyAdded ? '#f6ffed' : '#fafafa';
+                        }}
+                      >
+                        <span style={{ fontSize: 18, color: alreadyAdded ? '#52c41a' : '#1677ff', flexShrink: 0, width: 24, textAlign: 'center' }}>{def.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.3 }}>
+                            {def.name}
+                            {alreadyAdded && <Tag color="green" style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', borderRadius: 0 }}>已添加</Tag>}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#999', lineHeight: 1.3, marginTop: 2 }}>{def.description}</div>
+                        </div>
+                        {alreadyAdded ? (
+                          <MinusCircleOutlined style={{ color: '#ff4d4f', fontSize: 16 }} />
+                        ) : (
+                          <PlusOutlined style={{ color: '#1677ff', fontSize: 14 }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ),
+            }))}
+          />
+        </Drawer>
+
+        {/* 重命名 Modal */}
+        <Modal
+          title="重命名工作区"
+          open={renameModal.open}
+          onOk={handleRename}
+          onCancel={() => setRenameModal({ open: false, id: '', name: '' })}
+          width={360}
+        >
+          <Input
+            value={renameModal.name}
+            onChange={(e) => setRenameModal({ ...renameModal, name: e.target.value })}
+            placeholder="输入新名称"
+            maxLength={20}
+            onPressEnter={handleRename}
+            autoFocus
+            style={{ borderRadius: 0 }}
+          />
+        </Modal>
+
+        {/* 保存为系统工作区 Modal */}
+        <Modal
+          title="保存为系统工作区"
+          open={saveSystemModalOpen}
+          onOk={handleSaveAsSystem}
+          onCancel={() => { setSaveSystemModalOpen(false); setSystemWsName(''); setSystemWsDesc(''); }}
+          width={420}
+          okText="保存"
+        >
+          <div style={{ marginBottom: 12 }}>
+            <Typography.Text strong>名称</Typography.Text>
             <Input
-              placeholder="搜索组件名称..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              allowClear
-              prefix={<SearchOutlined style={{ color: '#bbb' }} />}
-              style={{ borderRadius: 0 }}
+              value={systemWsName}
+              onChange={(e) => setSystemWsName(e.target.value)}
+              placeholder="输入系统工作区名称"
+              maxLength={50}
+              style={{ borderRadius: 0, marginTop: 4 }}
             />
           </div>
-        }
-        placement="right"
-        width={460}
-        open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setSearch(''); }}
-        styles={{ body: { padding: '0 0 16px 0' } }}
-      >
-        <Collapse
-          defaultActiveKey={filteredSections.slice(0, 3).map((s) => s.key)}
-          ghost
-          size="small"
-          items={filteredSections.map((sec) => ({
-            key: sec.key,
-            label: (
-              <span style={{ fontWeight: 600, fontSize: 13 }}>
-                {sec.label}
-                <Tag style={{ marginLeft: 8, fontSize: 11, borderRadius: 0 }}>{sec.widgets.length}</Tag>
-              </span>
-            ),
-            children: (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0 4px' }}>
-                {sec.widgets.map((def) => {
-                  const alreadyAdded = addedWidgetIds.has(def.id);
-                  return (
-                    <div
-                      key={def.id}
-                      onClick={() => handleToggleWidget(def.id)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        padding: '8px 12px',
-                        borderRadius: 0,
-                        background: alreadyAdded ? '#f6ffed' : '#fafafa',
-                        border: `1px solid ${alreadyAdded ? '#b7eb8f' : '#f0f0f0'}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (alreadyAdded) {
-                          e.currentTarget.style.borderColor = '#ff4d4f';
-                          e.currentTarget.style.background = '#fff2f0';
-                        } else {
-                          e.currentTarget.style.borderColor = '#1677ff';
-                          e.currentTarget.style.background = '#e6f4ff';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = alreadyAdded ? '#b7eb8f' : '#f0f0f0';
-                        e.currentTarget.style.background = alreadyAdded ? '#f6ffed' : '#fafafa';
-                      }}
-                    >
-                      <span style={{ fontSize: 18, color: alreadyAdded ? '#52c41a' : '#1677ff', flexShrink: 0, width: 24, textAlign: 'center' }}>{def.icon}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.3 }}>
-                          {def.name}
-                          {alreadyAdded && <Tag color="green" style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', borderRadius: 0 }}>已添加</Tag>}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#999', lineHeight: 1.3, marginTop: 2 }}>{def.description}</div>
-                      </div>
-                      {alreadyAdded ? (
-                        <MinusCircleOutlined style={{ color: '#ff4d4f', fontSize: 16 }} />
-                      ) : (
-                        <PlusOutlined style={{ color: '#1677ff', fontSize: 14 }} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ),
-          }))}
-        />
-      </Drawer>
+          <div>
+            <Typography.Text strong>描述（可选）</Typography.Text>
+            <Input.TextArea
+              value={systemWsDesc}
+              onChange={(e) => setSystemWsDesc(e.target.value)}
+              placeholder="输入描述"
+              maxLength={200}
+              rows={2}
+              style={{ borderRadius: 0, marginTop: 4 }}
+            />
+          </div>
+          <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+            保存后可在角色管理中将此工作区分配给指定角色
+          </Typography.Text>
+        </Modal>
 
-      {/* 重命名 Modal */}
-      <Modal
-        title="重命名工作区"
-        open={renameModal.open}
-        onOk={handleRename}
-        onCancel={() => setRenameModal({ open: false, id: '', name: '' })}
-        width={360}
-      >
-        <Input
-          value={renameModal.name}
-          onChange={(e) => setRenameModal({ ...renameModal, name: e.target.value })}
-          placeholder="输入新名称"
-          maxLength={20}
-          onPressEnter={handleRename}
-          autoFocus
-          style={{ borderRadius: 0 }}
-        />
-      </Modal>
-
-      {/* 保存为系统工作区 Modal */}
-      <Modal
-        title="保存为系统工作区"
-        open={saveSystemModalOpen}
-        onOk={handleSaveAsSystem}
-        onCancel={() => { setSaveSystemModalOpen(false); setSystemWsName(''); setSystemWsDesc(''); }}
-        width={420}
-        okText="保存"
-      >
-        <div style={{ marginBottom: 12 }}>
-          <Typography.Text strong>名称</Typography.Text>
-          <Input
-            value={systemWsName}
-            onChange={(e) => setSystemWsName(e.target.value)}
-            placeholder="输入系统工作区名称"
-            maxLength={50}
-            style={{ borderRadius: 0, marginTop: 4 }}
-          />
-        </div>
-        <div>
-          <Typography.Text strong>描述（可选）</Typography.Text>
-          <Input.TextArea
-            value={systemWsDesc}
-            onChange={(e) => setSystemWsDesc(e.target.value)}
-            placeholder="输入描述"
-            maxLength={200}
-            rows={2}
-            style={{ borderRadius: 0, marginTop: 4 }}
-          />
-        </div>
-        <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
-          保存后可在角色管理中将此工作区分配给指定角色
-        </Typography.Text>
-      </Modal>
-
-      {/* ========== Grid 样式 ========== */}
-      <style>{`
+        {/* ========== Grid 样式 ========== */}
+        <style>{`
         /* 性能: 禁用所有过渡动画，减少 GPU 开销 */
         .dashboard-grid .react-grid-item {
           transition: none !important;
@@ -1118,8 +1115,10 @@ const DashboardBuilder: React.FC = () => {
           border-right: 2px solid #bbb;
           border-bottom: 2px solid #bbb;
         }
-      `}</style>
-    </PageContainer >
+      `}
+        </style>
+      </StandardTable>
+    </div>
   );
 };
 

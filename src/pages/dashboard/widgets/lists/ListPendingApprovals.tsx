@@ -1,5 +1,5 @@
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { Badge, Empty, List, Typography, Tooltip, Tag } from 'antd';
+import { Badge, Empty, Typography, Tooltip, Tag } from 'antd';
 import { useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -32,17 +32,19 @@ const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRem
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto' }}>
-                    <List
-                        size="small"
-                        dataSource={Array.isArray(items) ? items : []}
-                        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
-                        renderItem={(item: any, index: number) => {
+                    {(!Array.isArray(items) || items.length === 0) ? (
+                        <div style={{ padding: '24px 0' }}>
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                        </div>
+                    ) : (
+                        items.map((item: any, index: number) => {
                             const nodeId = item.node_id || item.id?.slice(0, 8);
                             const flowName = item.flow_name || '-';
                             const instanceId = item.flow_instance_id || '-';
 
                             return (
                                 <div
+                                    key={item.id || index}
                                     className="list-item-hover"
                                     style={{
                                         display: 'grid',
@@ -88,8 +90,8 @@ const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRem
                                     </div>
                                 </div>
                             );
-                        }}
-                    />
+                        })
+                    )}
                 </div>
             </div>
         </WidgetWrapper>

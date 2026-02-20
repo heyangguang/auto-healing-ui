@@ -10,9 +10,8 @@ const StatExecSuccess: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
     const { data: rawData, loading, refresh } = useRequest(() => getExecutionRunStats());
     const data = rawData as any;
     const statsData = data?.data ?? data ?? {};
-    const byStatus = statsData.by_status ?? [];
-    const success = byStatus.find((x: any) => x.status === 'success')?.count ?? 0;
-    const total = statsData.total ?? 0;
+    const success = statsData.success_count ?? 0;
+    const total = statsData.total_count ?? 0;
     const rate = total > 0 ? ((success / total) * 100).toFixed(1) : '0.0';
     return (
         <WidgetWrapper title="执行成功率" icon={<CheckCircleOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>

@@ -29,9 +29,14 @@ const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
     const data = rawData as any;
     const chartData = React.useMemo(() => {
         const statsData = data?.data ?? data ?? {};
-        const byStatus = statsData.by_status ?? [];
-        if (!Array.isArray(byStatus) || byStatus.length === 0) return [];
-        return byStatus.map((item: any) => ({
+        // API 返回扁平字段: success_count, failed_count, partial_count, cancelled_count
+        const entries = [
+            { status: 'success', count: Number(statsData.success_count ?? 0) },
+            { status: 'failed', count: Number(statsData.failed_count ?? 0) },
+            { status: 'partial', count: Number(statsData.partial_count ?? 0) },
+            { status: 'cancelled', count: Number(statsData.cancelled_count ?? 0) },
+        ].filter((item) => item.count > 0);
+        return entries.map((item) => ({
             status: STATUS_LABELS[item.status] || item.status,
             count: item.count,
             color: STATUS_COLORS[item.status] || '#8c8c8c',
