@@ -76,6 +76,7 @@ body,
 /* 内容区域 */
 .ant-layout-content {
   will-change: auto;
+  background: transparent !important;
 }
 
 /* 优化菜单过渡 - 使用 GPU 加速避免页面加载时卡顿 */
@@ -318,10 +319,11 @@ body[style] {
    自定义布局覆盖 - 适配 TopNavBar + AppLayout
    ============================================ */
 
-/* 禁用 ProLayout 默认的内容 padding */
+/* 禁用 ProLayout 默认的内容 padding 和背景 */
 .ant-pro-layout-content {
   padding: 0 !important;
   margin: 0 !important;
+  background: transparent !important;
 }
 
 /* 确保 ProLayout 容器不添加额外间距 */
