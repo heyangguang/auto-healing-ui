@@ -1,5 +1,5 @@
 import { useRequest } from '@umijs/max';
-import { Card, Col, Form, List, Row, Select, Typography } from 'antd';
+import { Card, Col, Form, Row, Select, Spin, Typography } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import type { FC } from 'react';
@@ -26,56 +26,48 @@ const Projects: FC = () => {
   });
   const list = data?.list || [];
   const cardList = list && (
-    <List<ListItemDataType>
-      rowKey="id"
-      loading={loading}
-      grid={{
-        gutter: 16,
-        xs: 1,
-        sm: 2,
-        md: 3,
-        lg: 3,
-        xl: 4,
-        xxl: 4,
-      }}
-      dataSource={list}
-      renderItem={(item) => (
-        <List.Item>
-          <Card
-            className={styles.card}
-            hoverable
-            cover={<img alt={item.title} src={item.cover} />}
-          >
-            <Card.Meta
-              title={<a>{item.title}</a>}
-              description={
-                <Paragraph
-                  ellipsis={{
-                    rows: 2,
-                  }}
-                >
-                  {item.subDescription}
-                </Paragraph>
-              }
-            />
-            <div className={styles.cardItemContent}>
-              <span>{dayjs(item.updatedAt).fromNow()}</span>
-              <div className={styles.avatarList}>
-                <AvatarList size="small">
-                  {item.members.map((member, i) => (
-                    <AvatarList.Item
-                      key={getKey(item.id, i)}
-                      src={member.avatar}
-                      tips={member.name}
-                    />
-                  ))}
-                </AvatarList>
+    loading ? (
+      <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+    ) : (
+      <Row gutter={[16, 16]}>
+        {list.map((item) => (
+          <Col key={item.id} xs={24} sm={12} md={8} lg={8} xl={6} xxl={6}>
+            <Card
+              className={styles.card}
+              hoverable
+              cover={<img alt={item.title} src={item.cover} />}
+            >
+              <Card.Meta
+                title={<a>{item.title}</a>}
+                description={
+                  <Paragraph
+                    ellipsis={{
+                      rows: 2,
+                    }}
+                  >
+                    {item.subDescription}
+                  </Paragraph>
+                }
+              />
+              <div className={styles.cardItemContent}>
+                <span>{dayjs(item.updatedAt).fromNow()}</span>
+                <div className={styles.avatarList}>
+                  <AvatarList size="small">
+                    {item.members.map((member, i) => (
+                      <AvatarList.Item
+                        key={getKey(item.id, i)}
+                        src={member.avatar}
+                        tips={member.name}
+                      />
+                    ))}
+                  </AvatarList>
+                </div>
               </div>
-            </div>
-          </Card>
-        </List.Item>
-      )}
-    />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    )
   );
   const formItemLayout = {
     wrapperCol: {

@@ -5,7 +5,7 @@ import {
   StarOutlined,
 } from '@ant-design/icons';
 import { useRequest } from '@umijs/max';
-import { Button, Card, Col, Form, List, Row, Select, Tag } from 'antd';
+import { Button, Card, Col, Form, Row, Select, Tag, Spin } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import type { FC } from 'react';
 import React, { useMemo } from 'react';
@@ -212,43 +212,46 @@ const Articles: FC = () => {
       <Card
         style={{ marginTop: 24 }}
         bordered={false}
-        bodyStyle={{ padding: '8px 32px 32px 32px' }}
+        styles={{ body: { padding: '8px 32px 32px 32px' } }}
       >
-        <List<ListItemDataType>
-          size="large"
-          loading={loading}
-          rowKey="id"
-          itemLayout="vertical"
-          loadMore={loadMoreDom}
-          dataSource={list}
-          renderItem={(item) => (
-            <List.Item
-              key={item.id}
-              actions={[
-                <IconText key="star" type="star-o" text={item.star} />,
-                <IconText key="like" type="like-o" text={item.like} />,
-                <IconText key="message" type="message" text={item.message} />,
-              ]}
-              extra={<div className={styles.listItemExtra} />}
-            >
-              <List.Item.Meta
-                title={
-                  <a className={styles.listItemMetaTitle} href={item.href}>
-                    {item.title}
-                  </a>
-                }
-                description={
-                  <span>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        ) : (
+          <div>
+            {list.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  padding: '16px 0',
+                  borderBottom: '1px solid #f0f0f0',
+                  display: 'flex',
+                  gap: 16,
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <a className={styles.listItemMetaTitle} href={item.href}>
+                      {item.title}
+                    </a>
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
                     <Tag>Ant Design</Tag>
                     <Tag>设计语言</Tag>
                     <Tag>蚂蚁金服</Tag>
-                  </span>
-                }
-              />
-              <ArticleListContent data={item} />
-            </List.Item>
-          )}
-        />
+                  </div>
+                  <ArticleListContent data={item} />
+                  <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                    <IconText key="star" type="star-o" text={item.star} />
+                    <IconText key="like" type="like-o" text={item.like} />
+                    <IconText key="message" type="message" text={item.message} />
+                  </div>
+                </div>
+                <div className={styles.listItemExtra} />
+              </div>
+            ))}
+            {loadMoreDom}
+          </div>
+        )}
       </Card>
     </>
   );

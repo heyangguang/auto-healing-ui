@@ -208,7 +208,7 @@ const TableForm: FC<TableFormProps> = ({ value, onChange }) => {
             return (
               <span>
                 <a onClick={(e) => saveRow(e, record.key)}>添加</a>
-                <Divider type="vertical" />
+                <Divider orientation="vertical" />
                 <Popconfirm
                   title="是否要删除此行？"
                   onConfirm={() => remove(record.key)}
@@ -221,7 +221,7 @@ const TableForm: FC<TableFormProps> = ({ value, onChange }) => {
           return (
             <span>
               <a onClick={(e) => saveRow(e, record.key)}>保存</a>
-              <Divider type="vertical" />
+              <Divider orientation="vertical" />
               <a onClick={(e) => cancel(e, record.key)}>取消</a>
             </span>
           );
@@ -229,7 +229,7 @@ const TableForm: FC<TableFormProps> = ({ value, onChange }) => {
         return (
           <span>
             <a onClick={(e) => toggleEditable(e, record.key)}>编辑</a>
-            <Divider type="vertical" />
+            <Divider orientation="vertical" />
             <Popconfirm
               title="是否要删除此行？"
               onConfirm={() => remove(record.key)}

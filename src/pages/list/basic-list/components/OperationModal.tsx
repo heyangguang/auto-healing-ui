@@ -40,12 +40,14 @@ const OperationModal: FC<OperationModalProps> = (props) => {
       trigger={children}
       modalProps={{
         onCancel: () => onDone(),
-        destroyOnClose: true,
-        bodyStyle: done
-          ? {
+        destroyOnHidden: true,
+        styles: {
+          body: done
+            ? {
               padding: '72px 0',
             }
-          : {},
+            : {}
+        },
       }}
     >
       {!done ? (

@@ -1,7 +1,7 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useRequest } from '@umijs/max';
-import { Button, Card, List, Typography } from 'antd';
+import { Button, Card, Col, Row, Spin, Typography } from 'antd';
 import type { CardListItemDataType } from './data.d';
 import { queryFakeList } from './service';
 import useStyles from './style.style';
@@ -59,64 +59,50 @@ const CardList = () => {
   return (
     <PageContainer content={content} extraContent={extraContent}>
       <div className={styles.cardList}>
-        <List<Partial<CardListItemDataType>>
-          rowKey="id"
-          loading={loading}
-          grid={{
-            gutter: 16,
-            xs: 1,
-            sm: 2,
-            md: 3,
-            lg: 3,
-            xl: 4,
-            xxl: 4,
-          }}
-          dataSource={[nullData, ...list]}
-          renderItem={(item) => {
-            if (item?.id) {
-              return (
-                <List.Item key={item.id}>
-                  <Card
-                    hoverable
-                    className={styles.card}
-                    actions={[
-                      <a key="option1">操作一</a>,
-                      <a key="option2">操作二</a>,
-                    ]}
-                  >
-                    <Card.Meta
-                      avatar={
-                        <img
-                          alt=""
-                          className={styles.cardAvatar}
-                          src={item.avatar}
-                        />
-                      }
-                      title={<a>{item.title}</a>}
-                      description={
-                        <Paragraph
-                          className={styles.item}
-                          ellipsis={{
-                            rows: 3,
-                          }}
-                        >
-                          {item.description}
-                        </Paragraph>
-                      }
-                    />
-                  </Card>
-                </List.Item>
-              );
-            }
-            return (
-              <List.Item>
-                <Button type="dashed" className={styles.newButton}>
-                  <PlusOutlined /> 新增产品
-                </Button>
-              </List.Item>
-            );
-          }}
-        />
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        ) : (
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8} lg={8} xl={6} xxl={6}>
+              <Button type="dashed" className={styles.newButton}>
+                <PlusOutlined /> 新增产品
+              </Button>
+            </Col>
+            {list.map((item) => (
+              <Col key={item.id} xs={24} sm={12} md={8} lg={8} xl={6} xxl={6}>
+                <Card
+                  hoverable
+                  className={styles.card}
+                  actions={[
+                    <a key="option1">操作一</a>,
+                    <a key="option2">操作二</a>,
+                  ]}
+                >
+                  <Card.Meta
+                    avatar={
+                      <img
+                        alt=""
+                        className={styles.cardAvatar}
+                        src={item.avatar}
+                      />
+                    }
+                    title={<a>{item.title}</a>}
+                    description={
+                      <Paragraph
+                        className={styles.item}
+                        ellipsis={{
+                          rows: 3,
+                        }}
+                      >
+                        {item.description}
+                      </Paragraph>
+                    }
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
       </div>
     </PageContainer>
   );
