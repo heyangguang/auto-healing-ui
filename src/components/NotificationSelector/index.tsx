@@ -427,7 +427,7 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
                     ) : null
                 }
                 width={500}
-                destroyOnClose
+                destroyOnHidden
             >
                 {renderSelectorContent()}
             </Modal>

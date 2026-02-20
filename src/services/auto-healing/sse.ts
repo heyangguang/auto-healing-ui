@@ -172,8 +172,9 @@ export const createInstanceEventStream = (
     callbacks: DryRunSSECallbacks
 ): EventSource => {
     const token = getAuthToken();
+    const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
     const eventSource = new EventSource(
-        `/api/v1/healing/instances/${instanceId}/events?token=${token}`
+        `${sseBase}/api/v1/healing/instances/${instanceId}/events?token=${token}`
     );
 
     eventSource.addEventListener('connected', (event: MessageEvent) => {

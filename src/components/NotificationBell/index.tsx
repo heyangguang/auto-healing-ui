@@ -1,58 +1,170 @@
 import React, { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
-import { getSiteMessages } from '@/services/auto-healing/siteMessage';
+import { getSiteMessages, getUnreadCount, getSiteMessageCategories } from '@/services/auto-healing/siteMessage';
+import type { SiteMessageCategory } from '@/services/auto-healing/siteMessage';
+import { TokenManager } from '@/requestErrorConfig';
+import dayjs from 'dayjs';
 import './index.css';
 
-const POLL = 60_000;
+/** 降级轮询间隔 5 分钟（SSE 在线时兜底） */
+const POLL_INTERVAL = 5 * 60_000;
+
+/** 分类颜色 - 使用后端英文 value */
+const DOT_COLORS: Record<string, string> = {
+    system_update: '#1677ff',
+    product_news: '#1677ff',
+    service_notice: '#52c41a',
+    activity: '#faad14',
+    fault_alert: '#ff4d4f',
+    security: '#ff4d4f',
+};
 
 const NotificationBell: React.FC = () => {
     const [open, setOpen] = useState(false);
-    const [msgs, setMsgs] = useState<{ title: string; time: string; category: string }[]>([]);
+    const [msgs, setMsgs] = useState<{ title: string; time: string; category: string; categoryLabel: string }[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const hoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const esRef = useRef<EventSource | null>(null);
 
-    /* 分类颜色 */
-    const DOT_COLORS: Record<string, string> = {
-        '产品消息': '#1677ff',
-        '服务消息': '#52c41a',
-        '活动通知': '#faad14',
-        '故障通知': '#ff4d4f',
-    };
-    const getDotColor = (cat: string) => {
-        for (const key of Object.keys(DOT_COLORS)) {
-            if (cat.includes(key)) return DOT_COLORS[key];
-        }
-        return '#1677ff';
-    };
+    /* 加载分类映射 */
+    useEffect(() => {
+        getSiteMessageCategories()
+            .then((res) => {
+                const map: Record<string, string> = {};
+                (res?.data || []).forEach((c: SiteMessageCategory) => {
+                    map[c.value] = c.label;
+                });
+                setCategoryMap(map);
+            })
+            .catch(() => { });
+    }, []);
 
-    const fetchData = useCallback(async () => {
+    const getDotColor = (cat: string) => DOT_COLORS[cat] || '#1677ff';
+
+    /** 获取未读数 */
+    const refreshUnreadCount = useCallback(async () => {
         try {
-            const res = await getSiteMessages({ page: 1, page_size: 5 });
-            const items = res?.data || [];
-            setUnreadCount(res?.total || items.length);
+            const res = await getUnreadCount();
+            setUnreadCount(res?.data?.unread_count ?? 0);
+        } catch { /* silent */ }
+    }, []);
+
+    /** 获取消息列表 */
+    const refreshMessages = useCallback(async () => {
+        try {
+            const listRes = await getSiteMessages({ page: 1, page_size: 5 });
+            const items = listRes?.data || [];
             setMsgs(items.slice(0, 5).map((m: any) => ({
                 title: m.title || '站内信',
-                time: m.date + ' ' + m.time,
+                time: m.created_at || '',
                 category: m.category || '',
+                categoryLabel: '',
             })));
         } catch { /* silent */ }
     }, []);
 
+    /** 完整刷新 */
+    const refreshAll = useCallback(async () => {
+        await Promise.all([refreshUnreadCount(), refreshMessages()]);
+    }, [refreshUnreadCount, refreshMessages]);
+
+    /* ======== SSE 连接（仅初始化一次） ======== */
     useEffect(() => {
-        fetchData();
-        timerRef.current = setInterval(fetchData, POLL);
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [fetchData]);
+        const token = TokenManager.getToken();
+        if (!token) {
+            console.warn('[NotificationBell] 无 token，跳过 SSE');
+            return;
+        }
+
+        // SSE 连接地址：
+        // - 配置了 SSE_API_BASE → 直连后端（绕过 dev proxy 对 SSE 的缓冲）
+        // - 未配置 → 走同源代理
+        // 修改 .env.local 中的 SSE_API_BASE 后需要重启 dev server
+        const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
+        const sseUrl = `${sseBase}/api/v1/site-messages/events?token=${token}`;
+        console.log('[SSE] 正在建立连接…', sseBase || '(same origin)');
+        const es = new EventSource(sseUrl);
+        esRef.current = es;
+
+        es.onopen = () => {
+            console.log('[SSE] ✅ 连接已打开, readyState:', es.readyState);
+        };
+
+        // 通用消息 fallback（捕获所有 named + unnamed 事件）
+        es.onmessage = (e: MessageEvent) => {
+            console.log('[SSE] onmessage (unnamed):', e.data);
+        };
+
+        // 连接建立 → 直接使用推送的未读数
+        es.addEventListener('init', (e: MessageEvent) => {
+            console.log('[SSE] 📨 收到 init 事件:', e.data);
+            try {
+                const d = JSON.parse(e.data);
+                setUnreadCount(d.unread_count ?? 0);
+            } catch { /* ignore */ }
+        });
+
+        // 新消息 → 调 API 拿最新未读数 + 列表
+        es.addEventListener('new_message', (e: MessageEvent) => {
+            console.log('[SSE] 🔔 收到 new_message 事件:', e.data);
+            getUnreadCount()
+                .then((res) => setUnreadCount(res?.data?.unread_count ?? 0))
+                .catch(() => { });
+            getSiteMessages({ page: 1, page_size: 5 })
+                .then((res) => {
+                    const items = res?.data || [];
+                    setMsgs(items.slice(0, 5).map((m: any) => ({
+                        title: m.title || '站内信',
+                        time: m.created_at || '',
+                        category: m.category || '',
+                        categoryLabel: '',
+                    })));
+                })
+                .catch(() => { });
+        });
+
+        es.onerror = (err) => {
+            console.warn('[SSE] ❌ 连接错误, readyState:', es.readyState, err);
+            // readyState: 0=CONNECTING, 1=OPEN, 2=CLOSED
+        };
+
+        return () => {
+            es.close();
+            esRef.current = null;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // 只在挂载时建立一次
+
+    /* ======== 初始加载 + 兜底轮询 + 本地事件 ======== */
+    useEffect(() => {
+        // 初始加载
+        refreshAll();
+
+        // 兜底轮询
+        timerRef.current = setInterval(refreshUnreadCount, POLL_INTERVAL);
+
+        // 本地事件（同窗口内的标记已读 / 发送消息）
+        const onLocal = () => refreshAll();
+        window.addEventListener('site-messages:read', onLocal);
+        window.addEventListener('site-messages:new', onLocal);
+
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+            window.removeEventListener('site-messages:read', onLocal);
+            window.removeEventListener('site-messages:new', onLocal);
+        };
+    }, [refreshAll, refreshUnreadCount]);
 
     const handleEnter = useCallback(() => {
         if (hoverRef.current) clearTimeout(hoverRef.current);
         hoverRef.current = setTimeout(() => {
             setOpen(true);
-            fetchData();
+            refreshAll();
         }, 150);
-    }, [fetchData]);
+    }, [refreshAll]);
 
     const handleLeave = useCallback(() => {
         if (hoverRef.current) clearTimeout(hoverRef.current);
@@ -65,15 +177,10 @@ const NotificationBell: React.FC = () => {
         startTransition(() => history.push(path));
     }, [close]);
 
-    /* 格式化时间为中文: 2026年2月13日 01:06:14 */
+    /* 格式化时间 */
     const formatTime = (t: string) => {
         try {
-            const d = new Date(t);
-            if (isNaN(d.getTime())) return t;
-            return d.toLocaleString('zh-CN', {
-                year: 'numeric', month: 'long', day: 'numeric',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-            });
+            return dayjs(t).format('YYYY年M月D日 HH:mm:ss');
         } catch { return t; }
     };
 
@@ -117,7 +224,9 @@ const NotificationBell: React.FC = () => {
                                         </span>
                                         <div className="nb-msg-content">
                                             <div className="nb-msg-title">{m.title}</div>
-                                            <div className="nb-msg-time">{formatTime(m.time)}</div>
+                                            <div className="nb-msg-time">
+                                                {categoryMap[m.category] || m.category} · {formatTime(m.time)}
+                                            </div>
                                         </div>
                                     </div>
                                 );
