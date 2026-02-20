@@ -1,0 +1,84 @@
+/* ========== 平台用户详情页 ========== */
+
+.user-detail-page {
+    padding: 0;
+    min-height: calc(100vh - 120px);
+    background: #f5f5f5;
+}
+
+.user-detail-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 24px 32px;
+    max-width: 860px;
+}
+
+.user-detail-card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    padding: 24px 32px;
+}
+
+.user-detail-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    margin: 0 0 16px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-detail-section-title .anticon {
+    font-size: 15px;
+    color: #1890ff;
+}
+
+.user-detail-info-row {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.user-detail-info-row:last-child {
+    margin-bottom: 0;
+}
+
+.user-detail-info-item {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    min-width: 200px;
+}
+
+.user-detail-info-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.user-detail-info-value {
+    font-size: 13px;
+    color: #262626;
+    word-break: break-all;
+}
+
+@media (max-width: 768px) {
+    .user-detail-cards {
+        padding: 12px 12px 24px;
+    }
+
+    .user-detail-card {
+        padding: 20px;
+    }
+
+    .user-detail-info-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+}

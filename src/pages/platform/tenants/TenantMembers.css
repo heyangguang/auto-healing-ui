@@ -1,0 +1,45 @@
+/* ========== 租户成员管理页 ========== */
+
+.tenant-members-page {
+    padding: 0;
+    min-height: calc(100vh - 120px);
+    background: #f5f5f5;
+}
+
+.tenant-members-body {
+    padding: 16px 24px 32px;
+    max-width: 960px;
+}
+
+.tenant-members-card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    padding: 24px 28px;
+}
+
+/* 表格样式 */
+.tenant-members-table .ant-table-thead>tr>th {
+    background: #fafafa !important;
+    font-size: 12px;
+    font-weight: 500;
+    color: #8c8c8c;
+    padding: 8px 12px !important;
+}
+
+.tenant-members-table .ant-table-tbody>tr>td {
+    padding: 12px !important;
+}
+
+.tenant-members-table .ant-table-tbody>tr:hover>td {
+    background: #f8f9fb !important;
+}
+
+@media (max-width: 768px) {
+    .tenant-members-body {
+        padding: 12px 12px 24px;
+    }
+
+    .tenant-members-card {
+        padding: 16px;
+    }
+}

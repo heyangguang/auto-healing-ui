@@ -1,0 +1,95 @@
+import { request } from '@umijs/max';
+
+/**
+ * 平台级用户管理 API
+ * 平台管理员专用，不携带 X-Tenant-ID
+ *
+ * 注意：
+ * - GET /platform/users        → 只返回有 platform_admin 角色的用户
+ * - GET /platform/users/simple → 全量轻量用户池（选人用，不过滤）
+ */
+
+/** 获取平台管理员列表（只含 platform_admin 角色的用户） */
+export async function getPlatformUsers(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+}) {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.User>>(
+        '/api/v1/platform/users',
+        { method: 'GET', params }
+    );
+}
+
+/** 全量轻量用户池（设置租户管理员时用，不过滤角色） */
+export async function getPlatformUsersSimple(params?: { search?: string }) {
+    return request<{ code: number; data: { id: string; username: string; display_name: string; status: string }[] }>(
+        '/api/v1/platform/users/simple',
+        { method: 'GET', params }
+    );
+}
+
+/** 创建平台管理员账号（后端自动赋予 platform_admin 角色，前端不需要选角色） */
+export async function createPlatformUser(data: {
+    username: string;
+    email?: string;
+    password: string;
+    display_name?: string;
+}) {
+    return request<AutoHealing.User>('/api/v1/platform/users', {
+        method: 'POST',
+        data,
+    });
+}
+
+/** 更新平台管理员信息 */
+export async function updatePlatformUser(id: string, data: AutoHealing.UpdateUserRequest) {
+    return request<AutoHealing.User>(`/api/v1/platform/users/${id}`, {
+        method: 'PUT',
+        data,
+    });
+}
+
+/** 删除平台管理员（最后一个不可删，后端返回 400） */
+export async function deletePlatformUser(id: string) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/users/${id}`, {
+        method: 'DELETE',
+    });
+}
+
+/** 获取渴望详情 */
+export async function getPlatformUser(id: string) {
+    return request<AutoHealing.User>(`/api/v1/platform/users/${id}`, {
+        method: 'GET',
+    });
+}
+
+/** 重置平台管理员密码 */
+export async function resetPlatformUserPassword(id: string, data: { new_password: string }) {
+    return request<AutoHealing.SuccessResponse>(
+        `/api/v1/platform/users/${id}/reset-password`,
+        { method: 'POST', data }
+    );
+}
+
+// ===== 租户级用户管理 API（租户管理员专用，自动携带 X-Tenant-ID） =====
+
+/** 获取当前租户用户列表 */
+export async function getTenantUsers(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+}) {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.User>>(
+        '/api/v1/tenant/users',
+        { method: 'GET', params }
+    );
+}
+
+/** 创建租户用户 */
+export async function createTenantUser(data: AutoHealing.CreateTenantUserRequest) {
+    return request<AutoHealing.User>('/api/v1/tenant/users', {
+        method: 'POST',
+        data,
+    });
+}
