@@ -1,0 +1,245 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { App } from 'antd';
+import { request, useModel, history } from '@umijs/max';
+import {
+    BankOutlined, CheckOutlined, SearchOutlined, CaretDownFilled,
+    ShopOutlined, TeamOutlined, CloudOutlined, ApartmentOutlined,
+    ToolOutlined, GlobalOutlined, RocketOutlined, HomeOutlined,
+    BulbOutlined, SafetyOutlined, ThunderboltOutlined, DatabaseOutlined,
+    ApiOutlined, DeploymentUnitOutlined, ClusterOutlined, DashboardOutlined,
+    ExperimentOutlined, MonitorOutlined, CodeOutlined, BuildOutlined,
+    FundOutlined, TrophyOutlined, StarOutlined, ProductOutlined,
+    AlertOutlined, AuditOutlined, FireOutlined, CustomerServiceOutlined,
+    ControlOutlined, SendOutlined, FolderOpenOutlined, LoadingOutlined,
+} from '@ant-design/icons';
+
+interface TenantBrief {
+    id: string;
+    name: string;
+    code: string;
+    icon?: string;
+}
+
+const ICON_MAP: Record<string, React.ReactNode> = {
+    bank: <BankOutlined />, shop: <ShopOutlined />, team: <TeamOutlined />,
+    cloud: <CloudOutlined />, apartment: <ApartmentOutlined />, tool: <ToolOutlined />,
+    global: <GlobalOutlined />, rocket: <RocketOutlined />, home: <HomeOutlined />,
+    bulb: <BulbOutlined />, safety: <SafetyOutlined />, thunder: <ThunderboltOutlined />,
+    database: <DatabaseOutlined />, api: <ApiOutlined />, deployment: <DeploymentUnitOutlined />,
+    cluster: <ClusterOutlined />, dashboard: <DashboardOutlined />, experiment: <ExperimentOutlined />,
+    monitor: <MonitorOutlined />, code: <CodeOutlined />, build: <BuildOutlined />,
+    fund: <FundOutlined />, trophy: <TrophyOutlined />, star: <StarOutlined />,
+    product: <ProductOutlined />, alert: <AlertOutlined />, audit: <AuditOutlined />,
+    fire: <FireOutlined />, service: <CustomerServiceOutlined />, control: <ControlOutlined />,
+    send: <SendOutlined />, folder: <FolderOpenOutlined />,
+};
+
+/* ── 内联样式常量 ── */
+const S = {
+    container: { position: 'relative' as const },
+    trigger: {
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+        padding: '0 14px', height: 58,
+        borderLeft: '1px solid rgba(255,255,255,0.12)',
+        transition: 'background 0.2s',
+        color: 'rgba(255,255,255,0.85)', userSelect: 'none' as const,
+    },
+    triggerName: {
+        fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)',
+        transform: 'translateY(1px)',
+    },
+    triggerCaret: { fontSize: 8, color: 'rgba(255,255,255,0.4)', transform: 'translateY(1px)' },
+    panel: {
+        position: 'absolute' as const, top: '100%', left: 0,
+        width: 180, background: '#fff',
+        borderRadius: '0 0 6px 6px',
+        boxShadow: '0 6px 16px rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12)',
+        zIndex: 1050, overflow: 'hidden' as const,
+    },
+    list: { maxHeight: 220, overflowY: 'auto' as const, padding: '2px 0' },
+    item: (active: boolean) => ({
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '5px 10px', cursor: 'pointer',
+        transition: 'background 0.12s',
+        color: active ? '#0f62fe' : '#262626',
+        fontWeight: active ? 500 : 400 as number,
+        fontSize: 13, lineHeight: '20px',
+    }),
+    itemIcon: (active: boolean) => ({
+        color: active ? '#0f62fe' : '#8c8c8c', fontSize: 13, flexShrink: 0,
+    }),
+    check: { color: '#0f62fe', fontSize: 10, marginLeft: 'auto', flexShrink: 0 },
+    empty: { padding: '12px 10px', color: '#bfbfbf', textAlign: 'center' as const, fontSize: 12 },
+};
+
+const TenantSwitcher: React.FC = () => {
+    const { message } = App.useApp();
+    const { refresh } = useModel('@@initialState');
+    const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
+    const [tenants, setTenants] = useState<TenantBrief[]>([]);
+    const [searchValue, setSearchValue] = useState('');
+    const [searchResults, setSearchResults] = useState<TenantBrief[] | null>(null);
+    const [searching, setSearching] = useState(false);
+    const [open, setOpen] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    /* 点击外部关闭 */
+    useEffect(() => {
+        if (!open) return;
+        const h = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+        };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, [open]);
+
+    /* 启动时加载租户列表 */
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('tenant-storage');
+            if (raw) setCurrentTenantId(JSON.parse(raw).currentTenantId || null);
+        } catch { /* ignore */ }
+
+        request('/api/v1/user/tenants')
+            .then((res: any) => {
+                if (res?.data && Array.isArray(res.data)) {
+                    setTenants(res.data);
+                    try {
+                        const raw = localStorage.getItem('tenant-storage');
+                        const stored = raw ? JSON.parse(raw) : {};
+                        stored.tenants = res.data;
+                        localStorage.setItem('tenant-storage', JSON.stringify(stored));
+                    } catch { /* ignore */ }
+                }
+            })
+            .catch(() => {
+                try {
+                    const raw = localStorage.getItem('tenant-storage');
+                    if (raw) setTenants(JSON.parse(raw).tenants || []);
+                } catch { /* ignore */ }
+            });
+    }, []);
+
+    useEffect(() => {
+        if (open) { setSearchValue(''); setSearchResults(null); setTimeout(() => searchRef.current?.focus(), 80); }
+    }, [open]);
+
+    /* 后端搜索（即时请求） */
+    const handleSearchChange = useCallback((value: string) => {
+        setSearchValue(value);
+
+        if (!value.trim()) {
+            setSearchResults(null);
+            setSearching(false);
+            return;
+        }
+        setSearching(true);
+        request('/api/v1/user/tenants', { params: { search: value.trim() } })
+            .then((res: any) => {
+                if (res?.data && Array.isArray(res.data)) setSearchResults(res.data);
+            })
+            .catch(() => { /* ignore */ })
+            .finally(() => setSearching(false));
+    }, []);
+
+    /* 切换租户：更新 localStorage → 刷新 initialState → 跳转首页 */
+    const handleChange = useCallback(async (tid: string) => {
+        if (tid === currentTenantId) { setOpen(false); return; }
+        const t = tenants.find(x => x.id === tid) || searchResults?.find(x => x.id === tid);
+        try {
+            const raw = localStorage.getItem('tenant-storage');
+            if (raw) {
+                const s = JSON.parse(raw);
+                s.currentTenantId = tid;
+                localStorage.setItem('tenant-storage', JSON.stringify(s));
+            }
+        } catch { /* ignore */ }
+
+        setCurrentTenantId(tid);
+        setOpen(false);
+        message.success(`已切换至: ${t?.name || tid}`);
+
+        // 刷新全局 initialState（重新拿用户信息/权限）
+        try { await refresh(); } catch { /* ignore */ }
+
+        // 跳转到工作台，触发页面级数据重新加载
+        history.push('/workbench');
+    }, [currentTenantId, tenants, searchResults, message, refresh]);
+
+    const cur = tenants.find(t => t.id === currentTenantId);
+    const curIcon = (cur?.icon && ICON_MAP[cur.icon]) ?? <BankOutlined />;
+    const showSearch = tenants.length >= 5;
+    const displayList = searchResults !== null ? searchResults : tenants;
+
+    return (
+        <div ref={containerRef} style={S.container}>
+            {/* ── 触发按钮 ── */}
+            <div
+                onClick={() => setOpen(v => !v)}
+                style={S.trigger}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+                <span style={{ fontSize: 16 }}>{curIcon}</span>
+                <span style={S.triggerName}>{cur?.name || '选择租户'}</span>
+                <CaretDownFilled style={S.triggerCaret} />
+            </div>
+
+            {/* ── 下拉面板 ── */}
+            {open && (
+                <div style={S.panel}>
+                    {showSearch && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            height: 40, padding: '0 8px',
+                            background: '#fafafa', borderBottom: '1px solid #f0f0f0',
+                        }}>
+                            {searching
+                                ? <LoadingOutlined style={{ color: '#bfbfbf', fontSize: 12, flexShrink: 0 }} spin />
+                                : <SearchOutlined style={{ color: '#bfbfbf', fontSize: 12, flexShrink: 0 }} />
+                            }
+                            <input
+                                ref={searchRef}
+                                placeholder="搜索租户..."
+                                value={searchValue}
+                                onChange={e => handleSearchChange(e.target.value)}
+                                style={{
+                                    flex: 1, border: 'none', outline: 'none',
+                                    background: 'transparent', fontSize: 12, height: 28,
+                                    padding: 0, color: '#262626', width: '100%',
+                                }}
+                            />
+                        </div>
+                    )}
+                    <div style={S.list}>
+                        {displayList.map(tenant => {
+                            const active = tenant.id === currentTenantId;
+                            const icon = (tenant.icon && ICON_MAP[tenant.icon]) ?? <BankOutlined />;
+                            return (
+                                <div
+                                    key={tenant.id}
+                                    onClick={() => handleChange(tenant.id)}
+                                    style={S.item(active)}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#f5f5f5'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    <span style={S.itemIcon(active)}>{icon}</span>
+                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {tenant.name}
+                                    </span>
+                                    {active && <CheckOutlined style={S.check} />}
+                                </div>
+                            );
+                        })}
+                        {displayList.length === 0 && (
+                            <div style={S.empty}>{searching ? '搜索中...' : '无匹配租户'}</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default TenantSwitcher;
