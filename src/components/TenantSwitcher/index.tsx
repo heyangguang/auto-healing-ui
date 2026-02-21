@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { App } from 'antd';
 import { request, useModel, history } from '@umijs/max';
 import {
@@ -50,11 +51,11 @@ const S = {
     },
     triggerCaret: { fontSize: 8, color: 'rgba(255,255,255,0.4)', transform: 'translateY(1px)' },
     panel: {
-        position: 'absolute' as const, top: '100%', left: 0,
+        position: 'fixed' as const,
         width: 180, background: '#fff',
         borderRadius: '0 0 6px 6px',
         boxShadow: '0 6px 16px rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12)',
-        zIndex: 1050, overflow: 'hidden' as const,
+        zIndex: 2000, overflow: 'hidden' as const,
     },
     list: { maxHeight: 220, overflowY: 'auto' as const, padding: '2px 0' },
     item: (active: boolean) => ({
@@ -83,12 +84,19 @@ const TenantSwitcher: React.FC = () => {
     const [open, setOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const [panelPos, setPanelPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
     /* 点击外部关闭 */
     useEffect(() => {
         if (!open) return;
         const h = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+            const t = e.target as Node;
+            if (
+                containerRef.current && !containerRef.current.contains(t) &&
+                panelRef.current && !panelRef.current.contains(t)
+            ) setOpen(false);
         };
         document.addEventListener('mousedown', h);
         return () => document.removeEventListener('mousedown', h);
@@ -122,7 +130,15 @@ const TenantSwitcher: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (open) { setSearchValue(''); setSearchResults(null); setTimeout(() => searchRef.current?.focus(), 80); }
+        if (open) {
+            setSearchValue(''); setSearchResults(null);
+            // 计算面板位置
+            if (triggerRef.current) {
+                const rect = triggerRef.current.getBoundingClientRect();
+                setPanelPos({ top: rect.bottom, left: rect.left });
+            }
+            setTimeout(() => searchRef.current?.focus(), 80);
+        }
     }, [open]);
 
     /* 后端搜索（即时请求） */
@@ -176,6 +192,7 @@ const TenantSwitcher: React.FC = () => {
         <div ref={containerRef} style={S.container}>
             {/* ── 触发按钮 ── */}
             <div
+                ref={triggerRef}
                 onClick={() => setOpen(v => !v)}
                 style={S.trigger}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
@@ -186,9 +203,9 @@ const TenantSwitcher: React.FC = () => {
                 <CaretDownFilled style={S.triggerCaret} />
             </div>
 
-            {/* ── 下拉面板 ── */}
-            {open && (
-                <div style={S.panel}>
+            {/* ── 下拉面板（Portal 到 body，脱离 navBar 层叠上下文） ── */}
+            {open && ReactDOM.createPortal(
+                <div ref={panelRef} style={{ ...S.panel, top: panelPos.top, left: panelPos.left }}>
                     {showSearch && (
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: 6,
@@ -236,7 +253,8 @@ const TenantSwitcher: React.FC = () => {
                             <div style={S.empty}>{searching ? '搜索中...' : '无匹配租户'}</div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
