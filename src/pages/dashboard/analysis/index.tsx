@@ -134,7 +134,7 @@ function autoArrangeLayouts(widgets: WidgetInstance[], currentLayouts: LayoutIte
  * 核心策略：按 lg 布局的 y->x 排序，然后在较少列数的网格中贪心重排
  * widget 宽度会按比例缩放到目标列数，确保不超出网格
  */
-const BREAKPOINT_COLS: Record<string, number> = { lg: 12, md: 10, sm: 6, xs: 4 };
+const BREAKPOINT_COLS = { lg: 12, md: 10, sm: 6, xs: 4 } as const;
 
 function generateLayoutForBreakpoint(lgLayout: LayoutItem[], targetCols: number): LayoutItem[] {
   if (targetCols >= 12) return lgLayout; // lg 直接返回
@@ -204,7 +204,7 @@ function generateAllBreakpointLayouts(lgLayout: LayoutItem[]): Record<string, La
 }
 
 // ==================== 布局比较工具 ====================
-function layoutsAreEqual(a: LayoutItem[], b: LayoutItem[]): boolean {
+function layoutsAreEqual(a: readonly LayoutItem[], b: readonly LayoutItem[]): boolean {
   if (a.length !== b.length) return false;
   // 简单比较每个 item 的核心属性
   const sortedA = [...a].sort((x, y) => x.i.localeCompare(y.i));
@@ -485,7 +485,7 @@ const DashboardBuilder: React.FC = () => {
     message.success('已重命名');
   }, [state, renameModal, saveState]);
 
-  const handleLayoutChange = useCallback((layout: LayoutItem[], allLayouts: { lg?: LayoutItem[]; md?: LayoutItem[]; sm?: LayoutItem[]; xs?: LayoutItem[] }) => {
+  const handleLayoutChange = useCallback((layout: readonly LayoutItem[], allLayouts: { lg?: readonly LayoutItem[]; md?: readonly LayoutItem[]; sm?: readonly LayoutItem[]; xs?: readonly LayoutItem[] }) => {
     if (!isEditing) return;
 
     // RGL 有时会返回 undefined 或空，以 layout 为准
@@ -501,7 +501,7 @@ const DashboardBuilder: React.FC = () => {
       const newState = {
         ...prev,
         workspaces: prev.workspaces.map((ws) =>
-          ws.id === prev.activeWorkspaceId ? { ...ws, layouts: currentLayout } : ws,
+          ws.id === prev.activeWorkspaceId ? { ...ws, layouts: [...currentLayout] } : ws,
         ),
       };
 
