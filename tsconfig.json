@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "target": "esnext",
+    "module": "esnext",
     "moduleResolution": "node",
     "jsx": "react-jsx",
     "esModuleInterop": true,
@@ -13,10 +14,20 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@@/*": ["./src/.umi/*"],
-      "@@test/*": ["./src/.umi-test/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@@/*": [
+        "./src/.umi/*"
+      ],
+      "@@test/*": [
+        "./src/.umi-test/*"
+      ]
     }
   },
-  "include": ["./**/*.d.ts", "./**/*.ts", "./**/*.tsx"]
+  "include": [
+    "./**/*.d.ts",
+    "./**/*.ts",
+    "./**/*.tsx"
+  ]
 }
