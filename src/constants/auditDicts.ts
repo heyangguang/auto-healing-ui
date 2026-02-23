@@ -8,19 +8,28 @@ import { getDictItems, onDictRefresh } from '@/utils/dictCache';
 // ==================== 硬编码兜底 ====================
 
 const FB_TENANT_RESOURCE: Record<string, string> = {
-    auth: '认证', 'auth-logout': '登出', channels: '通知渠道', cmdb: '资产管理',
+    auth: '认证', 'auth-logout': '登出', 'auth-profile': '个人资料',
+    channels: '通知渠道', cmdb: '资产管理', dashboard: '监控面板',
     'execution-schedules': '定时任务', 'execution-tasks': '执行任务',
-    'git-repos': 'Git 仓库', healing: '自愈管理', 'healing-flows': '自愈流程',
-    'healing-rules': '自愈规则', 'healing-approvals': '自愈审批', incidents: '事件管理',
-    playbooks: 'Playbook', plugins: '插件管理', 'secrets-sources': '密钥管理',
-    'site-messages': '站内信', templates: '通知模板', users: '用户管理',
+    'execution-runs': '执行记录', 'git-repos': '代码仓库',
+    healing: '自愈管理', 'healing-flows': '自愈流程',
+    'healing-rules': '自愈规则', 'healing-approvals': '审批任务',
+    'healing-instances': '自愈实例', incidents: '事件工单',
+    notifications: '通知记录', playbooks: '自动化剧本', plugins: '插件管理',
+    'secrets-sources': '凭据管理', 'site-messages': '站内信',
+    templates: '通知模板', 'tenant-impersonation': '临时提权',
+    user: '用户', users: '用户管理',
 };
 
 const FB_PLATFORM_RESOURCE: Record<string, string> = {
     auth: '认证', 'auth-profile': '个人资料', 'auth-logout': '登出',
-    'healing-approvals': '自愈审批', 'healing-flows': '自愈流程',
-    'healing-rules': '自愈规则', permissions: '权限管理', roles: '角色管理',
-    settings: '平台设置', tenant: '租户', 'tenant-users': '租户用户',
+    'execution-tasks': '执行任务', 'healing-approvals': '自愈审批',
+    'healing-flows': '自愈流程', 'healing-rules': '自愈规则',
+    impersonation: '临时提权', incidents: '事件管理',
+    permissions: '权限管理', plugins: '插件管理', roles: '角色管理',
+    settings: '平台设置', 'site-messages': '站内信',
+    tenant: '租户', 'tenant-impersonation': '临时提权',
+    'tenant-users': '租户用户',
     tenants: '租户管理', users: '用户管理',
 };
 
@@ -29,7 +38,8 @@ const FB_ACTION_LABELS: Record<string, string> = {
     assign_role: '分配角色', batch_create: '批量创建', confirm_review: '确认复核',
     create: '创建', deactivate: '停用', delete: '删除', disable: '禁用',
     dismiss: '驳回', enable: '启用', execute: '执行', login: '登录',
-    logout: '登出', maintenance: '维护', preview: '预览', ready: '就绪',
+    logout: '登出', impersonation_enter: '提权进入', impersonation_exit: '提权退出',
+    maintenance: '维护', preview: '预览', ready: '就绪',
     reject: '审批拒绝', reset_password: '重置密码', reset_scan: '重置扫描',
     resume: '恢复', scan: '扫描', sync: '同步', test: '测试',
     trigger: '触发', update: '更新', update_variables: '更新变量',
@@ -40,7 +50,8 @@ const FB_ACTION_COLORS: Record<string, string> = {
     assign_role: 'magenta', batch_create: 'lime', confirm_review: 'cyan',
     create: 'green', deactivate: 'orange', delete: 'red', disable: 'orange',
     dismiss: 'volcano', enable: 'green', execute: 'geekblue', login: 'purple',
-    logout: 'purple', maintenance: 'orange', preview: 'default', ready: 'cyan',
+    logout: 'purple', impersonation_enter: 'purple', impersonation_exit: 'default',
+    maintenance: 'orange', preview: 'default', ready: 'cyan',
     reject: 'red', reset_password: 'orange', reset_scan: 'gold',
     resume: 'geekblue', scan: 'blue', sync: 'purple', test: 'default',
     trigger: 'gold', update: 'blue', update_variables: 'blue',
@@ -54,7 +65,10 @@ const FB_ACTION_VERBS: Record<string, { verb: string; color: string }> = {
     delete: { verb: '删除了', color: '#f5222d' }, disable: { verb: '禁用了', color: '#fa8c16' },
     dismiss: { verb: '驳回了', color: '#fa541c' }, enable: { verb: '启用了', color: '#52c41a' },
     execute: { verb: '执行了', color: '#fa8c16' }, login: { verb: '登录了', color: '#722ed1' },
-    logout: { verb: '登出了', color: '#722ed1' }, maintenance: { verb: '维护了', color: '#fa8c16' },
+    logout: { verb: '登出了', color: '#722ed1' },
+    impersonation_enter: { verb: '提权进入了', color: '#722ed1' },
+    impersonation_exit: { verb: '提权退出了', color: '#722ed1' },
+    maintenance: { verb: '维护了', color: '#fa8c16' },
     preview: { verb: '预览了', color: '#8c8c8c' }, ready: { verb: '就绪了', color: '#13c2c2' },
     reject: { verb: '拒绝了', color: '#f5222d' }, reset_password: { verb: '重置了密码', color: '#fa8c16' },
     reset_scan: { verb: '重置了扫描', color: '#faad14' }, resume: { verb: '恢复了', color: '#1890ff' },
@@ -88,14 +102,16 @@ function refresh() {
     // 审计资源类型
     const tenantRes = getDictItems('audit_resource_tenant');
     if (tenantRes?.length) {
-        const map: Record<string, string> = {};
+        // 合并到硬编码兜底之上，保留两种 key 格式
+        const map: Record<string, string> = { ...FB_TENANT_RESOURCE };
         tenantRes.forEach(i => { map[i.dict_key] = i.label; });
         TENANT_RESOURCE_LABELS = map;
     }
 
     const platformRes = getDictItems('audit_resource_platform');
     if (platformRes?.length) {
-        const map: Record<string, string> = {};
+        // 合并到硬编码兜底之上，保留两种 key 格式（带/不带 platform- 前缀）
+        const map: Record<string, string> = { ...FB_PLATFORM_RESOURCE };
         platformRes.forEach(i => { map[i.dict_key] = i.label; });
         PLATFORM_RESOURCE_LABELS = map;
     }

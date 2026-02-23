@@ -26,14 +26,24 @@ const FB_AUDIT_RESULT: Array<{ label: string; value: string }> = [
 ];
 
 const FB_RISK_LEVEL: Array<{ label: string; value: string }> = [
+    { label: '极高', value: 'critical' },
     { label: '高危', value: 'high' },
-    { label: '正常', value: 'normal' },
+    { label: '中', value: 'medium' },
+    { label: '低', value: 'low' },
 ];
 
 const FB_USER_STATUS: Array<{ label: string; value: string }> = [
-    { label: '启用', value: 'active' },
-    { label: '禁用', value: 'inactive' },
+    { label: '正常', value: 'active' },
+    { label: '已锁定', value: 'locked' },
+    { label: '已禁用', value: 'inactive' },
 ];
+
+const FB_USER_STATUS_MAP: Record<string, { label: string; color: string; tagColor: string; badge: string }> = {
+    active: { label: '正常', color: '#52c41a', tagColor: 'success', badge: 'success' },
+    locked: { label: '已锁定', color: '#fa8c16', tagColor: 'warning', badge: 'warning' },
+    inactive: { label: '已禁用', color: '#8c8c8c', tagColor: 'default', badge: 'default' },
+    disabled: { label: '已禁用', color: '#d9d9d9', tagColor: 'default', badge: 'default' },
+};
 
 // ==================== 动态变量 ====================
 
@@ -48,6 +58,9 @@ export let RISK_LEVEL_OPTIONS: Array<{ label: string; value: string }> = [...FB_
 
 /** 用户状态 options */
 export let USER_STATUS_OPTIONS: Array<{ label: string; value: string }> = [...FB_USER_STATUS];
+
+/** 用户状态 map（key → label/color/tagColor/badge） */
+export let USER_STATUS_MAP: Record<string, { label: string; color: string; tagColor: string; badge: string }> = { ...FB_USER_STATUS_MAP };
 
 // ==================== 刷新逻辑 ====================
 
@@ -74,6 +87,16 @@ function refresh() {
     const userStatus = getDictItems('user_status');
     if (userStatus?.length) {
         USER_STATUS_OPTIONS = userStatus.map(i => ({ label: i.label, value: i.dict_key }));
+        const map: Record<string, any> = {};
+        userStatus.forEach(i => {
+            map[i.dict_key] = {
+                label: i.label,
+                color: i.color || '#8c8c8c',
+                tagColor: i.tag_color || 'default',
+                badge: i.badge || 'default',
+            };
+        });
+        USER_STATUS_MAP = map;
     }
 }
 
