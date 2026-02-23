@@ -19,7 +19,7 @@ import {
 } from '@ant-design/icons';
 import { history, useAccess } from '@umijs/max';
 import StandardTable from '@/components/StandardTable';
-import type { SearchField } from '@/components/StandardTable';
+import type { SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import {
     getTenants, deleteTenant, updateTenant, getTenant, getTenantMembers,
 } from '@/services/auto-healing/platform/tenants';
@@ -52,8 +52,16 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 const ROLE_COLOR: Record<string, string> = { admin: 'purple', operator: 'cyan', viewer: 'default' };
 
 const searchFields: SearchField[] = [
-    { key: 'name', label: '名称' },
-    { key: 'code', label: '代码' },
+    { key: 'keyword', label: '名称/代码' },
+];
+
+const advancedSearchFields: AdvancedSearchField[] = [
+    { key: 'name', label: '租户名称', type: 'input', placeholder: '搜索名称' },
+    { key: 'code', label: '租户代码', type: 'input', placeholder: '搜索代码' },
+    {
+        key: 'status', label: '状态', type: 'select',
+        options: [{ label: '启用', value: 'active' }, { label: '停用', value: 'inactive' }],
+    },
 ];
 
 const headerIcon = (
@@ -86,20 +94,24 @@ const TenantsPage: React.FC = () => {
     const [members, setMembers] = useState<any[]>([]);
     const [membersLoading, setMembersLoading] = useState(false);
 
-    const loadData = useCallback(async (p: number, ps: number, field?: string, value?: string) => {
+    const loadData = useCallback(async (p: number, ps: number, field?: string, value?: string, advanced?: Record<string, any>) => {
         setLoading(true);
         try {
             const apiParams: any = { page: p, page_size: ps };
             if (value?.trim()) {
-                if (field === 'code') apiParams.code = value.trim();
-                else apiParams.name = value.trim();
+                apiParams.keyword = value.trim();
+            }
+            if (advanced) {
+                if (advanced.name) apiParams.name = advanced.name;
+                if (advanced.code) apiParams.code = advanced.code;
+                if (advanced.status) apiParams.status = advanced.status;
             }
             const res = await getTenants(apiParams);
             const list = (res as any)?.data || [];
             const tot = (res as any)?.total || list.length;
             setData(list);
             setTotal(tot);
-            if (p === 1 && !value?.trim()) {
+            if (p === 1 && !value?.trim() && !advanced) {
                 const activeCount = list.filter((t: any) => t.status === 'active' || !t.status).length;
                 setStats({ total: tot, active: activeCount, inactive: tot - activeCount });
             }
@@ -114,13 +126,13 @@ const TenantsPage: React.FC = () => {
         loadData(1, pageSize);
     }, []);
 
-    const handleSearch = useCallback((params: { searchField?: string; searchValue?: string }) => {
+    const handleSearch = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any> }) => {
         const field = params.searchField || 'name';
         const value = params.searchValue || '';
         setSearchField(field);
         setSearchValue(value);
         setPage(1);
-        loadData(1, pageSize, field, value);
+        loadData(1, pageSize, field, value, params.advancedSearch);
     }, [pageSize, loadData]);
 
     // ==================== Drawer ====================
@@ -378,6 +390,7 @@ const TenantsPage: React.FC = () => {
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
                 searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
                 onSearch={handleSearch}
                 primaryActionLabel="创建租户"
                 primaryActionIcon={<PlusOutlined />}
