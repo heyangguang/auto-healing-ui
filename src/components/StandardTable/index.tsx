@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, ReactNode } from 'react';
+import { request as umiRequest } from '@umijs/max';
 import {
     Input, Select, Button, Table, Pagination, Space, DatePicker,
     Tooltip, Flex, Tag, Tabs,
@@ -181,6 +182,8 @@ export interface AdvancedSearchField {
     /** 字段说明（label 旁显示 ? 图标，hover 展示此说明） */
     description?: string;
     options?: { label: string; value: string }[];
+    /** 默认匹配模式，仅对 input 类型有效。默认 'fuzzy'（模糊） */
+    defaultMatchMode?: 'fuzzy' | 'exact';
 }
 
 /** 列定义（扩展 antd 原生） */
@@ -212,6 +215,8 @@ export interface StandardTableProps<T extends Record<string, any>> {
     afterHeader?: ReactNode;
     /** children 模式下的搜索回调（无 request 时由外部处理数据过滤） */
     onSearch?: (params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => void;
+    /** 搜索按钮旁的额外内容（如范围切换按钮），渲染在 Space.Compact 之后 */
+    searchExtra?: ReactNode;
 
     /* ---- 自定义内容（传了 children 时跳过搜索/表格/分页，只渲染 header + children） ---- */
     children?: ReactNode;
@@ -251,6 +256,9 @@ export interface StandardTableProps<T extends Record<string, any>> {
     preferenceKey?: string;
     /** 外部刷新触发器，值变化时自动重新请求数据（避免用 key 强制重装组件） */
     refreshTrigger?: number;
+    /** 后端搜索 schema URL（如 '/api/v1/plugins/search-schema'），
+     *  提供时自动获取声明式搜索字段，替代静态 advancedSearchFields */
+    searchSchemaUrl?: string;
 }
 
 /* ========== 组件 ========== */
@@ -273,6 +281,7 @@ function StandardTable<T extends Record<string, any>>({
     onPrimaryAction,
     extraToolbarActions,
     onSearch,
+    searchExtra,
     columns: columnDefs,
     rowKey,
     onRowClick,
@@ -281,13 +290,82 @@ function StandardTable<T extends Record<string, any>>({
     defaultPageSize = 10,
     preferenceKey,
     refreshTrigger,
+    searchSchemaUrl,
 }: StandardTableProps<T>) {
+    /* ---- 动态搜索 schema（从后端获取） ---- */
+    const [dynamicSearchFields, setDynamicSearchFields] = useState<AdvancedSearchField[] | null>(null);
+    useEffect(() => {
+        setDynamicSearchFields(null); // 清空旧 schema，等新请求回来
+        if (!searchSchemaUrl) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await umiRequest(searchSchemaUrl);
+                if (cancelled) return;
+                const fields: any[] = res?.fields || res?.data?.fields || [];
+                const converted: AdvancedSearchField[] = fields.map((f: any) => {
+                    let type: AdvancedSearchField['type'] = 'input';
+                    let options = f.options;
+                    if (f.type === 'enum') {
+                        type = 'select';
+                    } else if (f.type === 'boolean') {
+                        type = 'select';
+                        options = [{ label: '是', value: 'true' }, { label: '否', value: 'false' }];
+                    } else if (f.type === 'dateRange') {
+                        type = 'dateRange';
+                    }
+                    return {
+                        key: f.key,
+                        label: f.label,
+                        type,
+                        placeholder: f.placeholder,
+                        description: f.description,
+                        options,
+                        defaultMatchMode: f.default_match_mode === 'exact' ? 'exact' : 'fuzzy',
+                    };
+                });
+                setDynamicSearchFields(converted);
+            } catch { /* 获取 schema 失败，回退到静态配置 */ }
+        })();
+        return () => { cancelled = true; };
+    }, [searchSchemaUrl]);
+
+    // 最终使用的高级搜索字段：动态 schema 在前（后端标准），静态补充在后，相同 key 动态优先
+    const effectiveAdvancedSearchFields = useMemo(() => {
+        const staticFields = advancedSearchFields || [];
+        const dynamicFields = dynamicSearchFields || [];
+        if (!dynamicFields.length) return staticFields.length ? staticFields : undefined;
+        if (!staticFields.length) return dynamicFields;
+        // 合并：动态在前，静态补充不重复的字段
+        const dynamicKeys = new Set(dynamicFields.map(f => f.key));
+        const extra = staticFields.filter(f => !dynamicKeys.has(f.key));
+        return [...dynamicFields, ...extra];
+    }, [advancedSearchFields, dynamicSearchFields]);
     /* ---- 搜索状态 ---- */
     const [searchField, setSearchField] = useState<string>((searchFields || [])[0]?.key || '');
     const [searchValue, setSearchValue] = useState('');
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [advancedValues, setAdvancedValues] = useState<Record<string, any>>({});
+    /** 高级搜索各 input 字段的匹配模式 */
+    const [advancedMatchModes, setAdvancedMatchModes] = useState<Record<string, 'fuzzy' | 'exact'>>({});
     const [searchFilters, setSearchFilters] = useState<{ field: string; label: string; value: string; displayValue?: string }[]>([]);
+
+    // searchFields 变化时（如切换搜索范围），重置搜索状态
+    // ★ 使用内容比较（key 列表）而非引用比较，避免父组件 re-render 时误清筛选标签
+    const prevSearchKeysRef = useRef((searchFields || []).map(f => f.key).join(','));
+    useEffect(() => {
+        const currKeys = (searchFields || []).map(f => f.key).join(',');
+        const prevKeys = prevSearchKeysRef.current;
+        prevSearchKeysRef.current = currKeys;
+        if (prevKeys === currKeys) return; // 内容没变，跳过
+        const firstKey = (searchFields || [])[0]?.key || '';
+        setSearchField(firstKey);
+        setSearchValue('');
+        setSearchFilters([]);
+        setShowAdvanced(false);
+        setAdvancedValues({});
+        setAdvancedMatchModes({});
+    }, [searchFields]);
 
     /* ---- 表格状态 ---- */
     const [loading, setLoading] = useState(false);
@@ -473,8 +551,18 @@ function StandardTable<T extends Record<string, any>>({
                 activeFilters.forEach(f => {
                     filtersAsSearch[f.field] = f.value;
                 });
+                let processedAdvanced: Record<string, any> | undefined;
+                if (showAdvanced) {
+                    processedAdvanced = { ...filtersAsSearch };
+                    Object.entries(advancedValues).forEach(([key, value]) => {
+                        if (value === undefined || value === null || value === '') return;
+                        const mode = advancedMatchModes[key] || 'fuzzy';
+                        const finalKey = mode === 'exact' ? `${key}__exact` : key;
+                        processedAdvanced![finalKey] = value;
+                    });
+                }
                 const mergedAdvanced = showAdvanced
-                    ? { ...filtersAsSearch, ...advancedValues }
+                    ? processedAdvanced
                     : activeFilters.length > 0 ? filtersAsSearch : undefined;
                 onSearch({
                     searchField: undefined,
@@ -494,8 +582,19 @@ function StandardTable<T extends Record<string, any>>({
                 const key = f.field;
                 filtersAsSearch[key] = f.value;
             });
+            // 高级搜索模式下，根据匹配模式为 key 添加 __exact 后缀
+            let processedAdvanced: Record<string, any> | undefined;
+            if (showAdvanced) {
+                processedAdvanced = { ...filtersAsSearch };
+                Object.entries(advancedValues).forEach(([key, value]) => {
+                    if (value === undefined || value === null || value === '') return;
+                    const mode = advancedMatchModes[key] || 'fuzzy';
+                    const finalKey = mode === 'exact' ? `${key}__exact` : key;
+                    processedAdvanced![finalKey] = value;
+                });
+            }
             const mergedAdvanced = showAdvanced
-                ? { ...filtersAsSearch, ...advancedValues }
+                ? processedAdvanced
                 : activeFilters.length > 0 ? filtersAsSearch : undefined;
 
             const result = await request({
@@ -513,7 +612,7 @@ function StandardTable<T extends Record<string, any>>({
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize, searchFilters, showAdvanced, advancedValues, sorter, request, onSearch]);
+    }, [page, pageSize, searchFilters, showAdvanced, advancedValues, advancedMatchModes, sorter, request, onSearch]);
 
     /* ---- 首次加载和参数变化 ---- */
     React.useEffect(() => {
@@ -586,6 +685,7 @@ function StandardTable<T extends Record<string, any>>({
 
     const handleReset = () => {
         setAdvancedValues({});
+        setAdvancedMatchModes({});
         setSearchValue('');
         setSearchField((searchFields || [])[0]?.key || '');
         setSearchFilters([]);
@@ -636,11 +736,13 @@ function StandardTable<T extends Record<string, any>>({
         const fields = searchFields || [];
         // 文本字段 = 没有 __enum__ 前缀的 searchFields
         const textGroup = fields.filter(f => !f.key.startsWith('__enum__')).map(f => ({ label: f.label, value: f.key, desc: f.description }));
-        // 枚举字段 = 有 __enum__ 前缀的 searchFields + 列定义的枚举字段
-        const enumGroup = [
-            ...fields.filter(f => f.key.startsWith('__enum__')).map(f => ({ label: f.label, value: f.key, desc: f.description })),
-            ...filterableCols.map(c => ({ label: c.columnTitle, value: `__enum__${c.columnKey}` })),
-        ];
+        // 枚举字段 = 有 __enum__ 前缀的 searchFields + 列定义的枚举字段（去重）
+        const enumFromSearchFields = fields.filter(f => f.key.startsWith('__enum__')).map(f => ({ label: f.label, value: f.key, desc: f.description }));
+        const existingEnumKeys = new Set(enumFromSearchFields.map(f => f.value));
+        const enumFromCols = filterableCols
+            .filter(c => !existingEnumKeys.has(`__enum__${c.columnKey}`))
+            .map(c => ({ label: c.columnTitle, value: `__enum__${c.columnKey}` }));
+        const enumGroup = [...enumFromSearchFields, ...enumFromCols];
         if (enumGroup.length === 0) return textGroup;
         return [
             { label: '文本字段', options: textGroup },
@@ -743,9 +845,10 @@ function StandardTable<T extends Record<string, any>>({
                                             搜索
                                         </Button>
                                     </Space.Compact>
+                                    {searchExtra}
                                 </div>
                                 <div className="standard-table-search-right">
-                                    {advancedSearchFields && advancedSearchFields.length > 0 && (
+                                    {effectiveAdvancedSearchFields && effectiveAdvancedSearchFields.length > 0 && (
                                         <span
                                             className="standard-table-advanced-toggle"
                                             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -799,10 +902,10 @@ function StandardTable<T extends Record<string, any>>({
                             )}
 
                             {/* 高级搜索展开区 */}
-                            {showAdvanced && advancedSearchFields && (
+                            {showAdvanced && effectiveAdvancedSearchFields && (
                                 <div className="standard-table-advanced-search">
                                     <div className="standard-table-advanced-fields">
-                                        {advancedSearchFields.map(field => (
+                                        {effectiveAdvancedSearchFields.map(field => (
                                             <div key={field.key} className="standard-table-advanced-field">
                                                 <label>
                                                     {field.label}
@@ -813,13 +916,30 @@ function StandardTable<T extends Record<string, any>>({
                                                     )}
                                                 </label>
                                                 {field.type === 'input' && (
-                                                    <Input
-                                                        value={advancedValues[field.key] || ''}
-                                                        onChange={e => updateAdvancedField(field.key, e.target.value)}
-                                                        placeholder={field.placeholder || `输入${field.label}`}
-                                                        allowClear
-                                                        onPressEnter={handleSearch}
-                                                    />
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        <Input
+                                                            value={advancedValues[field.key] || ''}
+                                                            onChange={e => updateAdvancedField(field.key, e.target.value)}
+                                                            placeholder={field.placeholder || `输入${field.label}`}
+                                                            allowClear
+                                                            onPressEnter={handleSearch}
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                        <Tooltip title={(advancedMatchModes[field.key] || field.defaultMatchMode || 'fuzzy') === 'fuzzy' ? '当前：模糊匹配（点击切换为精确匹配）' : '当前：精确匹配（点击切换为模糊匹配）'}>
+                                                            <Button
+                                                                type={(advancedMatchModes[field.key] || field.defaultMatchMode || 'fuzzy') === 'exact' ? 'primary' : 'default'}
+                                                                style={{ minWidth: 32, fontSize: 14, padding: '4px 8px', flexShrink: 0 }}
+                                                                onClick={() => {
+                                                                    setAdvancedMatchModes(prev => {
+                                                                        const current = prev[field.key] || field.defaultMatchMode || 'fuzzy';
+                                                                        return { ...prev, [field.key]: current === 'fuzzy' ? 'exact' : 'fuzzy' };
+                                                                    });
+                                                                }}
+                                                            >
+                                                                {(advancedMatchModes[field.key] || field.defaultMatchMode || 'fuzzy') === 'fuzzy' ? '≈' : '='}
+                                                            </Button>
+                                                        </Tooltip>
+                                                    </div>
                                                 )}
                                                 {field.type === 'select' && (
                                                     <Select
@@ -910,9 +1030,10 @@ function StandardTable<T extends Record<string, any>>({
                                     搜索
                                 </Button>
                             </Space.Compact>
+                            {searchExtra}
                         </div>
                         <div className="standard-table-search-right">
-                            {advancedSearchFields && advancedSearchFields.length > 0 && (
+                            {effectiveAdvancedSearchFields && effectiveAdvancedSearchFields.length > 0 && (
                                 <span
                                     className="standard-table-advanced-toggle"
                                     onClick={() => setShowAdvanced(!showAdvanced)}
@@ -983,10 +1104,10 @@ function StandardTable<T extends Record<string, any>>({
                     )}
 
                     {/* ===== 高级搜索展开区 ===== */}
-                    {showAdvanced && advancedSearchFields && (
+                    {showAdvanced && effectiveAdvancedSearchFields && (
                         <div className="standard-table-advanced-search">
                             <div className="standard-table-advanced-fields">
-                                {advancedSearchFields.map(field => (
+                                {effectiveAdvancedSearchFields.map(field => (
                                     <div key={field.key} className="standard-table-advanced-field">
                                         <label>
                                             {field.label}
@@ -997,13 +1118,30 @@ function StandardTable<T extends Record<string, any>>({
                                             )}
                                         </label>
                                         {field.type === 'input' && (
-                                            <Input
-                                                value={advancedValues[field.key] || ''}
-                                                onChange={e => updateAdvancedField(field.key, e.target.value)}
-                                                placeholder={field.placeholder || `输入${field.label}`}
-                                                allowClear
-                                                onPressEnter={handleSearch}
-                                            />
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <Input
+                                                    value={advancedValues[field.key] || ''}
+                                                    onChange={e => updateAdvancedField(field.key, e.target.value)}
+                                                    placeholder={field.placeholder || `输入${field.label}`}
+                                                    allowClear
+                                                    onPressEnter={handleSearch}
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <Tooltip title={(advancedMatchModes[field.key] || field.defaultMatchMode || 'fuzzy') === 'fuzzy' ? '当前：模糊匹配（点击切换为精确匹配）' : '当前：精确匹配（点击切换为模糊匹配）'}>
+                                                    <Button
+                                                        type={(advancedMatchModes[field.key] || field.defaultMatchMode || 'fuzzy') === 'exact' ? 'primary' : 'default'}
+                                                        style={{ minWidth: 32, fontSize: 14, padding: '4px 8px', flexShrink: 0 }}
+                                                        onClick={() => {
+                                                            setAdvancedMatchModes(prev => {
+                                                                const current = prev[field.key] || field.defaultMatchMode || 'fuzzy';
+                                                                return { ...prev, [field.key]: current === 'fuzzy' ? 'exact' : 'fuzzy' };
+                                                            });
+                                                        }}
+                                                    >
+                                                        {(advancedMatchModes[field.key] || field.defaultMatchMode || 'fuzzy') === 'fuzzy' ? '≈' : '='}
+                                                    </Button>
+                                                </Tooltip>
+                                            </div>
                                         )}
                                         {field.type === 'select' && (
                                             <Select
