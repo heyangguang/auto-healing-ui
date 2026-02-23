@@ -1,0 +1,193 @@
+/* ══════ 租户运营明细 — 展开面板 (AWX-Style) ══════ */
+
+/* 展开面板容器 */
+.ops-expand-panel {
+    padding: 16px 16px 16px 48px;
+    background: linear-gradient(135deg, #f8f9fc 0%, #f2f4f8 100%);
+    border-top: 1px solid #e8ecf1;
+}
+
+/* 面板内网格 — 4列等高 */
+.ops-expand-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+/* 单个区块 */
+.ops-expand-section {
+    background: #fff;
+    border: 1px solid #e8ecf1;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 区块头部 */
+.ops-expand-section-header {
+    padding: 8px 14px;
+    border-bottom: 1px solid #f0f2f5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fafbfd;
+}
+
+.ops-expand-section-header-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.ops-expand-section-header-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1a2e;
+    letter-spacing: 0.3px;
+}
+
+.ops-expand-section-header-badge {
+    margin-left: auto;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+}
+
+/* 区块内容 — 统一网格 2×4 */
+.ops-expand-section-body {
+    padding: 10px 14px;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(4, auto);
+    gap: 2px 16px;
+    align-content: start;
+}
+
+/* 指标项 */
+.ops-metric-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.ops-metric-item:nth-last-child(-n+2) {
+    border-bottom: none;
+}
+
+.ops-metric-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.ops-metric-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ops-metric-label {
+    font-size: 11px;
+    color: #8c8c8c;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ops-metric-value {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 基本信息区块 — 用 key-value 列表 */
+.ops-expand-section-body.ops-info-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.ops-info-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.ops-info-row:last-child {
+    border-bottom: none;
+}
+
+.ops-info-label {
+    font-size: 13px;
+    color: #8c8c8c;
+    width: 68px;
+    flex-shrink: 0;
+}
+
+.ops-info-value {
+    font-size: 14px;
+    color: #262626;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 进度条区域 */
+.ops-progress-wrap {
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #f0f2f5;
+}
+
+.ops-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.ops-progress-label {
+    font-size: 13px;
+    color: #8c8c8c;
+}
+
+.ops-progress-pct {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* 进度条轨道 */
+.ops-progress-track {
+    height: 6px;
+    border-radius: 0;
+    background: #f0f2f5;
+    overflow: hidden;
+}
+
+.ops-progress-fill {
+    height: 100%;
+    border-radius: 0;
+    transition: width 0.4s ease;
+}
