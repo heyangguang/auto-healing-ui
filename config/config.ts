@@ -85,7 +85,7 @@ export default defineConfig({
    */
   title: '运维自愈平台',
   layout: {
-    locale: true,  // 启用菜单国际化，显示中文
+    locale: false,  // 禁用 ProLayout 菜单国际化（我们使用自定义导航，不需要翻译 menu.xxx）
     ...defaultSettings,
   },
   /**
