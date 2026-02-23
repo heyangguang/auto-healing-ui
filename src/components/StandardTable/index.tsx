@@ -518,7 +518,7 @@ function StandardTable<T extends Record<string, any>>({
     /* ---- 首次加载和参数变化 ---- */
     React.useEffect(() => {
         if (!prefsLoaded) return; // 等偏好加载完再请求数据，避免双重请求
-        fetchData(page, pageSize, sorter);
+        fetchData(page, pageSize, sorter, searchFilters);
     }, [page, pageSize, prefsLoaded]);
 
     /* ---- 搜索 ---- */

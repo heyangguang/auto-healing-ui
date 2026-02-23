@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { App } from 'antd';
-import { request, useModel, history } from '@umijs/max';
+
+import { request } from '@umijs/max';
 import {
     BankOutlined, CheckOutlined, SearchOutlined, CaretDownFilled,
     ShopOutlined, TeamOutlined, CloudOutlined, ApartmentOutlined,
@@ -74,8 +74,7 @@ const S = {
 };
 
 const TenantSwitcher: React.FC = () => {
-    const { message } = App.useApp();
-    const { refresh } = useModel('@@initialState');
+
     const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
     const [tenants, setTenants] = useState<TenantBrief[]>([]);
     const [searchValue, setSearchValue] = useState('');
@@ -159,10 +158,9 @@ const TenantSwitcher: React.FC = () => {
             .finally(() => setSearching(false));
     }, []);
 
-    /* 切换租户：更新 localStorage → 刷新 initialState → 跳转首页 */
-    const handleChange = useCallback(async (tid: string) => {
+    /* 切换租户：更新 localStorage → 整页刷新 */
+    const handleChange = useCallback((tid: string) => {
         if (tid === currentTenantId) { setOpen(false); return; }
-        const t = tenants.find(x => x.id === tid) || searchResults?.find(x => x.id === tid);
         try {
             const raw = localStorage.getItem('tenant-storage');
             if (raw) {
@@ -174,14 +172,10 @@ const TenantSwitcher: React.FC = () => {
 
         setCurrentTenantId(tid);
         setOpen(false);
-        message.success(`已切换至: ${t?.name || tid}`);
 
-        // 刷新全局 initialState（重新拿用户信息/权限）
-        try { await refresh(); } catch { /* ignore */ }
-
-        // 跳转到工作台，触发页面级数据重新加载
-        history.push('/workbench');
-    }, [currentTenantId, tenants, searchResults, message, refresh]);
+        // 原地刷新：保持当前页面，强制所有组件重新挂载、数据重新加载
+        window.location.reload();
+    }, [currentTenantId]);
 
     const cur = tenants.find(t => t.id === currentTenantId);
     const curIcon = (cur?.icon && ICON_MAP[cur.icon]) ?? <BankOutlined />;

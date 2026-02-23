@@ -153,7 +153,7 @@ const SideNav: React.FC<SideNavProps> = ({ isMobile, drawerOpen, onDrawerClose }
 
     /* ===== 桌面端: 固定侧栏 ===== */
     return (
-        <nav className={styles.sideNav}>
+        <nav id="side-nav-bar" className={styles.sideNav}>
             {navContent}
         </nav>
     );

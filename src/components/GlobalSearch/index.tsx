@@ -15,6 +15,9 @@ import {
     BellOutlined,
     RightOutlined,
     EnterOutlined,
+    AlertOutlined,
+    ThunderboltOutlined,
+    GitlabOutlined,
 } from '@ant-design/icons';
 import { Input, Empty } from 'antd';
 import { history } from '@umijs/max';
@@ -25,12 +28,15 @@ import type { SearchCategoryResult, SearchResultItem } from '@/services/auto-hea
 /* ── 分类图标 & 颜色 ── */
 const CATEGORY_META: Record<string, { icon: React.ReactNode; color: string }> = {
     hosts: { icon: <DatabaseOutlined />, color: '#52c41a' },
+    incidents: { icon: <AlertOutlined />, color: '#ff4d4f' },
     rules: { icon: <SafetyCertificateOutlined />, color: '#faad14' },
     flows: { icon: <ApartmentOutlined />, color: '#1890ff' },
     instances: { icon: <PlayCircleOutlined />, color: '#722ed1' },
     playbooks: { icon: <BookOutlined />, color: '#13c2c2' },
     templates: { icon: <FileTextOutlined />, color: '#eb2f96' },
     schedules: { icon: <ScheduleOutlined />, color: '#fa8c16' },
+    execution_runs: { icon: <ThunderboltOutlined />, color: '#9254de' },
+    git_repos: { icon: <GitlabOutlined />, color: '#fc6d26' },
     secrets: { icon: <KeyOutlined />, color: '#fadb14' },
     plugins: { icon: <AppstoreOutlined />, color: '#2f54eb' },
     notification_templates: { icon: <BellOutlined />, color: '#f5222d' },
@@ -277,12 +283,15 @@ function hl(text: string, kw: string): React.ReactNode {
 /* ── 分类 → 列表页路由 ── */
 const CATEGORY_LIST: Record<string, string> = {
     hosts: '/resources/cmdb',
+    incidents: '/resources/incidents',
     rules: '/healing/rules',
     flows: '/healing/flows',
     instances: '/healing/instances',
     playbooks: '/execution/playbooks',
     templates: '/execution/templates',
     schedules: '/execution/schedules',
+    execution_runs: '/execution/runs',
+    git_repos: '/execution/git-repos',
     secrets: '/resources/secrets',
     plugins: '/resources/plugins',
     notification_templates: '/notification/templates',
@@ -293,12 +302,13 @@ const CATEGORY_LIST: Record<string, string> = {
 function toPath(item: SearchResultItem, cat: string): string {
     if (cat === 'flows') return `/healing/flows/editor/${item.id}`;
     if (cat === 'instances') return `/healing/instances/${item.id}`;
+    if (cat === 'execution_runs') return `/execution/runs/${item.id}`;
     return item.path;
 }
 
 const DEBOUNCE = 280;
 
-const GlobalSearch: React.FC = () => {
+const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
     const { styles, cx } = useStyles();
     const [kw, setKw] = useState('');
     const [open, setOpen] = useState(false);
@@ -378,9 +388,10 @@ const GlobalSearch: React.FC = () => {
             <Input
                 ref={inRef}
                 className={styles.searchInput}
+                style={compact ? { maxWidth: 240 } : undefined}
                 prefix={loading ? <LoadingOutlined spin /> : <SearchOutlined />}
                 suffix={<span className={styles.kbdInline}>⌘K</span>}
-                placeholder="搜索产品、资源、文档..."
+                placeholder={compact ? '搜索...' : '搜索产品、资源...'}
                 allowClear
                 size="middle"
                 value={kw}

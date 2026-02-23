@@ -5,6 +5,7 @@ import SideNav from '@/components/SideNav';
 import { findServiceByPath } from '@/config/menu';
 import { recordRecent } from '@/services/auto-healing/userNav';
 
+
 const NAV_HEIGHT = 58;
 const SIDE_WIDTH = 200;
 const MOBILE_BP = 768;
@@ -92,7 +93,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         const isDashboard = p.startsWith('/dashboard');
         const isDetailPage = /^\/execution\/(runs|templates)\/[^/]+$/.test(p);
         const isAccount = p.startsWith('/account');
-        return !isWorkbench && !isDashboard && !isDetailPage && !isAccount;
+        const isGuide = p.startsWith('/guide');
+        const isException = p.startsWith('/exception');
+        return !isWorkbench && !isDashboard && !isDetailPage && !isAccount && !isGuide && !isException;
     }, [location.pathname]);
 
     return (
@@ -110,6 +113,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <main className={styles.mainContent}>
                 {children}
             </main>
+
         </div>
     );
 };
