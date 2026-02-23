@@ -117,7 +117,7 @@ const PlatformRolesPage: React.FC = () => {
             const res = await getPlatformRoleUsers(roleId, {
                 page,
                 page_size: userPageSize,
-                ...(search ? { search } : {}),
+                ...(search ? { name: search } : {}),
             });
             const list: any[] = (res as any)?.data || [];
             const tot = Number((res as any)?.total) || 0;

@@ -33,8 +33,8 @@ import {
 import { AUDIT_RESULT_OPTIONS, RISK_LEVEL_OPTIONS } from '@/constants/commonDicts';
 
 /* ========== 登录日志专用 action/resource 常量 ========== */
-const LOGIN_ACTIONS = ['login', 'logout'];
-const LOGIN_RESOURCES = ['auth', 'auth-logout'];
+const LOGIN_ACTIONS = ['login', 'logout', 'impersonation_enter', 'impersonation_exit'];
+const LOGIN_RESOURCES = ['auth', 'auth-logout', 'impersonation'];
 
 const { Text } = Typography;
 
@@ -49,12 +49,12 @@ const formatChangeValue = (v: any): string => {
 
 /** 操作日志 - 搜索字段 */
 const operationSearchFields: SearchField[] = [
-    { key: 'search', label: '全局搜索' },
+    { key: 'username', label: '全局搜索' },
     { key: 'username', label: '用户名' },
     { key: 'request_path', label: '请求路径' },
 ];
 const operationAdvancedSearchFields: AdvancedSearchField[] = [
-    { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / 资源名 / 路径' },
+    { key: 'username', label: '关键字', type: 'input', placeholder: '搜索用户名 / 资源名 / 路径' },
     { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
     {
         key: 'action', label: '操作类型', type: 'select', placeholder: '全部操作',
@@ -69,7 +69,7 @@ const operationAdvancedSearchFields: AdvancedSearchField[] = [
             .map(([v, l]) => ({ label: l, value: v })),
     },
     {
-        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        key: 'status', label: '操作结果', type: 'select', placeholder: '全部状态',
         options: AUDIT_RESULT_OPTIONS,
     },
     {
@@ -81,14 +81,14 @@ const operationAdvancedSearchFields: AdvancedSearchField[] = [
 
 /** 登录日志 - 搜索字段 */
 const loginSearchFields: SearchField[] = [
-    { key: 'search', label: '全局搜索' },
+    { key: 'username', label: '全局搜索' },
     { key: 'username', label: '用户名' },
 ];
 const loginAdvancedSearchFields: AdvancedSearchField[] = [
-    { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
+    { key: 'username', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
     { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
     {
-        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        key: 'status', label: '操作结果', type: 'select', placeholder: '全部状态',
         options: AUDIT_RESULT_OPTIONS,
     },
     { key: 'created_at', label: '时间范围', type: 'dateRange' },
@@ -350,10 +350,16 @@ const AuditLogsPage: React.FC = () => {
                 width: 80,
                 headerFilters: RISK_LEVEL_OPTIONS,
                 render: (_: any, record: any) => {
-                    if (record.risk_level === 'high') {
+                    const riskMap: Record<string, { color: string; label: string }> = {
+                        critical: { color: 'red', label: '极高' },
+                        high: { color: 'orange', label: '高危' },
+                        medium: { color: 'blue', label: '中' },
+                    };
+                    const risk = riskMap[record.risk_level];
+                    if (risk) {
                         return (
-                            <Tooltip title={record.risk_reason || '高危操作'}>
-                                <Tag color="orange" icon={<WarningOutlined />} style={{ margin: 0 }}>高危</Tag>
+                            <Tooltip title={record.risk_reason || risk.label}>
+                                <Tag color={risk.color} icon={record.risk_level === 'critical' ? <WarningOutlined /> : undefined} style={{ margin: 0 }}>{risk.label}</Tag>
                             </Tooltip>
                         );
                     }
@@ -398,8 +404,8 @@ const AuditLogsPage: React.FC = () => {
                 dataIndex: 'action',
                 width: 90,
                 render: (_: any, record: any) => (
-                    <Tag color={record.action === 'login' ? 'blue' : 'default'} style={{ margin: 0 }}>
-                        {record.action === 'login' ? '登录' : '登出'}
+                    <Tag color={ACTION_COLORS[record.action] || 'default'} style={{ margin: 0 }}>
+                        {ACTION_LABELS[record.action] || record.action}
                     </Tag>
                 ),
             },
@@ -441,22 +447,16 @@ const AuditLogsPage: React.FC = () => {
         };
 
         if (params.searchValue) {
-            if (params.searchField && params.searchField !== 'search') {
+            if (params.searchField && params.searchField !== 'username') {
                 apiParams[params.searchField] = params.searchValue;
             } else {
-                apiParams.search = params.searchValue;
+                apiParams.username = params.searchValue;
             }
         }
 
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            if (adv.search) apiParams.search = adv.search;
-            if (adv.username) apiParams.username = adv.username;
-            if (adv.request_path) apiParams.request_path = adv.request_path;
-            if (adv.action) apiParams.action = adv.action;
-            if (adv.resource_type) apiParams.resource_type = adv.resource_type;
-            if (adv.status) apiParams.status = adv.status;
-            if (adv.risk_level) apiParams.risk_level = adv.risk_level;
+            // 特殊字段处理
             if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
                 apiParams.created_after = adv.created_at[0].toISOString();
                 apiParams.created_before = adv.created_at[1].toISOString();
@@ -467,6 +467,12 @@ const AuditLogsPage: React.FC = () => {
             if (adv.exclude_resource_type && Array.isArray(adv.exclude_resource_type) && adv.exclude_resource_type.length > 0) {
                 apiParams.exclude_resource_type = adv.exclude_resource_type.join(',');
             }
+            // 通用字段传递（支持 __exact 后缀）
+            const specialKeys = ['created_at', 'exclude_action', 'exclude_resource_type'];
+            Object.entries(adv).forEach(([key, value]) => {
+                if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
+                apiParams[key] = value;
+            });
         }
 
         if (params.sorter) {
@@ -594,7 +600,7 @@ const AuditLogsPage: React.FC = () => {
                 {detail && (
                     <div className="audit-detail">
                         {/* 状态横幅 */}
-                        <div className={`audit-detail-banner ${detail.status === 'failed' ? 'audit-detail-banner-failed' : ''} ${detail.risk_level === 'high' ? 'audit-detail-banner-risk' : ''}`}>
+                        <div className={`audit-detail-banner ${detail.status === 'failed' ? 'audit-detail-banner-failed' : ''} ${(detail.risk_level === 'high' || detail.risk_level === 'critical') ? 'audit-detail-banner-risk' : ''}`}>
                             <div className="audit-detail-banner-row">
                                 <Tag
                                     color={detail.status === 'success' ? 'green' : 'red'}
@@ -602,9 +608,14 @@ const AuditLogsPage: React.FC = () => {
                                 >
                                     {detail.status === 'success' ? '操作成功' : '操作失败'}
                                 </Tag>
-                                {detail.risk_level === 'high' && (
-                                    <Tag color="orange" icon={<WarningOutlined />}>
-                                        高危 · {detail.risk_reason}
+                                {(detail.risk_level === 'critical' || detail.risk_level === 'high') && (
+                                    <Tag color={detail.risk_level === 'critical' ? 'red' : 'orange'} icon={<WarningOutlined />}>
+                                        {detail.risk_level === 'critical' ? '极高' : '高危'} · {detail.risk_reason}
+                                    </Tag>
+                                )}
+                                {detail.risk_level === 'medium' && (
+                                    <Tag color="blue">
+                                        中风险 · {detail.risk_reason}
                                     </Tag>
                                 )}
                                 <span className="audit-detail-time">
@@ -638,15 +649,32 @@ const AuditLogsPage: React.FC = () => {
                             <Descriptions.Item label="资源类型">
                                 {RESOURCE_LABELS[detail.resource_type] || detail.resource_type}
                             </Descriptions.Item>
-                            {detail.resource_name && (
-                                <Descriptions.Item label="资源名称" span={2}>
-                                    {detail.resource_name}
-                                </Descriptions.Item>
-                            )}
-                            {detail.resource_id && (
-                                <Descriptions.Item label="资源 ID" span={2}>
-                                    <Text code style={{ fontSize: 12 }}>{detail.resource_id}</Text>
-                                </Descriptions.Item>
+                            {detail.resource_type === 'impersonation' ? (
+                                /* Impersonation 特殊展示 */
+                                <>
+                                    <Descriptions.Item label="目标租户" span={2}>
+                                        <Tag color="purple">{detail.resource_name}</Tag>
+                                    </Descriptions.Item>
+                                    {detail.resource_id && (
+                                        <Descriptions.Item label="申请 ID" span={2}>
+                                            <Text code style={{ fontSize: 12 }}>{detail.resource_id}</Text>
+                                        </Descriptions.Item>
+                                    )}
+                                </>
+                            ) : (
+                                /* 普通资源展示 */
+                                <>
+                                    {detail.resource_name && (
+                                        <Descriptions.Item label="资源名称" span={2}>
+                                            {detail.resource_name}
+                                        </Descriptions.Item>
+                                    )}
+                                    {detail.resource_id && (
+                                        <Descriptions.Item label="资源 ID" span={2}>
+                                            <Text code style={{ fontSize: 12 }}>{detail.resource_id}</Text>
+                                        </Descriptions.Item>
+                                    )}
+                                </>
                             )}
                         </Descriptions>
 

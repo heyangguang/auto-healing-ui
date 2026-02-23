@@ -7,14 +7,9 @@ import type { StandardColumnDef, SearchField } from '@/components/StandardTable'
 import { getRoles, deleteRole, getRole } from '@/services/auto-healing/roles';
 import { getRoleWorkspaces, listSystemWorkspaces } from '@/services/auto-healing/dashboard';
 import dayjs from 'dayjs';
+import { PERMISSION_MODULE_LABELS as MODULE_LABELS } from '@/constants/permissionDicts';
 
 const { Text } = Typography;
-
-const MODULE_LABELS: Record<string, string> = {
-    system: '系统管理', user: '用户管理', role: '角色管理',
-    plugin: '插件管理', execution: '执行管理', notification: '通知管理',
-    healing: '自愈引擎', workflow: '工作流', dashboard: '仪表盘',
-};
 
 /* ========== 搜索字段配置 ========== */
 const searchFields: SearchField[] = [
@@ -249,19 +244,27 @@ const RolesPage: React.FC = () => {
             });
         }
 
-        // 高级搜索/筛选标签
+        // 高级搜索/筛选标签（客户端过滤，支持 __exact 后缀）
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            if (adv.display_name) {
-                items = items.filter(i => (i.display_name || '').toLowerCase().includes(adv.display_name.toLowerCase()));
-            }
-            if (adv.name) {
-                items = items.filter(i => (i.name || '').toLowerCase().includes(adv.name.toLowerCase()));
-            }
+            // 布尔字段转换
             if (adv.is_system !== undefined && adv.is_system !== '') {
                 const isSystem = adv.is_system === 'true';
                 items = items.filter(i => i.is_system === isSystem);
             }
+            // 通用字段传递（客户端字符串过滤）
+            const specialKeys = ['is_system'];
+            Object.entries(adv).forEach(([key, value]) => {
+                if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
+                const isExact = key.endsWith('__exact');
+                const fieldName = isExact ? key.replace(/__exact$/, '') : key;
+                const strVal = String(value);
+                if (isExact) {
+                    items = items.filter(i => String(i[fieldName] || '') === strVal);
+                } else {
+                    items = items.filter(i => String(i[fieldName] || '').toLowerCase().includes(strVal.toLowerCase()));
+                }
+            });
         }
 
         // 排序

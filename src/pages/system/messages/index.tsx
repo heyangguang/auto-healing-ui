@@ -5,7 +5,7 @@ import {
     BellOutlined, MailOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
-import type { StandardColumnDef, SearchField } from '@/components/StandardTable';
+import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import {
     getSiteMessages,
     markAsRead,
@@ -23,8 +23,18 @@ const { Text } = Typography;
 const SystemMessages: React.FC = () => {
     /* ---- 分类映射 ---- */
     const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
-    const [searchFields, setSearchFields] = useState<SearchField[]>([
+    const searchFields: SearchField[] = [
         { key: 'keyword', label: '关键字' },
+    ];
+    const [advancedSearchFields, setAdvancedSearchFields] = useState<AdvancedSearchField[]>([
+        { key: 'category', label: '分类', type: 'select', options: [] },
+        {
+            key: 'is_read', label: '阅读状态', type: 'select',
+            options: [
+                { label: '未读', value: 'false' },
+                { label: '已读', value: 'true' },
+            ],
+        },
     ]);
     useEffect(() => {
         getSiteMessageCategories()
@@ -36,14 +46,14 @@ const SystemMessages: React.FC = () => {
                     opts.push({ label: c.label, value: c.value });
                 });
                 setCategoryMap(map);
-                setSearchFields([
-                    { key: 'keyword', label: '关键字' },
-                    { key: '__enum__category', label: '分类', options: opts },
+                setAdvancedSearchFields([
+                    { key: 'category', label: '分类', type: 'select', options: opts },
                     {
-                        key: '__enum__is_read', label: '状态', options: [
+                        key: 'is_read', label: '阅读状态', type: 'select',
+                        options: [
                             { label: '未读', value: 'false' },
                             { label: '已读', value: 'true' },
-                        ]
+                        ],
                     },
                 ]);
             })
@@ -265,6 +275,7 @@ const SystemMessages: React.FC = () => {
                 description="系统消息与通知管理。查看、管理系统推送的通知消息，支持批量标记已读操作。"
                 headerIcon={headerIcon}
                 searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
                 extraToolbarActions={extraActions}
                 columns={columns}
                 rowKey="id"

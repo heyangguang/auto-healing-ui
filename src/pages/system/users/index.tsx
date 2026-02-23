@@ -13,7 +13,7 @@ import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import { getUsers, deleteUser, resetUserPassword, updateUser } from '@/services/auto-healing/users';
 import { getRoles } from '@/services/auto-healing/roles';
-import { USER_STATUS_OPTIONS } from '@/constants/commonDicts';
+import { USER_STATUS_OPTIONS, USER_STATUS_MAP } from '@/constants/commonDicts';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -156,10 +156,10 @@ const UsersPage: React.FC = () => {
             sorter: true,
             headerFilters: USER_STATUS_OPTIONS,
             render: (_: any, record: any) => {
-                const isActive = record.status === 'active';
+                const info = USER_STATUS_MAP[record.status] || USER_STATUS_MAP['inactive'];
                 return (
-                    <Tag color={isActive ? 'green' : 'default'}>
-                        {isActive ? '启用' : '禁用'}
+                    <Tag color={info.tagColor}>
+                        {info.label}
                     </Tag>
                 );
             },
@@ -240,24 +240,26 @@ const UsersPage: React.FC = () => {
             if (params.searchField) {
                 apiParams[params.searchField] = params.searchValue;
             } else {
-                apiParams.search = params.searchValue;
+                apiParams.username = params.searchValue;
             }
         }
 
         // 高级搜索
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            if (adv.search) apiParams.search = adv.search;
-            if (adv.username) apiParams.username = adv.username;
-            if (adv.email) apiParams.email = adv.email;
-            if (adv.display_name) apiParams.display_name = adv.display_name;
-            if (adv.user_id) apiParams.search = adv.user_id;
-            if (adv.status) apiParams.status = adv.status;
+            // 特殊字段映射
+            if (adv.user_id) apiParams.user_id = adv.user_id;
             if (adv.roles) apiParams.role_id = adv.roles;
             if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
                 apiParams.created_from = adv.created_at[0].toISOString();
                 apiParams.created_to = adv.created_at[1].toISOString();
             }
+            // 通用字段传递（支持 __exact 后缀）
+            const specialKeys = ['user_id', 'roles', 'created_at'];
+            Object.entries(adv).forEach(([key, value]) => {
+                if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
+                apiParams[key] = value;
+            });
         }
 
         // 排序
@@ -325,8 +327,8 @@ const UsersPage: React.FC = () => {
                                     <Text type="secondary" style={{ fontSize: 13 }}>@{detailUser.username}</Text>
                                 </div>
                                 <Badge
-                                    status={detailUser.status === 'active' ? 'success' : 'error'}
-                                    text={detailUser.status === 'active' ? '已启用' : '已禁用'}
+                                    status={(USER_STATUS_MAP[detailUser.status]?.badge || 'default') as any}
+                                    text={USER_STATUS_MAP[detailUser.status]?.label || detailUser.status}
                                 />
                             </div>
                             <Space size={8}>
