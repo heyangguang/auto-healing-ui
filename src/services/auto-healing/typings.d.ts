@@ -186,6 +186,7 @@ declare namespace AutoHealing {
         created_at: string;
         roles: RoleDetail[];
         permissions: string[];
+        is_platform_admin: boolean;
     }
 
     interface RoleDetail {

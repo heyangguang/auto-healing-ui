@@ -11,6 +11,7 @@ import { flushSync } from 'react-dom';
 import { logout } from '@/services/auto-healing/auth';
 import { TokenManager } from '@/requestErrorConfig';
 import HeaderDropdown from '../HeaderDropdown';
+import TeamsAvatar from '@/components/TeamsAvatar';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
@@ -21,8 +22,8 @@ export const AvatarName = () => {
   const { initialState } = useModel('@@initialState');
   const { currentUser } = initialState || {};
   const displayName = currentUser?.name || currentUser?.display_name || currentUser?.username || '';
-  // 头像圆圈内只显示首字母
-  return <span className="anticon">{displayName.charAt(0).toUpperCase()}</span>;
+  const seed = currentUser?.username || displayName;
+  return <TeamsAvatar seed={seed} name={displayName} size={28} />;
 };
 
 export const AvatarFullName = () => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { useModel } from '@umijs/max';
 import { Tag } from 'antd';
 import { createStyles } from 'antd-style';
+import TeamsAvatar from '@/components/TeamsAvatar';
 
 const useStyles = createStyles(({ token }) => ({
     card: {
@@ -22,7 +23,6 @@ const useStyles = createStyles(({ token }) => ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: '50%',
         color: '#fff',
         fontWeight: 600,
         fontSize: 16,
@@ -50,13 +50,13 @@ const UserInfoCard: React.FC = () => {
     const { initialState } = useModel('@@initialState');
     const user = initialState?.currentUser;
     const displayName = user?.name || user?.display_name || user?.username || '用户';
-    const firstChar = displayName.charAt(0).toUpperCase();
+    const seed = user?.username || displayName;
     const role = (user as any)?.access === 'admin' ? '系统管理员' : '普通用户';
 
     return (
         <div className={styles.card}>
             <div className={styles.header}>
-                <div className={styles.avatar}>{firstChar}</div>
+                <div className={styles.avatar}><TeamsAvatar seed={seed} name={displayName} size={40} /></div>
                 <div className={styles.info}>
                     <div className={styles.name}>{displayName}</div>
                     <div className={styles.role}>

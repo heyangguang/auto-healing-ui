@@ -4,13 +4,13 @@
 .rich-text-editor-wrap .ql-container {
     font-size: 14px;
     font-family: inherit;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .rich-text-editor-wrap .ql-toolbar {
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 /* 编辑区默认高度 */
