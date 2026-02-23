@@ -1,21 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+    ACTION_LABELS as _ACTION_LABELS,
+    ALL_RESOURCE_LABELS as _ALL_RESOURCE_LABELS,
+} from '@/constants/auditDicts';
+import {
+    INCIDENT_SEVERITY_MAP as _SEVERITY_MAP,
+} from '@/constants/incidentDicts';
+import { LockOutlined } from '@ant-design/icons';
 import { history, useModel } from '@umijs/max';
 import {
     CheckCircleOutlined,
     WarningOutlined,
-    FileTextOutlined,
     PlusOutlined,
     PlayCircleOutlined,
     ReadOutlined,
     BugOutlined,
-    DashboardOutlined,
     DatabaseOutlined,
     ToolOutlined,
     ThunderboltOutlined,
     BellOutlined,
     KeyOutlined,
     UserOutlined,
-    SafetyCertificateOutlined,
     CloudServerOutlined,
     AppstoreOutlined,
     RocketOutlined,
@@ -26,133 +31,204 @@ import {
     AlertOutlined,
     ScheduleOutlined,
     HistoryOutlined,
-    FieldTimeOutlined,
+
     ApiOutlined,
     HddOutlined,
-    NodeIndexOutlined,
     ImportOutlined,
     FolderAddOutlined,
     BranchesOutlined,
+    LoadingOutlined,
+    ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Tag, Avatar, Calendar, Badge } from 'antd';
+import { Button, Card, Tag, Avatar, Calendar, Spin, Empty, message } from 'antd';
 import { createStyles } from 'antd-style';
+import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
+import {
+    getWorkbenchOverview,
+    getScheduleCalendar,
+    getWorkbenchFavorites,
+    type WorkbenchOverview,
+    type ScheduleTask,
+    type FavoriteItem,
+} from '@/services/auto-healing/workbench';
+import { getSiteMessages, markAsRead, type SiteMessage } from '@/services/auto-healing/siteMessage';
+import { getAuditLogs } from '@/services/auto-healing/auditLogs';
+import { SERVICES } from '@/config/menu';
+import { getPendingApprovals, getPendingTriggers } from '@/services/auto-healing/healing';
+import { GUIDE_ARTICLES, type GuideArticle } from '@/pages/guide/guideData';
+import GuideDrawer from './GuideDrawer';
 
 /* ══════════════════════════════════════════════════
-   ██  Mock 数据
+   ██  图标映射表
    ══════════════════════════════════════════════════ */
 
-const myFavorites = [
-    { key: 'cmdb', label: '资产管理', icon: <DatabaseOutlined />, path: '/cmdb' },
-    { key: 'rules', label: '自愈规则', icon: <ToolOutlined />, path: '/healing/rules' },
-    { key: 'flows', label: '自愈流程', icon: <ThunderboltOutlined />, path: '/healing/flows' },
-    { key: 'exec', label: '执行管理', icon: <RocketOutlined />, path: '/execution' },
-    { key: 'playbook', label: 'Playbook', icon: <ReadOutlined />, path: '/execution/playbooks' },
-    { key: 'notify', label: '通知模板', icon: <BellOutlined />, path: '/notification/templates' },
-    { key: 'secrets', label: '密钥管理', icon: <KeyOutlined />, path: '/resources/secrets' },
-    { key: 'users', label: '用户管理', icon: <UserOutlined />, path: '/system/users' },
-];
-
-const pendingApprovals = [
-    { id: 1, title: '生产环境变更审批 #1024', type: 'trigger' as const, time: '5分钟前', severity: 'warning' as const },
-    { id: 2, title: '权限申请 #1025', type: 'manual' as const, time: '15分钟前', severity: 'info' as const },
-    { id: 3, title: '数据库备份流程 #1026', type: 'trigger' as const, time: '1小时前', severity: 'warning' as const },
-    { id: 4, title: '磁盘清理变更 #1028', type: 'manual' as const, time: '3小时前', severity: 'info' as const },
-    { id: 5, title: 'Redis重启审批 #1030', type: 'trigger' as const, time: '5小时前', severity: 'warning' as const },
-];
-
-/* ── 平台资源概览 ── */
-const platformStats = [
-    { icon: <ThunderboltOutlined />, label: '自愈流程', value: 18, sub: '5 已启用', color: '#1677ff', path: '/healing/flows' },
-    { icon: <ToolOutlined />, label: '自愈规则', value: 24, sub: '18 已启用', color: '#52c41a', path: '/healing/rules' },
-    { icon: <DatabaseOutlined />, label: '纳管主机', value: 148, sub: '3 离线', color: '#722ed1', path: '/cmdb' },
-    { icon: <ReadOutlined />, label: 'Playbook', value: 36, sub: '4 需审查', color: '#eb2f96', path: '/execution/playbooks' },
-    { icon: <ScheduleOutlined />, label: '定时任务', value: 12, sub: '10 已启用', color: '#fa8c16', path: '/execution/schedules' },
-    { icon: <BellOutlined />, label: '通知模板', value: 8, sub: '3 个渠道', color: '#13c2c2', path: '/notification/templates' },
-    { icon: <KeyOutlined />, label: '密钥管理', value: 15, sub: 'SSH + API', color: '#2f54eb', path: '/resources/secrets' },
-    { icon: <UserOutlined />, label: '系统用户', value: 12, sub: '3 管理员', color: '#8c8c8c', path: '/system/users' },
-];
-
-/* ── 变更记录 ── */
-const changeLog = [
-    { id: '1', user: '李明', action: '修改流程', target: 'Web服务监控流程', detail: '新增重启节点', time: '10分钟前' },
-    { id: '2', user: '王强', action: '创建规则', target: 'Pod OOM自愈', detail: '新建规则', time: '25分钟前' },
-    { id: '3', user: '张伟', action: '更新剧本', target: 'nginx_reload.yml', detail: '修复变量类型', time: '1小时前' },
-    { id: '4', user: 'admin', action: '禁用流程', target: 'SSL证书更新', detail: '临时停用', time: '2小时前' },
-    { id: '5', user: '赵杰', action: '新增通知', target: '微信告警模板', detail: '新建模板', time: '3小时前' },
-    { id: '6', user: '李明', action: '修改密钥', target: 'prod-ssh-key', detail: '轮换密钥', time: '5小时前' },
-];
-
-/* ── 帮助指南 ── */
-const helpGuides = [
-    { id: '1', icon: <ThunderboltOutlined />, title: '快速创建自愈流程', desc: '从零开始配置一个完整的自动化运维流程', path: '/healing/flows' },
-    { id: '2', icon: <ReadOutlined />, title: 'Playbook 编写规范', desc: '了解 Ansible Playbook 最佳实践和变量管理', path: '/execution/playbooks' },
-    { id: '3', icon: <ToolOutlined />, title: '规则配置指南', desc: '如何配置触发条件、匹配策略和执行动作', path: '/healing/rules' },
-    { id: '4', icon: <BellOutlined />, title: '通知模板配置', desc: '配置邮件、钉钉、Webhook 多渠道告警通知', path: '/notification/templates' },
-];
-
-const activityFeed = [
-    { id: '1', type: 'execution' as const, text: '执行完成：Web服务健康检查', time: '2分钟前' },
-    { id: '2', type: 'flow' as const, text: '创建流程：数据库自动备份', time: '10分钟前' },
-    { id: '3', type: 'rule' as const, text: '更新规则：磁盘空间监控', time: '15分钟前' },
-    { id: '4', type: 'execution' as const, text: '执行失败：磁盘空间清理', time: '15分钟前' },
-    { id: '5', type: 'system' as const, text: '系统通知：插件更新可用', time: '30分钟前' },
-    { id: '6', type: 'flow' as const, text: '启用流程：Nginx配置同步', time: '45分钟前' },
-    { id: '7', type: 'execution' as const, text: '执行完成：Redis缓存刷新', time: '1小时前' },
-    { id: '8', type: 'rule' as const, text: '触发规则：CPU使用率超过80%', time: '2小时前' },
-];
-
-/* ── 定时任务日历数据 ── */
-const scheduleData: Record<string, { name: string; time: string }[]> = {
-    '2026-02-17': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: '日志归档', time: '02:00' },
-        { name: '数据库备份', time: '03:00' },
-    ],
-    '2026-02-18': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: 'SSL证书检查', time: '06:00' },
-    ],
-    '2026-02-19': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: '日志归档', time: '02:00' },
-        { name: 'Redis缓存刷新', time: '04:00' },
-        { name: '磁盘空间清理', time: '05:00' },
-    ],
-    '2026-02-20': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: '数据库备份', time: '03:00' },
-    ],
-    '2026-02-21': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: '日志归档', time: '02:00' },
-    ],
-    '2026-02-22': [
-        { name: 'Web服务健康检查', time: '00:00' },
-    ],
-    '2026-02-23': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: '数据库备份', time: '03:00' },
-        { name: 'K8s Pod健康检查', time: '06:00' },
-    ],
-    '2026-02-24': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: '磁盘空间清理', time: '05:00' },
-    ],
-    '2026-02-25': [
-        { name: 'Web服务健康检查', time: '00:00' },
-        { name: '日志归档', time: '02:00' },
-        { name: 'SSL证书检查', time: '06:00' },
-    ],
+const iconMap: Record<string, React.ReactNode> = {
+    DatabaseOutlined: <DatabaseOutlined />,
+    ToolOutlined: <ToolOutlined />,
+    ThunderboltOutlined: <ThunderboltOutlined />,
+    RocketOutlined: <RocketOutlined />,
+    ReadOutlined: <ReadOutlined />,
+    BellOutlined: <BellOutlined />,
+    KeyOutlined: <KeyOutlined />,
+    UserOutlined: <UserOutlined />,
+    CloudServerOutlined: <CloudServerOutlined />,
+    ScheduleOutlined: <ScheduleOutlined />,
+    PlayCircleOutlined: <PlayCircleOutlined />,
+    AppstoreOutlined: <AppstoreOutlined />,
 };
 
+/** 根据收藏项的 key 从菜单配置中查找对应图标 */
+function resolveFavIcon(key: string): React.ReactNode {
+    for (const items of Object.values(SERVICES)) {
+        const match = items.find((svc) => svc.id === key);
+        if (match?.icon) return match.icon;
+    }
+    return <AppstoreOutlined />;
+}
+
+/** 默认收藏（用户未设置时使用） */
+const DEFAULT_FAVORITES: FavoriteItem[] = [
+    { key: 'cmdb', label: '资产管理', icon: 'DatabaseOutlined', path: '/cmdb' },
+    { key: 'rules', label: '自愈规则', icon: 'ToolOutlined', path: '/healing/rules' },
+    { key: 'flows', label: '自愈流程', icon: 'ThunderboltOutlined', path: '/healing/flows' },
+    { key: 'exec', label: '执行管理', icon: 'RocketOutlined', path: '/execution' },
+    { key: 'playbook', label: 'Playbook', icon: 'ReadOutlined', path: '/execution/playbooks' },
+    { key: 'notify', label: '通知模板', icon: 'BellOutlined', path: '/notification/templates' },
+    { key: 'secrets', label: '密钥管理', icon: 'KeyOutlined', path: '/resources/secrets' },
+    { key: 'users', label: '用户管理', icon: 'UserOutlined', path: '/system/users' },
+];
+
+/* ── 帮助指南（纯前端静态数据） ── */
+/* helpGuides 数据已迁移到 guideData.tsx 统一维护 */
 
 
-const activityIcon: Record<string, React.ReactNode> = {
-    execution: <PlayCircleOutlined style={{ color: '#722ed1' }} />,
-    flow: <ThunderboltOutlined style={{ color: '#1677ff' }} />,
-    rule: <ToolOutlined style={{ color: '#52c41a' }} />,
-    system: <BellOutlined style={{ color: '#faad14' }} />,
-};
+
+/* ══════════════════════════════════════════════════
+   ██  工具函数
+   ══════════════════════════════════════════════════ */
+
+/** 将秒数格式化为 "Xd Xh" */
+function formatUptime(seconds: number): string {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    if (days > 0) return `${days}天 ${hours}小时`;
+    if (hours > 0) return `${hours}小时`;
+    const mins = Math.floor((seconds % 3600) / 60);
+    return `${mins}分钟`;
+}
+
+/** 将 ISO 时间格式化为相对时间 */
+function formatRelativeTime(isoStr: string): string {
+    const now = dayjs();
+    const t = dayjs(isoStr);
+    const diffMin = now.diff(t, 'minute');
+    if (diffMin < 1) return '刚刚';
+    if (diffMin < 60) return `${diffMin}分钟前`;
+    const diffHour = now.diff(t, 'hour');
+    if (diffHour < 24) return `${diffHour}小时前`;
+    const diffDay = now.diff(t, 'day');
+    if (diffDay < 30) return `${diffDay}天前`;
+    return t.format('MM-DD');
+}
+
+/* ── 合并高频定时任务 ── */
+interface MergedTask {
+    name: string;
+    schedule_id: string;
+    /** 原始次数 */
+    count: number;
+    /** 展示用时间：单次显示具体时间，高频显示摘要 */
+    displayTime: string;
+    /** 是否被合并 */
+    isMerged: boolean;
+}
+
+/** 频率阈值：同一任务每天超过此次数则合并展示 */
+const MERGE_THRESHOLD = 3;
+
+function mergeScheduleTasks(tasks: ScheduleTask[]): MergedTask[] {
+    // 按 schedule_id 分组
+    const groups = new Map<string, ScheduleTask[]>();
+    for (const t of tasks) {
+        const key = t.schedule_id;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(t);
+    }
+
+    const result: MergedTask[] = [];
+    for (const [sid, items] of groups) {
+        if (items.length <= MERGE_THRESHOLD) {
+            // 次数少，逐条展示
+            for (const it of items) {
+                result.push({ name: it.name, schedule_id: sid, count: 1, displayTime: it.time, isMerged: false });
+            }
+        } else {
+            // 高频任务：合并为一条，智能生成频率摘要
+            const summary = buildFrequencySummary(items);
+            result.push({ name: items[0].name, schedule_id: sid, count: items.length, displayTime: summary, isMerged: true });
+        }
+    }
+
+    // 未合并的按时间排序，合并的排在最后
+    result.sort((a, b) => {
+        if (a.isMerged !== b.isMerged) return a.isMerged ? 1 : -1;
+        return a.displayTime.localeCompare(b.displayTime);
+    });
+
+    return result;
+}
+
+/** 分析任务时间列表，生成可读的频率描述 */
+function buildFrequencySummary(items: ScheduleTask[]): string {
+    const times = items.map(t => t.time).sort();
+    const count = times.length;
+
+    // 检查是否等间距
+    if (count >= 2) {
+        const minutes = times.map(t => {
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        });
+        const intervals = new Set<number>();
+        for (let i = 1; i < minutes.length; i++) {
+            intervals.add(minutes[i] - minutes[i - 1]);
+        }
+        if (intervals.size === 1) {
+            const interval = [...intervals][0];
+            const minutePart = times[0].split(':')[1];
+            if (interval === 60) return `每小时 :${minutePart}`;
+            if (interval === 30) return `每30分钟`;
+            if (interval === 120) return `每2小时 :${minutePart}`;
+            if (interval === 180) return `每3小时 :${minutePart}`;
+            if (interval === 240) return `每4小时 :${minutePart}`;
+            if (interval === 360) return `每6小时 :${minutePart}`;
+            return `每${interval}分钟`;
+        }
+    }
+
+    // 非等间距，显示首尾 + 次数
+    return `${times[0]}~${times[times.length - 1]}`;
+}
+
+/* ══════════════════════════════════════════════════
+   ██  平台资源概览映射
+   ══════════════════════════════════════════════════ */
+
+function buildPlatformStats(overview?: WorkbenchOverview['resource_overview']) {
+    if (!overview) return [];
+    const r = overview;
+    return [
+        { icon: <ThunderboltOutlined />, label: '自愈流程', value: r.flows.total, sub: `${r.flows.enabled ?? 0} 已启用`, color: '#1677ff', path: '/healing/flows', locked: r.flows.total === 0 && !r.flows.enabled },
+        { icon: <ToolOutlined />, label: '自愈规则', value: r.rules.total, sub: `${r.rules.enabled ?? 0} 已启用`, color: '#52c41a', path: '/healing/rules', locked: r.rules.total === 0 && !r.rules.enabled },
+        { icon: <DatabaseOutlined />, label: '纳管主机', value: r.hosts.total, sub: `${r.hosts.offline ?? 0} 离线`, color: '#722ed1', path: '/cmdb', locked: r.hosts.total === 0 && !r.hosts.offline },
+        { icon: <ReadOutlined />, label: 'Playbook', value: r.playbooks.total, sub: `${r.playbooks.needs_review ?? 0} 需审查`, color: '#eb2f96', path: '/execution/playbooks', locked: r.playbooks.total === 0 && !r.playbooks.needs_review },
+        { icon: <ScheduleOutlined />, label: '定时任务', value: r.schedules.total, sub: `${r.schedules.enabled ?? 0} 已启用`, color: '#fa8c16', path: '/execution/schedules', locked: r.schedules.total === 0 && !r.schedules.enabled },
+        { icon: <BellOutlined />, label: '通知模板', value: r.notification_templates.total, sub: `${r.notification_templates.channels ?? 0} 个渠道`, color: '#13c2c2', path: '/notification/templates', locked: r.notification_templates.total === 0 && !r.notification_templates.channels },
+        { icon: <KeyOutlined />, label: '密钥管理', value: r.secrets.total, sub: r.secrets.types || '', color: '#2f54eb', path: '/resources/secrets', locked: r.secrets.total === 0 && !r.secrets.types },
+        { icon: <UserOutlined />, label: '系统用户', value: r.users.total, sub: `${r.users.admins ?? 0} 管理员`, color: '#8c8c8c', path: '/system/users', locked: r.users.total === 0 && !r.users.admins },
+    ];
+}
 
 /* ══════════════════════════════════════════════════
    ██  样式
@@ -182,6 +258,9 @@ const useStyles = createStyles(({ token }) => ({
         display: 'flex',
         flexDirection: 'column' as const,
         gap: 12,
+        alignSelf: 'flex-start',
+        position: 'sticky' as const,
+        top: 24,
     },
 
     /* ── 卡片 ── */
@@ -221,88 +300,7 @@ const useStyles = createStyles(({ token }) => ({
     topRow: {
         display: 'flex',
         gap: 20,
-    },
-
-    /* ── 系统健康（重排版） ── */
-    healthTop: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 10,
-        padding: '6px 10px',
-        background: '#f6ffed',
-        border: '1px solid #b7eb8f',
-    },
-    healthIconSmall: {
-        fontSize: 22,
-        color: '#52c41a',
-    },
-    healthInfo: {
-        flex: 1,
-    },
-    healthTitleSmall: {
-        fontSize: 14,
-        fontWeight: 600,
-        color: '#262626',
-    },
-    healthSubSmall: {
-        fontSize: 11,
-        color: '#8c8c8c',
-    },
-    resourceRow: {
-        display: 'flex',
-        gap: 16,
-        marginBottom: 10,
-    },
-    resourceItem: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-    },
-    resourceLabel: {
-        fontSize: 12,
-        color: '#8c8c8c',
-        width: 28,
-        flexShrink: 0,
-    },
-    resourcePercent: {
-        fontSize: 12,
-        fontWeight: 600,
-        width: 32,
-        textAlign: 'right' as const,
-        flexShrink: 0,
-    },
-    componentTable: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '0',
-    },
-    componentRow: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '5px 10px',
-        borderBottom: '1px solid #f5f5f5',
-        fontSize: 12,
-    },
-    componentName: {
-        color: '#595959',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-    },
-    componentDot: {
-        width: 6,
-        height: 6,
-        borderRadius: '50%',
-        background: '#52c41a',
-    },
-    componentMeta: {
-        display: 'flex',
-        gap: 12,
-        color: '#8c8c8c',
-        fontSize: 11,
+        alignItems: 'stretch',
     },
 
     /* ── 待办审批（紧凑版） ── */
@@ -403,87 +401,10 @@ const useStyles = createStyles(({ token }) => ({
         marginTop: 2,
     },
 
-    /* ── 最近执行 ── */
-    /* ── 最近执行（表格式） ── */
-    execHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        padding: '6px 16px',
-        background: '#fafafa',
-        borderBottom: '1px solid #f0f0f0',
-        fontSize: 12,
-        color: '#8c8c8c',
-        fontWeight: 500,
-    },
-    execItem: {
-        display: 'flex',
-        alignItems: 'center',
-        padding: '7px 16px',
-        borderBottom: '1px solid #f5f5f5',
-        '&:last-child': { borderBottom: 'none' },
-        '&:hover': { background: '#fafafa' },
-    },
-    execCol1: { width: 22, flexShrink: 0 },
-    execCol2: { flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, color: '#262626', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-    execCol3: { flex: 1, minWidth: 0, fontSize: 12, color: '#595959', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-    execCol4: { flex: 1, minWidth: 0, fontSize: 12, color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-    execCol5: { width: 40, fontSize: 12, color: '#8c8c8c', textAlign: 'center' as const, flexShrink: 0 },
-    execCol6: { width: 44, fontSize: 12, color: '#8c8c8c', textAlign: 'center' as const, flexShrink: 0 },
-    execCol7: { width: 60, fontSize: 12, color: '#bfbfbf', textAlign: 'right' as const, flexShrink: 0 },
-    execCol8: { width: 54, textAlign: 'right' as const, flexShrink: 0 },
-
     /* ── 我的流程 + 规则通用 ── */
     flowRuleRow: {
         display: 'flex',
         gap: 16,
-    },
-    listItem: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '6px 0',
-        borderBottom: '1px solid #f5f5f5',
-        '&:last-child': { borderBottom: 'none' },
-    },
-    listItemLeft: {
-        flex: 1,
-        minWidth: 0,
-    },
-    listItemName: {
-        fontSize: 13,
-        fontWeight: 500,
-        color: '#262626',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap' as const,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-    },
-    listItemMeta: {
-        fontSize: 12,
-        color: '#bfbfbf',
-        marginTop: 2,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-    },
-    listItemRight: {
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-    },
-    progressWrap: {
-        width: 80,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-    },
-    progressText: {
-        fontSize: 12,
-        fontWeight: 600,
-        whiteSpace: 'nowrap' as const,
     },
 
     /* ── 右侧卡片 ── */
@@ -506,61 +427,34 @@ const useStyles = createStyles(({ token }) => ({
         fontSize: 12,
         color: '#8c8c8c',
     },
-    infoRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: 6,
-        fontSize: 13,
-    },
-    infoLabel: {
-        color: '#8c8c8c',
-    },
-    infoValue: {
-        fontWeight: 500,
-        color: '#262626',
-    },
     announcement: {
-        marginBottom: 8,
+        padding: '10px 0',
+        borderBottom: '1px solid #f5f5f5',
+        cursor: 'pointer',
+        '&:last-child': { borderBottom: 'none' },
+        '&:hover': { background: '#fafafa', marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 },
     },
     announcementTitle: {
         fontSize: 13,
         fontWeight: 500,
         color: '#262626',
-        cursor: 'pointer',
         '&:hover': { color: token.colorPrimary },
     },
-    announcementDate: {
+    announcementSummary: {
         fontSize: 12,
-        color: '#bfbfbf',
-        marginTop: 1,
-    },
-
-    /* ── 活动动态（紧凑） ── */
-    activityItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '6px 0',
-        borderBottom: '1px solid #f5f5f5',
-        '&:last-child': { borderBottom: 'none' },
-    },
-    activityIconWrap: {
-        fontSize: 14,
-        flexShrink: 0,
-    },
-    activityText: {
-        flex: 1,
-        fontSize: 12,
-        color: '#595959',
+        color: '#8c8c8c',
+        marginTop: 2,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap' as const,
     },
-    activityTime: {
+    announcementDate: {
         fontSize: 11,
         color: '#bfbfbf',
-        flexShrink: 0,
+        marginTop: 2,
     },
+
+
 
     /* ── 定时任务日历 ── */
     calendarWrap: {
@@ -585,9 +479,6 @@ const useStyles = createStyles(({ token }) => ({
                         lineHeight: '28px',
                         fontSize: 12,
                     },
-                },
-                '.ant-picker-cell-in-view': {
-                    // current month dates
                 },
                 '.ant-picker-cell:not(.ant-picker-cell-in-view)': {
                     visibility: 'hidden' as const,
@@ -662,22 +553,22 @@ const useStyles = createStyles(({ token }) => ({
     /* ── 变更记录 ── */
     changeItem: {
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: 10,
-        padding: '8px 16px',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 16px',
         borderBottom: '1px solid #f5f5f5',
         '&:last-child': { borderBottom: 'none' },
     },
     changeAvatar: {
-        width: 28,
-        height: 28,
+        width: 32,
+        height: 32,
         borderRadius: '50%',
         background: '#e6f4ff',
         color: '#1677ff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 600,
         flexShrink: 0,
     },
@@ -712,14 +603,14 @@ const useStyles = createStyles(({ token }) => ({
         '&:hover': { background: '#f6f8ff' },
     },
     guideIcon: {
-        width: 36,
-        height: 36,
+        width: 32,
+        height: 32,
         background: '#e6f4ff',
         color: '#1677ff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 18,
+        fontSize: 16,
         flexShrink: 0,
     },
     guideContent: {
@@ -736,6 +627,43 @@ const useStyles = createStyles(({ token }) => ({
         color: '#8c8c8c',
         marginTop: 1,
     },
+
+    /* ── Loading/Empty ── */
+    loadingWrap: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '24px 0',
+    },
+
+    /* ── 权限锁定遮罩 ── */
+    lockedOverlay: {
+        position: 'absolute' as const,
+        inset: 0,
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        background: 'rgba(250, 250, 250, 0.85)',
+        backdropFilter: 'blur(2px)',
+        zIndex: 2,
+        cursor: 'not-allowed',
+    },
+    lockedIcon: {
+        fontSize: 20,
+        color: '#d9d9d9',
+    },
+    lockedText: {
+        fontSize: 11,
+        color: '#bfbfbf',
+        fontWeight: 500,
+    },
+    lockedResourceItem: {
+        opacity: 0.35,
+        cursor: 'not-allowed',
+        '&:hover': { background: 'transparent' },
+    },
 }));
 
 /* ══════════════════════════════════════════════════
@@ -750,13 +678,106 @@ const WorkbenchPage: React.FC = () => {
     const firstChar = displayName.charAt(0).toUpperCase();
     const role = (user as any)?.access === 'admin' ? '系统管理员' : '普通用户';
 
+    /* ══ 数据状态 ══ */
+    const [loading, setLoading] = useState(true);
+    const [overview, setOverview] = useState<WorkbenchOverview | null>(null);
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
+    const [pendingApprovals, setPendingApprovals] = useState<{ total: number; items: any[] }>({ total: 0, items: [] });
+    const [scheduleData, setScheduleData] = useState<Record<string, ScheduleTask[]>>({});
+    const [announcements, setAnnouncements] = useState<SiteMessage[]>([]);
+    const [favorites, setFavorites] = useState<FavoriteItem[]>(DEFAULT_FAVORITES);
+
+    /* 引导 Drawer */
+    const [guideDrawerOpen, setGuideDrawerOpen] = useState(false);
+    const [guideDrawerArticle, setGuideDrawerArticle] = useState<GuideArticle | null>(null);
 
     /* 日历选中日期 */
-    const [selectedDate, setSelectedDate] = React.useState<string>(() => {
-        const now = new Date();
-        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    });
+    const [selectedDate, setSelectedDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
+    const [calendarMonth, setCalendarMonth] = useState<Dayjs>(dayjs());
+
+    /* ══ 数据加载 ══ */
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [overviewRes, calendarRes, announcementsRes, favoritesRes, auditRes, approvalsRes, triggersRes] =
+                await Promise.allSettled([
+                    getWorkbenchOverview(),
+                    getScheduleCalendar(dayjs().year(), dayjs().month() + 1),
+                    getSiteMessages({ category: 'announcement', page: 1, page_size: 5 }),
+                    getWorkbenchFavorites(),
+                    getAuditLogs({ page: 1, page_size: 10, exclude_action: 'login', sort_by: 'created_at', sort_order: 'desc' }),
+                    getPendingApprovals({ page: 1, page_size: 5 }),
+                    getPendingTriggers({ page: 1, page_size: 5 }),
+                ]);
+
+            if (overviewRes.status === 'fulfilled' && overviewRes.value?.data) {
+                setOverview(overviewRes.value.data);
+            }
+            if (calendarRes.status === 'fulfilled' && calendarRes.value?.data?.dates) {
+                setScheduleData(calendarRes.value.data.dates);
+            }
+            if (announcementsRes.status === 'fulfilled' && announcementsRes.value?.data) {
+                const items = Array.isArray(announcementsRes.value.data) ? announcementsRes.value.data : [];
+                setAnnouncements(items);
+            }
+            if (favoritesRes.status === 'fulfilled' && favoritesRes.value?.data?.items) {
+                const items = favoritesRes.value.data.items;
+                if (items.length > 0) {
+                    setFavorites(items);
+                }
+            }
+            if (auditRes.status === 'fulfilled' && auditRes.value?.data) {
+                const logs = Array.isArray(auditRes.value.data) ? auditRes.value.data : [];
+                setAuditLogs(logs);
+            }
+
+            // 合并待触发工单 + 待审批任务
+            {
+                const triggers = triggersRes.status === 'fulfilled' ? (Array.isArray(triggersRes.value?.data) ? triggersRes.value.data : []) : [];
+                const approvals = approvalsRes.status === 'fulfilled' ? (Array.isArray(approvalsRes.value?.data) ? approvalsRes.value.data : []) : [];
+                const triggerTotal = triggersRes.status === 'fulfilled' ? (triggersRes.value?.total ?? 0) : 0;
+                const approvalTotal = approvalsRes.status === 'fulfilled' ? (approvalsRes.value?.total ?? 0) : 0;
+                // 给每条加上类型标记
+                const mergedItems = [
+                    ...triggers.map((t: any) => ({ ...t, _pendingType: 'trigger' })),
+                    ...approvals.map((a: any) => ({ ...a, _pendingType: 'approval' })),
+                ].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                setPendingApprovals({ total: triggerTotal + approvalTotal, items: mergedItems });
+            }
+        } catch (err) {
+            console.error('[Workbench] Load data failed:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    /* 切换日历月份时重新加载日历数据 */
+    const handleCalendarMonthChange = useCallback(async (date: Dayjs) => {
+        setCalendarMonth(date);
+        try {
+            const res = await getScheduleCalendar(date.year(), date.month() + 1);
+            if (res?.data?.dates) {
+                setScheduleData(res.data.dates);
+            }
+        } catch {
+            // ignore
+        }
+    }, []);
+
+    /* ══ 系统健康状态颜色映射 ══ */
+    const healthStatus = overview?.system_health?.status || 'healthy';
+    const healthColor = healthStatus === 'healthy' ? '#52c41a' : healthStatus === 'degraded' ? '#faad14' : '#ff4d4f';
+    const healthLabel = healthStatus === 'healthy' ? '正常' : healthStatus === 'degraded' ? '降级' : '异常';
+    const healthTagColor = healthStatus === 'healthy' ? 'success' : healthStatus === 'degraded' ? 'warning' : 'error';
+    const healthTagLabel = healthStatus === 'healthy' ? '运行中' : healthStatus === 'degraded' ? '降级运行' : '异常';
+    const HealthIcon = healthStatus === 'healthy' ? CheckCircleOutlined : healthStatus === 'degraded' ? ExclamationCircleOutlined : CloseCircleOutlined;
+
+    const platformStats = buildPlatformStats(overview?.resource_overview);
 
     return (
         <div className={styles.page}>
@@ -765,114 +786,136 @@ const WorkbenchPage: React.FC = () => {
                 <div className={styles.leftCol}>
 
                     {/* ── 顶部行：系统健康 + 待办审批 ── */}
-                    <div className={styles.topRow}>
+                    <div id="tour-overview" className={styles.topRow}>
                         {/* 系统健康 */}
-                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' } }}>
+                        <Card className={styles.card} style={{ flex: 1, minHeight: 260, display: 'flex', flexDirection: 'column' }} styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', flex: 1 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
-                                    <CheckCircleOutlined className={styles.cardTitleIcon} style={{ color: '#52c41a' }} /> 系统健康状态
+                                    <HealthIcon className={styles.cardTitleIcon} style={{ color: healthColor }} /> 系统健康状态
                                 </span>
-                                <Tag color="success" style={{ margin: 0, fontSize: 10, height: 20, lineHeight: '20px' }}>运行中</Tag>
+                                <Tag color={healthTagColor} style={{ margin: 0, fontSize: 10, height: 20, lineHeight: '20px' }}>{healthTagLabel}</Tag>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr 1fr', flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid #f5f5f5', borderBottom: '1px solid #f5f5f5' }}>
-                                    <CheckCircleOutlined style={{ fontSize: 22, color: '#52c41a' }} />
-                                    <div>
-                                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>运行状态</div>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#52c41a' }}>正常</div>
+                            {loading ? (
+                                <div className={styles.loadingWrap}><Spin /></div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr 1fr', flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid #f5f5f5', borderBottom: '1px solid #f5f5f5' }}>
+                                        <HealthIcon style={{ fontSize: 22, color: healthColor }} />
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#8c8c8c' }}>运行状态</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: healthColor }}>{healthLabel}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderBottom: '1px solid #f5f5f5' }}>
+                                        <SyncOutlined style={{ fontSize: 22, color: '#1677ff' }} />
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#8c8c8c' }}>系统版本</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>{overview?.system_health?.version || '-'}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid #f5f5f5', borderBottom: '1px solid #f5f5f5' }}>
+                                        <ClockCircleOutlined style={{ fontSize: 22, color: '#722ed1' }} />
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#8c8c8c' }}>运行时间</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>{overview?.system_health ? formatUptime(overview.system_health.uptime_seconds) : '-'}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderBottom: '1px solid #f5f5f5' }}>
+                                        <CloudServerOutlined style={{ fontSize: 22, color: '#13c2c2' }} />
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#8c8c8c' }}>环境</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>{overview?.system_health?.environment || '-'}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid #f5f5f5' }}>
+                                        <ApiOutlined style={{ fontSize: 22, color: '#fa8c16' }} />
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#8c8c8c' }}>API 响应</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>{overview?.system_health?.api_latency_ms ?? '-'}ms</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
+                                        <DatabaseOutlined style={{ fontSize: 22, color: '#eb2f96' }} />
+                                        <div>
+                                            <div style={{ fontSize: 11, color: '#8c8c8c' }}>数据库</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>{overview?.system_health?.db_latency_ms ?? '-'}ms</div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderBottom: '1px solid #f5f5f5' }}>
-                                    <SyncOutlined style={{ fontSize: 22, color: '#1677ff' }} />
-                                    <div>
-                                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>系统版本</div>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>v2.5.0</div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid #f5f5f5', borderBottom: '1px solid #f5f5f5' }}>
-                                    <ClockCircleOutlined style={{ fontSize: 22, color: '#722ed1' }} />
-                                    <div>
-                                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>运行时间</div>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>12天 4小时</div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderBottom: '1px solid #f5f5f5' }}>
-                                    <CloudServerOutlined style={{ fontSize: 22, color: '#13c2c2' }} />
-                                    <div>
-                                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>环境</div>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>Production</div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid #f5f5f5' }}>
-                                    <ApiOutlined style={{ fontSize: 22, color: '#fa8c16' }} />
-                                    <div>
-                                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>API 响应</div>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>23ms</div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
-                                    <DatabaseOutlined style={{ fontSize: 22, color: '#eb2f96' }} />
-                                    <div>
-                                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>数据库</div>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#262626' }}>5ms</div>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </Card>
 
-                        {/* 待办审批（紧凑+更多条目） */}
-                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
+                        {/* 待办审批（待触发工单 + 待审批任务） */}
+                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', flex: 1 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <ScheduleOutlined className={styles.cardTitleIcon} /> 待办审批
                                 </span>
                                 <span className={styles.cardLink} onClick={() => history.push('/pending/triggers')}>
-                                    全部 {pendingApprovals.length} 项 <RightOutlined style={{ fontSize: 10 }} />
+                                    查看全部 <RightOutlined style={{ fontSize: 10 }} />
                                 </span>
                             </div>
-                            <div style={{ padding: '4px 0' }}>
-                                {pendingApprovals.map((item) => (
-                                    <div key={item.id} className={styles.pendingItem}>
-                                        <div
-                                            className={styles.pendingDot}
-                                            style={{ background: item.severity === 'warning' ? '#faad14' : '#1677ff' }}
-                                        />
-                                        <div className={styles.pendingContent}>
-                                            <span className={styles.pendingTitle}>{item.title}</span>
-                                            <span className={styles.pendingType}>{item.type === 'trigger' ? '触发器' : '人工'}</span>
-                                        </div>
-                                        <span className={styles.pendingTime}>{item.time}</span>
-                                        <div className={styles.pendingAction}>
-                                            <Button size="small" type="primary" ghost style={{ fontSize: 12, height: 24 }}>
-                                                处理
+                            {loading ? (
+                                <div className={styles.loadingWrap}><Spin /></div>
+                            ) : pendingApprovals.total === 0 ? (
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无待办任务" />
+                                </div>
+                            ) : (
+                                <div style={{ padding: 0, flex: 1 }}>
+                                    {pendingApprovals.items.slice(0, 4).map((item: any) => {
+                                        const sev = _SEVERITY_MAP[item.severity] || _SEVERITY_MAP.medium;
+                                        const targetHost = item.raw_data?.cmdb_ci || item.affected_ci || '';
+                                        return (
+                                            <div key={item.id} className={styles.pendingItem} onClick={() => history.push(item._pendingType === 'trigger' ? '/pending/triggers' : '/pending/approvals')}>
+                                                <span className={styles.pendingDot} style={{ background: sev.color }} />
+                                                <div className={styles.pendingContent}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <span className={styles.pendingTitle}>{item.title || item.node_name || '待办任务'}</span>
+                                                        <Tag color={sev.color} style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', borderRadius: 2 }}>{sev.text}</Tag>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#8c8c8c' }}>
+                                                        <span>{item._pendingType === 'trigger' ? '自愈审批' : '任务审批'}</span>
+                                                        {item.external_id && <span>·  {item.external_id}</span>}
+                                                        {targetHost && <span>·  {targetHost}</span>}
+                                                    </div>
+                                                </div>
+                                                <span className={styles.pendingTime}>{item.created_at ? formatRelativeTime(item.created_at) : ''}</span>
+                                            </div>
+                                        );
+                                    })}
+                                    {pendingApprovals.total > 4 && (
+                                        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                                            <Button type="link" size="small" onClick={() => history.push('/pending/triggers')}>
+                                                还有 {pendingApprovals.total - 4} 条待审批
                                             </Button>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    )}
+                                </div>
+                            )}
                         </Card>
                     </div>
 
                     {/* ── 我的收藏 ── */}
-                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
+                    <Card id="tour-favorites" className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <AppstoreOutlined className={styles.cardTitleIcon} /> 我的收藏
                             </span>
                         </div>
                         <div className={styles.favGrid}>
-                            {myFavorites.map((item) => (
+                            {favorites.map((item) => (
                                 <div key={item.key} className={styles.favItem} onClick={() => history.push(item.path)}>
-                                    <span className={styles.favIconWrap} style={{ color: '#1677ff' }}>{item.icon}</span>
+                                    <span className={styles.favIconWrap} style={{ color: '#1677ff' }}>{resolveFavIcon(item.key)}</span>
                                     <span className={styles.favName}>{item.label}</span>
                                 </div>
                             ))}
                         </div>
                     </Card>
 
-                    {/* ── 指标行 ── */}
+                    {/* ── 指标行（始终显示三张卡片，无权限时显示锁定遮罩） ── */}
                     <div className={styles.metricsRow}>
-                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
+                        <Card className={styles.card} style={{ flex: 1, position: 'relative' }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <BugOutlined className={styles.cardTitleIcon} /> 自愈执行
@@ -880,17 +923,23 @@ const WorkbenchPage: React.FC = () => {
                             </div>
                             <div className={cx(styles.cardBody, styles.metricCenter)}>
                                 <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#52c41a' }}>12</div>
+                                    <div className={styles.metricNumber} style={{ color: '#52c41a' }}>{overview?.healing_stats?.today_success ?? 0}</div>
                                     <div className={styles.metricLabel}>今日成功</div>
                                 </div>
                                 <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#ff4d4f' }}>1</div>
+                                    <div className={styles.metricNumber} style={{ color: '#ff4d4f' }}>{overview?.healing_stats?.today_failed ?? 0}</div>
                                     <div className={styles.metricLabel}>今日失败</div>
                                 </div>
                             </div>
+                            {!overview?.healing_stats && !loading && (
+                                <div className={styles.lockedOverlay}>
+                                    <LockOutlined className={styles.lockedIcon} />
+                                    <span className={styles.lockedText}>暂无权限查看</span>
+                                </div>
+                            )}
                         </Card>
 
-                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
+                        <Card className={styles.card} style={{ flex: 1, position: 'relative' }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <AlertOutlined className={styles.cardTitleIcon} /> 工单统计
@@ -898,17 +947,23 @@ const WorkbenchPage: React.FC = () => {
                             </div>
                             <div className={cx(styles.cardBody, styles.metricCenter)}>
                                 <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#faad14' }}>3</div>
+                                    <div className={styles.metricNumber} style={{ color: '#faad14' }}>{overview?.incident_stats?.pending_count ?? 0}</div>
                                     <div className={styles.metricLabel}>待处理</div>
                                 </div>
                                 <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#262626' }}>45</div>
+                                    <div className={styles.metricNumber} style={{ color: '#262626' }}>{overview?.incident_stats?.last_7_days_total ?? 0}</div>
                                     <div className={styles.metricLabel}>近 7 天总计</div>
                                 </div>
                             </div>
+                            {!overview?.incident_stats && !loading && (
+                                <div className={styles.lockedOverlay}>
+                                    <LockOutlined className={styles.lockedIcon} />
+                                    <span className={styles.lockedText}>暂无权限查看</span>
+                                </div>
+                            )}
                         </Card>
 
-                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
+                        <Card className={styles.card} style={{ flex: 1, position: 'relative' }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <CloudServerOutlined className={styles.cardTitleIcon} /> 纳管主机
@@ -916,14 +971,20 @@ const WorkbenchPage: React.FC = () => {
                             </div>
                             <div className={cx(styles.cardBody, styles.metricCenter)}>
                                 <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#1677ff' }}>145</div>
+                                    <div className={styles.metricNumber} style={{ color: '#1677ff' }}>{overview?.host_stats?.online_count ?? 0}</div>
                                     <div className={styles.metricLabel}>在线主机</div>
                                 </div>
                                 <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#bfbfbf' }}>3</div>
+                                    <div className={styles.metricNumber} style={{ color: '#bfbfbf' }}>{overview?.host_stats?.offline_count ?? 0}</div>
                                     <div className={styles.metricLabel}>离线</div>
                                 </div>
                             </div>
+                            {!overview?.host_stats && !loading && (
+                                <div className={styles.lockedOverlay}>
+                                    <LockOutlined className={styles.lockedIcon} />
+                                    <span className={styles.lockedText}>暂无权限查看</span>
+                                </div>
+                            )}
                         </Card>
                     </div>
 
@@ -934,54 +995,86 @@ const WorkbenchPage: React.FC = () => {
                                 <AppstoreOutlined className={styles.cardTitleIcon} /> 平台资源概览
                             </span>
                         </div>
-                        <div className={styles.resourceGrid}>
-                            {platformStats.map((item, i) => (
-                                <div key={i} className={styles.resourceItem} onClick={() => history.push(item.path)}>
-                                    <span className={styles.resourceIcon} style={{ color: item.color }}>{item.icon}</span>
-                                    <span className={styles.resourceValue}>{item.value}</span>
-                                    <span className={styles.resourceLabel}>{item.label}</span>
-                                    <span className={styles.resourceSub}>{item.sub}</span>
-                                </div>
-                            ))}
-                        </div>
+                        {loading ? (
+                            <div className={styles.loadingWrap}><Spin /></div>
+                        ) : (
+                            <div className={styles.resourceGrid}>
+                                {platformStats.map((item, i) => (
+                                    <div
+                                        key={i}
+                                        className={cx(styles.resourceItem, item.locked && styles.lockedResourceItem)}
+                                        onClick={() => !item.locked && history.push(item.path)}
+                                    >
+                                        <span className={styles.resourceIcon} style={{ color: item.locked ? '#d9d9d9' : item.color }}>
+                                            {item.locked ? <LockOutlined /> : item.icon}
+                                        </span>
+                                        <span className={styles.resourceValue} style={item.locked ? { color: '#d9d9d9' } : undefined}>
+                                            {item.locked ? '-' : item.value}
+                                        </span>
+                                        <span className={styles.resourceLabel} style={item.locked ? { color: '#d9d9d9' } : undefined}>{item.label}</span>
+                                        <span className={styles.resourceSub} style={item.locked ? { color: '#e8e8e8' } : undefined}>
+                                            {item.locked ? '无权限' : item.sub}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </Card>
 
-                    {/* ── 变更记录 + 帮助指南 ── */}
+                    {/* ── 变更记录 + 快速指南 ── */}
                     <div className={styles.flowRuleRow}>
+                        {/* 变更记录 */}
                         <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <HistoryOutlined className={styles.cardTitleIcon} /> 变更记录
                                 </span>
-                                <span className={styles.cardLink} onClick={() => history.push('/system/audit')}>
+                                <span className={styles.cardLink} onClick={() => history.push('/system/audit-logs')}>
                                     查看全部 <RightOutlined style={{ fontSize: 10 }} />
                                 </span>
                             </div>
-                            <div>
-                                {changeLog.map((item) => (
-                                    <div key={item.id} className={styles.changeItem}>
-                                        <div className={styles.changeAvatar}>{item.user.charAt(0)}</div>
-                                        <div className={styles.changeContent}>
-                                            <div className={styles.changeText}>
-                                                <strong>{item.user}</strong> {item.action} <span style={{ color: '#1677ff' }}>{item.target}</span>
+                            {loading ? (
+                                <div className={styles.loadingWrap}><Spin /></div>
+                            ) : auditLogs.length === 0 ? (
+                                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无变更记录" style={{ padding: '20px 0' }} />
+                            ) : (
+                                <div>
+                                    {auditLogs.slice(0, 6).map((log: any) => {
+                                        const actionLabel = _ACTION_LABELS[log.action] || log.action;
+                                        const resLabel = _ALL_RESOURCE_LABELS[log.resource_type] || log.resource_type;
+                                        const userName = log.username || log.user?.username || '系统';
+                                        return (
+                                            <div key={log.id} className={styles.changeItem}>
+                                                <div className={styles.changeAvatar}>
+                                                    {userName.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className={styles.changeContent}>
+                                                    <div className={styles.changeText}>
+                                                        <strong>{userName}</strong> {actionLabel} <span style={{ color: '#1677ff' }}>{log.resource_name || resLabel}</span>
+                                                    </div>
+                                                    {log.resource_name && <div className={styles.changeDetail}>{resLabel}</div>}
+                                                </div>
+                                                <span className={styles.changeTime}>{formatRelativeTime(log.created_at)}</span>
                                             </div>
-                                            <div className={styles.changeDetail}>{item.detail}</div>
-                                        </div>
-                                        <span className={styles.changeTime}>{item.time}</span>
-                                    </div>
-                                ))}
-                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </Card>
 
-                        <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
+                        {/* 快速指南 */}
+                        <Card id="tour-quick-guide" className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                             <div className={styles.cardHeader}>
                                 <span className={styles.cardTitle}>
                                     <ReadOutlined className={styles.cardTitleIcon} /> 快速指南
                                 </span>
+                                <span className={styles.cardLink} onClick={() => history.push('/guide')}>
+                                    查看全部 <RightOutlined style={{ fontSize: 10 }} />
+                                </span>
                             </div>
                             <div>
-                                {helpGuides.map((guide) => (
-                                    <div key={guide.id} className={styles.guideItem} onClick={() => history.push(guide.path)}>
+                                {GUIDE_ARTICLES.filter(g => g.category === 'quick').map((guide) => (
+                                    <div key={guide.id} className={styles.guideItem} onClick={() => { setGuideDrawerArticle(guide); setGuideDrawerOpen(true); }}>
                                         <div className={styles.guideIcon}>{guide.icon}</div>
                                         <div className={styles.guideContent}>
                                             <div className={styles.guideTitle}>{guide.title}</div>
@@ -994,11 +1087,9 @@ const WorkbenchPage: React.FC = () => {
                         </Card>
                     </div>
                 </div>
-
-                {/* ══════ 右栏 ══════ */}
                 <div className={styles.rightCol}>
                     {/* 快速操作 */}
-                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
+                    <Card id="tour-quick-actions" className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <ThunderboltOutlined className={styles.cardTitleIcon} /> 快速操作
@@ -1034,44 +1125,60 @@ const WorkbenchPage: React.FC = () => {
                         </div>
                     </Card>
 
-
-                    {/* 活动动态（紧凑） */}
-                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
-                        <div className={styles.cardHeader}>
-                            <span className={styles.cardTitle}>
-                                <FieldTimeOutlined className={styles.cardTitleIcon} /> 活动动态
-                            </span>
-                        </div>
-                        <div className={styles.cardBody} style={{ padding: '4px 12px' }}>
-                            {activityFeed.map((item) => (
-                                <div key={item.id} className={styles.activityItem}>
-                                    <span className={styles.activityIconWrap}>{activityIcon[item.type]}</span>
-                                    <span className={styles.activityText}>{item.text}</span>
-                                    <span className={styles.activityTime}>{item.time}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-
                     {/* 系统公告 */}
                     <Card className={styles.card} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
-                            <span className={styles.cardTitle}>系统公告</span>
+                            <span className={styles.cardTitle}>
+                                <BellOutlined className={styles.cardTitleIcon} /> 系统公告
+                                {announcements.filter(a => !a.is_read).length > 0 && (
+                                    <span style={{ fontSize: 11, color: '#fff', background: '#ff4d4f', borderRadius: 8, padding: '0 6px', marginLeft: 6, lineHeight: '16px', display: 'inline-block' }}>
+                                        {announcements.filter(a => !a.is_read).length}
+                                    </span>
+                                )}
+                            </span>
+                            <span className={styles.cardLink} onClick={() => history.push('/system/messages')}>
+                                查看全部 <RightOutlined style={{ fontSize: 10 }} />
+                            </span>
                         </div>
-                        <div className={styles.cardBody} style={{ padding: '8px 16px' }}>
-                            <div className={styles.announcement}>
-                                <div className={styles.announcementTitle}>v2.5.0 版本发布更新说明</div>
-                                <div className={styles.announcementDate}>2026-02-12</div>
-                            </div>
-                            <div className={styles.announcement}>
-                                <div className={styles.announcementTitle}>系统维护计划通知</div>
-                                <div className={styles.announcementDate}>2026-02-10</div>
-                            </div>
+                        <div className={styles.cardBody} style={{ padding: '4px 16px' }}>
+                            {announcements.length === 0 ? (
+                                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无公告" style={{ padding: '8px 0' }} />
+                            ) : (
+                                announcements.slice(0, 5).map((item) => {
+                                    const plainText = item.content
+                                        ? item.content.replace(/<[^>]*>/g, '').trim()
+                                        : '';
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className={styles.announcement}
+                                            onClick={async () => {
+                                                if (!item.is_read) {
+                                                    try {
+                                                        await markAsRead([item.id]);
+                                                        setAnnouncements(prev => prev.map(a => a.id === item.id ? { ...a, is_read: true } : a));
+                                                    } catch { /* ignore */ }
+                                                }
+                                                history.push('/system/messages');
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                {!item.is_read && (
+                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1677ff', flexShrink: 0, display: 'inline-block' }} />
+                                                )}
+                                                <span className={styles.announcementTitle} style={item.is_read ? { color: '#8c8c8c', fontWeight: 400 } : undefined}>{item.title}</span>
+                                            </div>
+                                            {plainText && <div className={styles.announcementSummary} style={!item.is_read ? undefined : { marginLeft: 0 }}>{plainText}</div>}
+                                            <div className={styles.announcementDate}>{dayjs(item.created_at).format('YYYY-MM-DD HH:mm')}</div>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                     </Card>
 
                     {/* 定时任务日历 */}
-                    <Card className={styles.card} styles={{ body: { padding: 0 } }}>
+                    <Card className={styles.card} style={{ flex: 1 }} styles={{ body: { padding: 0 } }}>
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <ScheduleOutlined className={styles.cardTitleIcon} /> 定时任务
@@ -1084,16 +1191,18 @@ const WorkbenchPage: React.FC = () => {
                             <Calendar
                                 fullscreen={false}
                                 headerRender={() => {
-                                    const now = new Date();
                                     return (
                                         <div style={{ padding: '8px 12px', fontSize: 13, fontWeight: 500, color: '#262626', textAlign: 'right' }}>
-                                            {now.getFullYear()}年 {now.getMonth() + 1}月
+                                            {calendarMonth.year()}年 {calendarMonth.month() + 1}月
                                         </div>
                                     );
                                 }}
                                 onSelect={(date: any) => {
                                     const dateStr = date.format?.('YYYY-MM-DD') || '';
                                     setSelectedDate(dateStr);
+                                }}
+                                onPanelChange={(date: any) => {
+                                    handleCalendarMonthChange(dayjs(date));
                                 }}
                                 cellRender={(current: any) => {
                                     const dateStr = current.format?.('YYYY-MM-DD') || '';
@@ -1113,10 +1222,11 @@ const WorkbenchPage: React.FC = () => {
                                 {selectedDate.replace(/-/g, '/')} 的定时任务
                             </div>
                             {scheduleData[selectedDate] && scheduleData[selectedDate].length > 0 ? (
-                                scheduleData[selectedDate].map((task, i) => (
-                                    <div key={i} className={styles.scheduleTaskItem}>
-                                        <span className={styles.scheduleTaskTime}>{task.time}</span>
+                                mergeScheduleTasks(scheduleData[selectedDate]).map((task, i) => (
+                                    <div key={i} className={styles.scheduleTaskItem} style={task.isMerged ? { borderLeftColor: '#722ed1', background: '#f9f0ff' } : undefined}>
+                                        <span className={styles.scheduleTaskTime} style={task.isMerged ? { color: '#722ed1' } : undefined}>{task.displayTime}</span>
                                         <span className={styles.scheduleTaskName}>{task.name}</span>
+                                        {task.isMerged && <span style={{ fontSize: 10, color: '#722ed1', background: '#f0e6ff', padding: '1px 6px', borderRadius: 2, flexShrink: 0 }}>{task.count}次/天</span>}
                                     </div>
                                 ))
                             ) : (
@@ -1126,6 +1236,11 @@ const WorkbenchPage: React.FC = () => {
                     </Card>
                 </div>
             </div>
+            <GuideDrawer
+                open={guideDrawerOpen}
+                article={guideDrawerArticle}
+                onClose={() => setGuideDrawerOpen(false)}
+            />
         </div>
     );
 };
