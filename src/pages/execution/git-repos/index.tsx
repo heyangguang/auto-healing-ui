@@ -23,6 +23,7 @@ import {
     getFiles, getCommits, getSyncLogs, getGitRepoStats,
 } from '@/services/auto-healing/git-repos';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
+import { REPO_STATUS_OPTIONS, AUTH_TYPE_OPTIONS, SYNC_ENABLED_OPTIONS } from '@/constants/gitRepoDicts';
 import './index.css';
 
 dayjs.extend(relativeTime);
@@ -56,26 +57,13 @@ const advancedSearchFields: AdvancedSearchField[] = [
     { key: 'name', label: '仓库名称', type: 'input', placeholder: '输入仓库名称' },
     { key: 'url', label: '仓库地址', type: 'input', placeholder: '输入仓库 URL' },
     {
-        key: 'status', label: '状态', type: 'select', options: [
-            { label: '就绪', value: 'ready' },
-            { label: '待同步', value: 'pending' },
-            { label: '同步中', value: 'syncing' },
-            { label: '错误', value: 'error' },
-        ]
+        key: 'status', label: '状态', type: 'select', options: REPO_STATUS_OPTIONS,
     },
     {
-        key: 'auth_type', label: '认证方式', type: 'select', options: [
-            { label: '公开', value: 'none' },
-            { label: 'Token', value: 'token' },
-            { label: '密码', value: 'password' },
-            { label: 'SSH', value: 'ssh_key' },
-        ]
+        key: 'auth_type', label: '认证方式', type: 'select', options: AUTH_TYPE_OPTIONS,
     },
     {
-        key: 'sync_enabled', label: '定时同步', type: 'select', options: [
-            { label: '已开启', value: 'true' },
-            { label: '未开启', value: 'false' },
-        ]
+        key: 'sync_enabled', label: '定时同步', type: 'select', options: SYNC_ENABLED_OPTIONS,
     },
     { key: 'created_at', label: '创建时间', type: 'dateRange' },
 ];
@@ -290,12 +278,7 @@ const GitRepoList: React.FC = () => {
         },
         {
             columnKey: 'status', columnTitle: '状态', dataIndex: 'status', width: 90, sorter: true,
-            headerFilters: [
-                { label: '就绪', value: 'ready' },
-                { label: '待同步', value: 'pending' },
-                { label: '同步中', value: 'syncing' },
-                { label: '错误', value: 'error' },
-            ],
+            headerFilters: REPO_STATUS_OPTIONS,
             render: (_: any, r: AutoHealing.GitRepository) => {
                 const st = statusConfig[r.status] || statusConfig.pending;
                 return <Badge status={st.badge} text={st.text} />;
@@ -303,12 +286,7 @@ const GitRepoList: React.FC = () => {
         },
         {
             columnKey: 'auth_type', columnTitle: '认证', dataIndex: 'auth_type', width: 80,
-            headerFilters: [
-                { label: '公开', value: 'none' },
-                { label: 'Token', value: 'token' },
-                { label: '密码', value: 'password' },
-                { label: 'SSH', value: 'ssh_key' },
-            ],
+            headerFilters: AUTH_TYPE_OPTIONS,
             render: (v: string) => {
                 const auth = authLabels[v] || authLabels.none;
                 return <Space size={4}><Text type="secondary">{auth.icon}</Text><Text type="secondary">{auth.text}</Text></Space>;

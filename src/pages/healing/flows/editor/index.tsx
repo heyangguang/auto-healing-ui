@@ -576,10 +576,9 @@ const FlowEditorInner: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             width: '100%',
-            height: 'calc(100vh - 140px)',
+            height: '100%',
             padding: 0,
             overflow: 'hidden',
-            border: '1px solid #f0f0f0',
         }}>
             <ReactFlowProvider>
                 <Layout style={{ flex: 1, background: '#fff', overflow: 'hidden' }}>

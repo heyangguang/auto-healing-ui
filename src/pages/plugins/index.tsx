@@ -18,6 +18,7 @@ import {
     getPlugins, getPluginsStats, deletePlugin,
     testPlugin, syncPlugin, activatePlugin, deactivatePlugin, getPluginSyncLogs,
 } from '@/services/auto-healing/plugins';
+import { PLUGIN_STATUS_LABELS, PLUGIN_STATUS_MAP } from '@/constants/pluginDicts';
 import './index.css';
 
 const { Text } = Typography;
@@ -71,7 +72,7 @@ const advancedSearchFields: AdvancedSearchField[] = [
     },
     {
         key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
-        options: [{ label: '运行中', value: 'active' }, { label: '未激活', value: 'inactive' }, { label: '异常', value: 'error' }]
+        options: Object.entries(PLUGIN_STATUS_LABELS).map(([value, label]) => ({ label, value }))
     },
 ];
 
@@ -205,15 +206,10 @@ const PluginList: React.FC = () => {
         },
         {
             columnKey: 'status', columnTitle: '状态', dataIndex: 'status', width: 90, sorter: true,
-            headerFilters: [{ label: '运行中', value: 'active' }, { label: '未激活', value: 'inactive' }, { label: '异常', value: 'error' }],
+            headerFilters: Object.entries(PLUGIN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
             render: (_: any, r: AutoHealing.Plugin) => {
-                const map: Record<string, { status: 'success' | 'default' | 'error'; text: string }> = {
-                    active: { status: 'success', text: '运行中' },
-                    error: { status: 'error', text: '异常' },
-                    inactive: { status: 'default', text: '未激活' },
-                };
-                const cfg = map[r.status] || map.inactive;
-                return <Badge status={cfg.status} text={cfg.text} />;
+                const cfg = PLUGIN_STATUS_MAP[r.status] || { color: 'default', text: r.status };
+                return <Badge status={cfg.color as any} text={cfg.text} />;
             },
         },
         {
@@ -311,9 +307,9 @@ const PluginList: React.FC = () => {
         <div className="plugins-stats-bar">
             {[
                 { icon: <CloudOutlined />, cls: 'total', val: stats.total, lbl: '总插件' },
-                { icon: <CheckCircleOutlined />, cls: 'active', val: stats.active, lbl: '运行中' },
-                { icon: <ExclamationCircleOutlined />, cls: 'inactive', val: stats.inactive, lbl: '未激活' },
-                { icon: <CloseCircleOutlined />, cls: 'error', val: stats.error, lbl: '异常' },
+                { icon: <CheckCircleOutlined />, cls: 'active', val: stats.active, lbl: PLUGIN_STATUS_LABELS['active'] || '活跃' },
+                { icon: <ExclamationCircleOutlined />, cls: 'inactive', val: stats.inactive, lbl: PLUGIN_STATUS_LABELS['inactive'] || '停用' },
+                { icon: <CloseCircleOutlined />, cls: 'error', val: stats.error, lbl: PLUGIN_STATUS_LABELS['error'] || '异常' },
                 { icon: <span style={{ fontSize: 18 }}>🎫</span>, cls: 'itsm', val: stats.itsm, lbl: 'ITSM' },
                 { icon: <span style={{ fontSize: 18 }}>🗄️</span>, cls: 'cmdb', val: stats.cmdb, lbl: 'CMDB' },
             ].map((s, i) => (
@@ -375,7 +371,7 @@ const PluginList: React.FC = () => {
                                     <div className="plugins-detail-sub">{tc.label}</div>
                                 </div>
                                 <Badge status={currentPlugin.status === 'active' ? 'success' : currentPlugin.status === 'error' ? 'error' : 'default'}
-                                    text={currentPlugin.status === 'active' ? '运行中' : currentPlugin.status === 'error' ? '异常' : '未激活'} />
+                                    text={PLUGIN_STATUS_LABELS[currentPlugin.status] || currentPlugin.status} />
                             </div>
                             <Space size="small">
                                 <Button size="small" icon={<ApiOutlined />} onClick={() => handleTest(currentPlugin.id)} disabled={!access.canUpdatePlugin}>测试</Button>
@@ -564,7 +560,7 @@ const PluginList: React.FC = () => {
                                                         title: '状态', dataIndex: 'status', width: 80,
                                                         render: (s: string) => (
                                                             <Badge status={s === 'success' ? 'success' : s === 'failed' ? 'error' : 'processing'}
-                                                                text={s === 'success' ? '成功' : s === 'failed' ? '失败' : '进行中'} />
+                                                                text={s === 'success' ? '成功' : s === 'failed' ? '失败' : s} />
                                                         ),
                                                     },
                                                     {

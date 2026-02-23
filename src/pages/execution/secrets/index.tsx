@@ -23,6 +23,7 @@ import {
     enableSecretsSource, disableSecretsSource,
     getSecretsSourcesStats,
 } from '@/services/auto-healing/secrets';
+import { SECRETS_SOURCE_OPTIONS, CREDENTIAL_TYPE_OPTIONS, SECRETS_STATUS_OPTIONS } from '@/constants/secretsDicts';
 import './index.css';
 
 const { Text } = Typography;
@@ -53,25 +54,15 @@ const advancedSearchFields: AdvancedSearchField[] = [
     { key: 'keyword', label: '名称', type: 'input', placeholder: '密钥源名称' },
     {
         key: 'type', label: '类型', type: 'select', placeholder: '全部类型',
-        options: [
-            { label: '本地文件', value: 'file' },
-            { label: 'Vault', value: 'vault' },
-            { label: 'Webhook', value: 'webhook' },
-        ],
+        options: SECRETS_SOURCE_OPTIONS,
     },
     {
         key: 'auth_type', label: '认证方式', type: 'select', placeholder: '全部认证',
-        options: [
-            { label: 'SSH 密钥', value: 'ssh_key' },
-            { label: '密码', value: 'password' },
-        ],
+        options: CREDENTIAL_TYPE_OPTIONS,
     },
     {
         key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
-        options: [
-            { label: '已启用', value: 'active' },
-            { label: '已禁用', value: 'inactive' },
-        ],
+        options: SECRETS_STATUS_OPTIONS,
     },
 ];
 
@@ -248,11 +239,7 @@ const SecretsSourceList: React.FC = () => {
             dataIndex: 'type',
             width: 120,
             sorter: true,
-            headerFilters: [
-                { label: '本地文件', value: 'file' },
-                { label: 'Vault', value: 'vault' },
-                { label: 'Webhook', value: 'webhook' },
-            ],
+            headerFilters: SECRETS_SOURCE_OPTIONS,
             render: (_: any, record: AutoHealing.SecretsSource) => {
                 const cfg = getSourceTypeConfig(record.type);
                 return (
@@ -268,10 +255,7 @@ const SecretsSourceList: React.FC = () => {
             dataIndex: 'auth_type',
             width: 110,
             sorter: true,
-            headerFilters: [
-                { label: 'SSH 密钥', value: 'ssh_key' },
-                { label: '密码', value: 'password' },
-            ],
+            headerFilters: CREDENTIAL_TYPE_OPTIONS,
             render: (_: any, record: AutoHealing.SecretsSource) => {
                 const cfg = getAuthTypeConfig(record.auth_type);
                 return <Tag icon={cfg.icon} color={cfg.color} style={{ margin: 0 }}>{cfg.label}</Tag>;
@@ -295,10 +279,7 @@ const SecretsSourceList: React.FC = () => {
             dataIndex: 'status',
             width: 80,
             sorter: true,
-            headerFilters: [
-                { label: '已启用', value: 'active' },
-                { label: '已禁用', value: 'inactive' },
-            ],
+            headerFilters: SECRETS_STATUS_OPTIONS,
             render: (_: any, record: AutoHealing.SecretsSource) => (
                 <Badge
                     status={record.status === 'active' ? 'success' : 'default'}

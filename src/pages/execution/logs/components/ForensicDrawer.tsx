@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Drawer, Space, Typography, Tag, Button, Tabs, Spin } from 'antd';
 import { CloseOutlined, ReloadOutlined, ExpandOutlined } from '@ant-design/icons';
 import { getExecutionRun, getExecutionLogs, createLogStream } from '@/services/auto-healing/execution';
+import { RUN_STATUS_LABELS } from '@/constants/executionDicts';
 import LogConsole, { LogEntry } from '@/components/execution/LogConsole';
 import dayjs from 'dayjs';
 
@@ -94,10 +95,7 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
                                         run.status === 'pending' ? '#722ed1' :
                                             '#ff4d4f'
                 }>
-                    {run.status === 'partial' ? '部分成功' :
-                        run.status === 'timeout' ? '超时' :
-                            run.status === 'cancelled' ? '已取消' :
-                                run.status.toUpperCase()}
+                    {RUN_STATUS_LABELS[run.status] || run.status.toUpperCase()}
                 </Tag>
             )}
             <Text type="secondary" style={{ fontSize: 13 }}>

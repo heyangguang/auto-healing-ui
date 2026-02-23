@@ -25,6 +25,7 @@ import {
     INCIDENT_SEVERITY_MAP as SEVERITY_MAP,
     INCIDENT_HEALING_MAP as HEALING_MAP,
     INCIDENT_STATUS_MAP as STATUS_MAP,
+    getSeverityOptions, getIncidentStatusOptions, getHealingStatusOptions,
 } from '@/constants/incidentDicts';
 
 /* ========== 搜索字段 ========== */
@@ -38,32 +39,15 @@ const advancedSearchFields: AdvancedSearchField[] = [
     { key: 'source_plugin_name', label: '来源插件', type: 'input', placeholder: '插件名称' },
     {
         key: 'severity', label: '严重程度', type: 'select', placeholder: '全部级别',
-        options: [
-            { label: '严重', value: 'critical' },
-            { label: '高', value: 'high' },
-            { label: '中', value: 'medium' },
-            { label: '低', value: 'low' },
-        ],
+        options: getSeverityOptions(),
     },
     {
         key: 'healing_status', label: '自愈状态', type: 'select', placeholder: '全部状态',
-        options: [
-            { label: '待处理', value: 'pending' },
-            { label: '处理中', value: 'processing' },
-            { label: '已自愈', value: 'healed' },
-            { label: '失败', value: 'failed' },
-            { label: '已跳过', value: 'skipped' },
-            { label: '已忽略', value: 'dismissed' },
-        ],
+        options: getHealingStatusOptions(),
     },
     {
         key: 'status', label: '工单状态', type: 'select', placeholder: '全部状态',
-        options: [
-            { label: '打开', value: 'open' },
-            { label: '处理中', value: 'in_progress' },
-            { label: '已解决', value: 'resolved' },
-            { label: '已关闭', value: 'closed' },
-        ],
+        options: getIncidentStatusOptions(),
     },
     {
         key: 'has_plugin', label: '关联插件', type: 'select', placeholder: '全部',
@@ -191,12 +175,7 @@ const IncidentList: React.FC = () => {
             dataIndex: 'severity',
             width: 80,
             sorter: true,
-            headerFilters: [
-                { label: '严重', value: 'critical' },
-                { label: '高', value: 'high' },
-                { label: '中', value: 'medium' },
-                { label: '低', value: 'low' },
-            ],
+            headerFilters: getSeverityOptions(),
             render: (_: any, record: AutoHealing.Incident) => {
                 const info = SEVERITY_MAP[record.severity] || { text: record.severity, tagColor: 'default' };
                 return <Tag color={info.tagColor} style={{ margin: 0 }}>{info.text}</Tag>;
@@ -208,12 +187,7 @@ const IncidentList: React.FC = () => {
             dataIndex: 'status',
             width: 90,
             sorter: true,
-            headerFilters: [
-                { label: '打开', value: 'open' },
-                { label: '处理中', value: 'in_progress' },
-                { label: '已解决', value: 'resolved' },
-                { label: '已关闭', value: 'closed' },
-            ],
+            headerFilters: getIncidentStatusOptions(),
             render: (_: any, record: AutoHealing.Incident) => {
                 const info = STATUS_MAP[record.status] || { text: record.status, color: 'default' };
                 return <Tag color={info.color} style={{ margin: 0 }}>{info.text}</Tag>;
@@ -225,14 +199,7 @@ const IncidentList: React.FC = () => {
             dataIndex: 'healing_status',
             width: 100,
             sorter: true,
-            headerFilters: [
-                { label: '待处理', value: 'pending' },
-                { label: '处理中', value: 'processing' },
-                { label: '已自愈', value: 'healed' },
-                { label: '失败', value: 'failed' },
-                { label: '已跳过', value: 'skipped' },
-                { label: '已忽略', value: 'dismissed' },
-            ],
+            headerFilters: getHealingStatusOptions(),
             render: (_: any, record: AutoHealing.Incident) => {
                 const info = HEALING_MAP[record.healing_status] || { text: record.healing_status, badge: 'default' as const };
                 return <Badge status={info.badge} text={info.text} />;

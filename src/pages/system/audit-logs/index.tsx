@@ -30,6 +30,7 @@ import {
     ACTION_COLORS,
     HTTP_METHOD_COLORS as METHOD_COLORS,
 } from '@/constants/auditDicts';
+import { AUDIT_RESULT_OPTIONS, RISK_LEVEL_OPTIONS } from '@/constants/commonDicts';
 
 /* ========== 登录日志专用 action/resource 常量 ========== */
 const LOGIN_ACTIONS = ['login', 'logout'];
@@ -69,11 +70,11 @@ const operationAdvancedSearchFields: AdvancedSearchField[] = [
     },
     {
         key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
-        options: [{ label: '成功', value: 'success' }, { label: '失败', value: 'failed' }],
+        options: AUDIT_RESULT_OPTIONS,
     },
     {
         key: 'risk_level', label: '风险等级', type: 'select', placeholder: '全部',
-        options: [{ label: '高危', value: 'high' }, { label: '正常', value: 'normal' }],
+        options: RISK_LEVEL_OPTIONS,
     },
     { key: 'created_at', label: '时间范围', type: 'dateRange' },
 ];
@@ -88,7 +89,7 @@ const loginAdvancedSearchFields: AdvancedSearchField[] = [
     { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
     {
         key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
-        options: [{ label: '成功', value: 'success' }, { label: '失败', value: 'failed' }],
+        options: AUDIT_RESULT_OPTIONS,
     },
     { key: 'created_at', label: '时间范围', type: 'dateRange' },
 ];
@@ -268,10 +269,7 @@ const AuditLogsPage: React.FC = () => {
             columnTitle: '状态',
             dataIndex: 'status',
             width: 80,
-            headerFilters: [
-                { label: '成功', value: 'success' },
-                { label: '失败', value: 'failed' },
-            ],
+            headerFilters: AUDIT_RESULT_OPTIONS,
             render: (_: any, record: any) => {
                 const ok = record.status === 'success';
                 return (
@@ -350,10 +348,7 @@ const AuditLogsPage: React.FC = () => {
                 columnTitle: '风险',
                 dataIndex: 'risk_level',
                 width: 80,
-                headerFilters: [
-                    { label: '高危', value: 'high' },
-                    { label: '正常', value: 'normal' },
-                ],
+                headerFilters: RISK_LEVEL_OPTIONS,
                 render: (_: any, record: any) => {
                     if (record.risk_level === 'high') {
                         return (
@@ -825,20 +820,14 @@ const AuditLogsPage: React.FC = () => {
                             <Select
                                 allowClear
                                 placeholder="全部状态"
-                                options={[
-                                    { label: '成功', value: 'success' },
-                                    { label: '失败', value: 'failed' },
-                                ]}
+                                options={AUDIT_RESULT_OPTIONS}
                             />
                         </Form.Item>
                         <Form.Item label="风险等级" name="risk_level" style={{ marginBottom: 0 }}>
                             <Select
                                 allowClear
                                 placeholder="全部"
-                                options={[
-                                    { label: '高危', value: 'high' },
-                                    { label: '正常', value: 'normal' },
-                                ]}
+                                options={RISK_LEVEL_OPTIONS}
                             />
                         </Form.Item>
                     </div>

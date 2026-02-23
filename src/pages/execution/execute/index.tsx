@@ -28,6 +28,7 @@ import SecretsSelector from '@/components/SecretsSelector';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
 import './style.css';
 import '../templates/index.css';
+import { getRunStatusOptions } from '@/constants/executionDicts';
 
 const { Text, Title } = Typography;
 
@@ -376,11 +377,7 @@ const ExecuteTaskPage: React.FC = () => {
         },
         {
             key: '__enum__last_run_status', label: '最后执行',
-            options: [
-                { label: '成功', value: 'success' },
-                { label: '失败', value: 'failed' },
-                { label: '部分成功', value: 'partial' },
-            ],
+            options: getRunStatusOptions().slice(0, 3),
         },
     ];
 
@@ -396,12 +393,7 @@ const ExecuteTaskPage: React.FC = () => {
         {
             key: 'last_run_status', label: '最后执行状态', type: 'select',
             description: '按最后一次执行记录的状态筛选',
-            options: [
-                { label: '成功', value: 'success' },
-                { label: '失败', value: 'failed' },
-                { label: '部分成功', value: 'partial' },
-                { label: '取消', value: 'cancelled' },
-            ]
+            options: getRunStatusOptions(),
         },
         {
             key: 'has_runs', label: '执行记录', type: 'select',

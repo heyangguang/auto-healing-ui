@@ -17,6 +17,9 @@ import {
     INCIDENT_SEVERITY_MAP,
     INCIDENT_STATUS_MAP,
     INCIDENT_HEALING_MAP,
+    getSeverityOptions,
+    getIncidentStatusOptions,
+    getHealingStatusOptions,
 } from '@/constants/incidentDicts';
 
 /** 从 INCIDENT_SEVERITY_MAP 提取颜色用于 Tag */
@@ -235,12 +238,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                             onChange={(v) => { setSeverity(v); setPage(1); }}
                             allowClear
                             style={{ width: '100%' }}
-                            options={[
-                                { label: '紧急 (1)', value: '1' },
-                                { label: '高 (2)', value: '2' },
-                                { label: '中 (3)', value: '3' },
-                                { label: '低 (4)', value: '4' },
-                            ]}
+                            options={getSeverityOptions()}
                         />
                     </Col>
                     <Col span={4}>
@@ -250,12 +248,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                             onChange={(v) => { setStatus(v); setPage(1); }}
                             allowClear
                             style={{ width: '100%' }}
-                            options={[
-                                { label: '打开', value: 'open' },
-                                { label: '处理中', value: 'in_progress' },
-                                { label: '已解决', value: 'resolved' },
-                                { label: '已关闭', value: 'closed' },
-                            ]}
+                            options={getIncidentStatusOptions()}
                         />
                     </Col>
                     <Col span={4}>
@@ -265,14 +258,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                             onChange={(v) => { setHealingStatus(v); setPage(1); }}
                             allowClear
                             style={{ width: '100%' }}
-                            options={[
-                                { label: '待处理', value: 'pending' },
-                                { label: '自愈中', value: 'processing' },
-                                { label: '已自愈', value: 'healed' },
-                                { label: '自愈失败', value: 'failed' },
-                                { label: '已跳过', value: 'skipped' },
-                                { label: '已忽略', value: 'dismissed' },
-                            ]}
+                            options={getHealingStatusOptions()}
                         />
                     </Col>
                     <Col span={6}>

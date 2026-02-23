@@ -3,6 +3,7 @@ import { history, useParams, useAccess } from '@umijs/max';
 import { Form, Input, Select, Button, message, Spin } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
+import { USER_STATUS_OPTIONS } from '@/constants/commonDicts';
 import { createUser, getUser, updateUser, assignUserRoles } from '@/services/auto-healing/users';
 import { getRoles } from '@/services/auto-healing/roles';
 import './UserForm.css';
@@ -117,7 +118,7 @@ const UserFormPage: React.FC = () => {
                         </Form.Item>
                         {isEdit && (
                             <Form.Item name="status" label="状态">
-                                <Select options={[{ label: '启用', value: 'active' }, { label: '禁用', value: 'inactive' }]} />
+                                <Select options={USER_STATUS_OPTIONS} />
                             </Form.Item>
                         )}
                         <Form.Item name="role_ids" label="角色">

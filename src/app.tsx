@@ -19,6 +19,8 @@ import '@fontsource/noto-sans-sc/400.css';
 import '@fontsource/noto-sans-sc/500.css';
 import '@fontsource/noto-sans-sc/700.css';
 
+import { initDictCache } from '@/utils/dictCache';
+
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 
@@ -31,6 +33,9 @@ export async function getInitialState(): Promise<{
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
+  // 并行初始化字典缓存（不阻塞页面渲染）
+  initDictCache().catch(err => console.warn('[App] 字典初始化失败:', err));
+
   const fetchUserInfo = async () => {
     try {
       // 检查是否有 token

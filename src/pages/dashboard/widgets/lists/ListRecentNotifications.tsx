@@ -4,13 +4,10 @@ import dayjs from 'dayjs';
 import React from 'react';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
+import { NOTIF_LOG_STATUS_MAP } from '@/constants/commonDicts';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
-const STATUS_MAP: Record<string, { color: string; text: string }> = {
-    sent: { color: 'success', text: '已发送' },
-    failed: { color: 'error', text: '失败' },
-    pending: { color: 'processing', text: '发送中' },
-};
+const STATUS_MAP = NOTIF_LOG_STATUS_MAP;
 
 const ListRecentNotifications: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('notifications');

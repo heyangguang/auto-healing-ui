@@ -28,7 +28,7 @@ import type { StandardColumnDef, AdvancedSearchField } from '@/components/Standa
 import { ExecutorIcon, DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import dayjs from 'dayjs';
 import './index.css';
-import { EXECUTOR_TYPE_CONFIG } from '@/constants/executionDicts';
+import { EXECUTOR_TYPE_CONFIG, getRunStatusOptions } from '@/constants/executionDicts';
 
 const { Text } = Typography;
 
@@ -56,12 +56,7 @@ const templateAdvancedSearchFields: AdvancedSearchField[] = [
     {
         key: 'last_run_status', label: '最后执行状态', type: 'select',
         description: '按最后一次执行记录的状态筛选',
-        options: [
-            { label: '成功', value: 'success' },
-            { label: '失败', value: 'failed' },
-            { label: '部分成功', value: 'partial' },
-            { label: '取消', value: 'cancelled' },
-        ]
+        options: getRunStatusOptions(),
     },
     {
         key: 'has_runs', label: '执行记录', type: 'select',

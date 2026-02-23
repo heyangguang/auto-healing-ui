@@ -21,6 +21,7 @@ import { getLayoutedElements } from './utils/layoutUtils';
 import { buildCanvasElements, normalizeNodeState, STATUS_EDGE_COLOR } from './utils/canvasBuilder';
 import AutoLayoutButton from './components/AutoLayoutButton';
 import { getHealingInstances, getHealingInstanceDetail, getHealingInstanceStats } from '@/services/auto-healing/instances';
+import { getInstanceStatusOptions } from '@/constants/instanceDicts';
 import dayjs from 'dayjs';
 
 import '../../../pages/execution/git-repos/index.css';
@@ -77,13 +78,7 @@ const searchFields: SearchField[] = [
     { key: 'search', label: '搜索', placeholder: '搜索流程名称 / 规则名称...' },
     {
         key: '__enum__status', label: '状态',
-        options: [
-            { label: '执行中', value: 'running' },
-            { label: '待审批', value: 'waiting_approval' },
-            { label: '已完成', value: 'completed' },
-            { label: '失败', value: 'failed' },
-            { label: '已取消', value: 'cancelled' },
-        ],
+        options: getInstanceStatusOptions(),
     },
     { key: 'flow_name', label: '流程名称', placeholder: '输入流程名称搜索' },
     { key: 'rule_name', label: '规则名称', placeholder: '输入规则名称搜索' },

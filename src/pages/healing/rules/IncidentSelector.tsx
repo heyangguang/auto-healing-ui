@@ -8,7 +8,7 @@ import {
     LoadingOutlined, DatabaseOutlined, DesktopOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { getIncidents } from '@/services/auto-healing/incidents';
-import { INCIDENT_SEVERITY_MAP, INCIDENT_STATUS_MAP, INCIDENT_HEALING_MAP } from '@/constants/incidentDicts';
+import { INCIDENT_SEVERITY_MAP, INCIDENT_STATUS_MAP, INCIDENT_HEALING_MAP, getSeverityOptions, getIncidentStatusOptions } from '@/constants/incidentDicts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -166,12 +166,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                         onChange={v => handleFilterChange('severity', v)}
                         allowClear
                         style={{ width: '100%' }}
-                        options={[
-                            { label: '严重 (Critical)', value: 'critical' },
-                            { label: '高 (High)', value: 'high' },
-                            { label: '中 (Medium)', value: 'medium' },
-                            { label: '低 (Low)', value: 'low' },
-                        ]}
+                        options={getSeverityOptions()}
                     />
                 </Col>
                 <Col span={7}>
@@ -181,12 +176,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                         onChange={v => handleFilterChange('status', v)}
                         allowClear
                         style={{ width: '100%' }}
-                        options={[
-                            { label: '打开', value: 'open' },
-                            { label: '处理中', value: 'in_progress' },
-                            { label: '已解决', value: 'resolved' },
-                            { label: '已关闭', value: 'closed' },
-                        ]}
+                        options={getIncidentStatusOptions()}
                     />
                 </Col>
             </Row>

@@ -16,6 +16,7 @@ import {
     ToolOutlined, WarningOutlined,
 } from '@ant-design/icons';
 import React from 'react';
+import { INCIDENT_CHART_LABELS } from '@/constants/incidentDicts';
 
 // ==================== 基础 Stat 组件 ====================
 import StatActiveFlows from './stats/StatActiveFlows';
@@ -103,10 +104,16 @@ export interface WidgetDefinition {
 
 // ==================== Widget 注册表 ====================
 
-const SEVERITY_LABELS: Record<string, string> = { critical: '紧急', high: '高', medium: '中', low: '低', info: '信息' };
+// 从 constants 引用，确保与全局字典一致
+import { CATEGORY_LABELS } from '@/constants/incidentDicts';
+import { INSTANCE_STATUS_LABELS } from '@/constants/instanceDicts';
+
+// severity 在饼图中使用（如果后端返回了对应字典则自动更新）
+const SEVERITY_LABELS: Record<string, string> = { critical: '严重', high: '高', medium: '中', low: '低', info: '信息' };
+// healing status 合并 constants + 额外图表专用值
 const HEALING_STATUS_LABELS: Record<string, string> = {
-    pending: '待处理', processing: '处理中', healed: '已自愈', failed: '失败',
-    skipped: '已跳过', dismissed: '已忽略', pending_trigger: '待触发', no_match: '未匹配', rejected: '已拒绝',
+    ...INCIDENT_CHART_LABELS,
+    pending_trigger: '待触发', no_match: '未匹配', rejected: '已拒绝',
 };
 
 export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {

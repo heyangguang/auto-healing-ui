@@ -8,6 +8,7 @@ import ForensicDrawer from './components/ForensicDrawer';
 import StatsPanel from './components/StatsPanel';
 import { getExecutionRuns } from '@/services/auto-healing/execution';
 import dayjs from 'dayjs';
+import { RUN_STATUS_LABELS } from '@/constants/executionDicts';
 import './index.css';
 
 /* ====== 搜索字段定义 ====== */
@@ -21,13 +22,9 @@ const SEARCH_FIELDS: SearchField[] = [
         key: '__enum__run_status', label: '执行状态',
         description: '筛选单次执行记录的运行结果状态',
         options: [
-            { label: '成功', value: 'success' },
-            { label: '部分成功', value: 'partial' },
-            { label: '失败', value: 'failed' },
-            { label: '执行中', value: 'running' },
-            { label: '等待中', value: 'pending' },
+            ...Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
             { label: '超时', value: 'timeout' },
-            { label: '已取消', value: 'cancelled' },
+            { label: '等待中', value: 'pending' },
         ],
     },
     {
@@ -52,12 +49,9 @@ const SEARCH_FIELDS: SearchField[] = [
         key: '__enum__task_last_status', label: '模板最近状态',
         description: '按任务模板上次执行的结果筛选左侧导航器',
         options: [
-            { label: '成功', value: 'success' },
-            { label: '失败', value: 'failed' },
-            { label: '执行中', value: 'running' },
-            { label: '等待中', value: 'pending' },
+            ...Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
             { label: '超时', value: 'timeout' },
-            { label: '已取消', value: 'cancelled' },
+            { label: '等待中', value: 'pending' },
         ],
     },
 ];
@@ -68,13 +62,9 @@ const ADVANCED_SEARCH_FIELDS: AdvancedSearchField[] = [
         key: 'status', label: '执行状态', type: 'select',
         description: '筛选单次执行记录的运行结果',
         options: [
-            { label: '成功', value: 'success' },
-            { label: '部分成功', value: 'partial' },
-            { label: '失败', value: 'failed' },
-            { label: '执行中', value: 'running' },
-            { label: '等待中', value: 'pending' },
+            ...Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
             { label: '超时', value: 'timeout' },
-            { label: '已取消', value: 'cancelled' },
+            { label: '等待中', value: 'pending' },
         ],
     },
     {
@@ -130,12 +120,9 @@ const ADVANCED_SEARCH_FIELDS: AdvancedSearchField[] = [
         key: 'last_run_status', label: '模板最近状态', type: 'select',
         description: '按任务模板上次执行的结果筛选左侧导航器',
         options: [
-            { label: '成功', value: 'success' },
-            { label: '失败', value: 'failed' },
-            { label: '执行中', value: 'running' },
-            { label: '等待中', value: 'pending' },
+            ...Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
             { label: '超时', value: 'timeout' },
-            { label: '已取消', value: 'cancelled' },
+            { label: '等待中', value: 'pending' },
         ],
     },
 ];

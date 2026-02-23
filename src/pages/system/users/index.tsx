@@ -13,6 +13,7 @@ import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import { getUsers, deleteUser, resetUserPassword, updateUser } from '@/services/auto-healing/users';
 import { getRoles } from '@/services/auto-healing/roles';
+import { USER_STATUS_OPTIONS } from '@/constants/commonDicts';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -153,10 +154,7 @@ const UsersPage: React.FC = () => {
             dataIndex: 'status',
             width: 80,
             sorter: true,
-            headerFilters: [
-                { label: '启用', value: 'active' },
-                { label: '禁用', value: 'inactive' },
-            ],
+            headerFilters: USER_STATUS_OPTIONS,
             render: (_: any, record: any) => {
                 const isActive = record.status === 'active';
                 return (

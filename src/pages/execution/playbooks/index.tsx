@@ -24,6 +24,10 @@ import {
 } from '@/services/auto-healing/playbooks';
 import { getGitRepos, getFiles } from '@/services/auto-healing/git-repos';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
+import {
+    PLAYBOOK_STATUS_OPTIONS, SCAN_MODE_OPTIONS,
+    HAS_VARIABLES_OPTIONS, HAS_REQUIRED_VARS_OPTIONS,
+} from '@/constants/playbookDicts';
 import './index.css';
 
 const { Text, Paragraph } = Typography;
@@ -130,30 +134,16 @@ const playbookSearchFields: SearchField[] = [
     { key: 'search', label: '名称/路径' },
     { key: 'file_path', label: '入口文件' },
     {
-        key: '__enum__status', label: '状态', options: [
-            { label: '就绪', value: 'ready' },
-            { label: '待处理', value: 'pending' },
-            { label: '已扫描', value: 'scanned' },
-            { label: '错误', value: 'error' },
-        ]
+        key: '__enum__status', label: '状态', options: PLAYBOOK_STATUS_OPTIONS,
     },
     {
-        key: '__enum__config_mode', label: '扫描模式', options: [
-            { label: '自动模式', value: 'auto' },
-            { label: '增强模式', value: 'enhanced' },
-        ]
+        key: '__enum__config_mode', label: '扫描模式', options: SCAN_MODE_OPTIONS,
     },
     {
-        key: '__enum__has_variables', label: '包含变量', options: [
-            { label: '有变量', value: 'true' },
-            { label: '无变量', value: 'false' },
-        ]
+        key: '__enum__has_variables', label: '包含变量', options: HAS_VARIABLES_OPTIONS,
     },
     {
-        key: '__enum__has_required_vars', label: '必填变量', options: [
-            { label: '有必填变量', value: 'true' },
-            { label: '无必填变量', value: 'false' },
-        ]
+        key: '__enum__has_required_vars', label: '必填变量', options: HAS_REQUIRED_VARS_OPTIONS,
     },
 ];
 
@@ -161,30 +151,16 @@ const playbookAdvancedSearchFields: AdvancedSearchField[] = [
     { key: 'name', label: '模板名称', type: 'input', placeholder: '输入模板名称' },
     { key: 'file_path', label: '入口文件', type: 'input', placeholder: '输入文件路径' },
     {
-        key: 'status', label: '状态', type: 'select', options: [
-            { label: '就绪', value: 'ready' },
-            { label: '待处理', value: 'pending' },
-            { label: '已扫描', value: 'scanned' },
-            { label: '错误', value: 'error' },
-        ]
+        key: 'status', label: '状态', type: 'select', options: PLAYBOOK_STATUS_OPTIONS,
     },
     {
-        key: 'config_mode', label: '扫描模式', type: 'select', options: [
-            { label: '自动模式', value: 'auto' },
-            { label: '增强模式', value: 'enhanced' },
-        ]
+        key: 'config_mode', label: '扫描模式', type: 'select', options: SCAN_MODE_OPTIONS,
     },
     {
-        key: 'has_variables', label: '包含变量', type: 'select', options: [
-            { label: '有变量', value: 'true' },
-            { label: '无变量', value: 'false' },
-        ]
+        key: 'has_variables', label: '包含变量', type: 'select', options: HAS_VARIABLES_OPTIONS,
     },
     {
-        key: 'has_required_vars', label: '必填变量', type: 'select', options: [
-            { label: '有必填变量', value: 'true' },
-            { label: '无必填变量', value: 'false' },
-        ]
+        key: 'has_required_vars', label: '必填变量', type: 'select', options: HAS_REQUIRED_VARS_OPTIONS,
     },
     { key: 'created_at', label: '创建时间', type: 'dateRange' },
 ];
