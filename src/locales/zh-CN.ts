@@ -1,6 +1,5 @@
 import component from './zh-CN/component';
 import globalHeader from './zh-CN/globalHeader';
-import menu from './zh-CN/menu';
 import pages from './zh-CN/pages';
 import pwa from './zh-CN/pwa';
 import settingDrawer from './zh-CN/settingDrawer';
@@ -16,7 +15,6 @@ export default {
   'app.welcome.link.block-list': '基于 block 开发，快速构建标准页面',
   ...pages,
   ...globalHeader,
-  ...menu,
   ...settingDrawer,
   ...settings,
   ...pwa,
