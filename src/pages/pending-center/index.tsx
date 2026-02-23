@@ -1,15 +1,18 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useAccess } from '@umijs/max';
 import { Button, message, Space, Tag, Modal, Input, Drawer, Descriptions, Typography } from 'antd';
 import {
     AlertOutlined, WarningOutlined, InfoCircleOutlined,
-    CheckCircleOutlined, ClockCircleOutlined, ThunderboltOutlined,
+    CheckCircleOutlined, ClockCircleOutlined, ThunderboltOutlined, StopOutlined,
 } from '@ant-design/icons';
 import StandardTable, { type StandardColumnDef, type SearchField } from '@/components/StandardTable';
 import {
     getPendingTriggers, getPendingApprovals,
-    triggerHealing, approveTask, rejectTask,
+    triggerHealing, approveTask, rejectTask, dismissIncident,
 } from '@/services/auto-healing/healing';
+import { getSimpleUsers } from '@/services/auto-healing/users';
 import dayjs from 'dayjs';
+import { INCIDENT_SEVERITY_MAP, SEVERITY_TAG_COLORS, CATEGORY_LABELS } from '@/constants/incidentDicts';
 
 const { Text } = Typography;
 
@@ -20,21 +23,21 @@ const TABS = [
     { key: 'approvals', label: '待审批任务' },
 ];
 
-const SEVERITY_MAP: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-    critical: { color: 'error', label: '严重', icon: <AlertOutlined /> },
-    high: { color: 'warning', label: '高', icon: <WarningOutlined /> },
-    medium: { color: 'processing', label: '中', icon: <InfoCircleOutlined /> },
-    low: { color: 'default', label: '低', icon: <CheckCircleOutlined /> },
-    '1': { color: 'error', label: '严重', icon: <AlertOutlined /> },
-    '2': { color: 'warning', label: '高', icon: <WarningOutlined /> },
-    '3': { color: 'processing', label: '中', icon: <InfoCircleOutlined /> },
-    '4': { color: 'default', label: '低', icon: <CheckCircleOutlined /> },
+/** 严重性图标映射（本地组装 JSX icon，数据来自集中化字典） */
+const SEVERITY_ICON_MAP: Record<string, React.ReactNode> = {
+    critical: <AlertOutlined />, high: <WarningOutlined />,
+    medium: <InfoCircleOutlined />, low: <CheckCircleOutlined />,
+    '1': <AlertOutlined />, '2': <WarningOutlined />,
+    '3': <InfoCircleOutlined />, '4': <CheckCircleOutlined />,
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-    network: '网络', application: '应用', database: '数据库',
-    security: '安全', hardware: '硬件', storage: '存储',
-};
+/** 组合后的严重性配置（向后兼容原 SEVERITY_MAP 的用法） */
+const SEVERITY_MAP: Record<string, { color: string; label: string; icon: React.ReactNode }> = Object.fromEntries(
+    Object.entries(INCIDENT_SEVERITY_MAP).map(([key, meta]) => [
+        key,
+        { color: SEVERITY_TAG_COLORS[key] || 'default', label: meta.text, icon: SEVERITY_ICON_MAP[key] || <InfoCircleOutlined /> },
+    ])
+);
 
 /* ============================== 工具函数 ============================== */
 
@@ -63,8 +66,32 @@ const approvalSearchFields: SearchField[] = [
 /* ============================== 组件 ============================== */
 
 const PendingCenter: React.FC = () => {
+    const access = useAccess();
     const [activeTab, setActiveTab] = useState('triggers');
     const refreshCountRef = useRef(0);
+
+    /* ------------ 用户名映射 ------------ */
+    const [userMap, setUserMap] = useState<Record<string, string>>({});
+    useEffect(() => {
+        getSimpleUsers().then((res) => {
+            const map: Record<string, string> = {};
+            (res?.data || []).forEach((u: any) => {
+                map[u.id] = u.display_name || u.username || u.id;
+            });
+            setUserMap(map);
+        }).catch(() => { });
+    }, []);
+
+    /** 将审批人UUID数组解析为用户名 */
+    const resolveApprovers = useCallback((record: any): string => {
+        const ids: string[] = record.approvers || [];
+        if (ids.length === 0) return '-';
+        const localMap = { ...userMap };
+        if (record.initiator?.id) {
+            localMap[record.initiator.id] = record.initiator.display_name || record.initiator.username || record.initiator.id;
+        }
+        return ids.map((id: string) => localMap[id] || id.substring(0, 8) + '...').join(', ');
+    }, [userMap]);
 
     /* ------------ 详情 Drawer ------------ */
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -80,7 +107,7 @@ const PendingCenter: React.FC = () => {
         setDetail(null);
     }, []);
 
-    /* ------------ 触发操作 ------------ */
+    /* ------------ 触发/忽略操作 ------------ */
     const handleTrigger = useCallback((id: string, externalId: string) => {
         Modal.confirm({
             title: '确认启动自愈？',
@@ -95,6 +122,26 @@ const PendingCenter: React.FC = () => {
                     setActiveTab(prev => prev);
                 } catch {
                     message.error('启动失败');
+                }
+            },
+        });
+    }, []);
+
+    const handleDismiss = useCallback((id: string, externalId: string) => {
+        Modal.confirm({
+            title: '确认忽略工单？',
+            content: `确定要忽略工单 ${externalId} 吗？忽略后该工单将不再出现在待触发列表中。`,
+            okText: '忽略',
+            okButtonProps: { danger: true },
+            cancelText: '取消',
+            onOk: async () => {
+                try {
+                    await dismissIncident(id);
+                    message.success('工单已忽略');
+                    refreshCountRef.current += 1;
+                    setActiveTab(prev => prev);
+                } catch {
+                    message.error('忽略失败');
                 }
             },
         });
@@ -214,21 +261,33 @@ const PendingCenter: React.FC = () => {
         {
             columnKey: 'actions',
             columnTitle: '操作',
-            width: 100,
+            width: 150,
             fixedColumn: true,
             fixed: 'right',
             render: (_: any, record: any) => (
-                <Button
-                    type="primary"
-                    size="small"
-                    icon={<ThunderboltOutlined />}
-                    onClick={() => handleTrigger(record.id, record.external_id)}
-                >
-                    启动
-                </Button>
+                <Space size={4}>
+                    <Button
+                        type="primary"
+                        size="small"
+                        icon={<ThunderboltOutlined />}
+                        disabled={!access.canTriggerHealing}
+                        onClick={() => handleTrigger(record.id, record.external_id)}
+                    >
+                        启动
+                    </Button>
+                    <Button
+                        danger
+                        size="small"
+                        icon={<StopOutlined />}
+                        disabled={!access.canTriggerHealing}
+                        onClick={() => handleDismiss(record.id, record.external_id)}
+                    >
+                        忽略
+                    </Button>
+                </Space>
             ),
         },
-    ], [handleTrigger]);
+    ], [handleTrigger, handleDismiss]);
 
     const approvalColumns: StandardColumnDef<any>[] = useMemo(() => [
         {
@@ -260,7 +319,7 @@ const PendingCenter: React.FC = () => {
             columnTitle: '审批人',
             dataIndex: 'approvers',
             width: 200,
-            render: (_: any, record: any) => (record.approvers || []).join(', ') || '-',
+            render: (_: any, record: any) => resolveApprovers(record),
         },
         {
             columnKey: 'created_at',
@@ -281,6 +340,7 @@ const PendingCenter: React.FC = () => {
                     <Button
                         type="primary"
                         size="small"
+                        disabled={!access.canApprove}
                         onClick={() => handleApprove(record.id, record.node_name || '节点')}
                     >
                         批准
@@ -288,6 +348,7 @@ const PendingCenter: React.FC = () => {
                     <Button
                         danger
                         size="small"
+                        disabled={!access.canApprove}
                         onClick={() => handleReject(record.id, record.node_name || '节点')}
                     >
                         拒绝
@@ -295,7 +356,7 @@ const PendingCenter: React.FC = () => {
                 </Space>
             ),
         },
-    ], [handleApprove, handleReject]);
+    ], [handleApprove, handleReject, resolveApprovers]);
 
     /* ============================== 数据请求 ============================== */
 
@@ -522,7 +583,7 @@ const PendingCenter: React.FC = () => {
                         <Tag color="orange" icon={<ClockCircleOutlined />}>待审批</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="审批人">
-                        {(detail.approvers || []).join(', ') || '-'}
+                        {resolveApprovers(detail)}
                     </Descriptions.Item>
                     <Descriptions.Item label="创建时间">
                         {formatTime(detail.created_at)}
@@ -576,23 +637,36 @@ const PendingCenter: React.FC = () => {
                 onClose={closeDrawer}
                 size={600}
                 extra={activeTab === 'triggers' && detail ? (
-                    <Button
-                        type="primary"
-                        icon={<ThunderboltOutlined />}
-                        onClick={() => { closeDrawer(); handleTrigger(detail.id, detail.external_id); }}
-                    >
-                        启动自愈
-                    </Button>
+                    <Space>
+                        <Button
+                            type="primary"
+                            icon={<ThunderboltOutlined />}
+                            disabled={!access.canTriggerHealing}
+                            onClick={() => { closeDrawer(); handleTrigger(detail.id, detail.external_id); }}
+                        >
+                            启动自愈
+                        </Button>
+                        <Button
+                            danger
+                            icon={<StopOutlined />}
+                            disabled={!access.canTriggerHealing}
+                            onClick={() => { closeDrawer(); handleDismiss(detail.id, detail.external_id); }}
+                        >
+                            忽略
+                        </Button>
+                    </Space>
                 ) : activeTab === 'approvals' && detail ? (
                     <Space>
                         <Button
                             type="primary"
+                            disabled={!access.canApprove}
                             onClick={() => { closeDrawer(); handleApprove(detail.id, detail.node_name || '节点'); }}
                         >
                             批准
                         </Button>
                         <Button
                             danger
+                            disabled={!access.canApprove}
                             onClick={() => { closeDrawer(); handleReject(detail.id, detail.node_name || '节点'); }}
                         >
                             拒绝

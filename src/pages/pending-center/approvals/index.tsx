@@ -1,8 +1,10 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useAccess } from '@umijs/max';
 import { Button, message, Space, Tag, Modal, Input, Drawer, Descriptions, Typography } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import StandardTable, { type StandardColumnDef, type SearchField } from '@/components/StandardTable';
 import { getPendingApprovals, approveTask, rejectTask } from '@/services/auto-healing/healing';
+import { getSimpleUsers } from '@/services/auto-healing/users';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -23,7 +25,32 @@ const searchFields: SearchField[] = [
 /* ============================== 组件 ============================== */
 
 const PendingApprovals: React.FC = () => {
+    const access = useAccess();
     const refreshCountRef = useRef(0);
+
+    /* ------------ 用户名映射 ------------ */
+    const [userMap, setUserMap] = useState<Record<string, string>>({});
+    useEffect(() => {
+        getSimpleUsers().then((res) => {
+            const map: Record<string, string> = {};
+            (res?.data || []).forEach((u: any) => {
+                map[u.id] = u.display_name || u.username || u.id;
+            });
+            setUserMap(map);
+        }).catch(() => { });
+    }, []);
+
+    /** 将审批人UUID数组解析为用户名 */
+    const resolveApprovers = useCallback((record: any): string => {
+        const ids: string[] = record.approvers || [];
+        if (ids.length === 0) return '-';
+        // 也利用 record.initiator 补充映射
+        const localMap = { ...userMap };
+        if (record.initiator?.id) {
+            localMap[record.initiator.id] = record.initiator.display_name || record.initiator.username || record.initiator.id;
+        }
+        return ids.map((id: string) => localMap[id] || id.substring(0, 8) + '...').join(', ');
+    }, [userMap]);
 
     /* ------------ 详情 Drawer ------------ */
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -132,7 +159,7 @@ const PendingApprovals: React.FC = () => {
             columnTitle: '审批人',
             dataIndex: 'approvers',
             width: 200,
-            render: (_: any, record: any) => (record.approvers || []).join(', ') || '-',
+            render: (_: any, record: any) => resolveApprovers(record),
         },
         {
             columnKey: 'created_at',
@@ -154,6 +181,7 @@ const PendingApprovals: React.FC = () => {
                         type="primary"
                         size="small"
                         onClick={() => handleApprove(record.id, record.node_name || '节点')}
+                        disabled={!access.canApprove}
                     >
                         批准
                     </Button>
@@ -161,13 +189,14 @@ const PendingApprovals: React.FC = () => {
                         danger
                         size="small"
                         onClick={() => handleReject(record.id, record.node_name || '节点')}
+                        disabled={!access.canApprove}
                     >
                         拒绝
                     </Button>
                 </Space>
             ),
         },
-    ], [handleApprove, handleReject]);
+    ], [handleApprove, handleReject, resolveApprovers]);
 
     /* ============================== 数据请求 ============================== */
 
@@ -249,7 +278,7 @@ const PendingApprovals: React.FC = () => {
                         <Tag color="orange" icon={<ClockCircleOutlined />}>待审批</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="审批人">
-                        {(detail.approvers || []).join(', ') || '-'}
+                        {resolveApprovers(detail)}
                     </Descriptions.Item>
                     <Descriptions.Item label="创建时间">
                         {formatTime(detail.created_at)}
@@ -302,12 +331,14 @@ const PendingApprovals: React.FC = () => {
                         <Button
                             type="primary"
                             onClick={() => { closeDrawer(); handleApprove(detail.id, detail.node_name || '节点'); }}
+                            disabled={!access.canApprove}
                         >
                             批准
                         </Button>
                         <Button
                             danger
                             onClick={() => { closeDrawer(); handleReject(detail.id, detail.node_name || '节点'); }}
+                            disabled={!access.canApprove}
                         >
                             拒绝
                         </Button>

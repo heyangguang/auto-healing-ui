@@ -1,32 +1,32 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { Button, message, Tag, Modal, Drawer, Descriptions, Typography } from 'antd';
+import { useAccess } from '@umijs/max';
+import { Button, message, Tag, Modal, Drawer, Descriptions, Typography, Space } from 'antd';
 import {
     AlertOutlined, WarningOutlined, InfoCircleOutlined,
-    CheckCircleOutlined, ClockCircleOutlined, ThunderboltOutlined,
+    CheckCircleOutlined, ClockCircleOutlined, ThunderboltOutlined, StopOutlined, UndoOutlined,
 } from '@ant-design/icons';
 import StandardTable, { type StandardColumnDef, type SearchField } from '@/components/StandardTable';
-import { getPendingTriggers, triggerHealing } from '@/services/auto-healing/healing';
+import { getPendingTriggers, getDismissedTriggers, triggerHealing, dismissIncident, resetIncidentScan } from '@/services/auto-healing/healing';
 import dayjs from 'dayjs';
+import { INCIDENT_SEVERITY_MAP, SEVERITY_TAG_COLORS, CATEGORY_LABELS } from '@/constants/incidentDicts';
 
 const { Text } = Typography;
 
 /* ============================== 常量 ============================== */
 
-const SEVERITY_MAP: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-    critical: { color: 'error', label: '严重', icon: <AlertOutlined /> },
-    high: { color: 'warning', label: '高', icon: <WarningOutlined /> },
-    medium: { color: 'processing', label: '中', icon: <InfoCircleOutlined /> },
-    low: { color: 'default', label: '低', icon: <CheckCircleOutlined /> },
-    '1': { color: 'error', label: '严重', icon: <AlertOutlined /> },
-    '2': { color: 'warning', label: '高', icon: <WarningOutlined /> },
-    '3': { color: 'processing', label: '中', icon: <InfoCircleOutlined /> },
-    '4': { color: 'default', label: '低', icon: <CheckCircleOutlined /> },
+const SEVERITY_ICON_MAP: Record<string, React.ReactNode> = {
+    critical: <AlertOutlined />, high: <WarningOutlined />,
+    medium: <InfoCircleOutlined />, low: <CheckCircleOutlined />,
+    '1': <AlertOutlined />, '2': <WarningOutlined />,
+    '3': <InfoCircleOutlined />, '4': <CheckCircleOutlined />,
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-    network: '网络', application: '应用', database: '数据库',
-    security: '安全', hardware: '硬件', storage: '存储',
-};
+const SEVERITY_MAP: Record<string, { color: string; label: string; icon: React.ReactNode }> = Object.fromEntries(
+    Object.entries(INCIDENT_SEVERITY_MAP).map(([key, meta]) => [
+        key,
+        { color: SEVERITY_TAG_COLORS[key] || 'default', label: meta.text, icon: SEVERITY_ICON_MAP[key] || <InfoCircleOutlined /> },
+    ])
+);
 
 /* ============================== 工具函数 ============================== */
 
@@ -51,7 +51,11 @@ const searchFields: SearchField[] = [
 /* ============================== 组件 ============================== */
 
 const PendingTriggers: React.FC = () => {
+    const access = useAccess();
     const refreshCountRef = useRef(0);
+
+    /* ------------ Tab 切换 ------------ */
+    const [activeTab, setActiveTab] = useState<'pending' | 'dismissed'>('pending');
 
     /* ------------ 详情 Drawer ------------ */
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -67,7 +71,7 @@ const PendingTriggers: React.FC = () => {
         setDetail(null);
     }, []);
 
-    /* ------------ 触发操作 ------------ */
+    /* ------------ 触发/忽略操作 ------------ */
     const [, setRefreshKey] = useState(0);
     const handleTrigger = useCallback((id: string, externalId: string) => {
         Modal.confirm({
@@ -88,9 +92,48 @@ const PendingTriggers: React.FC = () => {
         });
     }, []);
 
-    /* ============================== 列定义 ============================== */
+    const handleDismiss = useCallback((id: string, externalId: string) => {
+        Modal.confirm({
+            title: '确认忽略工单？',
+            content: `确定要忽略工单 ${externalId} 吗？忽略后该工单将不再出现在待触发列表中。`,
+            okText: '忽略',
+            okButtonProps: { danger: true },
+            cancelText: '取消',
+            onOk: async () => {
+                try {
+                    await dismissIncident(id);
+                    message.success('工单已忽略');
+                    refreshCountRef.current += 1;
+                    setRefreshKey(prev => prev + 1);
+                } catch {
+                    message.error('忽略失败');
+                }
+            },
+        });
+    }, []);
 
-    const columns: StandardColumnDef<any>[] = useMemo(() => [
+    const handleResetScan = useCallback((id: string, externalId: string) => {
+        Modal.confirm({
+            title: '确认恢复工单？',
+            content: `确定要将工单 ${externalId} 恢复为待处理状态吗？恢复后将重新扫描匹配规则。`,
+            okText: '恢复',
+            cancelText: '取消',
+            onOk: async () => {
+                try {
+                    await resetIncidentScan(id);
+                    message.success('工单已恢复为待处理');
+                    refreshCountRef.current += 1;
+                    setRefreshKey(prev => prev + 1);
+                } catch {
+                    message.error('恢复失败');
+                }
+            },
+        });
+    }, []);
+
+    /* ============================== 列定义（待处理） ============================== */
+
+    const pendingColumns: StandardColumnDef<any>[] = useMemo(() => [
         {
             columnKey: 'title',
             columnTitle: '工单标题',
@@ -142,25 +185,115 @@ const PendingTriggers: React.FC = () => {
         {
             columnKey: 'actions',
             columnTitle: '操作',
+            width: 150,
+            fixedColumn: true,
+            fixed: 'right',
+            render: (_: any, record: any) => (
+                <Space size={4}>
+                    <Button
+                        type="primary"
+                        size="small"
+                        icon={<ThunderboltOutlined />}
+                        disabled={!access.canTriggerHealing}
+                        onClick={() => handleTrigger(record.id, record.external_id)}
+                    >
+                        启动
+                    </Button>
+                    <Button
+                        danger
+                        size="small"
+                        icon={<StopOutlined />}
+                        disabled={!access.canTriggerHealing}
+                        onClick={() => handleDismiss(record.id, record.external_id)}
+                    >
+                        忽略
+                    </Button>
+                </Space>
+            ),
+        },
+    ], [handleTrigger, handleDismiss]);
+
+    /* ============================== 列定义（已忽略） ============================== */
+
+    const dismissedColumns: StandardColumnDef<any>[] = useMemo(() => [
+        {
+            columnKey: 'title',
+            columnTitle: '工单标题',
+            dataIndex: 'title',
+            ellipsis: true,
+            fixedColumn: true,
+        },
+        {
+            columnKey: 'external_id',
+            columnTitle: '工单ID',
+            dataIndex: 'external_id',
+            width: 200,
+        },
+        {
+            columnKey: 'severity',
+            columnTitle: '等级',
+            dataIndex: 'severity',
+            width: 100,
+            render: (_: any, record: any) => getSeverityTag(record.severity),
+            headerFilters: [
+                { label: '严重', value: 'critical' },
+                { label: '高', value: 'high' },
+                { label: '中', value: 'medium' },
+                { label: '低', value: 'low' },
+            ],
+        },
+        {
+            columnKey: 'affected_ci',
+            columnTitle: '影响CI',
+            dataIndex: 'affected_ci',
+            width: 150,
+            ellipsis: true,
+        },
+        {
+            columnKey: 'affected_service',
+            columnTitle: '影响服务',
+            dataIndex: 'affected_service',
+            width: 150,
+            ellipsis: true,
+        },
+        {
+            columnKey: 'created_at',
+            columnTitle: '创建时间',
+            dataIndex: 'created_at',
+            width: 180,
+            sorter: true,
+            render: (_: any, record: any) => formatTime(record.created_at),
+        },
+        {
+            columnKey: 'updated_at',
+            columnTitle: '忽略时间',
+            dataIndex: 'updated_at',
+            width: 180,
+            sorter: true,
+            render: (_: any, record: any) => formatTime(record.updated_at),
+        },
+        {
+            columnKey: 'actions',
+            columnTitle: '操作',
             width: 100,
             fixedColumn: true,
             fixed: 'right',
             render: (_: any, record: any) => (
                 <Button
-                    type="primary"
                     size="small"
-                    icon={<ThunderboltOutlined />}
-                    onClick={() => handleTrigger(record.id, record.external_id)}
+                    icon={<UndoOutlined />}
+                    disabled={!access.canTriggerHealing}
+                    onClick={() => handleResetScan(record.id, record.external_id)}
                 >
-                    启动
+                    恢复
                 </Button>
             ),
         },
-    ], [handleTrigger]);
+    ], [handleResetScan]);
 
     /* ============================== 数据请求 ============================== */
 
-    const handleRequest = useCallback(async (params: {
+    const handlePendingRequest = useCallback(async (params: {
         page: number;
         pageSize: number;
         searchField?: string;
@@ -193,6 +326,39 @@ const PendingTriggers: React.FC = () => {
         return { data: items, total };
     }, []);
 
+    const handleDismissedRequest = useCallback(async (params: {
+        page: number;
+        pageSize: number;
+        searchField?: string;
+        searchValue?: string;
+        advancedSearch?: Record<string, any>;
+        sorter?: { field: string; order: 'ascend' | 'descend' };
+    }) => {
+        const apiParams: Record<string, any> = {
+            page: params.page,
+            page_size: params.pageSize,
+        };
+
+        if (params.advancedSearch) {
+            if (params.advancedSearch.search) {
+                apiParams.search = params.advancedSearch.search;
+            }
+            if (params.advancedSearch.severity) {
+                apiParams.severity = params.advancedSearch.severity;
+            }
+        }
+
+        if (params.sorter) {
+            apiParams.sort_by = params.sorter.field;
+            apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
+        }
+
+        const res = await getDismissedTriggers(apiParams);
+        const items = res?.data || [];
+        const total = Number(res?.total ?? 0);
+        return { data: items, total };
+    }, []);
+
     /* ============================== Header Icon ============================== */
 
     const headerIcon = useMemo(() => (
@@ -212,16 +378,24 @@ const PendingTriggers: React.FC = () => {
 
     const renderDetail = () => {
         if (!detail) return null;
+        const isDismissed = detail.healing_status === 'dismissed';
         return (
             <>
                 {/* 顶部状态横幅 */}
                 <div style={{
                     padding: '12px 16px', marginBottom: 16,
-                    background: '#fffbe6', border: '1px solid #ffe58f',
+                    background: isDismissed ? '#f5f5f5' : '#fffbe6',
+                    border: isDismissed ? '1px solid #d9d9d9' : '1px solid #ffe58f',
                     display: 'flex', alignItems: 'center', gap: 8,
                 }}>
-                    <ClockCircleOutlined style={{ color: '#faad14' }} />
-                    <Text strong style={{ color: '#d48806' }}>待触发</Text>
+                    {isDismissed ? (
+                        <StopOutlined style={{ color: '#8c8c8c' }} />
+                    ) : (
+                        <ClockCircleOutlined style={{ color: '#faad14' }} />
+                    )}
+                    <Text strong style={{ color: isDismissed ? '#8c8c8c' : '#d48806' }}>
+                        {isDismissed ? '已忽略' : '待触发'}
+                    </Text>
                     <div style={{ marginLeft: 'auto' }}>
                         {getSeverityTag(detail.severity)}
                     </div>
@@ -253,7 +427,9 @@ const PendingTriggers: React.FC = () => {
                         <Tag color="blue">{detail.status || '-'}</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="自愈状态">
-                        <Tag color="orange">{detail.healing_status || '-'}</Tag>
+                        <Tag color={isDismissed ? 'default' : 'orange'}>
+                            {isDismissed ? '已忽略' : (detail.healing_status || '-')}
+                        </Tag>
                     </Descriptions.Item>
                 </Descriptions>
 
@@ -343,23 +519,41 @@ const PendingTriggers: React.FC = () => {
         );
     };
 
+    /* ============================== Tab 配置 ============================== */
+
+    const tabs = useMemo(() => [
+        { key: 'pending', label: '待处理' },
+        { key: 'dismissed', label: '已忽略' },
+    ], []);
+
+    const handleTabChange = useCallback((key: string) => {
+        setActiveTab(key as 'pending' | 'dismissed');
+    }, []);
+
     /* ============================== 渲染 ============================== */
+
+    const isPending = activeTab === 'pending';
 
     return (
         <>
             <StandardTable<any>
-                key={`triggers-${refreshCountRef.current}`}
-                tabs={[{ key: 'list', label: '待触发列表' }]}
-                title="自愈审批"
-                description="查看待触发的自愈工单，确认后启动自愈流程。"
+                key={`triggers-${activeTab}-${refreshCountRef.current}`}
+                tabs={tabs}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                title={isPending ? '自愈审批' : '已忽略工单'}
+                description={isPending
+                    ? '查看待触发的自愈工单，确认后启动自愈流程。'
+                    : '已忽略的自愈工单记录，这些工单不会执行自愈流程。'
+                }
                 headerIcon={headerIcon}
                 searchFields={searchFields}
-                columns={columns}
+                columns={isPending ? pendingColumns : dismissedColumns}
                 rowKey="id"
                 onRowClick={openDetail}
-                request={handleRequest}
+                request={isPending ? handlePendingRequest : handleDismissedRequest}
                 defaultPageSize={10}
-                preferenceKey="pending_triggers"
+                preferenceKey={isPending ? 'pending_triggers' : 'dismissed_triggers'}
             />
 
             {/* 详情抽屉 */}
@@ -368,14 +562,25 @@ const PendingTriggers: React.FC = () => {
                 open={drawerOpen}
                 onClose={closeDrawer}
                 size={600}
-                extra={detail ? (
-                    <Button
-                        type="primary"
-                        icon={<ThunderboltOutlined />}
-                        onClick={() => { closeDrawer(); handleTrigger(detail.id, detail.external_id); }}
-                    >
-                        启动自愈
-                    </Button>
+                extra={detail && isPending ? (
+                    <Space>
+                        <Button
+                            type="primary"
+                            icon={<ThunderboltOutlined />}
+                            disabled={!access.canTriggerHealing}
+                            onClick={() => { closeDrawer(); handleTrigger(detail.id, detail.external_id); }}
+                        >
+                            启动自愈
+                        </Button>
+                        <Button
+                            danger
+                            icon={<StopOutlined />}
+                            disabled={!access.canTriggerHealing}
+                            onClick={() => { closeDrawer(); handleDismiss(detail.id, detail.external_id); }}
+                        >
+                            忽略
+                        </Button>
+                    </Space>
                 ) : undefined}
             >
                 {renderDetail()}

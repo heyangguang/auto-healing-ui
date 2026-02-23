@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useAccess } from '@umijs/max';
 import {
     AlertOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined,
     SyncOutlined, SearchOutlined, UndoOutlined, EyeOutlined,
@@ -20,31 +21,11 @@ import './index.css';
 const { Text } = Typography;
 
 /* ========== 枚举映射 ========== */
-const SEVERITY_MAP: Record<string, { text: string; color: string; tagColor: string }> = {
-    critical: { text: '严重', color: '#cf1322', tagColor: 'red' },
-    '1': { text: '严重', color: '#cf1322', tagColor: 'red' },
-    high: { text: '高', color: '#fa541c', tagColor: 'orange' },
-    '2': { text: '高', color: '#fa541c', tagColor: 'orange' },
-    medium: { text: '中', color: '#faad14', tagColor: 'gold' },
-    '3': { text: '中', color: '#faad14', tagColor: 'gold' },
-    low: { text: '低', color: '#52c41a', tagColor: 'green' },
-    '4': { text: '低', color: '#52c41a', tagColor: 'green' },
-};
-
-const HEALING_MAP: Record<string, { text: string; color: string; badge: 'success' | 'error' | 'warning' | 'processing' | 'default' }> = {
-    pending: { text: '待处理', color: '#d9d9d9', badge: 'default' },
-    processing: { text: '处理中', color: '#1677ff', badge: 'processing' },
-    healed: { text: '已自愈', color: '#52c41a', badge: 'success' },
-    failed: { text: '失败', color: '#ff4d4f', badge: 'error' },
-    skipped: { text: '已跳过', color: '#8c8c8c', badge: 'default' },
-};
-
-const STATUS_MAP: Record<string, { text: string; color: string }> = {
-    open: { text: '打开', color: 'blue' },
-    in_progress: { text: '处理中', color: 'orange' },
-    resolved: { text: '已解决', color: 'green' },
-    closed: { text: '已关闭', color: 'default' },
-};
+import {
+    INCIDENT_SEVERITY_MAP as SEVERITY_MAP,
+    INCIDENT_HEALING_MAP as HEALING_MAP,
+    INCIDENT_STATUS_MAP as STATUS_MAP,
+} from '@/constants/incidentDicts';
 
 /* ========== 搜索字段 ========== */
 const searchFields: SearchField[] = [
@@ -72,6 +53,7 @@ const advancedSearchFields: AdvancedSearchField[] = [
             { label: '已自愈', value: 'healed' },
             { label: '失败', value: 'failed' },
             { label: '已跳过', value: 'skipped' },
+            { label: '已忽略', value: 'dismissed' },
         ],
     },
     {
@@ -107,6 +89,7 @@ const headerIcon = (
 
 /* ========== 组件 ========== */
 const IncidentList: React.FC = () => {
+    const access = useAccess();
     /* ---- 统计 ---- */
     const [stats, setStats] = useState<AutoHealing.IncidentStats | null>(null);
     const loadStats = useCallback(async () => {
@@ -248,6 +231,7 @@ const IncidentList: React.FC = () => {
                 { label: '已自愈', value: 'healed' },
                 { label: '失败', value: 'failed' },
                 { label: '已跳过', value: 'skipped' },
+                { label: '已忽略', value: 'dismissed' },
             ],
             render: (_: any, record: AutoHealing.Incident) => {
                 const info = HEALING_MAP[record.healing_status] || { text: record.healing_status, badge: 'default' as const };
@@ -327,6 +311,7 @@ const IncidentList: React.FC = () => {
                         <Button
                             type="link" size="small" icon={<UndoOutlined />}
                             onClick={(e) => { e.stopPropagation(); handleResetScan(record); }}
+                            disabled={!access.canTriggerHealing}
                         />
                     </Tooltip>
                 </Space>
@@ -362,6 +347,7 @@ const IncidentList: React.FC = () => {
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
             if (adv.keyword) apiParams.search = adv.keyword;
+            if (adv.external_id) apiParams.external_id = adv.external_id;
             if (adv.source_plugin_name) apiParams.source_plugin_name = adv.source_plugin_name;
             if (adv.severity) apiParams.severity = adv.severity;
             if (adv.healing_status) apiParams.healing_status = adv.healing_status;
@@ -441,6 +427,7 @@ const IncidentList: React.FC = () => {
             <div className="incidents-batch-bar" style={{ gap: 6 }}>
                 <span style={{ fontSize: 13, color: '#1677ff', fontWeight: 500 }}>已选 {selectedRows.length} 项</span>
                 <Button size="small" icon={<UndoOutlined />}
+                    disabled={!access.canTriggerHealing}
                     onClick={handleBatchResetScan}>
                     重置扫描
                 </Button>
@@ -522,6 +509,7 @@ const IncidentList: React.FC = () => {
                             {/* 操作按钮 */}
                             <Space size="small">
                                 <Button size="small" icon={<UndoOutlined />}
+                                    disabled={!access.canTriggerHealing}
                                     onClick={() => handleResetScan(currentRow)}>
                                     重置扫描
                                 </Button>
