@@ -4,25 +4,30 @@
  *
  * 后端权限码格式：  resource:action 或 resource:sub:action
  *
- * 完整权限种子清单（来自 /api/v1/permissions，共 64 个）：
+ * 完整权限种子清单（来自 seed.go，共 84 个）：
  * ─────────────────────────────────────────────────────────
- * [system]     audit:export | audit:list | system:settings
- * [user]       user:create | user:delete | user:list | user:reset_password | user:update
- * [role]       role:assign | role:create | role:delete | role:list | role:update
- * [plugin]     plugin:create | plugin:delete | plugin:detail | plugin:list | plugin:sync | plugin:test | plugin:update
- * [notification] channel:create | channel:delete | channel:list | channel:update
- *               template:create | template:delete | template:list | template:update
+ * [user]        user:list | user:create | user:update | user:delete | user:reset_password
+ * [role]        role:list | role:create | role:update | role:delete | role:assign
+ * [plugin]      plugin:list | plugin:detail | plugin:create | plugin:update | plugin:delete | plugin:sync | plugin:test
+ * [execution]   repository:list | repository:create | repository:update | repository:delete | repository:sync
+ *               playbook:list | playbook:execute
+ *               task:list | task:detail | task:create | task:update | task:delete | task:cancel
+ * [notification] channel:list | channel:create | channel:update | channel:delete
+ *               template:list | template:create | template:update | template:delete
  *               notification:list | notification:send
- * [execution]  task:cancel | task:create | task:delete | task:detail | task:list | task:update
- *              playbook:execute | playbook:list
- *              repository:create | repository:delete | repository:list | repository:sync | repository:update
- * [healing]    healing:flows:create | healing:flows:delete | healing:flows:update | healing:flows:view
- *              healing:rules:create | healing:rules:delete | healing:rules:update | healing:rules:view
- *              healing:instances:view
- *              healing:approvals:approve | healing:approvals:view
- *              healing:trigger:execute | healing:trigger:view
- * [workflow]   workflow:activate | workflow:create | workflow:delete | workflow:detail | workflow:list | workflow:run | workflow:update
- * [dashboard]  dashboard:workspace:manage
+ * [healing]     healing:flows:view | healing:flows:create | healing:flows:update | healing:flows:delete
+ *               healing:rules:view | healing:rules:create | healing:rules:update | healing:rules:delete
+ *               healing:instances:view
+ *               healing:approvals:view | healing:approvals:approve
+ *               healing:trigger:view | healing:trigger:execute
+ * [workflow]    workflow:list | workflow:detail | workflow:create | workflow:update | workflow:delete | workflow:activate | workflow:run
+ * [system]      audit:list | audit:export | system:settings
+ * [dashboard]   dashboard:view | dashboard:config:manage | dashboard:workspace:manage
+ * [site-message] site-message:list | site-message:create | site-message:settings:view | site-message:settings:manage
+ * [platform]    platform:settings:manage | platform:tenants:manage | platform:tenants:list
+ *               platform:users:list | platform:users:create | platform:users:update | platform:users:delete | platform:users:reset_password
+ *               platform:roles:list | platform:roles:manage | platform:permissions:list
+ *               platform:audit:list | platform:audit:export | platform:messages:send
  */
 export default function access(
   initialState: { currentUser?: API.CurrentUser } | undefined,
@@ -101,8 +106,8 @@ export default function access(
     canViewPlaybooks: hasPermission('playbook:list'),
     canViewRepositories: hasPermission('repository:list'),
     canViewAuditLogs: hasPermission('audit:list'),
-    canViewWorkflows: hasPermission('workflow:list'),
-    canViewDashboard: true, // 所有登录用户可见
+    canExportAuditLogs: hasPermission('audit:export'),
+    canViewDashboard: hasPermission('dashboard:view'),
 
     // ===============================
     // 用户管理 (user:*)
@@ -127,6 +132,7 @@ export default function access(
     canCreatePlugin: hasPermission('plugin:create'),
     canUpdatePlugin: hasPermission('plugin:update'),
     canDeletePlugin: hasPermission('plugin:delete'),
+    canViewPluginDetail: hasPermission('plugin:detail'),
     canTestPlugin: hasPermission('plugin:test'),
     canSyncPlugin: hasPermission('plugin:sync'),
     canActivatePlugin: hasPermission('plugin:update'),
@@ -137,13 +143,14 @@ export default function access(
     canCreateTask: hasPermission('task:create'),
     canUpdateTask: hasPermission('task:update'),
     canDeleteTask: hasPermission('task:delete'),
+    canViewTaskDetail: hasPermission('task:detail'),
     canExecuteTask: hasPermission('playbook:execute'),
     canCancelRun: hasPermission('task:cancel'),
 
     // ===============================
     // Playbook (playbook:*)
     // ===============================
-    canManagePlaybook: hasAnyPermission('task:create', 'task:update'),
+    canManagePlaybook: hasPermission('playbook:execute'),
 
     // ===============================
     // Git 仓库 (repository:*)
@@ -154,6 +161,7 @@ export default function access(
 
     // ===============================
     // 执行模块扩展
+    // 注意：后端无独立 secrets/schedule 权限码，复用 task:create/task:update
     // ===============================
     canManageSecrets: hasAnyPermission('task:create', 'task:update'),
     canManageSchedule: hasAnyPermission('task:create', 'task:update'),
@@ -203,27 +211,38 @@ export default function access(
     canTriggerHealing: hasPermission('healing:trigger:execute'),
 
     // ===============================
-    // 审计日志 (audit:*)
+    // 站内消息 (site-message:*)
     // ===============================
-    canExportAudit: hasPermission('audit:export'),
-
-    // ===============================
-    // 系统设置 (system:*)
-    // ===============================
-    canManageSettings: hasPermission('system:settings'),
-
-    // ===============================
-    // 工作流/ITSM (workflow:*)
-    // ===============================
-    canCreateWorkflow: hasPermission('workflow:create'),
-    canUpdateWorkflow: hasPermission('workflow:update'),
-    canDeleteWorkflow: hasPermission('workflow:delete'),
-    canActivateWorkflow: hasPermission('workflow:activate'),
-    canRunWorkflow: hasPermission('workflow:run'),
+    canCreateSiteMessage: hasPermission('site-message:create'),
+    canViewSiteMessages: hasPermission('site-message:list'),
+    canViewSiteMessageSettings: hasPermission('site-message:settings:view'),
+    canManageSiteMessageSettings: hasPermission('site-message:settings:manage'),
 
     // ===============================
     // Dashboard
     // ===============================
     canManageWorkspace: hasPermission('dashboard:workspace:manage'),
+    canManageDashboardConfig: hasPermission('dashboard:config:manage'),
+
+    // ===============================
+    // 平台权限
+    // ===============================
+    canViewPlatformPermissions: hasPermission('platform:permissions:list'),
+
+    // ===============================
+    // 系统设置
+    // ===============================
+    canManageSystemSettings: hasPermission('system:settings'),
+
+    // ===============================
+    // 工作流（预留）
+    // ===============================
+    canViewWorkflows: hasPermission('workflow:list'),
+    canViewWorkflowDetail: hasPermission('workflow:detail'),
+    canCreateWorkflow: hasPermission('workflow:create'),
+    canUpdateWorkflow: hasPermission('workflow:update'),
+    canDeleteWorkflow: hasPermission('workflow:delete'),
+    canActivateWorkflow: hasPermission('workflow:activate'),
+    canRunWorkflow: hasPermission('workflow:run'),
   };
 }

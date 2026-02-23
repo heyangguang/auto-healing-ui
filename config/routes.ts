@@ -38,12 +38,25 @@ export default [
     component: './workbench',
     hideInMenu: true,
   },
+  // ==================== 产品指南 ====================
+  {
+    path: '/guide',
+    name: '产品指南',
+    component: './guide',
+    hideInMenu: true,
+  },
+  {
+    path: '/guide/:id',
+    component: './guide',
+    hideInMenu: true,
+  },
   // ==================== 监控面板 ====================
   {
     path: '/dashboard',
     name: 'dashboard',
     icon: 'dashboard',
     component: './dashboard/analysis',
+    access: 'canViewDashboard',
   },
 
   // ==================== 资源配置 ====================
@@ -432,6 +445,7 @@ export default [
         path: '/system/permissions',
         name: 'permissions',
         component: './system/permissions',
+        access: 'canViewPlatformPermissions',
       },
 
       {
@@ -443,6 +457,7 @@ export default [
         path: '/system/messages',
         name: 'messages',
         component: './system/messages',
+        access: 'canViewSiteMessages',
       },
     ],
   },

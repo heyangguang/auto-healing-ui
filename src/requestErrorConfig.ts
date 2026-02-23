@@ -238,7 +238,9 @@ export const errorConfig: RequestConfig = {
         }
 
         if (status === 403) {
-          message.error('没有权限访问该资源');
+          // 静默处理：权限不足由路由 access 和 UI 按钮 disabled 状态处理
+          // 避免工作台多个 API 同时 403 导致满屏弹窗
+          console.warn('[403] 没有权限访问:', error.config?.url);
           return;
         }
 
@@ -249,6 +251,7 @@ export const errorConfig: RequestConfig = {
       } else {
         message.error('请求发生错误，请稍后重试');
       }
+      return;
     },
   },
 
