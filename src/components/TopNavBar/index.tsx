@@ -8,7 +8,7 @@ import {
     UpOutlined,
     MenuOutlined,
 } from '@ant-design/icons';
-import { history, useLocation } from '@umijs/max';
+import { history, useLocation, useAccess } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { AvatarDropdown, AvatarName, AvatarFullName } from '@/components/RightContent/AvatarDropdown';
 import GlobalSearch from '@/components/GlobalSearch';
@@ -18,6 +18,7 @@ const ProductMenu = lazy(() => import('@/components/ProductMenu'));
 import { CATEGORIES, SERVICES } from '@/config/menu';
 
 const MOBILE_BP = 768;
+const TABLET_BP = 1200;
 
 const useStyles = createStyles(({ token }) => ({
     navBar: {
@@ -36,7 +37,8 @@ const useStyles = createStyles(({ token }) => ({
         display: 'flex',
         alignItems: 'center',
         gap: 0,
-        flexShrink: 0,
+        flexShrink: 1,
+        minWidth: 0,
     },
     hamburger: {
         display: 'inline-flex',
@@ -118,9 +120,10 @@ const useStyles = createStyles(({ token }) => ({
         display: 'flex',
         alignItems: 'center',
         gap: 4,
-        flexShrink: 0,
+        flexShrink: 1,
         paddingRight: 8,
         marginLeft: 'auto',
+        minWidth: 0,
     },
     iconBtn: {
         display: 'inline-flex',
@@ -180,13 +183,20 @@ const useStyles = createStyles(({ token }) => ({
 const TopNavBar: React.FC = () => {
     const { styles, cx } = useStyles();
     const location = useLocation();
+    const access = useAccess() as unknown as Record<string, boolean>;
     const [menuOpen, setMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(
         typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BP : false
     );
+    const [isTablet, setIsTablet] = useState(
+        typeof window !== 'undefined' ? window.innerWidth <= TABLET_BP : false
+    );
 
     useEffect(() => {
-        const onResize = () => setIsMobile(window.innerWidth <= MOBILE_BP);
+        const onResize = () => {
+            setIsMobile(window.innerWidth <= MOBILE_BP);
+            setIsTablet(window.innerWidth <= TABLET_BP);
+        };
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
     }, []);
@@ -194,12 +204,23 @@ const TopNavBar: React.FC = () => {
     const isWorkbench = location.pathname === '/' || location.pathname === '/workbench';
     const isDashboard = location.pathname.startsWith('/dashboard');
 
+    // 权限检查：监控面板是否可见
+    const showDashboard = !!access.canViewDashboard;
+
+    // 权限检查：是否有任何可见的产品服务
+    const hasAnyService = React.useMemo(() => {
+        for (const [, items] of Object.entries(SERVICES)) {
+            if (items.some(svc => !svc.access || access[svc.access])) return true;
+        }
+        return false;
+    }, [access]);
+
     // 判断当前页面是否有侧边栏
     const hasSideNav = !isWorkbench && !isDashboard;
 
     return (
         <>
-            <div className={styles.navBar}>
+            <div id="top-nav-bar" className={styles.navBar}>
                 <div className={styles.leftSection}>
 
                     {/* 汉堡菜单: 仅移动端 + 有侧边栏时显示 */}
@@ -225,43 +246,48 @@ const TopNavBar: React.FC = () => {
                             onClick={() => { setMenuOpen(false); startTransition(() => history.push('/')); }}
                         >
                             <HomeOutlined className={styles.navIcon} />
-                            {!isMobile && <span>工作台</span>}
+                            {!isTablet && <span>工作台</span>}
                         </div>
 
-                        <div
-                            className={cx(styles.navItem, isDashboard && !menuOpen && styles.navItemActive)}
-                            onClick={() => { setMenuOpen(false); startTransition(() => history.push('/dashboard')); }}
-                        >
-                            <DashboardOutlined className={styles.navIcon} />
-                            {!isMobile && <span>监控面板</span>}
-                        </div>
+                        {showDashboard && (
+                            <div
+                                className={cx(styles.navItem, isDashboard && !menuOpen && styles.navItemActive)}
+                                onClick={() => { setMenuOpen(false); startTransition(() => history.push('/dashboard')); }}
+                            >
+                                <DashboardOutlined className={styles.navIcon} />
+                                {!isTablet && <span>监控面板</span>}
+                            </div>
+                        )}
 
-                        <div
-                            className={cx(styles.navItem, menuOpen && styles.navItemActive)}
-                            onClick={() => setMenuOpen(!menuOpen)}
-                        >
-                            <AppstoreOutlined className={styles.navIcon} />
-                            <span>产品与服务</span>
-                            {menuOpen ? (
-                                <UpOutlined className={styles.arrowIcon} />
-                            ) : (
-                                <DownOutlined className={styles.arrowIcon} />
-                            )}
-                        </div>
+                        {hasAnyService && (
+                            <div
+                                id="tour-product-menu"
+                                className={cx(styles.navItem, menuOpen && styles.navItemActive)}
+                                onClick={() => setMenuOpen(!menuOpen)}
+                            >
+                                <AppstoreOutlined className={styles.navIcon} />
+                                {!isTablet && <span>产品与服务</span>}
+                                {menuOpen ? (
+                                    <UpOutlined className={styles.arrowIcon} />
+                                ) : (
+                                    <DownOutlined className={styles.arrowIcon} />
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* 全局搜索 - 移动端隐藏 */}
-                {!isMobile && <GlobalSearch />}
+                {!isMobile && <GlobalSearch compact={isTablet} />}
 
                 {/* 右侧操作 */}
                 <div className={styles.rightSection}>
                     {!isMobile && (
                         <>
-                            <div className={styles.iconBtn} title="帮助文档">
+                            <div className={styles.iconBtn} title="帮助文档" onClick={() => startTransition(() => history.push('/guide'))}>
                                 <QuestionCircleOutlined />
                             </div>
-                            <NotificationBell />
+                            <span id="tour-notification-bell"><NotificationBell /></span>
                             <TenantSwitcher />
                             <div className={styles.divider} />
                         </>

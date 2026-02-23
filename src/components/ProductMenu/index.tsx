@@ -5,11 +5,12 @@ import {
     StarOutlined,
     ClockCircleOutlined,
     LoadingOutlined,
+    ReadOutlined,
 } from '@ant-design/icons';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import { Drawer, message, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
-import { CATEGORIES, SERVICES } from '@/config/menu';
+import { CATEGORIES, SERVICES, type ServiceItem } from '@/config/menu';
 import {
     getFavorites,
     addFavorite,
@@ -31,6 +32,13 @@ const useStyles = createStyles(({ token }) => ({
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column' as const,
+    },
+    catList: {
+        flex: 1,
+    },
+    guideBottom: {
+        borderTop: '1px solid #f0f0f0',
+        padding: '12px 0',
     },
     catItem: {
         display: 'flex',
@@ -213,6 +221,7 @@ interface ProductMenuProps {
 
 const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
     const { styles, cx } = useStyles();
+    const access = useAccess() as unknown as Record<string, boolean>;
     const [activeCategory, setActiveCategory] = useState('healing');
 
     // API 数据
@@ -268,8 +277,22 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
         onClose();
     };
 
-    const activeCat = CATEGORIES.find((c) => c.id === activeCategory);
-    const services = SERVICES[activeCategory] || [];
+    // 根据权限过滤服务和分类
+    const filteredServices = React.useMemo(() => {
+        const result: Record<string, ServiceItem[]> = {};
+        for (const [catId, items] of Object.entries(SERVICES)) {
+            const filtered = items.filter(svc => !svc.access || access[svc.access]);
+            if (filtered.length > 0) result[catId] = filtered;
+        }
+        return result;
+    }, [access]);
+
+    const filteredCategories = React.useMemo(() => {
+        return CATEGORIES.filter(cat => cat.id === 'guide' || filteredServices[cat.id]?.length > 0);
+    }, [filteredServices]);
+
+    const activeCat = filteredCategories.find((c) => c.id === activeCategory);
+    const services = filteredServices[activeCategory] || [];
 
     return (
         <Drawer
@@ -288,16 +311,27 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
         >
             {/* 左侧分类面板 */}
             <div className={styles.leftPanel}>
-                {CATEGORIES.map((cat) => (
+                <div className={styles.catList}>
+                    {filteredCategories.filter(cat => cat.id !== 'guide').map((cat) => (
+                        <div
+                            key={cat.id}
+                            className={cx(styles.catItem, activeCategory === cat.id && styles.catItemActive)}
+                            onClick={() => setActiveCategory(cat.id)}
+                        >
+                            <span className={styles.catIcon}>{cat.icon}</span>
+                            <span>{cat.label}</span>
+                        </div>
+                    ))}
+                </div>
+                <div className={styles.guideBottom}>
                     <div
-                        key={cat.id}
-                        className={cx(styles.catItem, activeCategory === cat.id && styles.catItemActive)}
-                        onClick={() => setActiveCategory(cat.id)}
+                        className={styles.catItem}
+                        onClick={() => handleNavigate('/guide')}
                     >
-                        <span className={styles.catIcon}>{cat.icon}</span>
-                        <span>{cat.label}</span>
+                        <span className={styles.catIcon}><ReadOutlined /></span>
+                        <span>产品指南</span>
                     </div>
-                ))}
+                </div>
             </div>
 
             {/* 右侧内容面板 */}
