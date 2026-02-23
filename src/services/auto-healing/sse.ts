@@ -178,8 +178,8 @@ export const createInstanceEventStream = (
     );
 
     eventSource.addEventListener('connected', (event: MessageEvent) => {
-        const data = JSON.parse(event.data);
-        callbacks.onFlowStart?.(data.data.instance_id, '');
+        // SSE 连接已建立 — 仅用于确认连接成功，不触发 onFlowStart
+        console.log('[SSE] Instance stream connected:', instanceId);
     });
 
     eventSource.addEventListener('node_start', (event: MessageEvent) => {

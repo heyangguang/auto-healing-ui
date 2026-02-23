@@ -29,12 +29,13 @@ export async function getPlatformUsersSimple(params?: { search?: string }) {
     );
 }
 
-/** 创建平台管理员账号（后端自动赋予 platform_admin 角色，前端不需要选角色） */
+/** 创建平台用户（可指定角色，不传默认 platform_admin） */
 export async function createPlatformUser(data: {
     username: string;
     email?: string;
     password: string;
     display_name?: string;
+    role_id?: string;
 }) {
     return request<AutoHealing.User>('/api/v1/platform/users', {
         method: 'POST',

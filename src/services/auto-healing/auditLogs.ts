@@ -7,6 +7,7 @@ export async function getAuditLogs(params?: {
     page?: number;
     page_size?: number;
     search?: string;
+    category?: string;
     action?: string;
     resource_type?: string;
     username?: string;

@@ -124,6 +124,41 @@ export async function triggerHealing(id: string) {
     });
 }
 
+/**
+ * 忽略待触发工单
+ */
+export async function dismissIncident(id: string) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/incidents/${id}/dismiss`, {
+        method: 'POST',
+    });
+}
+
+/**
+ * 获取已忽略工单列表
+ */
+export async function getDismissedTriggers(params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    severity?: string;
+    date_from?: string;
+    date_to?: string;
+}) {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.Incident>>('/api/v1/healing/pending/dismissed', {
+        method: 'GET',
+        params,
+    });
+}
+
+/**
+ * 重置工单扫描状态（将已忽略工单恢复为待处理）
+ */
+export async function resetIncidentScan(id: string) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/incidents/${id}/reset-scan`, {
+        method: 'POST',
+    });
+}
+
 // ==================== 自愈规则 ====================
 
 /**
@@ -296,7 +331,7 @@ export async function getApproval(id: string) {
  * 批准审批任务
  */
 export async function approveTask(id: string, data?: AutoHealing.ApprovalDecisionRequest) {
-    return request<AutoHealing.SuccessResponse>(`/healing/approvals/${id}/approve`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/healing/approvals/${id}/approve`, {
         method: 'POST',
         data,
     });
@@ -306,7 +341,7 @@ export async function approveTask(id: string, data?: AutoHealing.ApprovalDecisio
  * 拒绝审批任务
  */
 export async function rejectTask(id: string, data?: AutoHealing.ApprovalDecisionRequest) {
-    return request<AutoHealing.SuccessResponse>(`/healing/approvals/${id}/reject`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/healing/approvals/${id}/reject`, {
         method: 'POST',
         data,
     });
