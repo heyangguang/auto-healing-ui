@@ -12,10 +12,11 @@ import {
 } from '@ant-design/icons';
 import { history, useAccess } from '@umijs/max';
 import StandardTable from '@/components/StandardTable';
-import type { SearchField } from '@/components/StandardTable';
+import type { SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import {
     getPlatformUsers, deletePlatformUser, getPlatformUser, resetPlatformUserPassword, updatePlatformUser,
 } from '@/services/auto-healing/platform/users';
+import { USER_STATUS_MAP } from '@/constants/commonDicts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -30,6 +31,19 @@ const { Text } = Typography;
 const searchFields: SearchField[] = [
     { key: 'username', label: '用户名' },
     { key: 'display_name', label: '显示名' },
+];
+
+const advancedSearchFields: AdvancedSearchField[] = [
+    {
+        key: 'status', label: '状态', type: 'select',
+        options: [
+            { label: '活跃', value: 'active' },
+            { label: '锁定', value: 'locked' },
+            { label: '停用', value: 'inactive' },
+        ],
+    },
+    { key: 'email', label: '邮箱', type: 'input', placeholder: '搜索邮箱' },
+    { key: 'created_at', label: '创建时间', type: 'dateRange' },
 ];
 
 const headerIcon = (
@@ -63,18 +77,29 @@ const PlatformUsersPage: React.FC = () => {
     const [resetPwdForm] = Form.useForm();
     const [submitting, setSubmitting] = useState(false);
 
-    const loadData = useCallback(async (p: number, ps: number, value?: string) => {
+    const loadData = useCallback(async (p: number, ps: number, value?: string, field?: string, advanced?: Record<string, any>) => {
         setLoading(true);
         try {
-            const res = await getPlatformUsers({
-                page: p, page_size: ps,
-                search: value?.trim() || undefined,
-            });
+            const params: Record<string, any> = { page: p, page_size: ps };
+            if (value?.trim()) {
+                const key = field || 'username';
+                params[key] = value.trim();
+            }
+            if (advanced) {
+                if (advanced.status) params.status = advanced.status;
+                if (advanced.email) params.email = advanced.email;
+                if (advanced.created_at) {
+                    const [from, to] = advanced.created_at;
+                    if (from) params.created_from = dayjs(from).format('YYYY-MM-DD');
+                    if (to) params.created_to = dayjs(to).format('YYYY-MM-DD');
+                }
+            }
+            const res = await getPlatformUsers(params);
             const list = (res as any)?.data || [];
             const tot = (res as any)?.total || list.length;
             setData(list);
             setTotal(tot);
-            if (p === 1 && !value?.trim()) {
+            if (p === 1 && !value?.trim() && !advanced) {
                 const activeCount = list.filter((u: any) => u.status === 'active').length;
                 setStats({ total: tot, active: activeCount, inactive: tot - activeCount });
             }
@@ -89,11 +114,15 @@ const PlatformUsersPage: React.FC = () => {
         loadData(1, pageSize);
     }, []);
 
-    const handleSearch = useCallback((params: { searchField?: string; searchValue?: string }) => {
+    const [searchField, setSearchField] = useState('username');
+
+    const handleSearch = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any> }) => {
         const value = params.searchValue || '';
+        const field = params.searchField || 'username';
         setSearchValue(value);
+        setSearchField(field);
         setPage(1);
-        loadData(1, pageSize, value);
+        loadData(1, pageSize, value, field, params.advancedSearch);
     }, [pageSize, loadData]);
 
     // ==================== Drawer ====================
@@ -150,7 +179,7 @@ const PlatformUsersPage: React.FC = () => {
     const handleToggleStatus = async (e: any, user: any) => {
         e?.stopPropagation?.();
         const originalStatus = user.status;
-        const newStatus = originalStatus === 'active' ? 'inactive' : 'active';
+        const newStatus = (originalStatus === 'active') ? 'inactive' : 'active';
         // 乐观更新：立即刷新 UI
         setData(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
         if (drawerUser?.id === user.id) {
@@ -177,6 +206,7 @@ const PlatformUsersPage: React.FC = () => {
     // ==================== User Card ====================
     const renderUserCard = (user: any) => {
         const isActive = user.status === 'active';
+        const statusInfo = USER_STATUS_MAP[user.status] || USER_STATUS_MAP['inactive'];
         const displayName = user.display_name || user.username;
         const firstLetter = displayName?.[0]?.toUpperCase() || 'U';
         const roles = user.roles || [];
@@ -196,10 +226,14 @@ const PlatformUsersPage: React.FC = () => {
                             <Space size={4}>
                                 {isActive ? (
                                     <span className="user-card-status-active">
-                                        <CheckCircleOutlined /> 启用
+                                        <CheckCircleOutlined /> {statusInfo.label}
+                                    </span>
+                                ) : user.status === 'locked' ? (
+                                    <span style={{ color: '#fa8c16', fontSize: 12 }}>
+                                        <LockOutlined /> {statusInfo.label}
                                     </span>
                                 ) : (
-                                    <span className="user-card-status-inactive">已禁用</span>
+                                    <span className="user-card-status-inactive">{statusInfo.label}</span>
                                 )}
                             </Space>
                         </div>
@@ -313,6 +347,7 @@ const PlatformUsersPage: React.FC = () => {
 
     // ==================== Drawer Content ====================
     const drawerIsActive = drawerUser?.status === 'active';
+    const drawerStatusInfo = USER_STATUS_MAP[drawerUser?.status] || USER_STATUS_MAP['inactive'];
     const drawerName = drawerUser?.display_name || drawerUser?.username || '-';
     const drawerRoles = drawerUser?.roles || [];
 
@@ -326,6 +361,7 @@ const PlatformUsersPage: React.FC = () => {
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
                 searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
                 onSearch={handleSearch}
                 primaryActionLabel="新建用户"
                 primaryActionIcon={<PlusOutlined />}
@@ -350,7 +386,7 @@ const PlatformUsersPage: React.FC = () => {
                         <div className="users-pagination">
                             <Pagination
                                 current={page} total={total} pageSize={pageSize}
-                                onChange={(p, size) => { setPage(p); setPageSize(size); loadData(p, size, searchValue); }}
+                                onChange={(p, size) => { setPage(p); setPageSize(size); loadData(p, size, searchValue, searchField); }}
                                 showSizeChanger pageSizeOptions={['16', '24', '48']}
                                 showQuickJumper showTotal={t => `共 ${t} 条`}
                             />
@@ -383,8 +419,8 @@ const PlatformUsersPage: React.FC = () => {
                                     <div className="user-drawer-title">{drawerName}</div>
                                     <div className="user-drawer-sub">
                                         <Badge
-                                            status={drawerIsActive ? 'success' : 'default'}
-                                            text={<span style={{ fontSize: 12, color: '#8c8c8c' }}>{drawerIsActive ? '已启用' : '已禁用'}</span>}
+                                            status={drawerStatusInfo.badge as any}
+                                            text={<span style={{ fontSize: 12, color: '#8c8c8c' }}>{drawerStatusInfo.label}</span>}
                                         />
                                         <span style={{ margin: '0 8px', color: '#d9d9d9' }}>|</span>
                                         <span style={{ fontFamily: 'monospace', fontSize: 12 }}>@{drawerUser.username}</span>
@@ -453,8 +489,8 @@ const PlatformUsersPage: React.FC = () => {
                                         </div>
                                         <div className="user-drawer-field">
                                             <span className="user-drawer-field-label">状态</span>
-                                            <Tag color={drawerIsActive ? 'success' : 'default'} style={{ margin: 0 }}>
-                                                {drawerIsActive ? '已启用' : '已禁用'}
+                                            <Tag color={drawerStatusInfo.tagColor} style={{ margin: 0 }}>
+                                                {drawerStatusInfo.label}
                                             </Tag>
                                         </div>
                                         <div className="user-drawer-field">
