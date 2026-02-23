@@ -123,6 +123,7 @@ declare namespace AutoHealing {
         email?: string;
         display_name?: string;
         status?: 'active' | 'inactive';
+        role_id?: UUID;
     }
 
     interface ResetPasswordRequest {
@@ -316,7 +317,7 @@ declare namespace AutoHealing {
     // 不同 ITSM 系统可能返回不同格式
     type IncidentSeverity = 'critical' | 'high' | 'medium' | 'low' | '1' | '2' | '3' | '4' | string;
     type IncidentStatus = 'open' | 'in_progress' | 'resolved' | 'closed' | string;
-    type HealingStatus = 'pending' | 'processing' | 'healed' | 'failed' | 'skipped';
+    type HealingStatus = 'pending' | 'processing' | 'healed' | 'failed' | 'skipped' | 'dismissed';
 
     interface Incident {
         id: UUID;
@@ -365,6 +366,7 @@ declare namespace AutoHealing {
         healed: number;
         failed: number;
         skipped: number;
+        dismissed: number;
     }
 
     interface CloseIncidentRequest {
@@ -543,7 +545,7 @@ declare namespace AutoHealing {
 
     // ==================== Playbook 模板 ====================
     type PlaybookStatus = 'pending' | 'scanned' | 'ready' | 'error' | 'invalid';
-    type PlaybookVariableType = 'string' | 'number' | 'boolean' | 'list' | 'object' | 'enum' | 'password';
+    type PlaybookVariableType = 'string' | 'number' | 'boolean' | 'list' | 'object' | 'dict' | 'enum' | 'password' | 'choice';
 
     interface PlaybookVariableSource {
         file: string;
@@ -574,6 +576,8 @@ declare namespace AutoHealing {
         status: PlaybookStatus;
         config_mode: 'auto' | 'enhanced';
         variables: PlaybookVariable[];
+        /** Legacy field - some playbooks may still use this */
+        scanned_variables?: PlaybookVariable[];
         variables_count?: number;
         last_scanned_at: string | null;
         created_at: string;
@@ -651,7 +655,7 @@ declare namespace AutoHealing {
         updated_at: string;
         playbook?: Playbook;
         needs_review?: boolean;
-        changed_variables?: string[];
+        changed_variables?: Array<string | { name: string; new?: string; old?: string }>;
         playbook_variables_snapshot?: PlaybookVariable[];
     }
 
@@ -709,6 +713,9 @@ declare namespace AutoHealing {
         runtime_secrets_source_ids?: UUID[];
         runtime_extra_vars?: Record<string, any>;
         runtime_skip_notification?: boolean;
+        ended_at?: string;
+        duration_ms?: number;
+        error_message?: string;
     }
 
     interface ExecutionLog {
@@ -783,7 +790,7 @@ declare namespace AutoHealing {
     type ChannelType = 'webhook' | 'dingtalk' | 'email';
     type EventType = 'execution_result' | 'execution_started' | 'alert';
     type TemplateFormat = 'text' | 'markdown' | 'html';
-    type NotificationStatus = 'pending' | 'sent' | 'failed';
+    type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'failed' | 'bounced';
 
     interface NotificationChannel {
         id: UUID;
@@ -797,6 +804,8 @@ declare namespace AutoHealing {
         };
         recipients: string[];
         is_active: boolean;
+        /** Alias for is_active used in some contexts */
+        enabled?: boolean;
         is_default: boolean;
         rate_limit_per_minute?: number;
         created_at: string;
@@ -1028,6 +1037,8 @@ declare namespace AutoHealing {
         to?: string; // Legacy support
         /** 源节点输出口 ID (如 success/failed/approved/rejected/true/false) */
         sourceHandle?: string;
+        /** 目标节点输入口 ID */
+        targetHandle?: string;
         condition?: string;
         label?: string;
         id?: string;
@@ -1141,6 +1152,9 @@ declare namespace AutoHealing {
         is_active?: boolean;
     }
 
+    /** Alias for FlowInstance, used in healing trigger response */
+    type HealingFlowInstance = FlowInstance;
+
     interface FlowInstance {
         id: UUID;
         flow_id: UUID;
@@ -1159,6 +1173,7 @@ declare namespace AutoHealing {
         incident_title?: string;
         node_count?: number;
         failed_node_count?: number;
+        rejected_node_count?: number;
         // Snapshot fields (detail API returns flat fields instead of nested flow object)
         flow_nodes?: FlowNode[];
         flow_edges?: FlowEdge[];
@@ -1200,7 +1215,7 @@ declare namespace AutoHealing {
     // 不同 ITSM 系统可能返回不同格式
     type IncidentSeverity = 'critical' | 'high' | 'medium' | 'low' | '1' | '2' | '3' | '4' | string;
     type IncidentStatus = 'open' | 'in_progress' | 'resolved' | 'closed' | string;
-    type HealingStatus = 'pending' | 'processing' | 'healed' | 'failed' | 'skipped';
+    type HealingStatus = 'pending' | 'processing' | 'healed' | 'failed' | 'skipped' | 'dismissed';
 
     interface Incident {
         id: UUID;
