@@ -27,18 +27,8 @@ interface NodeDetailPanelProps {
     onRetry?: () => void;
 }
 
-// 节点类型配置（用于图标和颜色）
-const nodeTypeConfig: Record<string, { color: string; label: string }> = {
-    start: { color: '#52c41a', label: '开始' },
-    end: { color: '#ff4d4f', label: '结束' },
-    host_extractor: { color: '#1890ff', label: '主机提取' },
-    cmdb_validator: { color: '#13c2c2', label: 'CMDB验证' },
-    execution: { color: '#fa8c16', label: '任务执行' },
-    approval: { color: '#faad14', label: '人工审批' },
-    notification: { color: '#52c41a', label: '发送通知' },
-    condition: { color: '#722ed1', label: '条件分支' },
-    set_variable: { color: '#eb2f96', label: '设置变量' },
-};
+// 节点类型配置（从中心化 nodeConfig 导入）
+import { NODE_TYPE_CONFIG as nodeTypeConfig } from '../../nodeConfig';
 
 // 获取节点状态图标
 const getStatusIcon = (status?: string) => {
@@ -252,7 +242,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
     onNodeSelect,
     onRetry
 }) => {
-    const formRef = useRef<any>();
+    const formRef = useRef<any>(null);
     const [taskSelectorOpen, setTaskSelectorOpen] = useState(false);
     const [selectedTaskName, setSelectedTaskName] = useState<string>('');
     const [currentTaskTemplateId, setCurrentTaskTemplateId] = useState<string | undefined>(undefined);
@@ -511,7 +501,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
                             label="审批人 (角色)"
                             mode="multiple"
                             request={async () => {
-                                const res = await getRoles({ page_size: 100 });
+                                const res = await getRoles();
                                 return (res.data || []).map(r => ({ label: r.display_name, value: r.name }));
                             }}
                         />
@@ -849,7 +839,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
                                                 layout="vertical"
                                             >
                                                 <ProFormText name="label" label="节点名称" />
-                                                <Divider orientation="left" style={{ margin: '12px 0' }}>
+                                                <Divider style={{ margin: '12px 0' }}>
                                                     <Text type="secondary" style={{ fontSize: 12 }}>参数配置</Text>
                                                 </Divider>
                                                 {renderSettingsContent()}

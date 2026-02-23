@@ -81,7 +81,7 @@ const RunResultView: React.FC<{ data: any }> = ({ data }) => {
 };
 
 const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, open, onClose, onChange }) => {
-    const formRef = useRef<any>();
+    const formRef = useRef<any>(null);
     const [channelList, setChannelList] = useState<ChannelInfo[]>([]);
     const [selectedChannelTypes, setSelectedChannelTypes] = useState<string[]>([]);
     const [taskSelectorOpen, setTaskSelectorOpen] = useState(false);
@@ -236,7 +236,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, open, onClose, 
                             label="审批人 (角色)"
                             mode="multiple"
                             request={async () => {
-                                const res = await getRoles({ page_size: 100 });
+                                const res = await getRoles();
                                 return (res.data || []).map(r => ({ label: r.display_name, value: r.name }));
                             }}
                         />
@@ -511,7 +511,7 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, open, onClose, 
                         layout="vertical"
                     >
                         <ProFormText name="label" label="节点名称" />
-                        <Divider orientation="left" style={{ margin: '12px 0' }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>参数配置</Typography.Text></Divider>
+                        <Divider style={{ margin: '12px 0' }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>参数配置</Typography.Text></Divider>
                         {renderContent()}
                     </ProForm>
                 </>

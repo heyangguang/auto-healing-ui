@@ -8,7 +8,7 @@ const { Text } = Typography;
 
 interface PlaybookVariable {
     name: string;
-    type: 'string' | 'number' | 'boolean' | 'choice' | 'list' | 'enum' | 'password' | 'object';
+    type: 'string' | 'number' | 'boolean' | 'choice' | 'list' | 'enum' | 'password' | 'object' | 'dict';
     required?: boolean;
     description?: string;
     default?: any;

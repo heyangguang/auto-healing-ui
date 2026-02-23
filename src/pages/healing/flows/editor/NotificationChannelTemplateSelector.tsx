@@ -35,17 +35,10 @@ interface NotificationChannelTemplateSelectorProps {
     onChange?: (value: ChannelTemplateConfig[]) => void;
 }
 
-// 渠道类型图标和颜色
-const CHANNEL_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-    email: { icon: <MailOutlined />, color: '#1890ff', label: '邮件' },
-    dingtalk: { icon: <DingdingOutlined />, color: '#0089ff', label: '钉钉' },
-    webhook: { icon: <ApiOutlined />, color: '#722ed1', label: 'Webhook' },
-    default: { icon: <SendOutlined />, color: '#8c8c8c', label: '通知' },
-};
+// 渠道类型图标和颜色（集中化管理）
+import { getChannelTypeConfigWithDefault, type ChannelTypeConfig } from '@/constants/notificationDicts';
 
-const getChannelTypeConfig = (type: string) => {
-    return CHANNEL_TYPE_CONFIG[type.toLowerCase()] || CHANNEL_TYPE_CONFIG.default;
-};
+const getChannelTypeConfig = (type: string) => getChannelTypeConfigWithDefault(type);
 
 // 每页显示数量
 const PAGE_SIZE = 8;
@@ -255,7 +248,7 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
                     label: (
                         <Space size={4}>
                             <span style={{ color: config.color }}>{config.icon}</span>
-                            <span>{config.label}</span>
+                            <span>{config.labelCN}</span>
                             <Badge count={channelTypeStats[type]} style={{ backgroundColor: config.color }} />
                         </Space>
                     )
@@ -349,7 +342,7 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
                                             </div>
                                         </div>
                                     </div>
-                                    <Tag color={typeConfig.color} style={{ margin: 0 }}>{typeConfig.label}</Tag>
+                                    <Tag color={typeConfig.color} style={{ margin: 0 }}>{typeConfig.labelCN}</Tag>
                                 </div>
                             );
                         })
@@ -406,7 +399,7 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
                     <div>
                         <Text strong>{selectedChannel?.name}</Text>
                         <div style={{ fontSize: 11, color: '#8c8c8c' }}>
-                            已选渠道 · {getChannelTypeConfig(selectedChannel?.type || '').label}
+                            已选渠道 · {getChannelTypeConfig(selectedChannel?.type || '').labelCN}
                         </div>
                     </div>
                 </Space>
@@ -437,7 +430,7 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
             <div style={{ marginBottom: 8 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                     <FileTextOutlined style={{ marginRight: 4 }} />
-                    显示支持 {getChannelTypeConfig(selectedChannel?.type || '').label} 类型的模板
+                    显示支持 {getChannelTypeConfig(selectedChannel?.type || '').labelCN} 类型的模板
                 </Text>
             </div>
 
@@ -489,7 +482,7 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
                                             <div style={{ marginTop: 4 }}>
                                                 {t.supported_channels.map(sc => (
                                                     <Tag key={sc} style={{ fontSize: 10, lineHeight: '14px', margin: '0 4px 0 0', padding: '0 4px' }}>
-                                                        {getChannelTypeConfig(sc).label}
+                                                        {getChannelTypeConfig(sc).labelCN}
                                                     </Tag>
                                                 ))}
                                             </div>
