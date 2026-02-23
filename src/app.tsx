@@ -33,8 +33,7 @@ export async function getInitialState(): Promise<{
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
-  // 并行初始化字典缓存（不阻塞页面渲染）
-  initDictCache().catch(err => console.warn('[App] 字典初始化失败:', err));
+  // 注意: 字典缓存初始化延迟到确认用户身份后执行（平台管理员不需要）
 
   const fetchUserInfo = async () => {
     try {
@@ -50,7 +49,7 @@ export async function getInitialState(): Promise<{
       const userInfo = (response as any).data || response;
 
       // 需要同时设置 name 和 username，AvatarDropdown 会检查这两个字段
-      return {
+      const currentUserObj = {
         userid: userInfo.id,
         name: userInfo.display_name || userInfo.username,
         username: userInfo.username,
@@ -60,6 +59,11 @@ export async function getInitialState(): Promise<{
         permissions: userInfo.permissions || [],
         ...userInfo,
       } as API.CurrentUser;
+
+      // 🆕 同步平台管理员标志到 localStorage（供 request interceptor 使用）
+      localStorage.setItem('is-platform-admin', currentUserObj.is_platform_admin ? 'true' : 'false');
+
+      return currentUserObj;
     } catch (_error) {
       TokenManager.clearTokens();
       history.push(loginPath);
@@ -74,6 +78,43 @@ export async function getInitialState(): Promise<{
     )
   ) {
     const currentUser = await fetchUserInfo();
+
+    // 🆕 仅非平台管理员初始化字典缓存（字典API需要租户上下文）
+    if (currentUser && !currentUser.is_platform_admin) {
+      initDictCache().catch(err => console.warn('[App] 字典初始化失败:', err));
+    }
+
+    // 🆕 平台管理员 + 非平台页面 + 非 Impersonation → 立即重定向（在渲染前！）
+    if (currentUser?.is_platform_admin) {
+      const isPlatformPage = location.pathname.startsWith('/platform/') ||
+        location.pathname.startsWith('/user/') ||
+        location.pathname.startsWith('/account/') ||
+        location.pathname.startsWith('/guide');
+
+      let isImpersonating = false;
+      try {
+        const impRaw = localStorage.getItem('impersonation-storage');
+        if (impRaw) {
+          const imp = JSON.parse(impRaw);
+          if (imp?.isImpersonating && imp?.session?.expiresAt) {
+            isImpersonating = new Date(imp.session.expiresAt) > new Date();
+            if (!isImpersonating) localStorage.removeItem('impersonation-storage');
+          }
+        }
+      } catch { /* ignore */ }
+
+      if (!isPlatformPage && !isImpersonating) {
+        // 🆕 使用 window.location.href 而非 history.push
+        // getInitialState 阶段 history 可能未完全就绪，history.push 不一定生效
+        window.location.href = '/platform/tenant-overview';
+        return {
+          fetchUserInfo,
+          currentUser,
+          settings: defaultSettings as Partial<LayoutSettings>,
+        };
+      }
+    }
+
     return {
       fetchUserInfo,
       currentUser,
@@ -96,6 +137,8 @@ export const layout: RunTimeLayoutConfig = ({
     headerRender: () => <TopNavBar />,
     // 禁用 ProLayout 默认的侧边菜单（由 SideNav 组件管理）
     menuRender: false,
+    // 禁用面包屑（使用自定义导航，不需要 ProLayout 面包屑）
+    breadcrumbRender: false,
     // 禁用默认 Footer（在 AppLayout 中管理）
     footerRender: false,
     onPageChange: () => {
@@ -103,6 +146,36 @@ export const layout: RunTimeLayoutConfig = ({
       // 如果没有登录，重定向到 login
       if (!initialState?.currentUser && location.pathname !== loginPath) {
         history.push(loginPath);
+        return;
+      }
+
+      // 🆕 平台管理员路由守卫：
+      // 未在 Impersonation 模式下访问租户级页面 → 重定向到平台管理页
+      if (initialState?.currentUser?.is_platform_admin) {
+        const isPlatformPage = location.pathname.startsWith('/platform/') ||
+          location.pathname === '/user/login' ||
+          location.pathname.startsWith('/user/') ||
+          location.pathname.startsWith('/account/') ||
+          location.pathname === '/guide' ||
+          location.pathname.startsWith('/guide');
+
+        // 检查是否在 Impersonation 模式
+        const impersonationRaw = localStorage.getItem('impersonation-storage');
+        let isImpersonating = false;
+        if (impersonationRaw) {
+          try {
+            const imp = JSON.parse(impersonationRaw);
+            if (imp?.isImpersonating && imp?.session?.expiresAt) {
+              isImpersonating = new Date(imp.session.expiresAt) > new Date();
+              if (!isImpersonating) localStorage.removeItem('impersonation-storage');
+            }
+          } catch { /* ignore */ }
+        }
+
+        if (!isPlatformPage && !isImpersonating) {
+          console.log('[App] 平台管理员访问租户页面，重定向到平台管理');
+          history.push('/platform/tenant-overview');
+        }
       }
     },
     menuHeaderRender: false,

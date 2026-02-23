@@ -28,6 +28,7 @@
  *               platform:users:list | platform:users:create | platform:users:update | platform:users:delete | platform:users:reset_password
  *               platform:roles:list | platform:roles:manage | platform:permissions:list
  *               platform:audit:list | platform:audit:export | platform:messages:send
+ * [tenant]      tenant:impersonation:view | tenant:impersonation:approve
  */
 export default function access(
   initialState: { currentUser?: API.CurrentUser } | undefined,
@@ -69,7 +70,26 @@ export default function access(
     hasAnyPermission,
 
     // 🆕 平台管理员 (多租户专用)
-    isPlatformAdmin: currentUser?.is_platform_admin === true,
+    // 仅在 Impersonation 会话真正有效时（未过期）才视为租户用户
+    isPlatformAdmin: (() => {
+      if (currentUser?.is_platform_admin !== true) return false;
+      try {
+        const impRaw = localStorage.getItem('impersonation-storage');
+        if (impRaw) {
+          const imp = JSON.parse(impRaw);
+          // 必须同时满足: isImpersonating=true + session 存在 + 未过期
+          if (imp?.isImpersonating && imp?.session?.expiresAt) {
+            const expiresAt = new Date(imp.session.expiresAt);
+            if (expiresAt > new Date()) {
+              return false; // 有效的 impersonation 会话 → 显示租户菜单
+            }
+            // 已过期 → 清理残留数据
+            localStorage.removeItem('impersonation-storage');
+          }
+        }
+      } catch { /* ignore */ }
+      return true; // 非 impersonation → 显示平台菜单
+    })(),
 
     // ===============================
     // 平台管理 (platform:*)
@@ -244,5 +264,39 @@ export default function access(
     canDeleteWorkflow: hasPermission('workflow:delete'),
     canActivateWorkflow: hasPermission('workflow:activate'),
     canRunWorkflow: hasPermission('workflow:run'),
+
+    // ===============================
+    // Impersonation 审批
+    // ===============================
+    canViewImpersonationApprovals: (() => {
+      // 平台管理员不应该看到审批页面（这是租户级功能）
+      if (currentUser?.is_platform_admin) return false;
+      // 提权用户也不应该看到
+      try {
+        const impRaw = localStorage.getItem('impersonation-storage');
+        if (impRaw) {
+          const imp = JSON.parse(impRaw);
+          if (imp?.isImpersonating && imp?.session?.expiresAt) {
+            if (new Date(imp.session.expiresAt) > new Date()) return false;
+          }
+        }
+      } catch { /* ignore */ }
+      return hasPermission('tenant:impersonation:view');
+    })(),
+    canApproveImpersonation: (() => {
+      // 平台管理员不应该看到审批页面（这是租户级功能）
+      if (currentUser?.is_platform_admin) return false;
+      // 提权用户也不应该看到（避免审批自己的请求）
+      try {
+        const impRaw = localStorage.getItem('impersonation-storage');
+        if (impRaw) {
+          const imp = JSON.parse(impRaw);
+          if (imp?.isImpersonating && imp?.session?.expiresAt) {
+            if (new Date(imp.session.expiresAt) > new Date()) return false;
+          }
+        }
+      } catch { /* ignore */ }
+      return hasPermission('tenant:impersonation:approve');
+    })(),
   };
 }

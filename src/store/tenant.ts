@@ -62,16 +62,18 @@ export default function useTenantModel() {
         });
     }, [tenants]);
 
-    // 设置租户列表
+    // 设置租户列表（保留当前选择，除非当前租户已被移除）
     const setTenants = useCallback((newTenants: TenantBrief[]) => {
         setTenantsState(newTenants);
-        const newCurrentTenantId = newTenants.length > 0 ? newTenants[0].id : null;
+        // 如果用户当前选择的租户在新列表中仍存在，则保留
+        const stillExists = currentTenantId && newTenants.some(t => t.id === currentTenantId);
+        const newCurrentTenantId = stillExists ? currentTenantId : (newTenants.length > 0 ? newTenants[0].id : null);
         setCurrentTenantId(newCurrentTenantId);
         saveTenantState({
             currentTenantId: newCurrentTenantId,
             tenants: newTenants,
         });
-    }, []);
+    }, [currentTenantId]);
 
     // 重置租户信息
     const reset = useCallback(() => {

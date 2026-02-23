@@ -27,8 +27,15 @@ const useStyles = createStyles(({ token }) => {
     container: {
       display: 'flex',
       height: '100vh',
-      width: '100vw',
+      width: '100%',
       overflow: 'hidden',
+      margin: 0,
+      padding: 0,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
     },
     leftPanel: {
       flex: '0 0 60%',
@@ -148,24 +155,41 @@ const Login: React.FC = () => {
       // 保存 Token
       TokenManager.setTokens(response.access_token, response.refresh_token);
 
-      // 🆕 保存租户信息
-      if (response.tenants && response.tenants.length > 0) {
+      // 🆕 检查是否为平台管理员
+      const isPlatformAdmin = response.user?.is_platform_admin === true;
+
+      // 🆕 设置平台管理员标志（供 request interceptor 使用）
+      localStorage.setItem('is-platform-admin', isPlatformAdmin ? 'true' : 'false');
+
+      if (isPlatformAdmin) {
+        // 平台管理员：清除旧的租户数据，避免 interceptor 注入 X-Tenant-ID
+        localStorage.removeItem('tenant-storage');
+        console.log('[Login] 平台管理员登录，已清除租户缓存');
+      } else if (response.tenants && response.tenants.length > 0) {
+        // 🆕 保存租户信息（仅普通用户需要）
         const tenantStorage = {
           currentTenantId: response.current_tenant_id,
           tenants: response.tenants,
         };
         localStorage.setItem('tenant-storage', JSON.stringify(tenantStorage));
         console.log('[Login] 租户信息已保存:', tenantStorage);
+      }
 
-        message.success(
-          intl.formatMessage({
-            id: 'pages.login.success',
-            defaultMessage: '登录成功！',
-          })
-        );
+      message.success(
+        intl.formatMessage({
+          id: 'pages.login.success',
+          defaultMessage: '登录成功！',
+        })
+      );
 
-        await fetchUserInfo();
+      await fetchUserInfo();
 
+      if (isPlatformAdmin) {
+        // 🆕 平台管理员 → 直接进入平台管理页面
+        console.log('[Login] 平台管理员登录，重定向到平台管理页');
+        history.push('/platform/tenants');
+      } else if (response.tenants && response.tenants.length > 0) {
+        // 普通用户 → 进入工作台或原始 redirect
         const urlParams = new URL(window.location.href).searchParams;
         const redirect = urlParams.get('redirect') || '/';
         history.push(redirect);

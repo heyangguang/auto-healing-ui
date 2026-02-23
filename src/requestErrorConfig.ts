@@ -84,14 +84,25 @@ const doRefreshToken = async (): Promise<string | null> => {
       TokenManager.setTokens(data.access_token, data.refresh_token);
       console.log('[Auth] Token 已自动刷新');
 
-      // 🆕 更新租户信息
-      if (data.tenants && data.current_tenant_id) {
+      // 🆕 更新租户信息：只更新列表，保留用户当前选择的租户
+      if (data.tenants) {
+        const existingRaw = localStorage.getItem('tenant-storage');
+        let preservedTenantId = data.current_tenant_id; // 默认使用后端返回的
+        if (existingRaw) {
+          try {
+            const existing = JSON.parse(existingRaw);
+            // 如果用户当前选择的租户在新列表中仍然存在，则保留
+            if (existing.currentTenantId && data.tenants.some((t: any) => t.id === existing.currentTenantId)) {
+              preservedTenantId = existing.currentTenantId;
+            }
+          } catch { /* ignore */ }
+        }
         const tenantStorage = {
-          currentTenantId: data.current_tenant_id,
+          currentTenantId: preservedTenantId,
           tenants: data.tenants,
         };
         localStorage.setItem('tenant-storage', JSON.stringify(tenantStorage));
-        console.log('[Auth] 租户信息已更新');
+        console.log('[Auth] 租户列表已更新，当前租户:', preservedTenantId);
       }
 
       return data.access_token;
@@ -203,6 +214,13 @@ export const errorConfig: RequestConfig = {
         // 🆕 处理租户权限错误 (40300)
         if (data?.code === 40300) {
           const errorMsg = data?.message || '无权访问该租户';
+
+          // 平台管理员 Impersonation 相关错误 → 静默处理（路由守卫会重定向）
+          if (errorMsg.includes('Impersonation')) {
+            console.log('[Request] 平台管理员未 Impersonation，已由路由守卫处理');
+            return;
+          }
+
           message.error(errorMsg);
 
           // 如果用户未分配任何租户,跳转到提示页
@@ -272,12 +290,45 @@ export const errorConfig: RequestConfig = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // 🆕 注入 X-Tenant-ID (排除平台级 API 和认证 API)
-      const isPlatformAPI = url.startsWith('/api/v1/platform/') ||
-        url.startsWith('/auth/');
+      // 🆕 注入 X-Tenant-ID (排除不需要租户隔离的 API)
+      // 注意：/api/v1/auth/me 需要发送 X-Tenant-ID 以获取当前租户的精确权限
+      const isExcludedFromTenant = url.startsWith('/api/v1/platform/') ||
+        url.startsWith('/auth/') ||
+        url.startsWith('/api/v1/auth/login') ||
+        url.startsWith('/api/v1/auth/refresh') ||
+        url.startsWith('/api/v1/auth/logout') ||
+        url.startsWith('/api/v1/dictionaries') ||
+        url.startsWith('/api/v1/user/tenants');
 
-      if (!isPlatformAPI) {
-        // 从 localStorage 读取当前租户 ID
+      // 🆕 检查 Impersonation 状态
+      const impersonationRaw = localStorage.getItem('impersonation-storage');
+      let isImpersonating = false;
+      let impersonationSession: { requestId: string; tenantId: string; expiresAt: string } | null = null;
+
+      if (impersonationRaw) {
+        try {
+          const parsed = JSON.parse(impersonationRaw);
+          if (parsed.isImpersonating && parsed.session) {
+            // 检查会话是否过期
+            if (new Date(parsed.session.expiresAt) > new Date()) {
+              isImpersonating = true;
+              impersonationSession = parsed.session;
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      // 🆕 检查是否为平台管理员（从 localStorage 读取标志）
+      const isPlatformAdmin = localStorage.getItem('is-platform-admin') === 'true';
+
+      if (isImpersonating && impersonationSession && !isExcludedFromTenant) {
+        // Impersonation 模式：使用申请单指定的租户 ID + Impersonation 请求头
+        headers['X-Tenant-ID'] = impersonationSession.tenantId;
+        headers['X-Impersonation'] = 'true';
+        headers['X-Impersonation-Request-ID'] = impersonationSession.requestId;
+      } else if (!isExcludedFromTenant && !isPlatformAdmin) {
+        // 普通用户模式：从 localStorage 读取当前租户 ID
+        // 注意：平台管理员未 Impersonation 时不注入 X-Tenant-ID
         const tenantStorage = localStorage.getItem('tenant-storage');
         if (tenantStorage) {
           try {
@@ -298,6 +349,17 @@ export const errorConfig: RequestConfig = {
   // 响应拦截器
   responseInterceptors: [
     (response) => {
+      // 🆕 检测后端 X-Refresh-Token 信号：JWT 中的 tenant_ids 已过时，需要刷新
+      // 场景：管理员将用户添加到新租户后，用户的旧 JWT 不包含该租户，
+      //       后端回退到数据库查询确认有权限后，通知前端刷新 token 以更新缓存
+      const shouldRefresh = response.headers?.['x-refresh-token'];
+      if (shouldRefresh === 'true') {
+        console.log('[Auth] 收到 X-Refresh-Token 信号，后台刷新 Token 更新租户缓存...');
+        // 异步刷新，不阻塞当前响应
+        refreshToken().catch(() => {
+          console.warn('[Auth] 后台刷新 Token 失败，下次请求将重试');
+        });
+      }
       return response;
     },
   ],
