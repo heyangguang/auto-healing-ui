@@ -20,18 +20,11 @@ import {
     getChannels, deleteChannel, testChannel, updateChannel
 } from '@/services/auto-healing/notification';
 import './index.css';
+import { CHANNEL_TYPE_CONFIG, getChannelTypeConfig } from '@/constants/notificationDicts';
 
 const { Text } = Typography;
 
-// ==================== Constants ====================
-const CHANNEL_TYPE_CONFIG: Record<string, { icon: React.ReactElement; color: string; label: string; bg: string }> = {
-    webhook: { icon: <ApiOutlined />, color: '#722ed1', label: 'WEBHOOK', bg: '#f9f0ff' },
-    email: { icon: <MailOutlined />, color: '#1890ff', label: 'EMAIL', bg: '#e6f7ff' },
-    dingtalk: { icon: <DingdingOutlined />, color: '#0079f2', label: 'DINGTALK', bg: '#f0f5ff' },
-};
-
-const getTypeConfig = (type: string) =>
-    CHANNEL_TYPE_CONFIG[type] || { icon: <GlobalOutlined />, color: '#8c8c8c', label: type, bg: '#f5f5f5' };
+const getTypeConfig = (type: string) => getChannelTypeConfig(type);
 
 // ==================== Main Page Component ====================
 const NotificationChannelsPage: React.FC = () => {
@@ -157,8 +150,8 @@ const NotificationChannelsPage: React.FC = () => {
                 onClose={() => setDetailDrawerOpen(false)}
                 extra={
                     <Space>
-                        <Button onClick={() => { setDetailDrawerOpen(false); handleTest(detailChannel); }}>测试通道</Button>
-                        <Button type="primary" onClick={() => { setDetailDrawerOpen(false); history.push(`/notification/channels/${detailChannel.id}/edit`); }}>编辑</Button>
+                        <Button onClick={() => { setDetailDrawerOpen(false); handleTest(detailChannel); }} disabled={!access.canTestChannel}>测试通道</Button>
+                        <Button type="primary" onClick={() => { setDetailDrawerOpen(false); history.push(`/notification/channels/${detailChannel.id}/edit`); }} disabled={!access.canUpdateChannel}>编辑</Button>
                     </Space>
                 }
             >

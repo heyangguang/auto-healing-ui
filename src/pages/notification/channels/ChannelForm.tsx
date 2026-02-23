@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import {
     Form, Input, Select, Button, message, Spin, Switch,
     InputNumber, Row, Col, Card, Segmented, Divider, Alert
@@ -14,6 +14,7 @@ import './ChannelForm.css';
 const { TextArea } = Input;
 
 const ChannelFormPage: React.FC = () => {
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const isEdit = !!params.id;
     const [form] = Form.useForm();
@@ -253,7 +254,7 @@ const ChannelFormPage: React.FC = () => {
                 title={isEdit ? '编辑通知渠道' : '新建通知渠道'}
                 onBack={() => history.push('/notification/channels')}
                 actions={
-                    <Button type="primary" icon={<SaveOutlined />} loading={submitting} onClick={handleSubmit}>
+                    <Button type="primary" icon={<SaveOutlined />} loading={submitting} disabled={isEdit ? !access.canUpdateChannel : !access.canCreateChannel} onClick={handleSubmit}>
                         {isEdit ? '保存修改' : '创建渠道'}
                     </Button>
                 }

@@ -10,22 +10,17 @@ import {
     Avatar, message, Divider,
 } from 'antd';
 import React, { useState, useEffect, useCallback, startTransition } from 'react';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import { getNotifications, retryNotification, getChannels, getTemplates, getNotificationStats } from '@/services/auto-healing/notification';
 import { getExecutionRun } from '@/services/auto-healing/execution';
 import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, AdvancedSearchField } from '@/components/StandardTable';
 import './index.css';
+import { getChannelTypeConfig } from '@/constants/notificationDicts';
 
 const { Text } = Typography;
 
 // ==================== Constants ====================
-const CHANNEL_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
-    webhook: { icon: <ApiOutlined />, color: '#722ed1', label: 'WEBHOOK', bg: '#f9f0ff' },
-    email: { icon: <MailOutlined />, color: '#1890ff', label: 'EMAIL', bg: '#e6f7ff' },
-    dingtalk: { icon: <DingdingOutlined />, color: '#0079f2', label: 'DINGTALK', bg: '#f0f5ff' },
-    unknown: { icon: <BellOutlined />, color: '#8c8c8c', label: 'UNKNOWN', bg: '#f5f5f5' },
-};
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; label: string; tagColor: 'success' | 'error' | 'warning' | 'default' }> = {
     sent: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '已发送', tagColor: 'success' },
@@ -43,7 +38,7 @@ const TRIGGERED_BY_CONFIG: Record<string, { icon: React.ReactNode; label: string
 };
 
 // ==================== Helpers ====================
-const getTypeConfig = (type: string) => CHANNEL_TYPE_CONFIG[type] || CHANNEL_TYPE_CONFIG.unknown;
+const getTypeConfig = (type: string) => getChannelTypeConfig(type);
 const getStatusConfig = (status: string) => STATUS_CONFIG[status] || STATUS_CONFIG.pending;
 
 const formatTime = (timeStr: string) => {
@@ -126,6 +121,7 @@ const StatsDashboard: React.FC<{ refreshKey?: number }> = ({ refreshKey }) => {
 
 // ==================== Main Component ====================
 const NotificationRecords: React.FC = () => {
+    const access = useAccess();
     const [detailOpen, setDetailOpen] = useState(false);
     const [currentRecord, setCurrentRecord] = useState<AutoHealing.Notification | null>(null);
     const [retryLoading, setRetryLoading] = useState<string | null>(null);
@@ -179,7 +175,6 @@ const NotificationRecords: React.FC = () => {
             dataIndex: 'status',
             width: 100,
             sorter: true,
-            filterable: true,
             headerFilters: [
                 { label: '已发送', value: 'sent' },
                 { label: '已送达', value: 'delivered' },
@@ -196,7 +191,6 @@ const NotificationRecords: React.FC = () => {
             columnKey: 'channel',
             columnTitle: '通知渠道',
             width: 180,
-            filterable: true,
             headerFilters: channels.map(c => ({ label: c.name, value: c.id })),
             render: (_val, record) => {
                 const config = getTypeConfig(record.channel?.type || 'unknown');
@@ -228,7 +222,7 @@ const NotificationRecords: React.FC = () => {
                                 setExecLoading(true);
                                 setExecDetailOpen(true);
                                 try {
-                                    const res = await getExecutionRun(record.execution_run_id);
+                                    const res = await getExecutionRun(record.execution_run_id!);
                                     setExecDetail(res.data || res);
                                 } catch { message.error('加载执行详情失败'); }
                                 finally { setExecLoading(false); }
@@ -301,6 +295,7 @@ const NotificationRecords: React.FC = () => {
                         {isFailed && (
                             <Tooltip title="重试发送">
                                 <Button type="text" size="small" danger icon={<SyncOutlined />}
+                                    disabled={!access.canSendNotification}
                                     loading={retryLoading === record.id} onClick={() => handleRetry(record.id)} />
                             </Tooltip>
                         )}
@@ -434,6 +429,7 @@ const NotificationRecords: React.FC = () => {
                     currentRecord && (currentRecord.status === 'failed' || currentRecord.status === 'bounced') && (
                         <Button type="primary" danger icon={<SendOutlined />}
                             loading={retryLoading === currentRecord.id}
+                            disabled={!access.canSendNotification}
                             onClick={() => handleRetry(currentRecord.id)}>
                             重试发送
                         </Button>

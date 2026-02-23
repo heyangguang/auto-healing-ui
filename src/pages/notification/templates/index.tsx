@@ -747,7 +747,7 @@ const NotificationTemplatesPage: React.FC = () => {
                                         icon={<SaveOutlined />}
                                         onClick={handleSave}
                                         loading={saving}
-                                        disabled={!isDirty}
+                                        disabled={!isDirty || !(isCreating ? access.canCreateTemplate : access.canUpdateTemplate)}
                                     >
                                         保存
                                     </Button>
@@ -938,7 +938,7 @@ const NotificationTemplatesPage: React.FC = () => {
                                                             beforeMount={(monaco) => {
                                                                 // Register custom language for syntax highlighting
                                                                 const LANG_ID = 'template-vars';
-                                                                if (!monaco.languages.getLanguages().some(lang => lang.id === LANG_ID)) {
+                                                                if (!monaco.languages.getLanguages().some((lang: any) => lang.id === LANG_ID)) {
                                                                     monaco.languages.register({ id: LANG_ID });
 
                                                                     // Define custom theme: {{}} blue, variable green
@@ -979,7 +979,7 @@ const NotificationTemplatesPage: React.FC = () => {
                                                                     // Register completion provider for variables
                                                                     monaco.languages.registerCompletionItemProvider(LANG_ID, {
                                                                         triggerCharacters: ['{'],
-                                                                        provideCompletionItems: (model, position) => {
+                                                                        provideCompletionItems: (model: any, position: any) => {
                                                                             const textUntilPosition = model.getValueInRange({
                                                                                 startLineNumber: position.lineNumber,
                                                                                 startColumn: 1,
