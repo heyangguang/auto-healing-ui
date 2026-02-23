@@ -3,7 +3,7 @@ import { useAccess } from '@umijs/max';
 import { Form, Input, Button, Select, Radio, message, Space, Tag, Typography } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
-import type { StandardColumnDef } from '@/components/StandardTable';
+import type { StandardColumnDef, AdvancedSearchField } from '@/components/StandardTable';
 import RichTextEditor from '@/components/RichTextEditor';
 import {
     getSiteMessageCategories,
@@ -111,6 +111,11 @@ const PlatformMessagesPage: React.FC = () => {
             }
             if (params.advancedSearch.category) {
                 apiParams.category = params.advancedSearch.category;
+            }
+            if (params.advancedSearch.created_at) {
+                const [from, to] = params.advancedSearch.created_at;
+                if (from) apiParams.date_from = dayjs(from).format('YYYY-MM-DD');
+                if (to) apiParams.date_to = dayjs(to).format('YYYY-MM-DD');
             }
         }
         if (params.sorter) {
@@ -316,8 +321,14 @@ const PlatformMessagesPage: React.FC = () => {
             refreshTrigger={refreshTrigger}
             searchFields={[
                 { key: 'keyword', label: '关键字' },
-                { key: '__enum__category', label: '分类', options: categories.map(c => ({ label: c.label, value: c.value })) },
             ]}
+            advancedSearchFields={[
+                {
+                    key: 'category', label: '分类', type: 'select' as const,
+                    options: categories.map(c => ({ label: c.label, value: c.value })),
+                },
+                { key: 'created_at', label: '发送时间', type: 'dateRange' as const },
+            ] as AdvancedSearchField[]}
         />
     );
 };
