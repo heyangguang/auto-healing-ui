@@ -4,8 +4,6 @@ import { Button, Card, Descriptions, Result, Steps } from 'antd';
 import { Fragment } from 'react';
 import useStyles from './index.style';
 
-const { Step } = Steps;
-
 export default () => {
   const { styles } = useStyles();
   const desc1 = (
@@ -61,54 +59,26 @@ export default () => {
         </Descriptions.Item>
       </Descriptions>
       <br />
-      <Steps progressDot current={1}>
-        <Step
-          title={
-            <span
-              style={{
-                fontSize: 14,
-              }}
-            >
-              创建项目
-            </span>
-          }
-          description={desc1}
-        />
-        <Step
-          title={
-            <span
-              style={{
-                fontSize: 14,
-              }}
-            >
-              部门初审
-            </span>
-          }
-          description={desc2}
-        />
-        <Step
-          title={
-            <span
-              style={{
-                fontSize: 14,
-              }}
-            >
-              财务复核
-            </span>
-          }
-        />
-        <Step
-          title={
-            <span
-              style={{
-                fontSize: 14,
-              }}
-            >
-              完成
-            </span>
-          }
-        />
-      </Steps>
+      <Steps
+        progressDot
+        current={1}
+        items={[
+          {
+            title: <span style={{ fontSize: 14 }}>创建项目</span>,
+            description: desc1,
+          },
+          {
+            title: <span style={{ fontSize: 14 }}>部门初审</span>,
+            description: desc2,
+          },
+          {
+            title: <span style={{ fontSize: 14 }}>财务复核</span>,
+          },
+          {
+            title: <span style={{ fontSize: 14 }}>完成</span>,
+          },
+        ]}
+      />
     </>
   );
   const extra = (
@@ -124,7 +94,7 @@ export default () => {
         <Result
           status="success"
           title="提交成功"
-          subTitle="提交结果页用于反馈一系列操作任务的处理结果， 如果仅是简单操作，使用 Message 全局提示反馈即可。 本文字区域可以展示简单的补充说明，如果有类似展示 “单据”的需求，下面这个灰色区域可以呈现比较复杂的内容。"
+          subTitle={'提交结果页用于反馈一系列操作任务的处理结果， 如果仅是简单操作，使用 Message 全局提示反馈即可。 本文字区域可以展示简单的补充说明，如果有类似展示 "单据"的需求，下面这个灰色区域可以呈现比较复杂的内容。'}
           extra={extra}
           style={{
             marginBottom: 16,
@@ -133,6 +103,6 @@ export default () => {
           {content}
         </Result>
       </Card>
-    </GridContent>
+    </GridContent >
   );
 };
