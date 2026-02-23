@@ -1,309 +1,357 @@
-import { history, Link, useRequest } from '@umijs/max';
-import {
-  Button,
-  Col,
-  Form,
-  Input,
-  message,
-  Popover,
-  Progress,
-  Row,
-  Select,
-  Space,
-} from 'antd';
-import type { Store } from 'antd/es/form/interface';
-import type { FC } from 'react';
-import { useEffect, useState } from 'react';
-import type { StateType } from './service';
-import { fakeRegister } from './service';
-import useStyles from './styles';
+import { history, Link } from '@umijs/max';
+import { Alert, Button, ConfigProvider, Form, Input, message, Spin } from 'antd';
+import { createStyles } from 'antd-style';
+import React, { useEffect, useState } from 'react';
+import { Helmet } from '@umijs/max';
+import { UserOutlined, LockOutlined, IdcardOutlined } from '@ant-design/icons';
+import { request } from '@umijs/max';
+import Settings from '../../../../config/defaultSettings';
 
-const FormItem = Form.Item;
-const { Option } = Select;
+const useStyles = createStyles(({ token }) => ({
+  container: {
+    display: 'flex',
+    height: '100vh',
+    width: '100%',
+    overflow: 'hidden',
+    margin: 0,
+    padding: 0,
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  leftPanel: {
+    flex: '0 0 60%',
+    backgroundColor: '#161616',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    padding: '0 80px',
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundImage:
+      'radial-gradient(circle at 10% 20%, rgba(15, 98, 254, 0.1) 0%, transparent 20%), radial-gradient(circle at 90% 80%, rgba(15, 98, 254, 0.05) 0%, transparent 20%)',
+  },
+  rightPanel: {
+    flex: '1',
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '40px',
+  },
+  brandTitle: {
+    fontSize: '48px',
+    fontWeight: 600,
+    color: '#ffffff',
+    marginBottom: '24px',
+    fontFamily: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+    lineHeight: 1.1,
+  },
+  brandSubtitle: {
+    fontSize: '18px',
+    color: '#c6c6c6',
+    maxWidth: '500px',
+    lineHeight: 1.5,
+    fontFamily: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: '400px',
+  },
+  formTitle: {
+    fontSize: '28px',
+    fontWeight: 400,
+    color: '#161616',
+    marginBottom: '4px',
+    fontFamily: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+  },
+  formSubtitle: {
+    fontSize: '14px',
+    color: '#525252',
+    marginBottom: '24px',
+    fontFamily: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+  },
+  logoWatermark: {
+    position: 'absolute' as const,
+    bottom: '-10%',
+    right: '-10%',
+    width: '60%',
+    opacity: 0.03,
+    pointerEvents: 'none' as const,
+  },
+  footerContainer: {
+    position: 'absolute' as const,
+    bottom: 20,
+    width: '100%',
+    textAlign: 'center' as const,
+    fontSize: '12px',
+    color: '#8d8d8d',
+  },
+  fieldLabel: {
+    fontSize: '12px',
+    color: '#525252',
+    display: 'block',
+    marginBottom: '4px',
+    fontFamily: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+  },
+}));
 
-const passwordProgressMap: {
-  ok: 'success';
-  pass: 'normal';
-  poor: 'exception';
-} = {
-  ok: 'success',
-  pass: 'normal',
-  poor: 'exception',
-};
-const Register: FC = () => {
+const RegisterPage: React.FC = () => {
   const { styles } = useStyles();
-  const [count, setCount]: [number, any] = useState(0);
-  const [open, setVisible]: [boolean, any] = useState(false);
-  const [prefix, setPrefix]: [string, any] = useState('86');
-  const [popover, setPopover]: [boolean, any] = useState(false);
-  const confirmDirty = false;
-  let interval: number | undefined;
-
-  const passwordStatusMap = {
-    ok: (
-      <div className={styles.success}>
-        <span>强度：强</span>
-      </div>
-    ),
-    pass: (
-      <div className={styles.warning}>
-        <span>强度：中</span>
-      </div>
-    ),
-    poor: (
-      <div className={styles.error}>
-        <span>强度：太短</span>
-      </div>
-    ),
-  };
-
   const [form] = Form.useForm();
-  useEffect(
-    () => () => {
-      clearInterval(interval);
-    },
-    [interval],
-  );
-  const onGetCaptcha = () => {
-    let counts = 59;
-    setCount(counts);
-    interval = window.setInterval(() => {
-      counts -= 1;
-      setCount(counts);
-      if (counts === 0) {
-        clearInterval(interval);
-      }
-    }, 1000);
-  };
-  const getPasswordStatus = () => {
-    const value = form.getFieldValue('password');
-    if (value && value.length > 9) {
-      return 'ok';
-    }
-    if (value && value.length > 5) {
-      return 'pass';
-    }
-    return 'poor';
-  };
-  const { loading: submitting, run: register } = useRequest<{
-    data: StateType;
-  }>(fakeRegister, {
-    manual: true,
-    onSuccess: (data, params) => {
-      if (data.status === 'ok') {
-        message.success('注册成功！');
-        history.push({
-          pathname: `/user/register-result?account=${params[0].email}`,
-        });
-      }
-    },
-  });
-  const onFinish = (values: Store) => {
-    register(values);
-  };
-  const checkConfirm = (_: any, value: string) => {
-    const promise = Promise;
-    if (value && value !== form.getFieldValue('password')) {
-      return promise.reject('两次输入的密码不匹配!');
-    }
-    return promise.resolve();
-  };
-  const checkPassword = (_: any, value: string) => {
-    const promise = Promise;
-    // 没有值的情况
-    if (!value) {
-      setVisible(!!value);
-      return promise.reject('请输入密码!');
-    }
-    // 有值的情况
-    if (!open) {
-      setVisible(!!value);
-    }
-    setPopover(!popover);
-    if (value.length < 6) {
-      return promise.reject('');
-    }
-    if (value && confirmDirty) {
-      form.validateFields(['confirm']);
-    }
-    return promise.resolve();
-  };
-  const changePrefix = (value: string) => {
-    setPrefix(value);
-  };
-  const renderPasswordProgress = () => {
-    const value = form.getFieldValue('password');
-    const passwordStatus = getPasswordStatus();
-    return value?.length ? (
-      <div
-        className={styles[`progress-${passwordStatus}` as keyof typeof styles]}
-      >
-        <Progress
-          status={passwordProgressMap[passwordStatus]}
-          strokeWidth={6}
-          percent={value.length * 10 > 100 ? 100 : value.length * 10}
-          showInfo={false}
-        />
-      </div>
-    ) : null;
-  };
-  return (
-    <div className={styles.main}>
-      <h3>注册</h3>
-      <Form form={form} name="UserRegister" onFinish={onFinish}>
-        <FormItem
-          name="email"
-          rules={[
-            {
-              required: true,
-              message: '请输入邮箱地址!',
-            },
-            {
-              type: 'email',
-              message: '邮箱地址格式错误!',
-            },
-          ]}
-        >
-          <Input size="large" placeholder="邮箱" />
-        </FormItem>
-        <Popover
-          getPopupContainer={(node) => {
-            if (node?.parentNode) {
-              return node.parentNode as HTMLElement;
-            }
-            return node;
-          }}
-          content={
-            open && (
-              <div
-                style={{
-                  padding: '4px 0',
-                }}
-              >
-                {passwordStatusMap[getPasswordStatus()]}
-                {renderPasswordProgress()}
-                <div
-                  style={{
-                    marginTop: 10,
-                  }}
-                >
-                  <span>请至少输入 6 个字符。请不要使用容易被猜到的密码。</span>
-                </div>
-              </div>
-            )
-          }
-          overlayStyle={{
-            width: 240,
-          }}
-          placement="right"
-          open={open}
-        >
-          <FormItem
-            name="password"
-            className={
-              form.getFieldValue('password') &&
-              form.getFieldValue('password').length > 0 &&
-              styles.password
-            }
-            rules={[
-              {
-                validator: checkPassword,
-              },
-            ]}
-          >
-            <Input
-              size="large"
-              type="password"
-              placeholder="至少6位密码，区分大小写"
-            />
-          </FormItem>
-        </Popover>
-        <FormItem
-          name="confirm"
-          rules={[
-            {
-              required: true,
-              message: '确认密码',
-            },
-            {
-              validator: checkConfirm,
-            },
-          ]}
-        >
-          <Input size="large" type="password" placeholder="确认密码" />
-        </FormItem>
-        <FormItem
-          name="mobile"
-          rules={[
-            {
-              required: true,
-              message: '请输入手机号!',
-            },
-            {
-              pattern: /^\d{11}$/,
-              message: '手机号格式错误!',
-            },
-          ]}
-        >
-          <Space.Compact style={{ width: '100%' }}>
-            <Select
-              size="large"
-              value={prefix}
-              onChange={changePrefix}
-              style={{
-                width: '30%',
-              }}
-            >
-              <Option value="86">+86</Option>
-              <Option value="87">+87</Option>
-            </Select>
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [invitationEmail, setInvitationEmail] = useState('');
+  const [validatingToken, setValidatingToken] = useState(true);
+  const [tokenError, setTokenError] = useState('');
 
-            <Input size="large" placeholder="手机号" />
-          </Space.Compact>
-        </FormItem>
-        <Row gutter={8}>
-          <Col span={16}>
-            <FormItem
-              name="captcha"
-              rules={[
-                {
-                  required: true,
-                  message: '请输入验证码!',
-                },
-              ]}
-            >
-              <Input size="large" placeholder="验证码" />
-            </FormItem>
-          </Col>
-          <Col span={8}>
-            <Button
-              size="large"
-              disabled={!!count}
-              className={styles.getCaptcha}
-              onClick={onGetCaptcha}
-            >
-              {count ? `${count} s` : '获取验证码'}
-            </Button>
-          </Col>
-        </Row>
-        <FormItem>
-          <div className={styles.footer}>
-            <Button
-              size="large"
-              loading={submitting}
-              className={styles.submit}
-              type="primary"
-              htmlType="submit"
-            >
-              <span>注册</span>
-            </Button>
-            <Link to="/user/login">
-              <span>使用已有账户登录</span>
-            </Link>
+  // 从 URL 获取 token
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token') || '';
+
+  // 验证邀请 token
+  useEffect(() => {
+    if (!token) {
+      setTokenError('缺少邀请令牌，请通过邀请链接访问此页面');
+      setValidatingToken(false);
+      return;
+    }
+    // 尝试校验 token（先显示页面，让用户填写信息）
+    setValidatingToken(false);
+    setInvitationEmail('');
+  }, [token]);
+
+  const handleSubmit = async (values: any) => {
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      await request('/api/v1/auth/register', {
+        method: 'POST',
+        data: {
+          token,
+          username: values.username,
+          password: values.password,
+          display_name: values.display_name || '',
+        },
+      });
+      message.success('注册成功！请使用新账号登录');
+      history.push('/user/login');
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        '注册失败，请重试';
+      setErrorMsg(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ConfigProvider
+      theme={{
+        token: {
+          borderRadius: 0,
+          colorPrimary: '#0f62fe',
+          fontFamily: "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif",
+        },
+        components: {
+          Input: {
+            borderRadius: 0,
+            colorBgContainer: '#f4f4f4',
+            colorBorder: 'transparent',
+            activeBorderColor: '#0f62fe',
+            hoverBorderColor: '#0f62fe',
+            controlHeightLG: 48,
+            paddingInlineLG: 16,
+          },
+          Button: {
+            borderRadius: 0,
+            controlHeightLG: 48,
+            primaryColor: '#ffffff',
+            defaultBg: '#0f62fe',
+            defaultColor: '#ffffff',
+          },
+        },
+      }}
+    >
+      <div className={styles.container}>
+        <Helmet>
+          <title>注册{Settings.title && ` - ${Settings.title}`}</title>
+        </Helmet>
+
+        {/* Left Panel - Branding */}
+        <div className={styles.leftPanel}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32 }}>
+            <img src="/logo.svg" alt="logo" style={{ height: 48, marginRight: 16 }} />
           </div>
-        </FormItem>
-      </Form>
-    </div>
+          <h1 className={styles.brandTitle}>
+            KY-AHS
+            <br />
+            Enterprise
+          </h1>
+          <p className={styles.brandSubtitle}>
+            智能化运维与故障自愈平台。
+            <br />
+            Intelligent Operations & Auto-Healing Platform.
+          </p>
+          <img src="/logo.svg" alt="" className={styles.logoWatermark} />
+        </div>
+
+        {/* Right Panel - Register Form */}
+        <div className={styles.rightPanel}>
+          <div className={styles.formContainer}>
+            <div className={styles.formTitle}>Create account</div>
+            <div className={styles.formSubtitle}>通过邀请链接创建您的账户</div>
+
+            {tokenError ? (
+              <div>
+                <Alert
+                  type="error"
+                  message={tokenError}
+                  showIcon
+                  style={{ marginBottom: 24, borderRadius: 0 }}
+                />
+                <Button
+                  type="primary"
+                  size="large"
+                  block
+                  onClick={() => history.push('/user/login')}
+                >
+                  返回登录
+                </Button>
+              </div>
+            ) : validatingToken ? (
+              <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                <Spin size="large" />
+                <div style={{ marginTop: 16, color: '#525252' }}>验证邀请令牌...</div>
+              </div>
+            ) : (
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleSubmit}
+                requiredMark={false}
+                size="large"
+              >
+                {errorMsg && (
+                  <Alert
+                    message={errorMsg}
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 24, borderRadius: 0 }}
+                  />
+                )}
+
+                <div style={{ marginBottom: 12 }}>
+                  <span className={styles.fieldLabel}>用户名 *</span>
+                  <Form.Item
+                    name="username"
+                    noStyle
+                    rules={[
+                      { required: true, message: '请输入用户名' },
+                      { min: 3, message: '用户名至少 3 个字符' },
+                      { max: 50, message: '用户名最多 50 个字符' },
+                      {
+                        pattern: /^[a-zA-Z0-9_.-]+$/,
+                        message: '只允许字母、数字、下划线、点和连字符',
+                      },
+                    ]}
+                  >
+                    <Input
+                      prefix={<UserOutlined style={{ color: '#a8a8a8' }} />}
+                      placeholder="请设置您的登录用户名"
+                    />
+                  </Form.Item>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <span className={styles.fieldLabel}>显示名称</span>
+                  <Form.Item name="display_name" noStyle>
+                    <Input
+                      prefix={<IdcardOutlined style={{ color: '#a8a8a8' }} />}
+                      placeholder="可选，如：张三"
+                    />
+                  </Form.Item>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <span className={styles.fieldLabel}>密码 *</span>
+                  <Form.Item
+                    name="password"
+                    noStyle
+                    rules={[
+                      { required: true, message: '请输入密码' },
+                      { min: 8, message: '密码至少 8 个字符' },
+                    ]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined style={{ color: '#a8a8a8' }} />}
+                      placeholder="至少 8 位密码"
+                    />
+                  </Form.Item>
+                </div>
+
+                <div style={{ marginBottom: 20 }}>
+                  <span className={styles.fieldLabel}>确认密码 *</span>
+                  <Form.Item
+                    name="confirm"
+                    noStyle
+                    dependencies={['password']}
+                    rules={[
+                      { required: true, message: '请确认密码' },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value || getFieldValue('password') === value) {
+                            return Promise.resolve();
+                          }
+                          return Promise.reject(new Error('两次输入的密码不一致'));
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input.Password
+                      prefix={<LockOutlined style={{ color: '#a8a8a8' }} />}
+                      placeholder="再次输入密码"
+                    />
+                  </Form.Item>
+                </div>
+
+                <Form.Item style={{ marginBottom: 16 }}>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    size="large"
+                    loading={submitting}
+                    block
+                  >
+                    注 册
+                  </Button>
+                </Form.Item>
+
+                <div style={{ textAlign: 'center' }}>
+                  <span style={{ fontSize: 13, color: '#525252' }}>已有账号？</span>{' '}
+                  <Link
+                    to="/user/login"
+                    style={{ fontSize: 13, color: '#0f62fe', fontWeight: 500 }}
+                  >
+                    返回登录
+                  </Link>
+                </div>
+              </Form>
+            )}
+          </div>
+          <div className={styles.footerContainer}>
+            Copyright © 2026 KY-AHS Experience Technology Department
+          </div>
+        </div>
+      </div>
+    </ConfigProvider>
   );
 };
-export default Register;
+
+export default RegisterPage;
