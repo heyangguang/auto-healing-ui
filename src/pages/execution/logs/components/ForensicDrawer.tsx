@@ -112,8 +112,7 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
             size={1000}
             open={open}
             onClose={onClose}
-            styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' } }}
-            styles={{ header: { padding: '16px 24px' } }}
+            styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' }, header: { padding: '16px 24px' } }}
             destroyOnHidden
             extra={
                 <Space>

@@ -81,6 +81,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
                 setStreamController(null);
             }
         }
+        return undefined;
     }, [open, runId, run?.status]);
 
     const handleCancel = async () => {

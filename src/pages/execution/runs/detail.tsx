@@ -21,7 +21,7 @@ import {
     CodeOutlined,
     PlayCircleOutlined,
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import {
     Button, Tag, Space, Typography, message, Statistic, Tooltip, Alert, Drawer,
 } from 'antd';
@@ -55,10 +55,11 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 // ==================== 主组件 ====================
 const ExecutionRunDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const access = useAccess();
     const fromUrl = new URLSearchParams(window.location.search).get('from');
     const handleGoBack = useCallback(() => {
         if (fromUrl) { history.push(fromUrl); }
-        else if (window.history.length > 1) { history.goBack(); }
+        else if (window.history.length > 1) { history.back(); }
         else { history.push('/execution/logs'); }
     }, [fromUrl]);
     const [loading, setLoading] = useState(true);
@@ -186,10 +187,10 @@ const ExecutionRunDetail: React.FC = () => {
                 </div>
                 <Space size={8}>
                     {run?.status && run.status !== 'running' && run.status !== 'pending' && (
-                        <Button size="small" icon={<RedoOutlined />} onClick={handleRetry} loading={retrying}>重试</Button>
+                        <Button size="small" icon={<RedoOutlined />} onClick={handleRetry} loading={retrying} disabled={!access.canExecuteTask}>重试</Button>
                     )}
                     {run?.status === 'running' && (
-                        <Button size="small" danger onClick={handleCancel} loading={cancelling} icon={<CloseCircleOutlined />}>终止</Button>
+                        <Button size="small" danger onClick={handleCancel} loading={cancelling} disabled={!access.canCancelRun} icon={<CloseCircleOutlined />}>终止</Button>
                     )}
                     <Button size="small" icon={<ReloadOutlined spin={loading || streaming} />} onClick={handleRefresh}>刷新</Button>
                 </Space>

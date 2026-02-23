@@ -18,7 +18,7 @@ import type { StandardColumnDef, SearchField, AdvancedSearchField } from '@/comp
 import HostSelector from '@/components/HostSelector';
 
 import {
-    getSecretsSources,
+    getSecretsSources, updateSecretsSource,
     deleteSecretsSource, testSecretsQuery,
     enableSecretsSource, disableSecretsSource,
     getSecretsSourcesStats,
@@ -341,7 +341,7 @@ const SecretsSourceList: React.FC = () => {
                                 type="link" size="small"
                                 icon={testingId === record.id ? <Spin size="small" /> : <ApiOutlined />}
                                 onClick={() => handleOpenTestQuery(record)}
-                                disabled={!!testingId || !isActive}
+                                disabled={!!testingId || !isActive || !canManage}
                             />
                         </Tooltip>
                         <Tooltip title="查看">
@@ -363,7 +363,7 @@ const SecretsSourceList: React.FC = () => {
                                 <Button type="link" size="small"
                                     icon={<StarOutlined />}
                                     onClick={() => handleSetDefault(record)}
-                                    disabled={!isActive} />
+                                    disabled={!isActive || !canManage} />
                             </Tooltip>
                         )}
                         <Switch
@@ -543,7 +543,7 @@ const SecretsSourceList: React.FC = () => {
                                 <Space size="small">
                                     <Button size="small" icon={<ApiOutlined />}
                                         onClick={() => handleOpenTestQuery(currentSource)}
-                                        disabled={currentSource.status !== 'active'}>
+                                        disabled={currentSource.status !== 'active' || !canManage}>
                                         测试凭据
                                     </Button>
                                     <Button size="small" icon={<EditOutlined />}

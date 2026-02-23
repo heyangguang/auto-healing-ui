@@ -506,6 +506,7 @@ const ExecuteTaskPage: React.FC = () => {
             advancedSearchFields={launchpadAdvancedSearchFields}
             onSearch={handleLaunchpadSearch}
             primaryActionLabel="新建模板"
+            primaryActionDisabled={!access.canCreateTask}
             onPrimaryAction={() => history.push('/execution/templates/create')}
         >
             {/* ===== Card Grid ===== */}
@@ -654,9 +655,9 @@ const ExecuteTaskPage: React.FC = () => {
     const renderMissionControl = () => {
         if (!selectedTemplate) return null;
 
-        const variables = templatePlaybook?.variables || templatePlaybook?.scanned_variables || [];
-        const requiredVars = variables.filter(v => v.required);
-        const optionalVars = variables.filter(v => !v.required);
+        const variables: AutoHealing.PlaybookVariable[] = templatePlaybook?.variables || templatePlaybook?.scanned_variables || [];
+        const requiredVars = variables.filter((v: AutoHealing.PlaybookVariable) => v.required);
+        const optionalVars = variables.filter((v: AutoHealing.PlaybookVariable) => !v.required);
 
         // Pre-calculated counts for merge UI
         const templateSecretsCount = selectedTemplate.secrets_source_ids?.length || 0;
@@ -701,9 +702,10 @@ const ExecuteTaskPage: React.FC = () => {
                                             <div style={{ fontSize: 12 }}>
                                                 Playbook 变量已变更
                                                 <ul style={{ paddingLeft: 16, margin: '4px 0' }}>
-                                                    {selectedTemplate.changed_variables?.map(v => (
-                                                        <li key={v}><Text type="danger" code>{v}</Text></li>
-                                                    ))}
+                                                    {selectedTemplate.changed_variables?.map((v: any) => {
+                                                        const name = typeof v === 'string' ? v : v?.name;
+                                                        return <li key={name}><Text type="danger" code>{name}</Text></li>;
+                                                    })}
                                                 </ul>
                                             </div>
                                         }
@@ -712,7 +714,7 @@ const ExecuteTaskPage: React.FC = () => {
                                         icon={<WarningOutlined />}
                                         style={{ marginBottom: 16 }}
                                         action={
-                                            <Button size="small" danger onClick={handleConfirmReview} loading={syncing} icon={<SyncOutlined spin={syncing} />}>
+                                            <Button size="small" danger onClick={handleConfirmReview} loading={syncing} disabled={!access.canUpdateTask} icon={<SyncOutlined spin={syncing} />}>
                                                 确认
                                             </Button>
                                         }
@@ -895,7 +897,7 @@ const ExecuteTaskPage: React.FC = () => {
                                     </Col>
                                 </Row>
 
-                                <Divider orientation="left" style={{ margin: '24px 0 16px' }} plain>
+                                <Divider orientationMargin={0} style={{ margin: '24px 0 16px' }} plain>
                                     <Space><CodeOutlined /> 变量参数 (Variables)</Space>
                                 </Divider>
 
@@ -910,7 +912,7 @@ const ExecuteTaskPage: React.FC = () => {
                                             <div style={{ marginBottom: 24 }}>
                                                 <Text type="danger" strong style={{ marginBottom: 12, display: 'block' }}>必填参数 / REQUIRED</Text>
                                                 <Row gutter={[24, 0]}>
-                                                    {requiredVars.map(v => (
+                                                    {requiredVars.map((v: AutoHealing.PlaybookVariable) => (
                                                         <Col key={v.name} span={12}>
                                                             <div className="variable-form-item">
                                                                 <div style={{ marginBottom: 4 }}>
@@ -934,7 +936,7 @@ const ExecuteTaskPage: React.FC = () => {
                                             <div>
                                                 <Text type="secondary" strong style={{ marginBottom: 12, display: 'block' }}>可选参数 / OPTIONAL</Text>
                                                 <Row gutter={[24, 0]}>
-                                                    {optionalVars.map(v => (
+                                                    {optionalVars.map((v: AutoHealing.PlaybookVariable) => (
                                                         <Col key={v.name} span={12}>
                                                             <div className="variable-form-item">
                                                                 <div style={{ marginBottom: 4 }}>
