@@ -1,17 +1,22 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
     Tag, Button, Space, message, Spin, Avatar, Typography,
-    Empty, Table, Form, Select, Modal, Input, Tooltip,
+    Empty, Table, Form, Select, Modal, Input, Tooltip, Popconfirm,
+    Tabs, Switch, Badge,
 } from 'antd';
 import {
     ArrowLeftOutlined, CrownOutlined, PlusOutlined,
     TeamOutlined, UserAddOutlined, SettingOutlined,
+    DeleteOutlined, MailOutlined, LinkOutlined,
+    CopyOutlined, CloseCircleOutlined, SendOutlined,
+    StopOutlined, CheckCircleOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
-    getTenant, getTenantMembers, setTenantAdmin,
-    updateTenantMemberRole, createTenantUser,
+    getTenant, getTenantMembers,
+    updateTenantMemberRole, addTenantMember, removeTenantMember,
+    inviteToTenant, getTenantInvitations, cancelTenantInvitation,
 } from '@/services/auto-healing/platform/tenants';
 import { getPlatformUsersSimple } from '@/services/auto-healing/platform/users';
 import { getRoles } from '@/services/auto-healing/roles';
@@ -24,6 +29,18 @@ const ROLE_COLOR: Record<string, string> = {
     admin: 'blue',
     operator: 'cyan',
     viewer: 'default',
+    devops_engineer: 'geekblue',
+    healing_engineer: 'green',
+    auditor: 'orange',
+    monitor_admin: 'purple',
+    notification_manager: 'magenta',
+};
+
+const INV_STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    pending: { label: '待接受', color: 'processing', icon: <ClockCircleOutlined /> },
+    accepted: { label: '已接受', color: 'success', icon: <CheckCircleOutlined /> },
+    expired: { label: '已过期', color: 'default', icon: <StopOutlined /> },
+    cancelled: { label: '已取消', color: 'default', icon: <CloseCircleOutlined /> },
 };
 
 const TenantMembersPage: React.FC = () => {
@@ -33,16 +50,24 @@ const TenantMembersPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<any[]>([]);
     const [membersLoading, setMembersLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState('members');
 
-    // 设置管理员
-    const [setAdminModalOpen, setSetAdminModalOpen] = useState(false);
-    const [setAdminForm] = Form.useForm();
+    // 添加成员
+    const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
+    const [addMemberForm] = Form.useForm();
     const [simpleUsers, setSimpleUsers] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState(false);
 
-    // 新建用户
-    const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
-    const [createUserForm] = Form.useForm();
+    // 邀请用户
+    const [inviteModalOpen, setInviteModalOpen] = useState(false);
+    const [inviteForm] = Form.useForm();
+    const [inviteResult, setInviteResult] = useState<any>(null); // 邀请结果（含链接）
+
+    // 邀请列表
+    const [invitations, setInvitations] = useState<any[]>([]);
+    const [invTotal, setInvTotal] = useState(0);
+    const [invLoading, setInvLoading] = useState(false);
+    const [invPage, setInvPage] = useState(1);
 
     // 变更角色
     const [changeRoleModalOpen, setChangeRoleModalOpen] = useState(false);
@@ -83,63 +108,107 @@ const TenantMembersPage: React.FC = () => {
         } catch { }
     }, []);
 
+    const loadInvitations = useCallback(async (page = 1) => {
+        if (!id) return;
+        setInvLoading(true);
+        try {
+            const res = await getTenantInvitations(id, { page, page_size: 20 });
+            setInvitations((res as any)?.data || []);
+            setInvTotal((res as any)?.total || 0);
+            setInvPage(page);
+        } catch {
+            message.error('加载邀请列表失败');
+        } finally {
+            setInvLoading(false);
+        }
+    }, [id]);
+
     useEffect(() => {
         loadTenant();
         loadMembers();
         loadSimpleUsers();
+        loadInvitations();
         getRoles().then((res: any) => {
+            // 只显示系统级租户角色，排除自定义角色和 impersonation_accessor
             const roles = (res?.data || []).filter((r: any) =>
-                ['admin', 'operator', 'viewer'].includes(r.name)
+                r.is_system === true &&
+                (r.scope === 'tenant' || !r.name?.startsWith('platform_')) &&
+                r.name !== 'impersonation_accessor'
             );
             setTenantRoles(roles);
         }).catch(() => { });
-    }, [loadTenant, loadMembers, loadSimpleUsers]);
+    }, [loadTenant, loadMembers, loadSimpleUsers, loadInvitations]);
 
-    // 选人池：排除已有 admin + 排除 platform_admin
-    const existingAdminUserIds = new Set(
-        members.filter(m => m.role?.name === 'admin').map((m: any) => m.user_id)
-    );
-    const availableForAdmin = simpleUsers.filter(
-        u => !existingAdminUserIds.has(u.id) && !u.is_platform_admin
+    // 已是成员的 ID Set
+    const memberUserIds = new Set(members.map((m: any) => m.user_id));
+
+    // 选人池：排除已在租户 + 排除 platform_admin
+    const availableForAdd = simpleUsers.filter(
+        u => !memberUserIds.has(u.id) && !u.is_platform_admin
     );
 
-    // 设置管理员
-    const handleSetAdmin = async (values: { user_id: string }) => {
+    // ============ 添加成员 ============
+    const handleAddMember = async (values: { user_id: string; role_id: string }) => {
         if (!id) return;
         setSubmitting(true);
         try {
-            await setTenantAdmin(id, { user_id: values.user_id });
-            message.success('已设置租户管理员');
-            setSetAdminModalOpen(false);
-            setAdminForm.resetFields();
+            await addTenantMember(id, values);
+            message.success('成员添加成功');
+            setAddMemberModalOpen(false);
+            addMemberForm.resetFields();
             loadMembers();
             loadSimpleUsers();
-        } catch {
-            message.error('设置失败');
+        } catch (e: any) {
+            message.error(e?.response?.data?.message || e?.data?.message || '添加失败');
         } finally {
             setSubmitting(false);
         }
     };
 
-    // 新建用户
-    const handleCreateUser = async (values: any) => {
+    // ============ 移除成员 ============
+    const handleRemoveMember = async (userId: string) => {
+        if (!id) return;
+        try {
+            await removeTenantMember(id, userId);
+            message.success('成员已移除');
+            loadMembers();
+            loadSimpleUsers();
+        } catch (e: any) {
+            message.error(e?.response?.data?.message || e?.data?.message || '移除失败');
+        }
+    };
+
+    // ============ 邀请用户 ============
+    const handleInvite = async (values: { email: string; role_id: string; send_email: boolean }) => {
         if (!id) return;
         setSubmitting(true);
         try {
-            await createTenantUser(id, values);
-            message.success('用户创建成功，已加入该租户');
-            setCreateUserModalOpen(false);
-            createUserForm.resetFields();
-            loadMembers();
-            loadSimpleUsers();
-        } catch {
-            message.error('创建失败');
+            const res = await inviteToTenant(id, values);
+            const data = (res as any)?.data || res;
+            setInviteResult(data);
+            message.success('邀请已创建');
+            inviteForm.resetFields();
+            loadInvitations();
+        } catch (e: any) {
+            message.error(e?.response?.data?.message || e?.data?.message || '邀请失败');
         } finally {
             setSubmitting(false);
         }
     };
 
-    // 变更角色
+    // ============ 取消邀请 ============
+    const handleCancelInvitation = async (invId: string) => {
+        if (!id) return;
+        try {
+            await cancelTenantInvitation(id, invId);
+            message.success('邀请已取消');
+            loadInvitations(invPage);
+        } catch (e: any) {
+            message.error(e?.response?.data?.message || e?.data?.message || '取消失败');
+        }
+    };
+
+    // ============ 变更角色 ============
     const openChangeRole = (member: any) => {
         setChangeRoleTarget(member);
         changeRoleForm.setFieldValue('role_id', member.role_id);
@@ -162,6 +231,22 @@ const TenantMembersPage: React.FC = () => {
         }
     };
 
+    // ============ 复制链接 ============
+    const copyInvitationLink = (url: string) => {
+        navigator.clipboard.writeText(url).then(() => {
+            message.success('邀请链接已复制到剪贴板');
+        }).catch(() => {
+            // fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = url;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            message.success('邀请链接已复制');
+        });
+    };
+
     if (loading) {
         return (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
@@ -170,7 +255,8 @@ const TenantMembersPage: React.FC = () => {
         );
     }
 
-    const columns = [
+    // ============ 成员表格列 ============
+    const memberColumns = [
         {
             title: '成员',
             dataIndex: 'user',
@@ -206,6 +292,16 @@ const TenantMembersPage: React.FC = () => {
             },
         },
         {
+            title: '邮箱',
+            key: 'email',
+            width: 200,
+            render: (_: any, record: any) => (
+                <span style={{ fontSize: 12, color: '#595959' }}>
+                    {record.user?.email || '-'}
+                </span>
+            ),
+        },
+        {
             title: '角色',
             dataIndex: 'role',
             key: 'role',
@@ -230,20 +326,138 @@ const TenantMembersPage: React.FC = () => {
         {
             title: '操作',
             key: 'action',
-            width: 100,
+            width: 140,
             render: (_: any, record: any) => (
-                <Button
-                    type="link" size="small"
-                    icon={<SettingOutlined />}
-                    disabled={!access.canManagePlatformTenants}
-                    onClick={() => openChangeRole(record)}
-                    style={{ padding: 0, fontSize: 12 }}
-                >
-                    变更角色
-                </Button>
+                <Space size={4}>
+                    <Button
+                        type="link" size="small"
+                        icon={<SettingOutlined />}
+                        disabled={!access.canManagePlatformTenants}
+                        onClick={() => openChangeRole(record)}
+                        style={{ padding: 0, fontSize: 12 }}
+                    >
+                        变更角色
+                    </Button>
+                    <Popconfirm
+                        title="确认移除该成员？"
+                        description="移除后该用户将无法访问此租户的资源"
+                        onConfirm={() => handleRemoveMember(record.user_id)}
+                        okText="确认移除"
+                        cancelText="取消"
+                        okButtonProps={{ danger: true }}
+                    >
+                        <Button
+                            type="link" size="small" danger
+                            icon={<DeleteOutlined />}
+                            disabled={!access.canManagePlatformTenants}
+                            style={{ padding: 0, fontSize: 12 }}
+                        >
+                            移除
+                        </Button>
+                    </Popconfirm>
+                </Space>
             ),
         },
     ];
+
+    // ============ 邀请表格列 ============
+    const invitationColumns = [
+        {
+            title: '受邀邮箱',
+            dataIndex: 'email',
+            key: 'email',
+            render: (email: string) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MailOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
+                    <span style={{ fontSize: 13, color: '#262626' }}>{email}</span>
+                </div>
+            ),
+        },
+        {
+            title: '角色',
+            key: 'role',
+            width: 110,
+            render: (_: any, record: any) => {
+                const roleName = record.role?.name;
+                const roleDisplay = record.role?.display_name || roleName || '-';
+                return <Tag color={ROLE_COLOR[roleName] || 'default'} style={{ margin: 0 }}>{roleDisplay}</Tag>;
+            },
+        },
+        {
+            title: '状态',
+            dataIndex: 'status',
+            key: 'status',
+            width: 100,
+            render: (status: string) => {
+                const s = INV_STATUS_MAP[status] || { label: status, color: 'default', icon: null };
+                return <Tag color={s.color} icon={s.icon} style={{ margin: 0 }}>{s.label}</Tag>;
+            },
+        },
+        {
+            title: '邀请人',
+            key: 'inviter',
+            width: 120,
+            render: (_: any, record: any) => (
+                <span style={{ fontSize: 12, color: '#595959' }}>
+                    {record.inviter?.display_name || record.inviter?.username || '-'}
+                </span>
+            ),
+        },
+        {
+            title: '过期时间',
+            dataIndex: 'expires_at',
+            key: 'expires_at',
+            width: 150,
+            render: (v: string) => (
+                <span style={{ fontSize: 12, color: '#8c8c8c', fontVariantNumeric: 'tabular-nums' }}>
+                    {v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'}
+                </span>
+            ),
+        },
+        {
+            title: '操作',
+            key: 'action',
+            width: 120,
+            render: (_: any, record: any) => (
+                record.status === 'pending' ? (
+                    <Space size={0}>
+                        {record.invitation_url && (
+                            <Tooltip title="复制邀请链接">
+                                <Button
+                                    type="link" size="small"
+                                    icon={<CopyOutlined />}
+                                    style={{ padding: '0 4px', fontSize: 12 }}
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(record.invitation_url);
+                                        message.success('邀请链接已复制');
+                                    }}
+                                >
+                                    复制
+                                </Button>
+                            </Tooltip>
+                        )}
+                        <Popconfirm
+                            title="确认取消此邀请？"
+                            onConfirm={() => handleCancelInvitation(record.id)}
+                            okText="确认" cancelText="取消"
+                        >
+                            <Button
+                                type="link" size="small" danger
+                                icon={<CloseCircleOutlined />}
+                                disabled={!access.canManagePlatformTenants}
+                                style={{ padding: '0 4px', fontSize: 12 }}
+                            >
+                                取消
+                            </Button>
+                        </Popconfirm>
+                    </Space>
+                ) : <span style={{ color: '#d9d9d9', fontSize: 12 }}>—</span>
+            ),
+        },
+    ];
+
+    // 待处理的邀请数
+    const pendingInvCount = invitations.filter(i => i.status === 'pending').length;
 
     return (
         <div className="tenant-members-page">
@@ -254,18 +468,18 @@ const TenantMembersPage: React.FC = () => {
                     <Space size={8}>
                         <Button
                             type="primary"
-                            icon={<CrownOutlined />}
+                            icon={<SendOutlined />}
                             disabled={!access.canManagePlatformTenants}
-                            onClick={() => setSetAdminModalOpen(true)}
+                            onClick={() => { setInviteResult(null); setInviteModalOpen(true); }}
                         >
-                            设置管理员
+                            邀请用户
                         </Button>
                         <Button
-                            icon={<PlusOutlined />}
+                            icon={<UserAddOutlined />}
                             disabled={!access.canManagePlatformTenants}
-                            onClick={() => setCreateUserModalOpen(true)}
+                            onClick={() => setAddMemberModalOpen(true)}
                         >
-                            新建用户
+                            添加成员
                         </Button>
                     </Space>
                 }
@@ -273,51 +487,101 @@ const TenantMembersPage: React.FC = () => {
 
             <div className="tenant-members-body">
                 <div className="tenant-members-card">
-                    {/* 操作提示 */}
-                    <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        marginBottom: 16,
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <TeamOutlined style={{ color: '#1677ff', fontSize: 14 }} />
-                            <span style={{ fontSize: 14, fontWeight: 600, color: '#262626' }}>全部成员</span>
-                            <span style={{
-                                fontSize: 11, color: '#8c8c8c',
-                                background: '#f5f5f5', padding: '1px 8px',
-                                borderRadius: 10, fontVariantNumeric: 'tabular-nums',
-                            }}>{members.length}</span>
-                        </div>
-                    </div>
-
-                    <Spin spinning={membersLoading}>
-                        {members.length === 0 && !membersLoading ? (
-                            <Empty
-                                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description="该租户暂无成员"
-                                style={{ padding: '40px 0' }}
-                            >
-                                <Space>
-                                    <Button type="primary" icon={<CrownOutlined />}
-                                        onClick={() => setSetAdminModalOpen(true)}>
-                                        设置管理员
-                                    </Button>
-                                    <Button icon={<PlusOutlined />}
-                                        onClick={() => setCreateUserModalOpen(true)}>
-                                        新建用户
-                                    </Button>
-                                </Space>
-                            </Empty>
-                        ) : (
-                            <Table
-                                dataSource={members}
-                                columns={columns}
-                                rowKey="id"
-                                pagination={false}
-                                size="small"
-                                className="tenant-members-table"
-                            />
-                        )}
-                    </Spin>
+                    <Tabs
+                        activeKey={activeTab}
+                        onChange={(key) => {
+                            setActiveTab(key);
+                            if (key === 'invitations') loadInvitations();
+                        }}
+                        size="small"
+                        items={[
+                            {
+                                key: 'members',
+                                label: (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <TeamOutlined />
+                                        全部成员
+                                        <span style={{
+                                            fontSize: 11, color: '#8c8c8c',
+                                            background: '#f5f5f5', padding: '1px 8px',
+                                            borderRadius: 10, fontVariantNumeric: 'tabular-nums',
+                                        }}>{members.length}</span>
+                                    </span>
+                                ),
+                                children: (
+                                    <Spin spinning={membersLoading}>
+                                        {members.length === 0 && !membersLoading ? (
+                                            <Empty
+                                                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                                description="该租户暂无成员"
+                                                style={{ padding: '40px 0' }}
+                                            >
+                                                <Space>
+                                                    <Button type="primary" icon={<SendOutlined />}
+                                                        onClick={() => { setInviteResult(null); setInviteModalOpen(true); }}>
+                                                        邀请用户
+                                                    </Button>
+                                                    <Button icon={<UserAddOutlined />}
+                                                        onClick={() => setAddMemberModalOpen(true)}>
+                                                        添加成员
+                                                    </Button>
+                                                </Space>
+                                            </Empty>
+                                        ) : (
+                                            <Table
+                                                dataSource={members}
+                                                columns={memberColumns}
+                                                rowKey="id"
+                                                pagination={false}
+                                                size="small"
+                                                className="tenant-members-table"
+                                            />
+                                        )}
+                                    </Spin>
+                                ),
+                            },
+                            {
+                                key: 'invitations',
+                                label: (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <MailOutlined />
+                                        邀请记录
+                                        {pendingInvCount > 0 && (
+                                            <Badge count={pendingInvCount} size="small"
+                                                style={{ boxShadow: 'none' }} />
+                                        )}
+                                    </span>
+                                ),
+                                children: (
+                                    <Spin spinning={invLoading}>
+                                        {invitations.length === 0 && !invLoading ? (
+                                            <Empty
+                                                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                                description="暂无邀请记录"
+                                                style={{ padding: '40px 0' }}
+                                            />
+                                        ) : (
+                                            <Table
+                                                dataSource={invitations}
+                                                columns={invitationColumns}
+                                                rowKey="id"
+                                                size="small"
+                                                className="tenant-members-table"
+                                                pagination={invTotal > 20 ? {
+                                                    current: invPage,
+                                                    total: invTotal,
+                                                    pageSize: 20,
+                                                    size: 'small',
+                                                    showTotal: (t) => `共 ${t} 条`,
+                                                    onChange: (p) => loadInvitations(p),
+                                                } : false}
+                                            />
+                                        )}
+                                    </Spin>
+                                ),
+                            },
+                        ]}
+                    />
 
                     {/* 角色说明 */}
                     <div style={{
@@ -326,65 +590,147 @@ const TenantMembersPage: React.FC = () => {
                         borderRadius: 2, fontSize: 12, color: '#8c8c8c', lineHeight: 1.8,
                     }}>
                         <b style={{ color: '#595959' }}>角色说明：</b>
-                        <Tag color="blue" style={{ margin: '0 2px' }}>管理员</Tag> 管理租户内所有资源 ·
-                        <Tag color="cyan" style={{ margin: '0 2px' }}>操作员</Tag> 执行操作，无管理权限 ·
-                        <Tag color="default" style={{ margin: '0 2px' }}>只读</Tag> 只读用户
+                        {tenantRoles.map((role, i) => (
+                            <span key={role.id}>
+                                <b style={{ color: '#262626' }}>{role.display_name}</b>
+                                {' '}{role.description || role.name}
+                                {i < tenantRoles.length - 1 && ' · '}
+                            </span>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            {/* ===== 设置管理员 Modal ===== */}
+            {/* ===== 添加成员 Modal ===== */}
             <Modal
-                title={<Space><CrownOutlined style={{ color: '#fa8c16' }} />为「{tenant?.name}」设置管理员</Space>}
-                open={setAdminModalOpen}
-                onCancel={() => { setSetAdminModalOpen(false); setAdminForm.resetFields(); }}
-                onOk={() => setAdminForm.submit()}
-                okText="确认设置" confirmLoading={submitting} destroyOnHidden width={440}
+                title={<Space><UserAddOutlined style={{ color: '#1677ff' }} />为「{tenant?.name}」添加成员</Space>}
+                open={addMemberModalOpen}
+                onCancel={() => { setAddMemberModalOpen(false); addMemberForm.resetFields(); }}
+                onOk={() => addMemberForm.submit()}
+                okText="添加" confirmLoading={submitting} destroyOnHidden width={440}
             >
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 2, fontSize: 12, color: '#7c5c00' }}>
-                    从全量用户池中选人，后端将自动为其在该租户赋予 <b>admin</b> 角色。
+                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 2, fontSize: 12, color: '#0050b3' }}>
+                    从平台用户池中选择已有用户添加到该租户，并分配角色。
                 </div>
-                <Form form={setAdminForm} layout="vertical" onFinish={handleSetAdmin} style={{ marginTop: 8 }}>
+                <Form form={addMemberForm} layout="vertical" onFinish={handleAddMember} style={{ marginTop: 8 }}>
                     <Form.Item name="user_id" label="选择用户" rules={[{ required: true, message: '请选择用户' }]}>
                         <Select
                             showSearch
                             placeholder="搜索用户名或姓名"
                             filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-                            options={availableForAdmin.map(u => ({
+                            options={availableForAdd.map(u => ({
                                 label: `${u.display_name || u.username} (@${u.username})`,
                                 value: u.id,
                             }))}
                             notFoundContent={<div style={{ textAlign: 'center', padding: '12px 0', color: '#8c8c8c' }}>暂无可选用户</div>}
                         />
                     </Form.Item>
+                    <Form.Item name="role_id" label="分配角色" rules={[{ required: true, message: '请选择角色' }]}>
+                        <Select placeholder="选择角色">
+                            {tenantRoles.map(role => (
+                                <Select.Option key={role.id} value={role.id}>
+                                    {role.display_name}
+                                    {role.description && (
+                                        <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 8 }}>— {role.description}</span>
+                                    )}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
                 </Form>
             </Modal>
 
-            {/* ===== 新建租户用户 Modal ===== */}
+            {/* ===== 邀请用户 Modal ===== */}
             <Modal
-                title={<Space><PlusOutlined style={{ color: '#1677ff' }} />为「{tenant?.name}」新建用户</Space>}
-                open={createUserModalOpen}
-                onCancel={() => { setCreateUserModalOpen(false); createUserForm.resetFields(); }}
-                onOk={() => createUserForm.submit()}
-                okText="创建" confirmLoading={submitting} destroyOnHidden width={440}
+                title={<Space><SendOutlined style={{ color: '#1677ff' }} />邀请用户加入「{tenant?.name}」</Space>}
+                open={inviteModalOpen}
+                onCancel={() => { setInviteModalOpen(false); inviteForm.resetFields(); setInviteResult(null); }}
+                footer={inviteResult ? (
+                    <Button onClick={() => { setInviteModalOpen(false); inviteForm.resetFields(); setInviteResult(null); }}>
+                        完成
+                    </Button>
+                ) : undefined}
+                onOk={inviteResult ? undefined : () => inviteForm.submit()}
+                okText="发送邀请" confirmLoading={submitting} destroyOnHidden width={520}
             >
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 2, fontSize: 12, color: '#0050b3' }}>
-                    创建的用户将自动加入该租户，角色默认为 <b>viewer</b>（只读）。如需设为管理员，请创建后使用「设置管理员」功能。
-                </div>
-                <Form form={createUserForm} layout="vertical" onFinish={handleCreateUser} style={{ marginTop: 8 }}>
-                    <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }, { pattern: /^[a-zA-Z0-9_]+$/, message: '仅支持字母、数字、下划线' }]}>
-                        <Input placeholder="登录用户名" autoComplete="off" />
-                    </Form.Item>
-                    <Form.Item name="display_name" label="显示名称">
-                        <Input placeholder="可选，用于界面展示" />
-                    </Form.Item>
-                    <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '邮箱格式不正确' }]}>
-                        <Input placeholder="user@example.com" />
-                    </Form.Item>
-                    <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }, { min: 8, message: '密码至少 8 位' }]}>
-                        <Input.Password placeholder="至少 8 位" autoComplete="new-password" />
-                    </Form.Item>
-                </Form>
+                {inviteResult ? (
+                    /* 邀请结果：展示链接 */
+                    <div>
+                        <div style={{
+                            padding: '14px 16px', background: '#f6ffed', border: '1px solid #b7eb8f',
+                            borderRadius: 4, marginBottom: 16, textAlign: 'center',
+                        }}>
+                            <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 18, marginRight: 8 }} />
+                            <span style={{ fontWeight: 600, color: '#135200', fontSize: 14 }}>邀请已创建</span>
+                            {inviteResult.email_message && (
+                                <div style={{ fontSize: 12, color: '#389e0d', marginTop: 6 }}>
+                                    {inviteResult.email_message}
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ marginBottom: 8, fontSize: 12, color: '#595959', fontWeight: 500 }}>
+                            <LinkOutlined /> 邀请链接（有效期 7 天）：
+                        </div>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '10px 12px', background: '#fafafa', border: '1px solid #e8e8e8',
+                            borderRadius: 4,
+                        }}>
+                            <Input
+                                value={inviteResult.invitation_url}
+                                readOnly
+                                style={{ flex: 1, fontSize: 12, border: 'none', background: 'transparent', padding: 0 }}
+                            />
+                            <Button
+                                type="primary" size="small"
+                                icon={<CopyOutlined />}
+                                onClick={() => copyInvitationLink(inviteResult.invitation_url)}
+                            >
+                                复制
+                            </Button>
+                        </div>
+
+                        <div style={{ marginTop: 12, fontSize: 11, color: '#8c8c8c', lineHeight: 1.6 }}>
+                            · 用户通过此链接可注册并自动加入「{tenant?.name}」<br />
+                            · 每个邮箱只能有一个待处理邀请
+                        </div>
+                    </div>
+                ) : (
+                    /* 邀请表单 */
+                    <>
+                        <div style={{ marginBottom: 12, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 2, fontSize: 12, color: '#0050b3' }}>
+                            输入邮箱地址邀请新用户，系统会生成邀请链接。用户通过链接注册后自动加入此租户。
+                        </div>
+                        <Form form={inviteForm} layout="vertical" onFinish={handleInvite}
+                            initialValues={{ send_email: false }} style={{ marginTop: 8 }}
+                        >
+                            <Form.Item name="email" label="邮箱地址" rules={[
+                                { required: true, message: '请输入邮箱' },
+                                { type: 'email', message: '邮箱格式不正确' },
+                            ]}>
+                                <Input placeholder="user@example.com" prefix={<MailOutlined style={{ color: '#bfbfbf' }} />} />
+                            </Form.Item>
+                            <Form.Item name="role_id" label="分配角色" rules={[{ required: true, message: '请选择角色' }]}>
+                                <Select placeholder="选择加入后的角色">
+                                    {tenantRoles.map(role => (
+                                        <Select.Option key={role.id} value={role.id}>
+                                            {role.display_name}
+                                            {role.description && (
+                                                <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 8 }}>— {role.description}</span>
+                                            )}
+                                        </Select.Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="send_email" label="发送邮件通知" valuePropName="checked"
+                                extra="启用后需在平台设置中配置 SMTP 邮箱服务"
+                            >
+                                <Switch checkedChildren="发送" unCheckedChildren="不发送" />
+                            </Form.Item>
+                        </Form>
+                    </>
+                )}
             </Modal>
 
             {/* ===== 变更角色 Modal ===== */}
@@ -400,12 +746,10 @@ const TenantMembersPage: React.FC = () => {
                         <Select>
                             {tenantRoles.map(role => (
                                 <Select.Option key={role.id} value={role.id}>
-                                    <Space size={6}>
-                                        <Tag color={ROLE_COLOR[role.name] || 'default'} style={{ margin: 0 }}>{role.display_name}</Tag>
-                                        <Text type="secondary" style={{ fontSize: 12 }}>
-                                            {role.description || role.name}
-                                        </Text>
-                                    </Space>
+                                    {role.display_name}
+                                    {role.description && (
+                                        <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 8 }}>— {role.description}</span>
+                                    )}
                                 </Select.Option>
                             ))}
                         </Select>

@@ -54,17 +54,6 @@ export async function getTenantMembers(tenantId: string) {
 }
 
 /**
- * 设置租户管理员（从 /platform/users/simple 选人）
- * POST /platform/tenants/:id/admin  { user_id: string }
- */
-export async function setTenantAdmin(tenantId: string, data: { user_id: string }) {
-    return request<any>(`/api/v1/platform/tenants/${tenantId}/admin`, {
-        method: 'POST',
-        data,
-    });
-}
-
-/**
  * 变更租户内成员角色（升/降级）
  * PUT /platform/tenants/:id/members/:userId/role  { role_id: string }
  */
@@ -75,20 +64,64 @@ export async function updateTenantMemberRole(tenantId: string, userId: string, d
     });
 }
 
-// ===== 已废弃，保留为空以免 import 报错 =====
-// POST /platform/tenants/:id/members → 已废弃
-// DELETE /platform/tenants/:id/members/:userId → 已废弃
+// ==================== 成员管理（新） ====================
 
-/**
- * 在租户下创建普通用户（非平台管理员）
- * POST /platform/tenants/:id/users
- */
-export async function createTenantUser(
-    tenantId: string,
-    data: { username: string; password: string; display_name?: string; email: string },
-) {
-    return request<any>(`/api/v1/platform/tenants/${tenantId}/users`, {
+/** 添加已有用户到租户 */
+export async function addTenantMember(tenantId: string, data: { user_id: string; role_id: string }) {
+    return request<any>(`/api/v1/platform/tenants/${tenantId}/members`, {
         method: 'POST',
         data,
+    });
+}
+
+/** 从租户移除成员 */
+export async function removeTenantMember(tenantId: string, userId: string) {
+    return request<any>(`/api/v1/platform/tenants/${tenantId}/members/${userId}`, {
+        method: 'DELETE',
+    });
+}
+
+// ==================== 邀请管理 ====================
+
+/** 邀请用户加入租户 */
+export async function inviteToTenant(
+    tenantId: string,
+    data: { email: string; role_id: string; send_email?: boolean },
+) {
+    return request<any>(`/api/v1/platform/tenants/${tenantId}/invitations`, {
+        method: 'POST',
+        data,
+    });
+}
+
+/** 查看租户邀请列表 */
+export async function getTenantInvitations(tenantId: string, params?: Record<string, any>) {
+    return request<any>(`/api/v1/platform/tenants/${tenantId}/invitations`, {
+        method: 'GET',
+        params,
+    });
+}
+
+/** 取消邀请 */
+export async function cancelTenantInvitation(tenantId: string, invitationId: string) {
+    return request<any>(`/api/v1/platform/tenants/${tenantId}/invitations/${invitationId}`, {
+        method: 'DELETE',
+    });
+}
+
+// ==================== 统计 ====================
+
+/** 获取租户运营总览统计 */
+export async function getTenantStats() {
+    return request<any>('/api/v1/platform/tenants/stats', {
+        method: 'GET',
+    });
+}
+
+/** 获取租户运营趋势数据 */
+export async function getTenantTrends(params?: { days?: number }) {
+    return request<any>('/api/v1/platform/tenants/trends', {
+        method: 'GET',
+        params,
     });
 }
