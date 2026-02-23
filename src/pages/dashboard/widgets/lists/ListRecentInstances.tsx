@@ -4,17 +4,9 @@ import { useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getHealingInstances } from '@/services/auto-healing/instances';
+import { INSTANCE_STATUS_MAP } from '@/constants/instanceDicts';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
-
-const STATUS_MAP: Record<string, { color: string; text: string; bg?: string }> = {
-    completed: { color: 'success', text: '完成', bg: '#f6ffed' },
-    running: { color: 'processing', text: '运行中', bg: '#e6f7ff' },
-    pending: { color: 'warning', text: '待处理', bg: '#fffbe6' },
-    failed: { color: 'error', text: '失败', bg: '#fff2f0' },
-    skipped: { color: 'default', text: '跳过', bg: '#fafafa' },
-    cancelled: { color: 'default', text: '取消', bg: '#fafafa' },
-};
 
 const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     // 增加 page_size 到 15 以填充大屏幕
@@ -51,7 +43,7 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                         </div>
                     ) : (
                         items.map((item: any, index: number) => {
-                            const st = STATUS_MAP[item.status] || { color: 'default', text: item.status };
+                            const st = INSTANCE_STATUS_MAP[item.status] || { color: 'default', text: item.status };
                             const displayName = item.title || item.name || (item.id ? `${item.id.slice(0, 8)}...` : '-');
                             const flowName = item.flow_name || '-';
                             const currentNode = item.current_node_id || '-';

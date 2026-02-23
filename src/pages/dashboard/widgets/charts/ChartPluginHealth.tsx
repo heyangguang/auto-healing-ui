@@ -5,13 +5,7 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 import { useDashboardSection } from '../useDashboardSection';
-
-const STATUS_COLORS = ['#52c41a', '#d9d9d9', '#ff4d4f'];
-const STATUS_LABELS: Record<string, string> = {
-    active: '活跃',
-    inactive: '停用',
-    error: '异常',
-};
+import { PLUGIN_STATUS_LABELS, PLUGIN_STATUS_COLORS } from '@/constants/pluginDicts';
 
 const ChartPluginHealth: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('plugins');
@@ -20,7 +14,7 @@ const ChartPluginHealth: React.FC<WidgetComponentProps> = ({ isEditing, onRemove
     const chartData = React.useMemo(() => {
         if (!data?.by_status) return [];
         return data.by_status.map((item: any) => ({
-            type: STATUS_LABELS[item.status] || item.status,
+            type: PLUGIN_STATUS_LABELS[item.status] || item.status,
             value: Number(item.count),
         }));
     }, [data]);
@@ -39,7 +33,7 @@ const ChartPluginHealth: React.FC<WidgetComponentProps> = ({ isEditing, onRemove
                         colorField="type"
                         radius={0.7}
                         innerRadius={0.55}
-                        color={STATUS_COLORS}
+                        color={Object.values(PLUGIN_STATUS_COLORS)}
                         label={false}
                         legend={{ color: { position: 'bottom', layout: { justifyContent: 'center' } } }}
                         interaction={{ elementHighlight: true }}

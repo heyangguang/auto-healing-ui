@@ -3,14 +3,9 @@ import { Badge, Table, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
 import { useDashboardSection } from '../useDashboardSection';
+import { PLUGIN_STATUS_MAP } from '@/constants/pluginDicts';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
-
-const STATUS_MAP: Record<string, { color: string; text: string }> = {
-    active: { color: 'success', text: '活跃' },
-    inactive: { color: 'default', text: '停用' },
-    error: { color: 'error', text: '异常' },
-};
 
 const StatusPlugins: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('plugins');
@@ -29,7 +24,7 @@ const StatusPlugins: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
         {
             title: '状态', dataIndex: 'status', key: 'status', width: 80,
             render: (status: string) => {
-                const st = STATUS_MAP[status] || { color: 'default', text: status };
+                const st = PLUGIN_STATUS_MAP[status] || { color: 'default', text: status };
                 return <Badge status={st.color as any} text={<span style={{ fontSize: 12 }}>{st.text}</span>} />;
             },
         },

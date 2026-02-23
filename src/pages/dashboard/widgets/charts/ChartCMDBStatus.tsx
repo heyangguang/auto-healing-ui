@@ -5,14 +5,7 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 import { useDashboardSection } from '../useDashboardSection';
-
-const STATUS_LABELS: Record<string, string> = {
-    active: '活跃',
-    inactive: '停用',
-    maintenance: '维护中',
-};
-
-const STATUS_COLORS = ['#52c41a', '#d9d9d9', '#faad14'];
+import { CMDB_STATUS_LABELS, CMDB_STATUS_MAP } from '@/constants/cmdbDicts';
 
 const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('cmdb');
@@ -21,7 +14,7 @@ const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
     const chartData = React.useMemo(() => {
         if (!data?.by_status) return [];
         return data.by_status.map((item: any) => ({
-            type: STATUS_LABELS[item.status] || item.status,
+            type: CMDB_STATUS_LABELS[item.status] || item.status,
             value: Number(item.count),
         }));
     }, [data]);
@@ -40,7 +33,7 @@ const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
                         colorField="type"
                         radius={0.7}
                         innerRadius={0.55}
-                        color={STATUS_COLORS}
+                        color={Object.values(CMDB_STATUS_MAP).map(s => s.color)}
                         label={false}
                         legend={{ color: { position: 'bottom', layout: { justifyContent: 'center' } } }}
                         interaction={{ elementHighlight: true }}

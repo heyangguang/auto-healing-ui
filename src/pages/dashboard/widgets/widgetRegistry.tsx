@@ -106,7 +106,7 @@ export interface WidgetDefinition {
 const SEVERITY_LABELS: Record<string, string> = { critical: '紧急', high: '高', medium: '中', low: '低', info: '信息' };
 const HEALING_STATUS_LABELS: Record<string, string> = {
     pending: '待处理', processing: '处理中', healed: '已自愈', failed: '失败',
-    skipped: '已跳过', pending_trigger: '待触发', no_match: '未匹配', rejected: '已拒绝',
+    skipped: '已跳过', dismissed: '已忽略', pending_trigger: '待触发', no_match: '未匹配', rejected: '已拒绝',
 };
 
 export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {

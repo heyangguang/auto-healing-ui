@@ -3,28 +3,10 @@ import { Pie } from '@ant-design/plots';
 import { useRequest } from '@umijs/max';
 import React from 'react';
 import { getHealingInstanceStats } from '@/services/auto-healing/instances';
+import { INSTANCE_STATUS_COLORS, INSTANCE_STATUS_LABELS } from '@/constants/instanceDicts';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
-
-const STATUS_COLORS: Record<string, string> = {
-    completed: '#52c41a',
-    running: '#1677ff',
-    pending: '#faad14',
-    failed: '#ff4d4f',
-    skipped: '#8c8c8c',
-    cancelled: '#d9d9d9',
-    waiting_approval: '#722ed1',
-};
-const STATUS_LABELS: Record<string, string> = {
-    completed: '已完成',
-    running: '运行中',
-    pending: '待处理',
-    failed: '失败',
-    skipped: '已跳过',
-    cancelled: '已取消',
-    waiting_approval: '待审批',
-};
 
 const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data: rawData, loading, refresh } = useRequest(() => getHealingInstanceStats());
@@ -36,7 +18,7 @@ const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
         const byStatus = statsData.by_status ?? [];
         if (!Array.isArray(byStatus) || byStatus.length === 0) return [];
         return byStatus.map((item: any) => ({
-            type: STATUS_LABELS[item.status] || item.status,
+            type: INSTANCE_STATUS_LABELS[item.status] || item.status,
             value: item.count,
         }));
     }, [data]);
@@ -58,7 +40,7 @@ const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                         colorField="type"
                         radius={0.65}
                         innerRadius={0.55}
-                        color={Object.values(STATUS_COLORS)}
+                        color={Object.values(INSTANCE_STATUS_COLORS)}
                         label={false}
                         legend={{ color: { position: 'bottom', layout: { justifyContent: 'center' } } }}
                         tooltip={{ title: false }}

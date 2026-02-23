@@ -22,7 +22,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
-import { useModel } from '@umijs/max';
+import { useAccess, useModel } from '@umijs/max';
 import { Button, Collapse, Drawer, Empty, Input, message, Modal, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd';
 import React, { useState, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import './index.css';
@@ -245,8 +245,9 @@ const DashboardBuilder: React.FC = () => {
   const saveTimeout = useRef<number | undefined>(undefined);
   const sysWsSaveTimeout = useRef<number | undefined>(undefined);
   const { initialState } = useModel('@@initialState');
-  const userPermissions: string[] = (initialState?.currentUser as any)?.permissions || [];
-  const hasWsManage = userPermissions.includes('*') || userPermissions.includes('dashboard:workspace:manage');
+  const access = useAccess();
+  const hasWsManage = !!access.canManageWorkspace;
+  const hasDashboardConfig = !!access.canManageDashboardConfig;
 
   // 渐进式加载：widget 分批渲染，避免首次加载卡顿
   const [visibleCount, setVisibleCount] = useState(0);
@@ -821,16 +822,18 @@ const DashboardBuilder: React.FC = () => {
               </Tooltip>
             </>
           )}
-          <Button
-            type={isEditing ? 'primary' : 'default'}
-            icon={isEditing ? <LockOutlined /> : <EditOutlined />}
-            onClick={handleToggleEdit}
-            ghost={isEditing}
-            size="small"
-            style={{ borderRadius: 0, minWidth: 72 }}
-          >
-            {isEditing ? '锁定' : '编辑'}
-          </Button>
+          {hasDashboardConfig && (
+            <Button
+              type={isEditing ? 'primary' : 'default'}
+              icon={isEditing ? <LockOutlined /> : <EditOutlined />}
+              onClick={handleToggleEdit}
+              ghost={isEditing}
+              size="small"
+              style={{ borderRadius: 0, minWidth: 72 }}
+            >
+              {isEditing ? '锁定' : '编辑'}
+            </Button>
+          )}
           {hasWsManage && activeWorkspace.widgets.length > 0 && !activeWorkspace.isSystem && (
             <Button
               size="small"

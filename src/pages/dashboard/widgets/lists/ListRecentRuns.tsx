@@ -4,16 +4,9 @@ import { useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getExecutionRuns } from '@/services/auto-healing/execution';
+import { RUN_STATUS_MAP } from '@/constants/executionDicts';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
-
-const STATUS_MAP: Record<string, { color: string; text: string }> = {
-    success: { color: 'success', text: '成功' },
-    failed: { color: 'error', text: '失败' },
-    running: { color: 'processing', text: '运行中' },
-    partial: { color: 'warning', text: '部分成功' },
-    cancelled: { color: 'default', text: '取消' },
-};
 
 const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data: rawData, loading, refresh } = useRequest(() => getExecutionRuns({ page_size: 15 }));
@@ -45,7 +38,7 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                     ) : (
                         (Array.isArray(items) ? items : []).map((item: any, index: number) => {
-                            const st = STATUS_MAP[item.status] || { color: 'default', text: item.status };
+                            const st = RUN_STATUS_MAP[item.status] || { color: 'default', text: item.status };
                             const triggeredBy = item.triggered_by || '-';
                             const stats = item.stats || { ok: 0, failed: 0, changed: 0 };
 

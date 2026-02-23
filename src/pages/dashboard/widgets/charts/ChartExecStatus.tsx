@@ -3,24 +3,10 @@ import { Column } from '@ant-design/plots';
 import { useRequest } from '@umijs/max';
 import React from 'react';
 import { getExecutionRunStats } from '@/services/auto-healing/execution';
+import { RUN_STATUS_COLORS, RUN_STATUS_LABELS } from '@/constants/executionDicts';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
-
-const STATUS_COLORS: Record<string, string> = {
-    success: '#52c41a',
-    failed: '#ff4d4f',
-    running: '#1677ff',
-    partial: '#faad14',
-    cancelled: '#d9d9d9',
-};
-const STATUS_LABELS: Record<string, string> = {
-    success: '成功',
-    failed: '失败',
-    running: '运行中',
-    partial: '部分成功',
-    cancelled: '已取消',
-};
 
 const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data: rawData, loading, refresh } = useRequest(() => getExecutionRunStats());
@@ -37,9 +23,9 @@ const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
             { status: 'cancelled', count: Number(statsData.cancelled_count ?? 0) },
         ].filter((item) => item.count > 0);
         return entries.map((item) => ({
-            status: STATUS_LABELS[item.status] || item.status,
+            status: RUN_STATUS_LABELS[item.status] || item.status,
             count: item.count,
-            color: STATUS_COLORS[item.status] || '#8c8c8c',
+            color: RUN_STATUS_COLORS[item.status] || '#8c8c8c',
         }));
     }, [data]);
 
@@ -54,7 +40,7 @@ const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
                         xField="status"
                         yField="count"
                         colorField="status"
-                        color={Object.values(STATUS_COLORS)}
+                        color={Object.values(RUN_STATUS_COLORS)}
                         label={{
                             text: 'count',
                             position: 'inside',

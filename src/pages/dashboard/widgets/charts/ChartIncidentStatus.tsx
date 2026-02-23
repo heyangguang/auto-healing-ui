@@ -3,24 +3,10 @@ import { Pie } from '@ant-design/plots';
 import { useRequest } from '@umijs/max';
 import React from 'react';
 import { getIncidentStats } from '@/services/auto-healing/incidents';
+import { INCIDENT_CHART_COLORS, INCIDENT_CHART_LABELS } from '@/constants/incidentDicts';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
-
-const STATUS_COLORS: Record<string, string> = {
-    pending: '#faad14',
-    processing: '#1677ff',
-    healed: '#52c41a',
-    failed: '#ff4d4f',
-    skipped: '#8c8c8c',
-};
-const STATUS_LABELS: Record<string, string> = {
-    pending: '待处理',
-    processing: '处理中',
-    healed: '已自愈',
-    failed: '失败',
-    skipped: '已跳过',
-};
 
 const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data: rawData, loading, refresh } = useRequest(getIncidentStats, { formatResult: (r: any) => r });
@@ -30,11 +16,12 @@ const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
     const chartData = React.useMemo(() => {
         if (!data) return [];
         return [
-            { type: STATUS_LABELS.pending, value: data.pending ?? 0 },
-            { type: STATUS_LABELS.processing, value: data.processing ?? 0 },
-            { type: STATUS_LABELS.healed, value: data.healed ?? 0 },
-            { type: STATUS_LABELS.failed, value: data.failed ?? 0 },
-            { type: STATUS_LABELS.skipped, value: data.skipped ?? 0 },
+            { type: INCIDENT_CHART_LABELS.pending, value: data.pending ?? 0 },
+            { type: INCIDENT_CHART_LABELS.processing, value: data.processing ?? 0 },
+            { type: INCIDENT_CHART_LABELS.healed, value: data.healed ?? 0 },
+            { type: INCIDENT_CHART_LABELS.failed, value: data.failed ?? 0 },
+            { type: INCIDENT_CHART_LABELS.skipped, value: data.skipped ?? 0 },
+            { type: INCIDENT_CHART_LABELS.dismissed, value: data.dismissed ?? 0 },
         ].filter((d) => d.value > 0);
     }, [data]);
 
@@ -52,7 +39,7 @@ const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                         colorField="type"
                         radius={0.65}
                         innerRadius={0.55}
-                        color={Object.values(STATUS_COLORS)}
+                        color={Object.values(INCIDENT_CHART_COLORS)}
                         label={false}
                         legend={{ color: { position: 'bottom', layout: { justifyContent: 'center' } } }}
                         interaction={{ elementHighlight: true }}
