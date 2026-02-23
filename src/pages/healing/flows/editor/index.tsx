@@ -14,13 +14,14 @@ import ReactFlow, {
     Panel,
     NodeTypes,
     MiniMap,
+    BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { PageContainer } from '@ant-design/pro-components';
 import { Layout, Button, Input, message, Spin, Card, Descriptions, Empty } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined, AppstoreOutlined, ExperimentOutlined, ClearOutlined } from '@ant-design/icons';
 import dagre from 'dagre';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import { getFlow, createFlow, updateFlow } from '@/services/auto-healing/healing';
 import { getExecutionTask } from '@/services/auto-healing/execution';
 import { getPlaybook } from '@/services/auto-healing/playbooks';
@@ -41,6 +42,7 @@ const getId = () => `node_${Math.random().toString(36).substr(2, 9)}`;
 
 const FlowEditorInner: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const access = useAccess();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -432,8 +434,8 @@ const FlowEditorInner: React.FC = () => {
         const apiEdges = edges.map(e => ({
             source: e.source,
             target: e.target,
-            sourceHandle: e.sourceHandle,
-            targetHandle: e.targetHandle,
+            sourceHandle: e.sourceHandle || undefined,
+            targetHandle: e.targetHandle || undefined,
             id: e.id // persist ID if needed
         }));
 
@@ -627,7 +629,7 @@ const FlowEditorInner: React.FC = () => {
                                     重置状态
                                 </Button>
                                 <Button icon={<AppstoreOutlined />} onClick={() => onLayout('TB')}>一键整理</Button>
-                                <Button type="primary" icon={<SaveOutlined />} onClick={handleSave}>保存流程</Button>
+                                <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} disabled={id ? !access.canUpdateFlow : !access.canCreateFlow}>保存流程</Button>
                             </div>
                         </div>
 
@@ -653,7 +655,7 @@ const FlowEditorInner: React.FC = () => {
                                 maxZoom={1.5}
                             >
                                 <Controls style={{ bottom: 100 }} />
-                                <Background variant="dots" gap={16} size={1} color="#999" />
+                                <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#999" />
                                 <MiniMap nodeStrokeWidth={3} zoomable pannable style={{ bottom: 100 }} />
                                 {menu && <ContextMenu {...menu} onClick={onMenuClick} onClose={onPaneClick} />}
                             </ReactFlow>

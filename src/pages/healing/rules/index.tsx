@@ -396,12 +396,14 @@ const HealingRulesPage: React.FC = () => {
                                         checked={rule.is_active}
                                         loading={actionLoading === rule.id}
                                         onChange={(c) => handleToggle(rule, c)}
+                                        disabled={!access.canUpdateRule}
                                     />
                                 </Tooltip>
                                 <Button
                                     type="text"
                                     size="small"
                                     icon={<EditOutlined />}
+                                    disabled={!access.canUpdateRule}
                                     onClick={() => history.push(`/healing/rules/${rule.id}/edit`)}
                                 />
                                 <Popconfirm
@@ -415,6 +417,7 @@ const HealingRulesPage: React.FC = () => {
                                         size="small"
                                         icon={<DeleteOutlined />}
                                         loading={actionLoading === rule.id}
+                                        disabled={!access.canDeleteRule}
                                     />
                                 </Popconfirm>
                             </Space>
@@ -449,6 +452,7 @@ const HealingRulesPage: React.FC = () => {
                 extra={
                     <Button
                         icon={<EditOutlined />}
+                        disabled={!access.canUpdateRule}
                         onClick={() => {
                             setDrawerOpen(false);
                             history.push(`/healing/rules/${selectedRule.id}/edit`);
@@ -604,6 +608,7 @@ const HealingRulesPage: React.FC = () => {
                 primaryActionLabel="新建规则"
                 primaryActionIcon={<PlusOutlined />}
                 onPrimaryAction={() => history.push('/healing/rules/create')}
+                primaryActionDisabled={!access.canCreateRule}
                 extraToolbarActions={sortToolbar}
             >
                 {/* ===== Card Grid ===== */}

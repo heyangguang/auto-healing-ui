@@ -2,7 +2,8 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Typography, Tooltip } from 'antd';
 import { AuditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle, getNodeHeaderBg } from './CustomNode';
+import { getNodeTypeColor } from '../../nodeConfig';
 
 const { Text } = Typography;
 
@@ -23,19 +24,17 @@ const NODE_HEIGHT = NODE_HEADER_HEIGHT + NODE_FOOTER_HEIGHT;
 
 const ApprovalNode = ({ data, isConnectable, selected }: NodeProps) => {
     const status = data.status;
-    const color = '#faad14';
-    const statusConfig = status ? STATUS_CONFIG[status] : null;
-    const statusColor = statusConfig?.color;
+    const color = getNodeTypeColor('approval');
     const isCurrent = !!data.isCurrent;
 
-    // 构建悬浮提示内容
+    // 直接使用原始 status 映射，不强行覆盖：
+    // 如果是 rejected，statusConfig 就是红色叉叉，左侧边框也会自然变成红色
+    const statusConfig = status ? STATUS_CONFIG[status] : null;
+    const statusColor = statusConfig?.color;
+    const headerBg = getNodeHeaderBg(status);
+
     const tooltipContent = data.dryRunMessage ? (
-        <div style={{ maxWidth: 300 }}>
-            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-                {statusConfig?.label || '审批状态'}
-            </div>
-            <div>{data.dryRunMessage}</div>
-        </div>
+        <div style={{ maxWidth: 300 }}>{data.dryRunMessage}</div>
     ) : null;
 
     return (
@@ -54,7 +53,6 @@ const ApprovalNode = ({ data, isConnectable, selected }: NodeProps) => {
                 border: '1px solid #d9d9d9',
                 borderLeft: `3px solid ${statusColor || color}`,
                 transition: 'all 0.3s',
-                overflow: 'visible',
                 animation: isCurrent ? 'currentNodePulse 2s ease-in-out infinite' : undefined,
                 ...getNodeOutlineStyle(isCurrent, !!selected),
             }}>
@@ -70,7 +68,8 @@ const ApprovalNode = ({ data, isConnectable, selected }: NodeProps) => {
                     height: NODE_HEADER_HEIGHT,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8
+                    gap: 6,
+                    background: headerBg,
                 }}>
                     <AuditOutlined style={{ fontSize: 16, color: statusColor || color, flexShrink: 0 }} />
                     <Text style={{ fontSize: 13, userSelect: 'none', flex: 1 }} ellipsis>
@@ -83,12 +82,12 @@ const ApprovalNode = ({ data, isConnectable, selected }: NodeProps) => {
                     )}
                 </div>
 
-                <div style={{ height: NODE_FOOTER_HEIGHT, position: 'relative', borderTop: '1px solid #f5f5f5' }}>
+                <div style={{ height: NODE_FOOTER_HEIGHT, position: 'relative', borderTop: '1px solid #f0f0f0' }}>
                     {/* 通过 */}
                     <div style={{
                         position: 'absolute', left: 0, bottom: 0, width: '50%', height: '100%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        borderRight: '1px solid #f5f5f5'
+                        borderRight: '1px solid #f0f0f0'
                     }}>
                         <CheckOutlined style={{ fontSize: 12, color: '#52c41a' }} />
                         <Handle

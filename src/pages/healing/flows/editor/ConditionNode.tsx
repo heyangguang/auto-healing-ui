@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Typography, Tooltip } from 'antd';
 import { BranchesOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle, getNodeHeaderBg } from './CustomNode';
 
 const { Text } = Typography;
 
@@ -28,6 +28,7 @@ const ConditionNode = ({ data, isConnectable, selected }: NodeProps) => {
     const color = '#722ed1';
     const statusConfig = status ? STATUS_CONFIG[status] : null;
     const statusColor = statusConfig?.color;
+    const headerBg = getNodeHeaderBg(status);
 
     // 构建悬浮提示内容
     const tooltipContent = data.dryRunMessage ? (
@@ -73,7 +74,8 @@ const ConditionNode = ({ data, isConnectable, selected }: NodeProps) => {
                     height: NODE_HEADER_HEIGHT,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8
+                    gap: 8,
+                    background: headerBg,
                 }}>
                     <BranchesOutlined style={{ fontSize: 16, color: statusColor || color, flexShrink: 0 }} />
                     <Text style={{ fontSize: 13, userSelect: 'none', flex: 1 }} ellipsis>

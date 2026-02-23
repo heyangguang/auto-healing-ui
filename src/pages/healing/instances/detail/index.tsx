@@ -6,10 +6,10 @@ import {
 import { getExecutionLogs } from '@/services/auto-healing/execution';
 import { createInstanceEventStream, NodeStatus } from '@/services/auto-healing/sse';
 
-import { history, useParams, useRequest } from '@umijs/max';
-import { Button, Card, Drawer, Empty, Space, Spin, Steps, Tabs, Tag, Typography, message, Descriptions, Result, Timeline, Alert } from 'antd';
-import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined, EyeOutlined, ClockCircleOutlined, BugOutlined, FileTextOutlined, WarningOutlined, ThunderboltOutlined, AimOutlined, AppstoreOutlined, TagOutlined, DashboardOutlined, AlertOutlined, NodeIndexOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import { history, useParams, useRequest, request, useAccess } from '@umijs/max';
+import { Button, Card, Drawer, Empty, Space, Spin, Steps, Tabs, Tag, Typography, message, Descriptions, Result, Timeline, Alert, Collapse, Badge, Row, Col, Statistic, Divider } from 'antd';
+import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined, EyeOutlined, ClockCircleOutlined, BugOutlined, FileTextOutlined, WarningOutlined, ThunderboltOutlined, AimOutlined, AppstoreOutlined, TagOutlined, DashboardOutlined, AlertOutlined, NodeIndexOutlined, PlayCircleOutlined, CodeOutlined } from '@ant-design/icons';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
     Background,
     BackgroundVariant,
@@ -23,8 +23,10 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import { getLayoutedElements } from '../utils/layoutUtils';
+import { buildCanvasElements, normalizeNodeState, getActiveBranchHandle, STATUS_EDGE_COLOR, NODE_TYPE_LABELS } from '../utils/canvasBuilder';
 import AutoLayoutButton from '../components/AutoLayoutButton';
 import LogConsole, { LogEntry } from '@/components/execution/LogConsole';
+import '../instances.css';
 
 // Import node types from the editor
 import ApprovalNode from '../../flows/editor/ApprovalNode';
@@ -53,115 +55,86 @@ const nodeTypes = {
 
 const proOptions: ProOptions = { hideAttribution: true };
 
-/** 将 node_states 的值统一为对象格式（兼容字符串和对象两种后端格式） */
-function normalizeNodeState(raw: any): Record<string, any> | undefined {
-    if (!raw) return undefined;
-    if (typeof raw === 'string') return { status: raw };
-    return raw;
-}
-
-// 节点状态对应的边颜色
-const STATUS_EDGE_COLOR: Record<string, string> = {
-    success: '#52c41a', completed: '#52c41a', approved: '#52c41a',
-    failed: '#ff4d4f', rejected: '#ff4d4f', partial: '#faad14',
-    running: '#1890ff', waiting_approval: '#fa8c16',
-};
-
 // 节点类型中文标签
-const NODE_TYPE_LABELS: Record<string, string> = {
-    start: '开始', end: '结束', execution: '执行', approval: '审批',
-    condition: '条件分支', notification: '通知', host_extractor: '主机提取',
-    cmdb_validator: 'CMDB 校验', set_variable: '变量设置',
-    compute: '计算', trigger: '触发器', custom: '自定义',
-};
-
-// 状态中文标签
-const STATUS_LABELS: Record<string, string> = {
-    pending: '等待中', running: '执行中', waiting_approval: '待审批',
-    completed: '已完成', success: '成功', approved: '已通过',
-    failed: '失败', rejected: '已拒绝', error: '错误',
-    partial: '部分成功', cancelled: '已取消', skipped: '已跳过',
-    simulated: '模拟通过', triggered: '已触发',
-};
+import { NODE_TYPE_COLORS, getNodeTypeColor } from '../../nodeConfig';
+import { INSTANCE_STATUS_LABELS } from '@/constants/instanceDicts';
 
 // 配置参数中文标签
 const CONFIG_LABELS: Record<string, string> = {
     label: '节点名称', type: '节点类型', description: '描述',
-    task_template_id: '任务模板 ID', task_template_name: '任务模板',
+    task_template_id: '任务模板', task_template_name: '任务模板',
+    task_id: '任务模板', run_id: '执行记录',
     playbook_id: 'Playbook ID', playbook_name: 'Playbook',
-    extra_vars: '额外变量', hosts: '目标主机',
+    extra_vars: '额外变量', hosts: '目标主机', target_hosts: '目标主机',
     timeout: '超时', timeout_seconds: '超时(秒)',
     condition: '条件表达式', expression: '表达式',
     title: '审批标题', approval_title: '审批标题',
-    notification_template_id: '通知模板 ID',
-    notification_channel_id: '通知渠道 ID',
+    notification_template_id: '通知模板', notification_channel_id: '通知渠道',
+    template_id: '通知模板', channel_id: '通知渠道',
+    notification_template_name: '通知模板', notification_channel_name: '通知渠道',
     on_success: '成功时', on_failure: '失败时',
     retry_count: '重试次数', retry_interval: '重试间隔',
+    activeHandles: '激活分支', active_handles: '激活分支',
+    variable_name: '变量名称', variable_value: '变量值',
+    set_variable: '设置变量', compute: '计算逻辑',
+    cmdb_query: 'CMDB 查询', cmdb_filter: 'CMDB 过滤条件',
+    host_pattern: '主机匹配', host_group: '主机分组',
+    script: '脚本内容', command: '执行命令',
+    approvers: '审批人', approval_type: '审批类型',
+    max_retries: '最大重试', interval: '间隔(秒)',
+    tags: '标签', priority: '优先级', enabled: '是否启用',
+    extracted_hosts: '提取主机', target: '目标',
+    playbook: 'Playbook 剧本', inventory: '主机清单',
+    become: '提权执行', become_method: '提权方式',
+    forks: '并发数', verbosity: '详细级别',
+    limit: '主机限制', check_mode: '检查模式',
+    diff_mode: '差异模式', connection: '连接方式',
+    credentials: '凭证', secret_id: '凭证 ID',
+    template_name: '模板名称', channel_name: '渠道名称',
+    // 主机提取节点
+    extract_mode: '提取方式', source_field: '来源字段',
+    output_key: '输出变量名', input_key: '输入变量名',
+    result_key: '结果变量名', hosts_key: '主机变量名',
+    // 条件/计算节点
+    true_branch: '真分支', false_branch: '假分支',
+    default_branch: '默认分支', branches: '分支列表',
+    // CMDB 验证
+    validation_rules: '验证规则', cmdb_host_field: 'CMDB 主机字段',
+    cmdb_status_field: 'CMDB 状态字段', expected_status: '期望状态',
 };
 
-/**
- * 根据节点类型和状态，返回实际走过的 sourceHandle 名称
- */
-function getActiveBranchHandle(
-    nodeType: string,
-    nodeStatus: string | undefined,
-): string | null {
-    if (!nodeStatus) return null;
-    switch (nodeType) {
-        case 'approval':
-            if (['approved', 'completed', 'success', 'simulated'].includes(nodeStatus)) return 'approved';
-            if (['rejected'].includes(nodeStatus)) return 'rejected';
-            return null;
-        case 'execution':
-            if (['completed', 'success'].includes(nodeStatus)) return 'success';
-            if (['partial'].includes(nodeStatus)) return 'partial';
-            if (['failed'].includes(nodeStatus)) return 'failed';
-            return null;
-        case 'condition':
-            if (['completed', 'success', 'true'].includes(nodeStatus)) return 'true';
-            if (['failed', 'false'].includes(nodeStatus)) return 'false';
-            return null;
-        default:
-            return null;
-    }
-}
-
-/** 根据 node_states + current_node_id 推算所有已执行节点 */
-function inferExecutedNodes(
-    nodes: any[], edges: any[],
-    nodeStates: Record<string, any>,
-    currentNodeId: string | null,
-    instanceStatus: string,
-): Record<string, string> {
-    const result: Record<string, string> = {};
-    for (const [nodeId, state] of Object.entries(nodeStates)) {
-        const ns = normalizeNodeState(state);
-        if (ns?.status) result[nodeId] = ns.status;
-    }
-    if (currentNodeId && !result[currentNodeId]) {
-        if (instanceStatus === 'completed') result[currentNodeId] = 'success';
-        else if (instanceStatus === 'failed') result[currentNodeId] = 'failed';
-        else if (instanceStatus === 'running') result[currentNodeId] = 'running';
-    }
-    const executedSet = new Set(Object.keys(result));
-    const reverseEdges: Record<string, string[]> = {};
-    for (const edge of edges) {
-        if (!reverseEdges[edge.target]) reverseEdges[edge.target] = [];
-        reverseEdges[edge.target].push(edge.source);
-    }
-    const queue = [...executedSet];
-    while (queue.length > 0) {
-        const nodeId = queue.shift()!;
-        for (const parent of (reverseEdges[nodeId] || [])) {
-            if (!executedSet.has(parent)) {
-                executedSet.add(parent);
-                result[parent] = 'success';
-                queue.push(parent);
-            }
-        }
-    }
-    return result;
-}
+const CONTEXT_LABELS: Record<string, string> = {
+    output: '输出结果', result: '执行结果', status: '状态',
+    hosts: '主机列表', extracted_hosts: '提取的主机',
+    target_hosts: '目标主机', host_count: '主机数量',
+    stdout: '标准输出', stderr: '错误输出',
+    exit_code: '退出码', return_code: '返回码',
+    error_message: '错误信息', message: '消息', errors: '错误列表',
+    duration_ms: '耗时(ms)', started_at: '开始时间',
+    finished_at: '结束时间', updated_at: '更新时间',
+    run_id: '执行记录 ID', task_id: '任务模板 ID',
+    stats: '执行统计', run: '执行详情',
+    variables: '变量', context: '上下文',
+    computed_value: '计算结果', computed_results: '计算结果',
+    variable_name: '变量名', variable_value: '变量值',
+    set_variables: '已设变量', variables_set: '已设置变量',
+    matched_hosts: '匹配主机', cmdb_results: 'CMDB 结果',
+    // 审批
+    decision: '审批决策', decision_comment: '审批意见',
+    approved_by: '审批人', approved_at: '审批时间',
+    // 通知
+    notification_sent: '通知已发送', notification_result: '通知结果',
+    // 条件/分支
+    activeHandles: '激活分支', activated_branch: '激活分支',
+    condition_result: '条件结果', matched_expression: '匹配表达式',
+    expression_result: '表达式结果', branch: '分支',
+    output_handle: '输出分支',
+    // 主机提取
+    source_field: '来源字段', extract_mode: '提取方式',
+    // CMDB 验证
+    validated_hosts: '验证通过主机', invalid_hosts: '无效主机',
+    validation_summary: '验证摘要',
+};
 
 // 执行日志 Tab - 异步加载 API 日志
 const ExecutionLogTab: React.FC<{ runId?: string; fallbackLogs: LogEntry[] }> = ({ runId, fallbackLogs }) => {
@@ -216,13 +189,78 @@ const ExecutionLogTab: React.FC<{ runId?: string; fallbackLogs: LogEntry[] }> = 
 
 const HealingInstanceDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const access = useAccess();
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [contextDrawerVisible, setContextDrawerVisible] = useState(false);
     const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
     const [selectedNodeData, setSelectedNodeData] = useState<any>(null);
+    const selectedNodeDataRef = useRef<any>(null);
     const [contextData, setContextData] = useState<any>({});
     const [instanceStatus, setInstanceStatus] = useState<string>('pending');
+
+    // ID → 名称映射（通知渠道/模板 + 执行任务模板）
+    const [resolvedNames, setResolvedNames] = useState<Record<string, string>>({});
+
+    // 选中节点时，异步获取关联实体名称
+    useEffect(() => {
+        if (!selectedNodeData?.config) return;
+        const cfg = selectedNodeData.config;
+        const ns = selectedNodeData.state;
+        const nodeType = cfg.type;
+
+        const fetchNames = async () => {
+            const newNames: Record<string, string> = {};
+
+            // ——— 通知节点：解析渠道和模板名称 ———
+            if (nodeType === 'notification' || nodeType === 'send_notification') {
+                const channelId = cfg.channel_id || cfg.notification_channel_id;
+                const templateId = cfg.template_id || cfg.notification_template_id;
+                if (channelId && !resolvedNames[channelId]) {
+                    try {
+                        const res = await request<any>(`/api/v1/channels/${channelId}`);
+                        const data = res?.data || res;
+                        if (data?.name) newNames[channelId] = data.name;
+                    } catch (e) { /* ignore */ }
+                }
+                if (templateId && !resolvedNames[templateId]) {
+                    try {
+                        const res = await request<any>(`/api/v1/templates/${templateId}`);
+                        const data = res?.data || res;
+                        if (data?.name) newNames[templateId] = data.name;
+                    } catch (e) { /* ignore */ }
+                }
+            }
+
+            // ——— 执行节点：解析任务模板名称 ———
+            if (nodeType === 'execution') {
+                const taskId = cfg.task_id || cfg.task_template_id || ns?.task_id || ns?.run?.task_id;
+                if (taskId && !resolvedNames[taskId]) {
+                    try {
+                        const res = await request<any>(`/api/v1/execution-tasks/${taskId}`);
+                        const data = res?.data || res;
+                        if (data?.name) newNames[taskId] = data.name;
+                    } catch (e) { /* ignore */ }
+                }
+                // 如果有 run_id，获取执行记录详情（含 task 名称）
+                const runId = ns?.run?.run_id || cfg.run_id;
+                if (runId && !resolvedNames[`run:${runId}`]) {
+                    try {
+                        const res = await request<any>(`/api/v1/execution-runs/${runId}`);
+                        const data = res?.data || res;
+                        if (data?.task?.name) newNames[`task:${data.task_id || taskId}`] = data.task.name;
+                        if (data?.task?.target_hosts) newNames[`hosts:${runId}`] = data.task.target_hosts;
+                        newNames[`run:${runId}`] = data?.status || 'unknown';
+                    } catch (e) { /* ignore */ }
+                }
+            }
+
+            if (Object.keys(newNames).length > 0) {
+                setResolvedNames(prev => ({ ...prev, ...newNames }));
+            }
+        };
+        fetchNames();
+    }, [selectedNodeData]);
 
     // Store logs per node for the LogConsole
     // Map<NodeID, LogEntry[]>
@@ -273,128 +311,18 @@ const HealingInstanceDetail: React.FC = () => {
                     setInstanceStatus(data.status);
                     setContextData(data.context || {});
 
-                    // 推算所有已执行节点的状态
-                    const executedNodes = inferExecutedNodes(
-                        data.flow_nodes, data.flow_edges,
-                        data.node_states || {}, data.current_node_id, data.status,
-                    );
-
-                    // Transform nodes with status
-                    let flowNodes = data.flow_nodes.map((node: any) => {
-                        const nodeState = normalizeNodeState(data.node_states?.[node.id]);
-                        const effectiveStatus = nodeState?.status || executedNodes[node.id];
-                        return {
-                            ...node,
-                            draggable: false,
-                            connectable: false,
-                            selectable: true,
-                            data: {
-                                ...node.config,
-                                label: node.name || node.config?.label || NODE_TYPE_LABELS[node.type] || node.type,
-                                type: node.type,
-                                status: effectiveStatus,
-                                dryRunMessage: nodeState?.error_message || nodeState?.message || nodeState?.description,
-                                _nodeState: nodeState, // Full state for detail drawer
-                                isCurrent: node.id === data.current_node_id,
-                            },
-                        } as Node;
+                    // 使用共享画布构建函数 — 与列表页逻辑完全一致
+                    const { nodes: builtNodes, edges: builtEdges } = buildCanvasElements({
+                        flowNodes: data.flow_nodes,
+                        flowEdges: data.flow_edges,
+                        nodeStates: data.node_states || {},
+                        currentNodeId: data.current_node_id,
+                        rule: data.rule,
                     });
 
-                    // 边着色：分支感知 — 只高亮实际走过的分支
-                    const nodeTypeMap: Record<string, string> = {};
-                    for (const node of data.flow_nodes as any[]) {
-                        nodeTypeMap[node.id] = node.type;
-                    }
-
-                    let flowEdges = data.flow_edges.map((edge: any) => {
-                        const sourceStatus = executedNodes[edge.source];
-                        const targetStatus = executedNodes[edge.target];
-                        const bothExecuted = !!sourceStatus && !!targetStatus;
-
-                        // 分支判断：有 sourceHandle 的边需要匹配实际走过的分支
-                        let isActiveBranch = true;
-                        if (edge.sourceHandle) {
-                            const srcType = nodeTypeMap[edge.source] || '';
-                            const nodeState = normalizeNodeState(data.node_states?.[edge.source]);
-                            const activeHandle = getActiveBranchHandle(srcType, nodeState?.status || sourceStatus);
-                            isActiveBranch = activeHandle === edge.sourceHandle;
-                        }
-
-                        const isExecutedEdge = bothExecuted && isActiveBranch;
-                        const inactiveBranchColor = edge.sourceHandle
-                            ? (edge.sourceHandle === 'rejected' || edge.sourceHandle === 'failed' || edge.sourceHandle === 'false'
-                                ? '#ff4d4f' : edge.sourceHandle === 'partial' ? '#faad14' : '#52c41a')
-                            : '#d9d9d9';
-
-                        return {
-                            ...edge,
-                            animated: isExecutedEdge,
-                            style: {
-                                stroke: isExecutedEdge
-                                    ? (STATUS_EDGE_COLOR[targetStatus] || '#52c41a')
-                                    : (edge.sourceHandle && bothExecuted ? inactiveBranchColor : '#d9d9d9'),
-                                strokeWidth: isExecutedEdge ? 2 : 1,
-                                opacity: isExecutedEdge ? 1 : (edge.sourceHandle && bothExecuted ? 0.2 : 0.4),
-                                strokeDasharray: (!isExecutedEdge && edge.sourceHandle && bothExecuted) ? '5 3' : undefined,
-                            },
-                        };
-                    }) as Edge[];
-
-                    // Inject Virtual Rule Node if Rule exists
-                    if (data.rule) {
-                        const ruleNodeId = 'virtual-rule-trigger';
-                        const startNode = flowNodes.find((n: any) => n.type === 'start') || flowNodes[0];
-
-                        const ruleNode: Node = {
-                            id: ruleNodeId,
-                            type: 'custom',
-                            position: {
-                                x: startNode?.position?.x ?? 0,
-                                y: (startNode?.position?.y ?? 0) - 100,
-                            },
-                            data: {
-                                label: `自愈规则: ${data.rule.name}`,
-                                type: 'trigger',
-                                status: 'triggered',
-                                details: data.rule,
-                            },
-                            draggable: false,
-                            connectable: false,
-                        };
-
-                        flowNodes = [ruleNode, ...flowNodes];
-
-                        if (startNode) {
-                            flowEdges = [{
-                                id: `edge-${ruleNodeId}-${startNode.id}`,
-                                source: ruleNodeId,
-                                target: startNode.id,
-                                type: 'smoothstep',
-                                animated: true,
-                                style: { stroke: '#722ed1', strokeWidth: 2 },
-                            }, ...flowEdges];
-                        }
-                    }
-
-                    // 计算每个节点的活跃连接点（在虚拟节点注入之后）
-                    const activeHandlesMap: Record<string, string[]> = {};
-                    for (const edge of flowEdges) {
-                        if (edge.animated) {
-                            const srcH = (edge as any).sourceHandle || 'default';
-                            if (!activeHandlesMap[edge.source]) activeHandlesMap[edge.source] = [];
-                            activeHandlesMap[edge.source].push(srcH);
-                            if (!activeHandlesMap[edge.target]) activeHandlesMap[edge.target] = [];
-                            activeHandlesMap[edge.target].push('target');
-                        }
-                    }
-                    flowNodes = flowNodes.map((node: any) => ({
-                        ...node,
-                        data: { ...node.data, activeHandles: activeHandlesMap[node.id] || [] },
-                    }));
-
                     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-                        flowNodes,
-                        flowEdges
+                        builtNodes,
+                        builtEdges
                     );
 
                     setNodes(layoutedNodes);
@@ -416,7 +344,6 @@ const HealingInstanceDetail: React.FC = () => {
         const eventSource = createInstanceEventStream(id, {
             onFlowStart: () => {
                 setInstanceStatus('running');
-                message.info('流程开始执行');
             },
             onNodeStart: (data) => {
                 updateNodeStatus(data.node_id, 'running');
@@ -441,7 +368,7 @@ const HealingInstanceDetail: React.FC = () => {
                 updateNodeStatus(data.node_id, data.status, undefined, data.message);
 
                 // Update node state in selectedNodeData if detailed view is open
-                if (selectedNodeData?.id === data.node_id) {
+                if (selectedNodeDataRef.current?.id === data.node_id) {
                     setSelectedNodeData((prev: any) => ({
                         ...prev,
                         status: data.status,
@@ -473,7 +400,12 @@ const HealingInstanceDetail: React.FC = () => {
         return () => {
             eventSource.close();
         };
-    }, [id, instanceStatus, selectedNodeData]); // Re-subscribe if ID changes, but status check logic handles unwanted reconnections
+    }, [id, instanceStatus]); // Re-subscribe if ID changes, but status check logic handles unwanted reconnections
+
+    // Keep ref in sync with selectedNodeData state
+    useEffect(() => {
+        selectedNodeDataRef.current = selectedNodeData;
+    }, [selectedNodeData]);
 
     const handleNodeClick = (_: React.MouseEvent, node: Node) => {
         // Handle virtual rule node click
@@ -532,7 +464,7 @@ const HealingInstanceDetail: React.FC = () => {
                                     instanceStatus === 'running' ? 'processing' :
                                         instanceStatus === 'waiting_approval' ? 'warning' : 'default'
                         }>
-                            {STATUS_LABELS[instanceStatus] || instanceStatus}
+                            {INSTANCE_STATUS_LABELS[instanceStatus] || instanceStatus}
                         </Tag>
                         {instanceStatus === 'completed' && instance?.node_states && (() => {
                             const hasFailed = Object.values(instance.node_states).some((state: any) => {
@@ -560,10 +492,10 @@ const HealingInstanceDetail: React.FC = () => {
                     <Space>
                         <Button icon={<EyeOutlined />} onClick={() => setContextDrawerVisible(true)}>执行概况</Button>
                         {(instanceStatus === 'running' || instanceStatus === 'waiting_approval' || instanceStatus === 'pending') && (
-                            <Button danger onClick={handleCancel}>取消执行</Button>
+                            <Button danger onClick={handleCancel} disabled={!access.canTriggerHealing}>取消执行</Button>
                         )}
                         {instanceStatus === 'failed' && (
-                            <Button type="primary" onClick={handleRetry}>重试</Button>
+                            <Button type="primary" onClick={handleRetry} disabled={!access.canTriggerHealing}>重试</Button>
                         )}
                     </Space>
                 }
@@ -612,7 +544,7 @@ const HealingInstanceDetail: React.FC = () => {
                 const failedEntries = Object.entries(instance.node_states)
                     .filter(([, state]: [string, any]) => {
                         const ns = normalizeNodeState(state);
-                        return ns?.status === 'failed' || ns?.status === 'error';
+                        return ns?.status === 'failed' || ns?.status === 'error' || ns?.status === 'rejected';
                     });
                 if (failedEntries.length > 0) {
                     return (
@@ -671,8 +603,7 @@ const HealingInstanceDetail: React.FC = () => {
                 size={600}
                 onClose={() => setContextDrawerVisible(false)}
                 open={contextDrawerVisible}
-                styles={{ header: { display: 'none' } }}
-                styles={{ body: { padding: 0 } }}
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }}
             >
                 {/* 动态颜色头部 - 若隐若现渐变 */}
                 {(() => {
@@ -709,7 +640,7 @@ const HealingInstanceDetail: React.FC = () => {
                                         instanceStatus === 'failed' ? 'error' :
                                             instanceStatus === 'running' ? 'processing' : 'warning'
                                 } style={{ borderRadius: 12, fontSize: 12 }}>
-                                    {STATUS_LABELS[instanceStatus] || instanceStatus}
+                                    {INSTANCE_STATUS_LABELS[instanceStatus] || instanceStatus}
                                 </Tag>
                             </div>
                         </div>
@@ -786,27 +717,68 @@ const HealingInstanceDetail: React.FC = () => {
                                                 <Descriptions.Item label="目标主机" span={2}>{execResult.target_hosts || '-'}</Descriptions.Item>
                                             )}
                                         </Descriptions>
-                                        {/* Node execution timeline */}
+                                        {/* 节点执行时间线 */}
                                         {instance?.node_states && Object.keys(instance.node_states).length > 0 && (
-                                            <div style={{ marginTop: 24 }}>
-                                                <Typography.Text strong style={{ display: 'block', marginBottom: 12 }}>节点执行记录</Typography.Text>
-                                                <Timeline items={Object.entries(instance.node_states).map(([nodeId, rawState]) => {
-                                                    const ns = normalizeNodeState(rawState);
-                                                    const nodeName = instance.flow_nodes?.find((n: any) => n.id === nodeId)?.name || nodeId;
-                                                    const isFail = ns?.status === 'failed' || ns?.status === 'error';
-                                                    return {
-                                                        color: isFail ? 'red' : ns?.status === 'success' ? 'green' : 'blue',
-                                                        dot: isFail ? <CloseCircleOutlined /> : ns?.status === 'success' ? <CheckCircleOutlined /> : <ClockCircleOutlined />,
+                                            <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 20 }}>
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: '#262626', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <ClockCircleOutlined style={{ color: '#1890ff' }} />
+                                                    执行时间线
+                                                </div>
+                                                <Timeline items={Object.entries(instance.node_states)
+                                                    .map(([nodeId, rawState]) => {
+                                                        const ns = normalizeNodeState(rawState);
+                                                        const nodeName = instance.flow_nodes?.find((n: any) => n.id === nodeId)?.name || nodeId;
+                                                        const isFail = ns?.status === 'failed' || ns?.status === 'error' || ns?.status === 'rejected';
+                                                        const isSuccess = ns?.status === 'success' || ns?.status === 'completed' || ns?.status === 'approved';
+                                                        const isSkipped = ns?.status === 'skipped';
+                                                        const statusKey = ns?.status || 'unknown';
+                                                        const timeVal = new Date(ns?.started_at || ns?.updated_at || 0).getTime();
+                                                        const timeStr = ns?.started_at || ns?.updated_at
+                                                            ? new Date(ns?.started_at || ns?.updated_at).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                                            : '';
+                                                        const durationStr = ns?.duration_ms != null
+                                                            ? (ns.duration_ms >= 1000 ? `${(ns.duration_ms / 1000).toFixed(1)}s` : `${ns.duration_ms}ms`)
+                                                            : '';
+                                                        return { nodeId, ns, nodeName, isFail, isSuccess, isSkipped, statusKey, timeVal, timeStr, durationStr };
+                                                    })
+                                                    .sort((a, b) => a.timeVal - b.timeVal)
+                                                    .map(({ ns, nodeName, isFail, isSuccess, isSkipped, statusKey, timeStr, durationStr }) => ({
+                                                        color: isFail ? 'red' : isSuccess ? 'green' : isSkipped ? 'gray' : 'blue',
+                                                        dot: isFail
+                                                            ? <CloseCircleOutlined style={{ fontSize: 14 }} />
+                                                            : isSuccess
+                                                                ? <CheckCircleOutlined style={{ fontSize: 14 }} />
+                                                                : <ClockCircleOutlined style={{ fontSize: 14 }} />,
                                                         children: (
-                                                            <div>
-                                                                <Typography.Text strong>{nodeName}</Typography.Text>
-                                                                <Tag style={{ marginLeft: 8 }} color={isFail ? 'error' : 'success'}>{ns?.status}</Tag>
-                                                                {ns?.error_message && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 4 }}>{ns.error_message}</div>}
-                                                                {ns?.message && !ns?.error_message && <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 4 }}>{ns.message}</div>}
+                                                            <div style={{ paddingBottom: 4 }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                    <Typography.Text strong style={{ fontSize: 13, color: '#262626' }}>{nodeName}</Typography.Text>
+                                                                    <Tag style={{
+                                                                        margin: 0, border: 'none', fontSize: 11,
+                                                                        background: isFail ? '#fff1f0' : isSuccess ? '#f6ffed' : isSkipped ? '#f5f5f5' : '#e6f7ff',
+                                                                        color: isFail ? '#ff4d4f' : isSuccess ? '#52c41a' : isSkipped ? '#999' : '#1890ff',
+                                                                    }}>
+                                                                        {INSTANCE_STATUS_LABELS[statusKey] || statusKey}
+                                                                    </Tag>
+                                                                    {timeStr && <Typography.Text type="secondary" style={{ fontSize: 11 }}>{timeStr}</Typography.Text>}
+                                                                    {durationStr && <Typography.Text type="secondary" style={{ fontSize: 11 }}>耗时 {durationStr}</Typography.Text>}
+                                                                </div>
+                                                                {(ns?.error_message || ns?.message) && (
+                                                                    <div style={{
+                                                                        marginTop: 6,
+                                                                        color: isFail ? '#ff4d4f' : '#8c8c8c',
+                                                                        fontSize: 12,
+                                                                        background: isFail ? '#fff1f0' : '#fafafa',
+                                                                        padding: '4px 10px',
+                                                                        borderRadius: 4,
+                                                                        borderLeft: `2px solid ${isFail ? '#ff4d4f' : '#d9d9d9'}`,
+                                                                    }}>
+                                                                        {ns.error_message || ns.message}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ),
-                                                    };
-                                                })} />
+                                                    }))} />
                                             </div>
                                         )}
                                     </div>
@@ -873,8 +845,7 @@ const HealingInstanceDetail: React.FC = () => {
                 size={600}
                 onClose={() => setIncidentDrawerVisible(false)}
                 open={incidentDrawerVisible}
-                styles={{ header: { display: 'none' } }}
-                styles={{ body: { padding: 0 } }}
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }}
             >
                 {instance?.incident ? (
                     <div>
@@ -976,8 +947,7 @@ const HealingInstanceDetail: React.FC = () => {
                 size={600}
                 onClose={() => setRuleDrawerVisible(false)}
                 open={ruleDrawerVisible}
-                styles={{ header: { display: 'none' } }}
-                styles={{ body: { padding: 0 } }}
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }}
             >
                 {instance?.rule ? (
                     <div>
@@ -1096,7 +1066,7 @@ const HealingInstanceDetail: React.FC = () => {
                                                 <TagOutlined style={{ color: '#1890ff', fontSize: 11 }} />
                                                 <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>{item.field}</Tag>
                                                 <Typography.Text type="secondary" style={{ fontSize: 11 }}>{item.operator}</Typography.Text>
-                                                <Tag style={{ margin: 0, fontSize: 11, background: '#f6ffed', borderColor: '#b7eb8f' }}>{item.value}</Tag>
+                                                <Tag style={{ margin: 0, fontSize: 11, background: '#f6ffed', borderColor: '#b7eb8f' }}>{typeof item.value === 'object' ? JSON.stringify(item.value) : String(item.value ?? '')}</Tag>
                                             </div>
                                         );
                                     };
@@ -1129,13 +1099,13 @@ const HealingInstanceDetail: React.FC = () => {
                 size={600}
                 onClose={() => setNodeDetailVisible(false)}
                 open={nodeDetailVisible}
-                styles={{ header: { display: 'none' } }}
-                styles={{ body: { padding: 0 } }}
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }}
             >
                 {/* 若隐若现节点头部 */}
                 {(() => {
                     const s = selectedNodeData?.state?.status || selectedNodeData?.status;
                     const nodeType = selectedNodeData?.type;
+                    const nodeTypeColor = NODE_TYPE_COLORS[nodeType] || '#8c8c8c';
                     const statusColor = s === 'success' || s === 'completed' || s === 'approved'
                         ? '#52c41a'
                         : s === 'failed' || s === 'error' || s === 'rejected'
@@ -1148,7 +1118,7 @@ const HealingInstanceDetail: React.FC = () => {
                                         ? '#8c8c8c'
                                         : s === 'triggered'
                                             ? '#722ed1'
-                                            : '#faad14';
+                                            : nodeTypeColor;
                     const nodeIcon = nodeType === 'execution' ? <PlayCircleOutlined />
                         : nodeType === 'approval' ? <EyeOutlined />
                             : nodeType === 'condition' ? <NodeIndexOutlined />
@@ -1180,7 +1150,7 @@ const HealingInstanceDetail: React.FC = () => {
                                                         : s === 'running' ? 'processing'
                                                             : s === 'waiting_approval' ? 'warning' : 'default'
                                             } style={{ borderRadius: 4, fontSize: 12 }}>
-                                                {STATUS_LABELS[s] || s}
+                                                {INSTANCE_STATUS_LABELS[s] || s}
                                             </Tag>
                                         )}
                                     </div>
@@ -1222,9 +1192,16 @@ const HealingInstanceDetail: React.FC = () => {
                     );
                     const configEntries = Object.entries(filteredConfig);
 
-                    // 用于「节点上下文」Tab 的数据（从运行时状态中提取，排除大段文本）
+                    // 用于「运行输出」的数据：排除已在专属卡片展示的字段和大段文本
+                    const contextExcludeKeys = [
+                        'stdout', 'stderr', 'error_message', 'message',
+                        // run 对象已拆解为执行统计 + 基本信息
+                        'run',
+                        // 已在基本信息卡展示
+                        'status',
+                    ];
                     const contextEntries = ns
-                        ? Object.entries(ns).filter(([k]) => !['stdout', 'stderr', 'status', 'error_message', 'message'].includes(k))
+                        ? Object.entries(ns).filter(([k]) => !contextExcludeKeys.includes(k))
                         : [];
 
                     // Descriptions 统一样式
@@ -1235,180 +1212,501 @@ const HealingInstanceDetail: React.FC = () => {
                         <Tabs defaultActiveKey="overview" tabBarStyle={{ padding: '0 16px' }} items={[
                             {
                                 key: 'overview',
-                                label: '概览',
+                                label: '执行详情',
                                 children: (
-                                    <div style={{ padding: '16px 20px' }}>
-                                        <Descriptions column={1} size="small" bordered
-                                            labelStyle={descLabelStyle}
-                                            contentStyle={descContentStyle}
+                                    <div style={{ padding: '16px 20px', height: 'calc(100vh - 160px)', overflow: 'auto' }}>
+                                        {/* ═══════ Card 1: 基本信息 ═══════ */}
+                                        <Card size="small" bordered={false} style={{ marginBottom: 16, background: '#fafafa' }}
+                                            bodyStyle={{ padding: '16px 20px' }}
                                         >
-                                            <Descriptions.Item label="节点 ID">
-                                                <Typography.Text copyable={{ text: selectedNodeData.id }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{selectedNodeData.id}</span></Typography.Text>
-                                            </Descriptions.Item>
-                                            <Descriptions.Item label="类型">
-                                                <Tag style={{ margin: 0 }}>{NODE_TYPE_LABELS[nodeType] || nodeType}</Tag>
-                                            </Descriptions.Item>
-                                            <Descriptions.Item label="状态">
-                                                {effectiveStatus ? (
-                                                    <Tag color={
-                                                        effectiveStatus === 'completed' || effectiveStatus === 'success' || effectiveStatus === 'approved' ? 'success' :
-                                                            effectiveStatus === 'failed' || effectiveStatus === 'error' || effectiveStatus === 'rejected' ? 'error' :
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                                                <span style={{ fontSize: 16, fontWeight: 600, color: '#1f1f1f' }}>
+                                                    {selectedNodeData.name || selectedNodeData.id}
+                                                </span>
+                                                <Badge
+                                                    status={
+                                                        effectiveStatus === 'failed' || effectiveStatus === 'error' || effectiveStatus === 'rejected' ? 'error' :
+                                                            effectiveStatus === 'completed' || effectiveStatus === 'success' || effectiveStatus === 'approved' ? 'success' :
                                                                 effectiveStatus === 'running' ? 'processing' :
                                                                     effectiveStatus === 'skipped' ? 'default' : 'warning'
-                                                    } style={{ margin: 0 }}>
-                                                        {STATUS_LABELS[effectiveStatus] || effectiveStatus}
-                                                    </Tag>
-                                                ) : <Typography.Text type="secondary">未执行</Typography.Text>}
-                                            </Descriptions.Item>
-                                            {ns?.started_at && (
-                                                <Descriptions.Item label="开始">
-                                                    {new Date(ns.started_at).toLocaleString('zh-CN')}
-                                                </Descriptions.Item>
-                                            )}
-                                            {(ns?.finished_at || ns?.updated_at) && (
-                                                <Descriptions.Item label="结束">
-                                                    {new Date(ns.finished_at || ns.updated_at).toLocaleString('zh-CN')}
-                                                </Descriptions.Item>
-                                            )}
-                                            {ns?.duration_ms != null && (
-                                                <Descriptions.Item label="耗时">
-                                                    <span style={{ fontWeight: 600, color: '#595959' }}>
+                                                    }
+                                                    text={<span style={{ fontWeight: 500 }}>{INSTANCE_STATUS_LABELS[effectiveStatus] || effectiveStatus || '未执行'}</span>}
+                                                />
+                                            </div>
+                                            <Descriptions column={2} size="small"
+                                                labelStyle={{ color: '#8c8c8c', fontSize: 12, paddingBottom: 4, width: 80 }}
+                                                contentStyle={{ color: '#262626', fontSize: 13, paddingBottom: 4 }}
+                                            >
+                                                <Descriptions.Item label="节点类型">{NODE_TYPE_LABELS[nodeType] || nodeType}</Descriptions.Item>
+                                                {ns?.duration_ms != null && (
+                                                    <Descriptions.Item label="执行耗时">
                                                         {ns.duration_ms >= 1000 ? `${(ns.duration_ms / 1000).toFixed(1)}s` : `${ns.duration_ms}ms`}
-                                                    </span>
-                                                </Descriptions.Item>
-                                            )}
-                                        </Descriptions>
-
-                                        {/* 执行关键信息 - run_id / exit_code / task_id */}
-                                        {isExecution && runId && (
-                                            <div style={{ marginTop: 12 }}>
-                                                <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>执行信息</Typography.Text>
-                                                <Descriptions column={1} size="small" bordered
-                                                    labelStyle={descLabelStyle}
-                                                    contentStyle={descContentStyle}
-                                                >
-                                                    <Descriptions.Item label="Run ID">
-                                                        <Typography.Text copyable={{ text: runId }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{runId}</span></Typography.Text>
                                                     </Descriptions.Item>
-                                                    {ns?.run?.exit_code != null && (
-                                                        <Descriptions.Item label="退出码">
-                                                            <Tag color={ns.run.exit_code === 0 ? 'success' : 'error'} style={{ margin: 0 }}>{ns.run.exit_code}</Tag>
-                                                        </Descriptions.Item>
-                                                    )}
-                                                    {ns?.task_id && (
-                                                        <Descriptions.Item label="任务 ID">
-                                                            <Typography.Text copyable={{ text: ns.task_id }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{ns.task_id}</span></Typography.Text>
+                                                )}
+                                                {ns?.started_at && (
+                                                    <Descriptions.Item label="开始时间">{new Date(ns.started_at).toLocaleString('zh-CN')}</Descriptions.Item>
+                                                )}
+                                                {(ns?.finished_at || ns?.updated_at) && (
+                                                    <Descriptions.Item label="结束时间">{new Date(ns.finished_at || ns.updated_at).toLocaleString('zh-CN')}</Descriptions.Item>
+                                                )}
+                                                {runId && (
+                                                    <Descriptions.Item label="执行记录">
+                                                        {resolvedNames[`run:${runId}`]
+                                                            ? <Tag color={resolvedNames[`run:${runId}`] === 'completed' ? 'success' : resolvedNames[`run:${runId}`] === 'failed' ? 'error' : 'processing'} style={{ margin: 0 }}>{resolvedNames[`run:${runId}`]}</Tag>
+                                                            : <Typography.Text copyable style={{ fontSize: 12 }}>{runId}</Typography.Text>
+                                                        }
+                                                    </Descriptions.Item>
+                                                )}
+                                                {ns?.task_id && (
+                                                    <Descriptions.Item label="任务模板">
+                                                        {resolvedNames[ns.task_id] || resolvedNames[`task:${ns.task_id}`]
+                                                            ? <Tag color="blue" style={{ margin: 0 }}>{resolvedNames[ns.task_id] || resolvedNames[`task:${ns.task_id}`]}</Tag>
+                                                            : <Typography.Text copyable style={{ fontSize: 12 }}>{ns.task_id}</Typography.Text>
+                                                        }
+                                                    </Descriptions.Item>
+                                                )}
+                                                {isExecution && ns?.run?.exit_code != null && (
+                                                    <Descriptions.Item label="退出码">{ns.run.exit_code}</Descriptions.Item>
+                                                )}
+                                            </Descriptions>
+                                        </Card>
+
+                                        {/* ═══════ Card 2: 错误 / 输出信息 ═══════ */}
+                                        {!isApproval && (ns?.error_message || ns?.message) && (
+                                            <Card size="small" style={{ marginBottom: 16 }}
+                                                title={<span style={{ fontSize: 13, fontWeight: 600 }}>
+                                                    {effectiveStatus === 'failed' || effectiveStatus === 'error'
+                                                        ? <><CloseCircleOutlined style={{ color: '#ff4d4f', marginRight: 6 }} />错误输出</>
+                                                        : <><InfoCircleOutlined style={{ color: '#1890ff', marginRight: 6 }} />节点输出</>}
+                                                </span>}
+                                                bodyStyle={{ padding: 0 }}
+                                            >
+                                                <div style={{
+                                                    background: '#1e1e1e',
+                                                    color: effectiveStatus === 'failed' || effectiveStatus === 'error' ? '#ff6b6b' : '#d4d4d4',
+                                                    padding: '14px 18px',
+                                                    fontFamily: "'SF Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+                                                    fontSize: 12.5,
+                                                    lineHeight: 1.7,
+                                                    maxHeight: 200,
+                                                    overflow: 'auto',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordBreak: 'break-all'
+                                                }}>
+                                                    {ns.error_message || ns.message}
+                                                </div>
+                                            </Card>
+                                        )}
+
+                                        {/* ═══════ Card 3: 审批详情 ═══════ */}
+                                        {isApproval && ns && (
+                                            <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><CheckCircleOutlined style={{ marginRight: 6 }} />审批详情</span>}
+                                                style={{ marginBottom: 16 }}
+                                            >
+                                                <Descriptions column={2} size="small" bordered
+                                                    labelStyle={{ background: '#fafafa', color: '#595959', width: 100, fontSize: 12 }}
+                                                    contentStyle={{ color: '#262626', fontSize: 13 }}
+                                                >
+                                                    {ns.title && <Descriptions.Item label="审批标题">{ns.title}</Descriptions.Item>}
+                                                    {ns.timeout_at && <Descriptions.Item label="超时期限">{new Date(ns.timeout_at).toLocaleString('zh-CN')}</Descriptions.Item>}
+                                                    {ns.description && <Descriptions.Item label="说明备注" span={2}>{ns.description}</Descriptions.Item>}
+                                                    {(ns.decision_comment || effectiveStatus === 'rejected') && (
+                                                        <Descriptions.Item label="决策意见" span={2}>
+                                                            <Tag color={effectiveStatus === 'rejected' ? 'error' : 'success'} style={{ fontSize: 13, padding: '2px 10px' }}>
+                                                                {ns.decision_comment || (effectiveStatus === 'rejected' ? '无意见直接拒绝' : '无意见直接通过')}
+                                                            </Tag>
                                                         </Descriptions.Item>
                                                     )}
                                                 </Descriptions>
-                                            </div>
+                                            </Card>
                                         )}
 
-                                        {/* 错误/消息 */}
-                                        {(ns?.error_message || ns?.message) && (
-                                            <div style={{
-                                                marginTop: 12, padding: '8px 12px', borderRadius: 4,
-                                                background: ns?.status === 'failed' || ns?.status === 'rejected' ? '#fff2f0' : '#f6ffed',
-                                                border: `1px solid ${ns?.status === 'failed' || ns?.status === 'rejected' ? '#ffccc7' : '#b7eb8f'}`,
-                                                fontSize: 12,
-                                            }}>
-                                                <Typography.Text type={ns?.status === 'failed' || ns?.status === 'rejected' ? 'danger' : undefined} style={{ fontSize: 12 }}>
-                                                    {ns.error_message || ns.message}
-                                                </Typography.Text>
-                                            </div>
-                                        )}
-
-                                        {/* 审批通过/拒绝提示 */}
-                                        {isApproval && effectiveStatus === 'rejected' && (
-                                            <Alert type="error" showIcon message="审批被拒绝" description={ns?.error_message} style={{ marginTop: 12 }} />
-                                        )}
-                                        {isApproval && effectiveStatus === 'approved' && (
-                                            <Alert type="success" showIcon message="审批已通过" style={{ marginTop: 12 }} />
-                                        )}
-
-                                        {/* 执行统计 - 指标卡片网格 */}
+                                        {/* ═══════ Card 4: 执行统计 ═══════ */}
                                         {isExecution && (ns?.run?.stats || ns?.stats) && (() => {
                                             const stats = ns.run?.stats || ns.stats;
                                             const total = (stats.ok || 0) + (stats.changed || 0) + (stats.unreachable || 0) + (stats.failed || 0) + (stats.skipped || 0);
-                                            const statItems = [
-                                                { key: 'ok', label: '成功', value: stats.ok || 0, color: '#52c41a' },
-                                                { key: 'changed', label: '已变更', value: stats.changed || 0, color: '#faad14' },
-                                                { key: 'unreachable', label: '不可达', value: stats.unreachable || 0, color: '#ff4d4f' },
-                                                { key: 'failed', label: '失败', value: stats.failed || 0, color: '#cf1322' },
-                                                { key: 'skipped', label: '跳过', value: stats.skipped || 0, color: '#8c8c8c' },
-                                            ];
-                                            const okRate = total > 0 ? Math.round(((stats.ok || 0) / total) * 100) : 0;
                                             return (
-                                                <div style={{ marginTop: 12 }}>
-                                                    <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>执行统计</Typography.Text>
-                                                    {/* 汇总条 */}
-                                                    <div style={{
-                                                        display: 'flex', alignItems: 'center', gap: 8,
-                                                        padding: '6px 10px', background: '#fafafa', border: '1px solid #f0f0f0', marginBottom: 8,
-                                                    }}>
-                                                        <span style={{ fontSize: 11, color: '#8c8c8c' }}>共 <b style={{ color: '#262626' }}>{total}</b> 台</span>
-                                                        <div style={{ flex: 1, height: 4, background: '#f0f0f0', overflow: 'hidden' }}>
-                                                            <div style={{ width: `${okRate}%`, height: '100%', background: '#52c41a', transition: 'width 0.3s' }} />
-                                                        </div>
-                                                        <span style={{ fontSize: 11, color: okRate === 100 ? '#52c41a' : '#8c8c8c', fontWeight: 500 }}>{okRate}%</span>
-                                                    </div>
-                                                    {/* 指标卡片网格 */}
-                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-                                                        {statItems.map(item => (
-                                                            <Card key={item.key} size="small" style={{
-                                                                borderLeft: `3px solid ${item.value > 0 ? item.color : '#e8e8e8'}`,
-                                                                background: item.value > 0 ? `${item.color}08` : undefined,
-                                                            }} styles={{ body: { padding: '6px 8px' } }}>
-                                                                <div style={{
-                                                                    fontSize: 18, fontWeight: 600, lineHeight: 1.2,
-                                                                    color: item.value > 0 ? item.color : '#bfbfbf',
-                                                                }}>{item.value}</div>
-                                                                <div style={{
-                                                                    fontSize: 10, color: '#8c8c8c', marginTop: 2,
-                                                                }}>{item.label}</div>
-                                                            </Card>
+                                                <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><DashboardOutlined style={{ marginRight: 6 }} />执行统计</span>}
+                                                    style={{ marginBottom: 16 }}
+                                                >
+                                                    <Row gutter={0}>
+                                                        {[
+                                                            { label: '总计', value: total, color: '#262626' },
+                                                            { label: '成功', value: stats.ok || 0, color: '#52c41a' },
+                                                            { label: '失败', value: stats.failed || 0, color: '#ff4d4f' },
+                                                            { label: '变更', value: stats.changed || 0, color: '#faad14' },
+                                                            { label: '失联', value: stats.unreachable || 0, color: '#ff7a45' },
+                                                            { label: '跳过', value: stats.skipped || 0, color: '#8c8c8c' },
+                                                        ].map(item => (
+                                                            <Col span={4} key={item.label} style={{ textAlign: 'center' }}>
+                                                                <div style={{ fontSize: 22, fontWeight: 700, color: item.color, lineHeight: 1.2 }}>{item.value}</div>
+                                                                <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 4 }}>{item.label}</div>
+                                                            </Col>
                                                         ))}
-                                                    </div>
-                                                </div>
+                                                    </Row>
+                                                </Card>
                                             );
                                         })()}
 
-                                        {/* 目标主机 */}
-                                        {isExecution && (ns?.target_hosts || ns?.hosts) && (() => {
-                                            const hostsStr = ns.target_hosts || '';
-                                            const hostsArr = ns.hosts || (hostsStr ? hostsStr.split(',').map((h: string) => h.trim()).filter(Boolean) : []);
-                                            return hostsArr.length > 0 ? (
-                                                <div style={{ marginTop: 12 }}>
-                                                    <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>目标主机</Typography.Text>
-                                                    <Space size={4} wrap>{hostsArr.map((h: string) => <Tag key={h} style={{ margin: 0 }}>{h}</Tag>)}</Space>
+                                        {/* ═══════ 执行日志摘要 ═══════ */}
+                                        {isExecution && stdoutLogs.length > 0 && (
+                                            <Card size="small"
+                                                title={<span style={{ fontSize: 13, fontWeight: 600 }}><CodeOutlined style={{ marginRight: 6 }} />执行日志 ({stdoutLogs.length} 行)</span>}
+                                                style={{ marginBottom: 16 }}
+                                                bodyStyle={{ padding: 0 }}
+                                            >
+                                                <div style={{
+                                                    background: '#0d1117',
+                                                    padding: '12px 16px',
+                                                    maxHeight: 250,
+                                                    overflow: 'auto',
+                                                    fontFamily: "'SF Mono', Menlo, Monaco, Consolas, monospace",
+                                                    fontSize: 11.5,
+                                                    lineHeight: 1.6,
+                                                }}>
+                                                    {stdoutLogs.slice(-30).map((log, i) => (
+                                                        <div key={i} style={{
+                                                            color: log.log_level === 'error' ? '#ff6b6b'
+                                                                : log.log_level === 'changed' ? '#faad14'
+                                                                    : log.log_level === 'ok' ? '#52c41a'
+                                                                        : log.log_level === 'skipping' ? '#8c8c8c'
+                                                                            : '#c9d1d9',
+                                                            whiteSpace: 'pre-wrap',
+                                                            wordBreak: 'break-all',
+                                                        }}>
+                                                            {log.message}
+                                                        </div>
+                                                    ))}
                                                 </div>
+                                            </Card>
+                                        )}
+
+                                        {(() => {
+                                            const hostsStr = ns?.target_hosts || '';
+                                            const hostsArr = ns?.hosts || (hostsStr ? hostsStr.split(',').map((h: string) => h.trim()).filter(Boolean) : []);
+                                            return hostsArr.length > 0 ? (
+                                                <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><AimOutlined style={{ marginRight: 6 }} />目标主机 ({hostsArr.length})</span>}
+                                                    style={{ marginBottom: 16 }}
+                                                >
+                                                    <Space size={[6, 6]} wrap>
+                                                        {hostsArr.map((h: string) => <Tag key={h} style={{ margin: 0 }}>{h}</Tag>)}
+                                                    </Space>
+                                                </Card>
                                             ) : null;
                                         })()}
 
-                                        {/* 审批信息 */}
-                                        {isApproval && ns && (
-                                            <div style={{ marginTop: 12 }}>
-                                                <Typography.Text strong style={{ fontSize: 12, color: '#595959', display: 'block', marginBottom: 8 }}>审批信息</Typography.Text>
-                                                <Descriptions column={1} size="small" bordered
-                                                    labelStyle={descLabelStyle}
-                                                    contentStyle={descContentStyle}
+                                        {/* ═══════ 节点结果卡（按节点类型）═══════ */}
+
+                                        {/* 主机提取结果 */}
+                                        {nodeType === 'host_extractor' && ns?.extracted_hosts && (() => {
+                                            const extracted = Array.isArray(ns.extracted_hosts)
+                                                ? ns.extracted_hosts
+                                                : typeof ns.extracted_hosts === 'string'
+                                                    ? ns.extracted_hosts.split(',').map((h: string) => h.trim()).filter(Boolean)
+                                                    : [];
+                                            return extracted.length > 0 ? (
+                                                <Card size="small"
+                                                    title={<span style={{ fontSize: 13, fontWeight: 600 }}><AimOutlined style={{ color: '#52c41a', marginRight: 6 }} />提取结果 ({extracted.length} 台主机)</span>}
+                                                    style={{ marginBottom: 16, borderLeft: '3px solid #52c41a' }}
                                                 >
-                                                    {ns.title && <Descriptions.Item label="标题">{ns.title}</Descriptions.Item>}
-                                                    {ns.description && <Descriptions.Item label="说明">{ns.description}</Descriptions.Item>}
-                                                    {ns.timeout_at && <Descriptions.Item label="超时">{new Date(ns.timeout_at).toLocaleString('zh-CN')}</Descriptions.Item>}
-                                                    {ns.task_id && (
-                                                        <Descriptions.Item label="任务 ID">
-                                                            <Typography.Text copyable={{ text: ns.task_id }}><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#595959' }}>{ns.task_id}</span></Typography.Text>
+                                                    <Space size={[6, 6]} wrap>
+                                                        {extracted.map((h: string, i: number) => (
+                                                            <Tag key={i} color="green" style={{ margin: 0 }}>{h}</Tag>
+                                                        ))}
+                                                    </Space>
+                                                    {ns.extract_mode && (
+                                                        <div style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>
+                                                            提取方式: {ns.extract_mode} {ns.source_field ? `| 来源: ${ns.source_field}` : ''}
+                                                        </div>
+                                                    )}
+                                                </Card>
+                                            ) : null;
+                                        })()}
+
+                                        {/* CMDB 验证结果 */}
+                                        {nodeType === 'cmdb_validator' && (ns?.validated_hosts || ns?.invalid_hosts) && (
+                                            <Card size="small"
+                                                title={<span style={{ fontSize: 13, fontWeight: 600 }}><CheckCircleOutlined style={{ color: '#1890ff', marginRight: 6 }} />CMDB 验证结果</span>}
+                                                style={{ marginBottom: 16, borderLeft: '3px solid #1890ff' }}
+                                            >
+                                                {ns.validation_summary && (
+                                                    <div style={{ marginBottom: 10, fontSize: 13 }}>{ns.validation_summary}</div>
+                                                )}
+                                                {ns.validated_hosts && (() => {
+                                                    const valid = Array.isArray(ns.validated_hosts) ? ns.validated_hosts : [];
+                                                    return valid.length > 0 ? (
+                                                        <div style={{ marginBottom: 8 }}>
+                                                            <span style={{ fontSize: 12, color: '#52c41a', fontWeight: 500 }}>✓ 验证通过 ({valid.length})</span>
+                                                            <div style={{ marginTop: 4 }}>
+                                                                <Space size={[4, 4]} wrap>
+                                                                    {valid.map((h: string, i: number) => <Tag key={i} color="success" style={{ margin: 0 }}>{h}</Tag>)}
+                                                                </Space>
+                                                            </div>
+                                                        </div>
+                                                    ) : null;
+                                                })()}
+                                                {ns.invalid_hosts && (() => {
+                                                    const invalid = Array.isArray(ns.invalid_hosts) ? ns.invalid_hosts : [];
+                                                    return invalid.length > 0 ? (
+                                                        <div>
+                                                            <span style={{ fontSize: 12, color: '#ff4d4f', fontWeight: 500 }}>✗ 未通过 ({invalid.length})</span>
+                                                            <div style={{ marginTop: 4 }}>
+                                                                <Space size={[4, 4]} wrap>
+                                                                    {invalid.map((h: string, i: number) => <Tag key={i} color="error" style={{ margin: 0 }}>{h}</Tag>)}
+                                                                </Space>
+                                                            </div>
+                                                        </div>
+                                                    ) : null;
+                                                })()}
+                                            </Card>
+                                        )}
+
+                                        {/* 条件/分支结果 */}
+                                        {(nodeType === 'condition' || nodeType === 'compute') && ns?.activated_branch && (
+                                            <Card size="small"
+                                                title={<span style={{ fontSize: 13, fontWeight: 600 }}><NodeIndexOutlined style={{ color: '#722ed1', marginRight: 6 }} />分支决策</span>}
+                                                style={{ marginBottom: 16, borderLeft: '3px solid #722ed1' }}
+                                            >
+                                                <Descriptions column={1} size="small" bordered
+                                                    labelStyle={{ background: '#fafafa', color: '#595959', width: 100, fontSize: 12 }}
+                                                    contentStyle={{ color: '#262626', fontSize: 13 }}
+                                                >
+                                                    <Descriptions.Item label="激活分支">
+                                                        <Tag color="purple" style={{ margin: 0, fontSize: 13 }}>{ns.activated_branch}</Tag>
+                                                    </Descriptions.Item>
+                                                    {ns.matched_expression && (
+                                                        <Descriptions.Item label="匹配表达式">
+                                                            <Typography.Text code style={{ fontSize: 12 }}>{ns.matched_expression}</Typography.Text>
                                                         </Descriptions.Item>
                                                     )}
                                                 </Descriptions>
-                                            </div>
+                                            </Card>
+                                        )}
+
+                                        {/* 设置变量结果 */}
+                                        {nodeType === 'set_variable' && ns?.variables_set && (
+                                            <Card size="small"
+                                                title={<span style={{ fontSize: 13, fontWeight: 600 }}><TagOutlined style={{ color: '#13c2c2', marginRight: 6 }} />已设置变量</span>}
+                                                style={{ marginBottom: 16, borderLeft: '3px solid #13c2c2' }}
+                                            >
+                                                {typeof ns.variables_set === 'object' && !Array.isArray(ns.variables_set) ? (
+                                                    <Descriptions column={1} size="small" bordered
+                                                        labelStyle={{ background: '#fafafa', color: '#595959', width: 120, fontSize: 12 }}
+                                                        contentStyle={{ color: '#262626', fontSize: 13 }}
+                                                    >
+                                                        {Object.entries(ns.variables_set).map(([k, v]) => (
+                                                            <Descriptions.Item key={k} label={k}>
+                                                                <Typography.Text code style={{ fontSize: 12 }}>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</Typography.Text>
+                                                            </Descriptions.Item>
+                                                        ))}
+                                                    </Descriptions>
+                                                ) : (
+                                                    <JsonPrettyView data={ns.variables_set} />
+                                                )}
+                                            </Card>
+                                        )}
+
+                                        {/* 计算节点结果 */}
+                                        {nodeType === 'compute' && ns?.computed_results && (
+                                            <Card size="small"
+                                                title={<span style={{ fontSize: 13, fontWeight: 600 }}><DashboardOutlined style={{ color: '#fa8c16', marginRight: 6 }} />计算结果</span>}
+                                                style={{ marginBottom: 16, borderLeft: '3px solid #fa8c16' }}
+                                            >
+                                                <JsonPrettyView data={ns.computed_results} />
+                                            </Card>
+                                        )}
+
+                                        {/* ═══════ 输入配置 ═══════ */}
+                                        {!isApproval && configEntries.length > 0 && (
+                                            <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><TagOutlined style={{ marginRight: 6 }} />输入配置</span>}
+                                                style={{ marginBottom: 16 }}
+                                            >
+                                                <Descriptions column={2} size="small" bordered
+                                                    labelStyle={{ background: '#fafafa', color: '#595959', width: 120, fontSize: 12 }}
+                                                    contentStyle={{ color: '#262626', fontSize: 13 }}
+                                                >
+                                                    {configEntries.map(([k, v]) => {
+                                                        // 值翻译：节点类型用 NODE_TYPE_LABELS；ID 字段用已解析的名称
+                                                        const isIdField = ['channel_id', 'template_id', 'notification_channel_id', 'notification_template_id', 'task_id', 'task_template_id'].includes(k);
+                                                        const displayValue = k === 'type'
+                                                            ? (NODE_TYPE_LABELS[v as string] || v)
+                                                            : (isIdField && typeof v === 'string' && resolvedNames[v])
+                                                                ? resolvedNames[v]
+                                                                : v;
+                                                        const isArr = Array.isArray(displayValue);
+                                                        const isSimpleArr = isArr && (displayValue as any[]).every((item: any) => typeof item !== 'object');
+                                                        const isLongStr = typeof displayValue === 'string' && String(displayValue).length > 40;
+                                                        const isObj = typeof displayValue === 'object' && displayValue !== null && !isArr;
+
+                                                        return (
+                                                            <Descriptions.Item key={k} label={CONFIG_LABELS[k] || k}
+                                                                span={isLongStr || isObj || (isArr && !isSimpleArr) ? 2 : 1}
+                                                            >
+                                                                {isSimpleArr ? (
+                                                                    <Space size={[4, 4]} wrap>
+                                                                        {(displayValue as any[]).map((item: any, idx: number) => (
+                                                                            <Tag key={idx} style={{ margin: 0 }}>{String(item)}</Tag>
+                                                                        ))}
+                                                                    </Space>
+                                                                ) : isArr ? (
+                                                                    <Space size={[4, 4]} wrap>
+                                                                        {(displayValue as any[]).map((item: any, idx: number) => (
+                                                                            <Tag key={idx} style={{ margin: 0 }}>{typeof item === 'object' ? JSON.stringify(item) : String(item)}</Tag>
+                                                                        ))}
+                                                                    </Space>
+                                                                ) : isObj ? (
+                                                                    <Typography.Paragraph copyable code style={{ fontSize: 11, margin: 0, maxWidth: '100%', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                                                                        {JSON.stringify(displayValue, null, 2)}
+                                                                    </Typography.Paragraph>
+                                                                ) : typeof displayValue === 'boolean' ? (
+                                                                    <Tag color={displayValue ? 'success' : 'default'} style={{ margin: 0 }}>{String(displayValue)}</Tag>
+                                                                ) : (
+                                                                    <span>{String(displayValue)}</span>
+                                                                )}
+                                                            </Descriptions.Item>
+                                                        );
+                                                    })}
+                                                </Descriptions>
+                                            </Card>
+                                        )}
+
+                                        {/* ═══════ 通知发送记录（内联展示）═══════ */}
+                                        {(nodeType === 'notification' || nodeType === 'send_notification') && (() => {
+                                            // 从节点运行输出中提取通知结果
+                                            const notifStatus = ns?.status;
+                                            const notifResponse = ns?.response || ns?.result;
+                                            const notifError = ns?.error_message || ns?.error;
+                                            const channelId = configData?.channel_id || configData?.notification_channel_id;
+                                            const templateId = configData?.template_id || configData?.notification_template_id;
+                                            const channelName = channelId ? resolvedNames[channelId] : null;
+                                            const templateName = templateId ? resolvedNames[templateId] : null;
+
+                                            return (
+                                                <Card size="small"
+                                                    title={<span style={{ fontSize: 13, fontWeight: 600 }}><FileTextOutlined style={{ marginRight: 6 }} />通知发送记录</span>}
+                                                    style={{ marginBottom: 16 }}
+                                                >
+                                                    <Descriptions column={2} size="small" bordered
+                                                        labelStyle={{ background: '#fafafa', color: '#595959', width: 100, fontSize: 12 }}
+                                                        contentStyle={{ color: '#262626', fontSize: 13 }}
+                                                    >
+                                                        {channelName && (
+                                                            <Descriptions.Item label="通知渠道">
+                                                                <Tag color="blue" style={{ margin: 0 }}>{channelName}</Tag>
+                                                            </Descriptions.Item>
+                                                        )}
+                                                        {templateName && (
+                                                            <Descriptions.Item label="通知模板">
+                                                                <Tag color="purple" style={{ margin: 0 }}>{templateName}</Tag>
+                                                            </Descriptions.Item>
+                                                        )}
+                                                        <Descriptions.Item label="发送状态">
+                                                            <Tag color={notifStatus === 'completed' || notifStatus === 'success' ? 'success'
+                                                                : notifStatus === 'failed' ? 'error'
+                                                                    : notifStatus === 'skipped' ? 'default'
+                                                                        : 'processing'}
+                                                                style={{ margin: 0 }}
+                                                            >
+                                                                {notifStatus === 'completed' || notifStatus === 'success' ? '✓ 发送成功'
+                                                                    : notifStatus === 'failed' ? '✗ 发送失败'
+                                                                        : notifStatus === 'skipped' ? '已跳过'
+                                                                            : notifStatus === 'running' ? '发送中...'
+                                                                                : notifStatus || '未知'}
+                                                            </Tag>
+                                                        </Descriptions.Item>
+                                                        {ns?.sent_at && (
+                                                            <Descriptions.Item label="发送时间">
+                                                                {new Date(ns.sent_at).toLocaleString('zh-CN')}
+                                                            </Descriptions.Item>
+                                                        )}
+                                                        {ns?.duration_ms != null && (
+                                                            <Descriptions.Item label="耗时">
+                                                                {ns.duration_ms}ms
+                                                            </Descriptions.Item>
+                                                        )}
+                                                    </Descriptions>
+
+                                                    {/* 响应详情 */}
+                                                    {notifResponse && typeof notifResponse === 'object' && (
+                                                        <div style={{ marginTop: 10 }}>
+                                                            <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>响应详情</div>
+                                                            <Typography.Paragraph code copyable
+                                                                style={{ fontSize: 11, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 150, overflow: 'auto' }}
+                                                            >
+                                                                {JSON.stringify(notifResponse, null, 2)}
+                                                            </Typography.Paragraph>
+                                                        </div>
+                                                    )}
+
+                                                    {/* 错误信息 */}
+                                                    {notifError && (
+                                                        <Alert type="error" showIcon message={notifError}
+                                                            style={{ marginTop: 10, fontSize: 12 }}
+                                                        />
+                                                    )}
+                                                </Card>
+                                            );
+                                        })()}
+
+                                        {/* ═══════ 运行输出 ═══════ */}
+                                        {!isApproval && contextEntries.length > 0 && (
+                                            <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><NodeIndexOutlined style={{ marginRight: 6 }} />运行输出</span>}
+                                                style={{ marginBottom: 16 }}
+                                            >
+                                                <Descriptions column={1} size="small" bordered
+                                                    labelStyle={{ background: '#fafafa', color: '#595959', width: 130, fontSize: 12 }}
+                                                    contentStyle={{ color: '#262626', fontSize: 13 }}
+                                                >
+                                                    {contextEntries.map(([k, v]) => {
+                                                        const ctxLabel = CONTEXT_LABELS[k] || k;
+                                                        // 时间字段格式化
+                                                        const isTimeField = k.endsWith('_at') || k.endsWith('_time');
+                                                        if (isTimeField && typeof v === 'string') {
+                                                            return (
+                                                                <Descriptions.Item key={k} label={ctxLabel}>
+                                                                    {new Date(v).toLocaleString('zh-CN')}
+                                                                </Descriptions.Item>
+                                                            );
+                                                        }
+                                                        // ID 字段：尝试用解析名称
+                                                        const isIdField = k.endsWith('_id') && typeof v === 'string';
+                                                        if (isIdField && resolvedNames[v]) {
+                                                            return (
+                                                                <Descriptions.Item key={k} label={ctxLabel}>
+                                                                    <Tag color="blue" style={{ margin: 0 }}>{resolvedNames[v]}</Tag>
+                                                                </Descriptions.Item>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <Descriptions.Item key={k} label={ctxLabel}>
+                                                                {typeof v === 'string' ? (
+                                                                    v.length > 120
+                                                                        ? <Typography.Paragraph ellipsis={{ rows: 2, expandable: true, symbol: '展开' }} style={{ margin: 0, fontSize: 13 }}>{v}</Typography.Paragraph>
+                                                                        : v
+                                                                ) :
+                                                                    typeof v === 'number' || typeof v === 'boolean' ? (
+                                                                        typeof v === 'boolean'
+                                                                            ? <Tag color={v ? 'success' : 'default'} style={{ margin: 0 }}>{String(v)}</Tag>
+                                                                            : String(v)
+                                                                    ) :
+                                                                        Array.isArray(v) && v.every((item: any) => typeof item !== 'object') ? (
+                                                                            <Space size={[4, 4]} wrap>
+                                                                                {v.map((item: any, idx: number) => <Tag key={idx} style={{ margin: 0 }}>{String(item)}</Tag>)}
+                                                                            </Space>
+                                                                        ) : (
+                                                                            <JsonPrettyView data={v} />
+                                                                        )}
+                                                            </Descriptions.Item>
+                                                        );
+                                                    })}
+                                                </Descriptions>
+                                            </Card>
                                         )}
                                     </div>
                                 )
                             },
-                            // 执行日志 tab - 优先用 API 日志，否则用 stdout
-                            ...(isExecution && (runId || stdoutLogs.length > 0) ? [{
+                            // 执行日志 tab
+                            ...((runId || stdoutLogs.length > 0) ? [{
                                 key: 'execution_log',
                                 label: '执行日志',
                                 children: (
@@ -1427,69 +1725,44 @@ const HealingInstanceDetail: React.FC = () => {
                                     />
                                 )
                             }] : []),
-                            // 节点上下文 tab（仅显示当前节点的运行时数据）
-                            ...(contextEntries.length > 0 ? [{
-                                key: 'context',
-                                label: '节点上下文',
-                                children: (
-                                    <div style={{ padding: '16px 20px', height: 'calc(100vh - 160px)', overflow: 'auto' }}>
-                                        <Descriptions column={1} size="small" bordered
-                                            labelStyle={{ ...descLabelStyle, width: 130 }}
-                                            contentStyle={descContentStyle}
-                                        >
-                                            {contextEntries.map(([key, value]) => (
-                                                <Descriptions.Item key={key} label={key}>
-                                                    {typeof value === 'object' && value !== null ? (
-                                                        <pre style={{ background: '#f6f8fa', padding: 8, borderRadius: 4, fontSize: 11, fontFamily: 'Menlo, Monaco, Consolas, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, maxHeight: 200, overflow: 'auto' }}>
-                                                            {JSON.stringify(value, null, 2)}
-                                                        </pre>
-                                                    ) : typeof value === 'boolean' ? (
-                                                        <Tag color={value ? 'success' : 'default'} style={{ margin: 0 }}>{String(value)}</Tag>
-                                                    ) : (
-                                                        <span>{String(value)}</span>
-                                                    )}
-                                                </Descriptions.Item>
-                                            ))}
-                                        </Descriptions>
-                                    </div>
-                                )
-                            }] : []),
-                            // 配置参数 tab
+                            // 开发者排错
                             {
-                                key: 'config',
-                                label: '配置参数',
+                                key: 'developer',
+                                label: <span><CodeOutlined /> 开发者排错</span>,
                                 children: (
                                     <div style={{ padding: '16px 20px', height: 'calc(100vh - 160px)', overflow: 'auto' }}>
-                                        {configEntries.length === 0 ? <Empty description="暂无配置参数" style={{ marginTop: 40 }} /> : (
-                                            <Descriptions column={1} size="small" bordered
-                                                labelStyle={{ ...descLabelStyle, width: 110 }}
-                                                contentStyle={descContentStyle}
+                                        {/* 配置参数 */}
+                                        <Card size="small"
+                                            title={<span style={{ fontSize: 13, fontWeight: 600 }}><TagOutlined style={{ marginRight: 6 }} />配置参数</span>}
+                                            style={{ marginBottom: 16 }}
+                                        >
+                                            {Object.keys(filteredConfig).length === 0
+                                                ? <Empty description="暂无配置参数" style={{ padding: '20px 0' }} />
+                                                : <JsonPrettyView data={filteredConfig} />}
+                                        </Card>
+
+                                        {/* 运行时上下文 */}
+                                        <Card size="small"
+                                            title={<span style={{ fontSize: 13, fontWeight: 600 }}><NodeIndexOutlined style={{ marginRight: 6 }} />运行时上下文</span>}
+                                            style={{ marginBottom: 16 }}
+                                        >
+                                            {contextEntries.length === 0
+                                                ? <Empty description="暂无上下文数据" style={{ padding: '20px 0' }} />
+                                                : <JsonPrettyView data={Object.fromEntries(contextEntries)} />}
+                                        </Card>
+
+                                        {/* 原始状态快照 */}
+                                        {ns && (
+                                            <Card size="small"
+                                                title={<span style={{ fontSize: 13, fontWeight: 600 }}><CodeOutlined style={{ marginRight: 6 }} />原始状态快照</span>}
+                                                style={{ marginBottom: 16 }}
                                             >
-                                                {configEntries.map(([k, v]) => (
-                                                    <Descriptions.Item key={k} label={CONFIG_LABELS[k] || k}>
-                                                        {typeof v === 'object' && v !== null
-                                                            ? <pre style={{ background: '#f6f8fa', padding: 8, borderRadius: 4, fontSize: 11, fontFamily: 'Menlo, Monaco, Consolas, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, maxHeight: 150, overflow: 'auto' }}>{JSON.stringify(v, null, 2)}</pre>
-                                                            : typeof v === 'boolean'
-                                                                ? <Tag color={v ? 'success' : 'default'} style={{ margin: 0 }}>{String(v)}</Tag>
-                                                                : <span>{String(v)}</span>
-                                                        }
-                                                    </Descriptions.Item>
-                                                ))}
-                                            </Descriptions>
+                                                <JsonPrettyView data={ns} />
+                                            </Card>
                                         )}
                                     </div>
                                 )
-                            },
-                            // 原始状态 tab
-                            ...(ns ? [{
-                                key: 'state',
-                                label: '原始状态',
-                                children: (
-                                    <div style={{ padding: 16, height: 'calc(100vh - 160px)', overflow: 'auto' }}>
-                                        <JsonPrettyView data={ns} />
-                                    </div>
-                                )
-                            }] : [])
+                            }
                         ]} />
                     );
                 })()}

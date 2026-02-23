@@ -6,16 +6,14 @@ import {
     DatabaseOutlined,
 } from '@ant-design/icons';
 import IncidentSelector from './IncidentSelector';
+import { INCIDENT_SEVERITY_MAP } from '@/constants/incidentDicts';
 
 const { Text } = Typography;
 
-// ==================== Severity Metadata ====================
-const SEVERITY_META: Record<string, { label: string; color: string }> = {
-    critical: { label: '严重', color: '#cf1322' },
-    high: { label: '高', color: '#fa541c' },
-    medium: { label: '中', color: '#faad14' },
-    low: { label: '低', color: '#1890ff' },
-};
+// 本地适配器：将集中化字典的 { text, color } 转为本文件需要的 { label, color }
+const SEVERITY_META: Record<string, { label: string; color: string }> = Object.fromEntries(
+    Object.entries(INCIDENT_SEVERITY_MAP).map(([k, v]) => [k, { label: v.text, color: v.color }])
+);
 
 interface RuleTesterProps {
     open: boolean;
@@ -124,7 +122,7 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
                     if (c.type === 'group') {
                         label = `(Group Logic: ${c.logic})`;
                     } else {
-                        label = `${c.field} ${c.operator} ${c.value}`;
+                        label = `${c.field} ${c.operator} ${typeof c.value === 'object' ? JSON.stringify(c.value) : c.value}`;
                     }
                     return { condition: label, pass };
                 });

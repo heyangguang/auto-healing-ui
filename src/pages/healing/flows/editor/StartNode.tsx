@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Typography } from 'antd';
 import { PlayCircleOutlined } from '@ant-design/icons';
-import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle, getNodeHeaderBg } from './CustomNode';
 
 const { Text } = Typography;
 
@@ -25,6 +25,7 @@ const StartNode = ({ data, isConnectable, selected }: NodeProps) => {
     const statusConfig = status ? STATUS_CONFIG[status] : null;
     const statusColor = statusConfig?.color;
     const isCurrent = !!data.isCurrent;
+    const headerBg = getNodeHeaderBg(status);
 
     const effectiveColor = statusColor || color;
 
@@ -56,7 +57,8 @@ const StartNode = ({ data, isConnectable, selected }: NodeProps) => {
                 height: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8
+                gap: 8,
+                background: headerBg,
             }}>
                 <PlayCircleOutlined style={{ color: statusColor || color, fontSize: 16, flexShrink: 0 }} />
                 <Text style={{ fontSize: 13, userSelect: 'none', flex: 1 }}>开始</Text>

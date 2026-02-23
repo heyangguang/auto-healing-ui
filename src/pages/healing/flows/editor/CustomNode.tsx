@@ -28,21 +28,24 @@ const handleStyle = {
     borderRadius: '50%',
     zIndex: 10,
 };
+import { NODE_TYPE_COLORS } from '../../nodeConfig';
 
 // 节点类型配置
 const nodeConfigs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
-    host_extractor: { color: '#1890ff', icon: <CloudServerOutlined />, label: '主机提取' },
-    cmdb_validator: { color: '#13c2c2', icon: <SafetyCertificateOutlined />, label: 'CMDB验证' },
-    set_variable: { color: '#eb2f96', icon: <FunctionOutlined />, label: '设置变量' },
-    compute: { color: '#2f54eb', icon: <CalculatorOutlined />, label: '计算节点' },
-    notification: { color: '#52c41a', icon: <BellOutlined />, label: '发送通知' },
-    trigger: { color: '#722ed1', icon: <ThunderboltOutlined />, label: '自愈规则' },
+    host_extractor: { color: NODE_TYPE_COLORS.host_extractor, icon: <CloudServerOutlined />, label: '主机提取' },
+    cmdb_validator: { color: NODE_TYPE_COLORS.cmdb_validator, icon: <SafetyCertificateOutlined />, label: 'CMDB验证' },
+    set_variable: { color: NODE_TYPE_COLORS.set_variable, icon: <FunctionOutlined />, label: '设置变量' },
+    compute: { color: NODE_TYPE_COLORS.compute, icon: <CalculatorOutlined />, label: '计算节点' },
+    notification: { color: NODE_TYPE_COLORS.notification, icon: <BellOutlined />, label: '发送通知' },
+    trigger: { color: NODE_TYPE_COLORS.trigger, icon: <ThunderboltOutlined />, label: '自愈规则' },
     default: { color: '#8c8c8c', icon: <AppstoreOutlined />, label: '节点' },
 };
 
 // 节点状态配置（包含实际执行和 Dry-Run 模拟状态）
 export const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
     // 通用状态
+    approved: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '已通过' },
+    rejected: { color: '#ff4d4f', icon: <CloseCircleOutlined />, label: '已拒绝' },
     pending: { color: '#d9d9d9', icon: <ClockCircleOutlined />, label: '等待中' },
     running: { color: '#1890ff', icon: <LoadingOutlined spin />, label: '执行中' },
     success: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '成功' },
@@ -98,6 +101,16 @@ export function getActiveHandleStyle(
     };
 }
 
+/**
+ * 获取统一的节点标题栏状态背景色
+ */
+export function getNodeHeaderBg(status?: string): string {
+    if (status === 'failed' || status === 'error' || status === 'rejected') return '#fff1f0';
+    if (status === 'partial') return '#fffbe6';
+    if (status === 'completed' || status === 'success' || status === 'approved' || status === 'ok') return '#f6ffed';
+    return '#fff';
+}
+
 // 固定节点尺寸
 const NODE_WIDTH = 160;
 const TRIGGER_NODE_WIDTH = 220; // 自愈规则节点更宽
@@ -110,6 +123,7 @@ const CustomNode = ({ data, isConnectable, selected }: NodeProps) => {
     const statusConfig = status ? STATUS_CONFIG[status] : null;
     const statusColor = statusConfig?.color;
     const isCurrent = !!data.isCurrent;
+    const headerBg = getNodeHeaderBg(status);
 
     // 自愈规则节点使用更宽的宽度
     const nodeWidth = nodeType === 'trigger' ? TRIGGER_NODE_WIDTH : NODE_WIDTH;
@@ -156,7 +170,8 @@ const CustomNode = ({ data, isConnectable, selected }: NodeProps) => {
                     height: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8
+                    gap: 6,
+                    background: headerBg,
                 }}>
                     <span style={{ fontSize: 16, color: statusColor || config.color, display: 'flex', flexShrink: 0 }}>
                         {config.icon}

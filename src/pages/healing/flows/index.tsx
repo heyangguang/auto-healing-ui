@@ -25,18 +25,15 @@ dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
 const { Text } = Typography;
+import { NODE_TYPE_COLORS, NODE_TYPE_LABELS as _NODE_TYPE_LABELS } from '../nodeConfig';
 
 // ==================== Constants ====================
-const NODE_TYPE_LABELS: Record<string, { label: string; color: string }> = {
-    execution: { label: '执行', color: '#fa8c16' },
-    approval: { label: '审批', color: '#faad14' },
-    notification: { label: '通知', color: '#52c41a' },
-    host_extractor: { label: '主机提取', color: '#13c2c2' },
-    cmdb_validator: { label: 'CMDB校验', color: '#722ed1' },
-    condition: { label: '条件', color: '#1890ff' },
-    set_variable: { label: '变量', color: '#eb2f96' },
-    compute: { label: '计算', color: '#2f54eb' },
-};
+// 组合 nodeConfig 的标签和颜色，供流程卡片、Detail Drawer 使用
+const NODE_TYPE_LABELS: Record<string, { label: string; color: string }> = Object.fromEntries(
+    Object.entries(_NODE_TYPE_LABELS)
+        .filter(([k]) => k !== 'start' && k !== 'end')
+        .map(([k, label]) => [k, { label, color: NODE_TYPE_COLORS[k] || '#8c8c8c' }])
+);
 
 // ==================== Search Fields ====================
 const searchFields: SearchField[] = [
@@ -446,6 +443,7 @@ const HealingFlowsPage: React.FC = () => {
                 extra={
                     <Button
                         icon={<EditOutlined />}
+                        disabled={!access.canUpdateFlow}
                         onClick={() => {
                             setDrawerOpen(false);
                             history.push(`/healing/flows/editor/${selectedFlow.id}`);

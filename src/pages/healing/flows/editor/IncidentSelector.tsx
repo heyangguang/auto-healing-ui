@@ -13,31 +13,22 @@ interface IncidentSelectorProps {
     onCancel: () => void;
 }
 
-const severityColors: Record<string, string> = {
-    '1': 'red',
-    '2': 'orange',
-    '3': 'gold',
-    '4': 'blue',
-    'critical': 'red',
-    'high': 'orange',
-    'medium': 'gold',
-    'low': 'blue',
-};
+import {
+    INCIDENT_SEVERITY_MAP,
+    INCIDENT_STATUS_MAP,
+    INCIDENT_HEALING_MAP,
+} from '@/constants/incidentDicts';
 
-const healingStatusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: '待处理', color: 'default' },
-    processing: { text: '自愈中', color: 'processing' },
-    healed: { text: '已自愈', color: 'success' },
-    failed: { text: '自愈失败', color: 'error' },
-    skipped: { text: '已跳过', color: 'warning' },
-};
+/** 从 INCIDENT_SEVERITY_MAP 提取颜色用于 Tag */
+const severityColors: Record<string, string> = Object.fromEntries(
+    Object.entries(INCIDENT_SEVERITY_MAP).map(([k, v]) => [k, v.tagColor]),
+);
 
-const statusMap: Record<string, { text: string; color: string }> = {
-    open: { text: '打开', color: 'blue' },
-    in_progress: { text: '处理中', color: 'processing' },
-    resolved: { text: '已解决', color: 'success' },
-    closed: { text: '已关闭', color: 'default' },
-};
+const healingStatusMap: Record<string, { text: string; color: string }> = Object.fromEntries(
+    Object.entries(INCIDENT_HEALING_MAP).map(([k, v]) => [k, { text: v.text, color: v.color }]),
+);
+
+const statusMap = INCIDENT_STATUS_MAP;
 
 const IncidentSelector: React.FC<IncidentSelectorProps> = ({
     open,
@@ -280,6 +271,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                                 { label: '已自愈', value: 'healed' },
                                 { label: '自愈失败', value: 'failed' },
                                 { label: '已跳过', value: 'skipped' },
+                                { label: '已忽略', value: 'dismissed' },
                             ]}
                         />
                     </Col>

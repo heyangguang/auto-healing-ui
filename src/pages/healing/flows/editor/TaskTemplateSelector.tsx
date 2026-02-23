@@ -20,7 +20,7 @@ interface TaskTemplate {
     name: string;
     description?: string;
     executor_type: string;
-    needs_review: boolean;
+    needs_review?: boolean;
     playbook?: {
         id: string;
         name: string;
@@ -185,6 +185,7 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
             }, 300);
             return () => clearTimeout(timer);
         }
+        return undefined;
     }, [selectedTreeKey, search, executorType, statusFilter, initLoading, open]);
 
     // 滚动加载更多

@@ -7,9 +7,11 @@ import ReactFlow, { Background, Controls, Edge, Node, useNodesState, useEdgesSta
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import { getLayoutedElements } from '../utils/layoutUtils';
+import { buildCanvasElements } from '../utils/canvasBuilder';
 import AutoLayoutButton from './AutoLayoutButton';
 import { getHealingInstanceDetail } from '@/services/auto-healing/instances';
 import dayjs from 'dayjs';
+import '../instances.css';
 
 // Import node types from the editor
 import ApprovalNode from '../../flows/editor/ApprovalNode';
@@ -36,56 +38,6 @@ const nodeTypes = {
 };
 
 const proOptions: ProOptions = { hideAttribution: true };
-
-/** 将 node_states 的值统一为对象格式（兼容字符串和对象两种后端格式） */
-function normalizeNodeState(raw: any): Record<string, any> | undefined {
-    if (!raw) return undefined;
-    if (typeof raw === 'string') return { status: raw };
-    return raw;
-}
-
-const STATUS_EDGE_COLOR: Record<string, string> = {
-    success: '#52c41a', completed: '#52c41a', approved: '#52c41a',
-    failed: '#ff4d4f', rejected: '#ff4d4f', partial: '#faad14',
-    running: '#1890ff', waiting_approval: '#fa8c16',
-};
-
-/** 根据 node_states + current_node_id 推算所有已执行节点 */
-function inferExecutedNodes(
-    nodes: any[], edges: any[],
-    nodeStates: Record<string, any>,
-    currentNodeId: string | null,
-    instanceStatus: string,
-): Record<string, string> {
-    const result: Record<string, string> = {};
-    for (const [nodeId, state] of Object.entries(nodeStates)) {
-        const ns = normalizeNodeState(state);
-        if (ns?.status) result[nodeId] = ns.status;
-    }
-    if (currentNodeId && !result[currentNodeId]) {
-        if (instanceStatus === 'completed') result[currentNodeId] = 'success';
-        else if (instanceStatus === 'failed') result[currentNodeId] = 'failed';
-        else if (instanceStatus === 'running') result[currentNodeId] = 'running';
-    }
-    const executedSet = new Set(Object.keys(result));
-    const reverseEdges: Record<string, string[]> = {};
-    for (const edge of edges) {
-        if (!reverseEdges[edge.target]) reverseEdges[edge.target] = [];
-        reverseEdges[edge.target].push(edge.source);
-    }
-    const queue = [...executedSet];
-    while (queue.length > 0) {
-        const nodeId = queue.shift()!;
-        for (const parent of (reverseEdges[nodeId] || [])) {
-            if (!executedSet.has(parent)) {
-                executedSet.add(parent);
-                result[parent] = 'success';
-                queue.push(parent);
-            }
-        }
-    }
-    return result;
-}
 
 // Status config
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactElement; label: string }> = {
@@ -126,84 +78,16 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
             refreshDeps: [instanceId],
             onSuccess: (data) => {
                 if (data && data.flow_nodes && data.flow_edges) {
-                    const executedNodes = inferExecutedNodes(
-                        data.flow_nodes, data.flow_edges,
-                        data.node_states || {}, data.current_node_id, data.status,
-                    );
-
-                    let flowNodes = data.flow_nodes.map((node) => {
-                        const nodeState = normalizeNodeState(data.node_states?.[node.id]);
-                        const effectiveStatus = nodeState?.status || executedNodes[node.id];
-                        return {
-                            ...node,
-                            draggable: false,
-                            connectable: false,
-                            selectable: true,
-                            data: {
-                                ...node.config,
-                                label: node.name,
-                                type: node.type,
-                                status: effectiveStatus,
-                                dryRunMessage: nodeState?.error_message || nodeState?.message || nodeState?.description,
-                                isCurrent: node.id === data.current_node_id,
-                            },
-                        } as Node;
+                    // 使用共享画布构建函数 — 与列表页/详情页逻辑完全一致
+                    const { nodes: builtNodes, edges: builtEdges } = buildCanvasElements({
+                        flowNodes: data.flow_nodes,
+                        flowEdges: data.flow_edges,
+                        nodeStates: data.node_states || {},
+                        currentNodeId: data.current_node_id,
+                        rule: data.rule,
                     });
 
-                    let flowEdges = data.flow_edges.map((edge: any) => {
-                        const sourceStatus = executedNodes[edge.source];
-                        const targetStatus = executedNodes[edge.target];
-                        const isExecutedEdge = sourceStatus && targetStatus;
-                        const edgeColor = isExecutedEdge
-                            ? (STATUS_EDGE_COLOR[targetStatus] || '#52c41a') : '#d9d9d9';
-                        return {
-                            ...edge,
-                            animated: isExecutedEdge,
-                            style: {
-                                stroke: edgeColor,
-                                strokeWidth: isExecutedEdge ? 2 : 1,
-                                opacity: isExecutedEdge ? 1 : 0.4,
-                            },
-                        };
-                    }) as Edge[];
-
-                    // Inject Virtual Rule Node if Rule exists
-                    if (data.rule) {
-                        const ruleNodeId = 'virtual-rule-trigger';
-                        const startNode = flowNodes.find(n => n.type === 'start') || flowNodes[0];
-
-                        const ruleNode: Node = {
-                            id: ruleNodeId,
-                            type: 'custom',
-                            position: {
-                                x: startNode?.position?.x ?? 0,
-                                y: (startNode?.position?.y ?? 0) - 100,
-                            },
-                            data: {
-                                label: `自愈规则: ${data.rule.name}`,
-                                type: 'trigger',
-                                status: 'triggered',
-                                details: data.rule,
-                            },
-                            draggable: false,
-                            connectable: false,
-                        };
-
-                        flowNodes = [ruleNode, ...flowNodes];
-
-                        if (startNode) {
-                            flowEdges = [{
-                                id: `edge-${ruleNodeId}-${startNode.id}`,
-                                source: ruleNodeId,
-                                target: startNode.id,
-                                type: 'smoothstep',
-                                animated: true,
-                                style: { stroke: '#722ed1', strokeWidth: 2 },
-                            }, ...flowEdges];
-                        }
-                    }
-
-                    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(flowNodes, flowEdges);
+                    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(builtNodes, builtEdges);
                     setNodes(layoutedNodes);
                     setEdges(layoutedEdges);
                 }

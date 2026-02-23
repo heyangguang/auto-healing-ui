@@ -1,112 +1,183 @@
-import React from 'react';
-import { Button, Descriptions, Empty, Space, Tag, Typography, message } from 'antd';
-import { CopyOutlined, CodeOutlined } from '@ant-design/icons';
+import React, { useMemo } from 'react';
+import { Button, Empty, message } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 
-/** 内部字段黑名单 - 不展示给用户 */
-const HIDDEN_KEYS = new Set(['_nodeState', 'dryRunMessage', '__proto__']);
+/**
+ * JSON 代码查看器 — GitHub Dark 深色主题 + 自动换行 + 内联语法着色
+ */
 
-/** 判断值是否为"空" */
-const isEmptyValue = (v: any): boolean => {
-    if (v === null || v === undefined) return true;
-    if (typeof v === 'string' && v.trim() === '') return true;
-    return false;
+// 着色方案 (GitHub Dark)
+const COLORS = {
+    key: '#79c0ff',       // 蓝色 key
+    str: '#a5d6ff',       // 浅蓝字符串
+    num: '#79c0ff',       // 蓝色数字
+    bool: '#ff7b72',      // 红色布尔
+    nul: '#d2a8ff',       // 紫色 null
+    brace: '#8b949e',     // 灰色括号
+    colon: '#8b949e',     // 灰色冒号
+    comma: '#8b949e',     // 灰色逗号
 };
 
-/** 将值渲染为可读 React 节点 */
-const renderValue = (value: any, depth: number = 0): React.ReactNode => {
-    if (isEmptyValue(value)) return <Typography.Text type="secondary">-</Typography.Text>;
-    if (typeof value === 'boolean') return <Tag color={value ? 'success' : 'default'}>{String(value)}</Tag>;
-    if (typeof value === 'number') return <Typography.Text code>{value}</Typography.Text>;
-    if (typeof value === 'string') {
-        // Timestamp
-        if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
-            try { return new Date(value).toLocaleString('zh-CN'); } catch { return value; }
+const syntaxHighlight = (json: string): string => {
+    // 先 HTML 转义
+    const lines = json.split('\n');
+    const result: string[] = [];
+
+    for (const line of lines) {
+        let highlighted = '';
+        let i = 0;
+        const chars = line;
+
+        while (i < chars.length) {
+            const ch = chars[i];
+
+            // 空白
+            if (ch === ' ' || ch === '\t') {
+                highlighted += ch;
+                i++;
+                continue;
+            }
+
+            // 括号 { } [ ]
+            if (ch === '{' || ch === '}' || ch === '[' || ch === ']') {
+                highlighted += `<span style="color:${COLORS.brace}">${ch}</span>`;
+                i++;
+                continue;
+            }
+
+            // 逗号
+            if (ch === ',') {
+                highlighted += `<span style="color:${COLORS.comma}">,</span>`;
+                i++;
+                continue;
+            }
+
+            // 冒号
+            if (ch === ':') {
+                highlighted += `<span style="color:${COLORS.colon}">:</span>`;
+                i++;
+                continue;
+            }
+
+            // 字符串 (可能是 key 或 value)
+            if (ch === '"') {
+                let str = '"';
+                i++;
+                while (i < chars.length) {
+                    if (chars[i] === '\\' && i + 1 < chars.length) {
+                        str += chars[i] + chars[i + 1];
+                        i += 2;
+                    } else if (chars[i] === '"') {
+                        str += '"';
+                        i++;
+                        break;
+                    } else {
+                        str += chars[i];
+                        i++;
+                    }
+                }
+
+                // 判断是 key 还是 value — key 后面紧跟 `: ` 或 `:`
+                const restTrimmed = chars.substring(i).trimStart();
+                const isKey = restTrimmed.startsWith(':');
+
+                // HTML 转义字符串内容
+                const escaped = str
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                const color = isKey ? COLORS.key : COLORS.str;
+                highlighted += `<span style="color:${color}">${escaped}</span>`;
+                continue;
+            }
+
+            // 数字
+            if (ch === '-' || (ch >= '0' && ch <= '9')) {
+                let num = ch;
+                i++;
+                while (i < chars.length && /[\d.eE+\-]/.test(chars[i])) {
+                    num += chars[i];
+                    i++;
+                }
+                highlighted += `<span style="color:${COLORS.num};font-weight:500">${num}</span>`;
+                continue;
+            }
+
+            // true / false / null
+            const rest = chars.substring(i);
+            const kwMatch = rest.match(/^(true|false|null)\b/);
+            if (kwMatch) {
+                const kw = kwMatch[1];
+                const color = kw === 'null' ? COLORS.nul : COLORS.bool;
+                const fontStyle = kw === 'null' ? ';font-style:italic' : '';
+                highlighted += `<span style="color:${color}${fontStyle}">${kw}</span>`;
+                i += kw.length;
+                continue;
+            }
+
+            // 其他字符
+            const escaped = ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : ch;
+            highlighted += escaped;
+            i++;
         }
-        // Status-like values
-        if (['success', 'completed'].includes(value)) return <Tag color="success">{value}</Tag>;
-        if (['failed', 'error'].includes(value)) return <Tag color="error">{value}</Tag>;
-        if (['running', 'pending'].includes(value)) return <Tag color="processing">{value}</Tag>;
-        if (['skipped', 'cancelled'].includes(value)) return <Tag color="default">{value}</Tag>;
-        // Long text
-        if (value.length > 200) return <Typography.Paragraph ellipsis={{ rows: 3, expandable: true }} style={{ margin: 0, fontSize: 13 }}>{value}</Typography.Paragraph>;
-        return <span style={{ fontSize: 13 }}>{value}</span>;
+
+        result.push(highlighted);
     }
-    if (Array.isArray(value)) {
-        if (value.length === 0) return <Typography.Text type="secondary">[]</Typography.Text>;
-        if (value.every(v => typeof v !== 'object')) {
-            return <Space size={4} wrap>{value.map((v, i) => <Tag key={i}>{String(v)}</Tag>)}</Space>;
-        }
-        return (
-            <pre style={{ background: '#fafafa', padding: 8, borderRadius: 6, fontSize: 11, fontFamily: 'Menlo, Monaco, Consolas, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, maxHeight: 200, overflow: 'auto' }}>
-                {JSON.stringify(value, null, 2)}
-            </pre>
-        );
-    }
-    if (typeof value === 'object' && depth < 2) {
-        const entries = Object.entries(value).filter(([k, v]) => !HIDDEN_KEYS.has(k) && !isEmptyValue(v));
-        if (entries.length === 0) return <Typography.Text type="secondary">-</Typography.Text>;
-        return (
-            <Descriptions column={1} size="small" bordered labelStyle={{ background: '#fafafa', fontWeight: 500, width: 120, fontSize: 12 }} contentStyle={{ fontSize: 12 }}>
-                {entries.map(([k, v]) => (
-                    <Descriptions.Item key={k} label={k}>{renderValue(v, depth + 1)}</Descriptions.Item>
-                ))}
-            </Descriptions>
-        );
-    }
-    return (
-        <pre style={{ background: '#fafafa', padding: 8, borderRadius: 6, fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, maxHeight: 150, overflow: 'auto' }}>
-            {JSON.stringify(value, null, 2)}
-        </pre>
-    );
+
+    return result.join('\n');
 };
 
-/** JSON 美化展示组件：key-value 表格 + 复制按钮 + 可折叠原始数据 */
 const JsonPrettyView: React.FC<{ data: any }> = ({ data }) => {
     if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
-        return <Empty description="暂无数据" style={{ marginTop: 40 }} />;
+        return <Empty description="暂无数据" style={{ padding: '30px 0' }} />;
     }
 
-    // 过滤掉内部字段和空值
-    const entries = Object.entries(data).filter(([k, v]) => !HIDDEN_KEYS.has(k) && !isEmptyValue(v));
-
-    if (entries.length === 0) {
-        return <Empty description="暂无数据" style={{ marginTop: 40 }} />;
-    }
-
-    const jsonStr = JSON.stringify(data, null, 2);
+    const jsonStr = useMemo(() => JSON.stringify(data, null, 2), [data]);
+    const highlighted = useMemo(() => syntaxHighlight(jsonStr), [jsonStr]);
+    const fieldCount = typeof data === 'object' ? Object.keys(data).length : 0;
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <div style={{ borderRadius: 6, overflow: 'hidden', border: '1px solid #30363d' }}>
+            {/* 顶部工具栏 */}
+            <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '6px 14px',
+                background: '#161b22',
+                borderBottom: '1px solid #30363d',
+            }}>
+                <span style={{ fontSize: 11, color: '#8b949e', fontFamily: 'monospace' }}>
+                    JSON · {fieldCount} 字段
+                </span>
                 <Button
                     size="small"
+                    type="text"
                     icon={<CopyOutlined />}
-                    onClick={() => { navigator.clipboard.writeText(jsonStr); message.success('已复制到剪贴板'); }}
+                    style={{ color: '#8b949e', fontSize: 11, height: 22 }}
+                    onClick={() => { navigator.clipboard.writeText(jsonStr); message.success('已复制'); }}
                 >
-                    复制 JSON
+                    复制
                 </Button>
             </div>
-            <Descriptions
-                column={1}
-                size="small"
-                bordered
-                labelStyle={{ background: '#fafafa', fontWeight: 500, width: 130, fontSize: 12 }}
-                contentStyle={{ fontSize: 12 }}
-            >
-                {entries.map(([key, value]) => (
-                    <Descriptions.Item key={key} label={key}>
-                        {renderValue(value)}
-                    </Descriptions.Item>
-                ))}
-            </Descriptions>
-            <details style={{ marginTop: 12 }}>
-                <summary style={{ cursor: 'pointer', fontSize: 12, color: '#8c8c8c', userSelect: 'none' }}>
-                    <CodeOutlined /> 查看原始 JSON
-                </summary>
-                <pre style={{ background: '#fafafa', padding: 12, borderRadius: 6, fontSize: 11, fontFamily: 'Menlo, Monaco, Consolas, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: '8px 0 0', border: '1px solid #f0f0f0', maxHeight: 300, overflow: 'auto' }}>
-                    {jsonStr}
-                </pre>
-            </details>
+
+            {/* 代码区域 */}
+            <pre
+                style={{
+                    margin: 0,
+                    padding: '14px 18px',
+                    background: '#0d1117',
+                    fontSize: 12,
+                    lineHeight: 1.7,
+                    fontFamily: "'SF Mono', Menlo, Monaco, Consolas, monospace",
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    overflowWrap: 'break-word',
+                    maxHeight: 500,
+                    overflow: 'auto',
+                    color: '#c9d1d9',
+                }}
+                dangerouslySetInnerHTML={{ __html: highlighted }}
+            />
         </div>
     );
 };

@@ -22,30 +22,31 @@ interface NodeTypeItem {
     color: string;
     description: string;
 }
+import { NODE_TYPE_COLORS } from '../../nodeConfig';
 
 const nodeGroups: { title: string; items: NodeTypeItem[] }[] = [
     {
         title: '数据处理',
         items: [
-            { type: 'host_extractor', label: '主机提取', icon: <CloudServerOutlined />, color: '#1890ff', description: '从告警提取主机' },
-            { type: 'cmdb_validator', label: 'CMDB校验', icon: <SafetyCertificateOutlined />, color: '#13c2c2', description: '验证主机状态' },
-            { type: 'set_variable', label: '设置变量', icon: <FunctionOutlined />, color: '#eb2f96', description: '设置上下文变量' },
-            { type: 'compute', label: '计算节点', icon: <CalculatorOutlined />, color: '#2f54eb', description: '表达式计算' },
+            { type: 'host_extractor', label: '主机提取', icon: <CloudServerOutlined />, color: NODE_TYPE_COLORS.host_extractor, description: '从告警提取主机' },
+            { type: 'cmdb_validator', label: 'CMDB校验', icon: <SafetyCertificateOutlined />, color: NODE_TYPE_COLORS.cmdb_validator, description: '验证主机状态' },
+            { type: 'set_variable', label: '设置变量', icon: <FunctionOutlined />, color: NODE_TYPE_COLORS.set_variable, description: '设置上下文变量' },
+            { type: 'compute', label: '计算节点', icon: <CalculatorOutlined />, color: NODE_TYPE_COLORS.compute, description: '表达式计算' },
         ],
     },
     {
         title: '流程控制',
         items: [
-            { type: 'condition', label: '条件分支', icon: <BranchesOutlined />, color: '#722ed1', description: '根据条件分流' },
-            { type: 'approval', label: '人工审批', icon: <AuditOutlined />, color: '#faad14', description: '需人工确认' },
-            { type: 'end', label: '结束节点', icon: <AppstoreOutlined />, color: '#ff4d4f', description: '流程终点' },
+            { type: 'condition', label: '条件分支', icon: <BranchesOutlined />, color: NODE_TYPE_COLORS.condition, description: '根据条件分流' },
+            { type: 'approval', label: '人工审批', icon: <AuditOutlined />, color: NODE_TYPE_COLORS.approval, description: '需人工确认' },
+            { type: 'end', label: '结束节点', icon: <AppstoreOutlined />, color: NODE_TYPE_COLORS.end, description: '流程终点' },
         ],
     },
     {
         title: '执行动作',
         items: [
-            { type: 'execution', label: '任务执行', icon: <CodeOutlined />, color: '#fa8c16', description: '执行自动化任务' },
-            { type: 'notification', label: '发送通知', icon: <BellOutlined />, color: '#52c41a', description: '发送告警通知' },
+            { type: 'execution', label: '任务执行', icon: <CodeOutlined />, color: NODE_TYPE_COLORS.execution, description: '执行自动化任务' },
+            { type: 'notification', label: '发送通知', icon: <BellOutlined />, color: NODE_TYPE_COLORS.notification, description: '发送告警通知' },
         ],
     },
 ];

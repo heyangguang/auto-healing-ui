@@ -5,7 +5,8 @@ import {
     CodeOutlined, CheckOutlined, CloseOutlined,
     ExclamationCircleOutlined
 } from '@ant-design/icons';
-import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle } from './CustomNode';
+import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle, getNodeHeaderBg } from './CustomNode';
+import { getNodeTypeColor } from '../../nodeConfig';
 
 const { Text } = Typography;
 
@@ -26,19 +27,14 @@ const NODE_HEIGHT = NODE_HEADER_HEIGHT + NODE_FOOTER_HEIGHT;
 
 const ExecutionNode = ({ data, isConnectable, selected }: NodeProps) => {
     const status = data.status;
-    const color = '#fa8c16';
+    const color = getNodeTypeColor('execution');
     const statusConfig = status ? STATUS_CONFIG[status] : null;
     const statusColor = statusConfig?.color;
     const isCurrent = !!data.isCurrent;
+    const headerBg = getNodeHeaderBg(status);
 
-    // 构建悬浮提示内容
     const tooltipContent = data.dryRunMessage ? (
-        <div style={{ maxWidth: 300 }}>
-            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-                {statusConfig?.label || '执行状态'}
-            </div>
-            <div>{data.dryRunMessage}</div>
-        </div>
+        <div style={{ maxWidth: 300 }}>{data.dryRunMessage}</div>
     ) : null;
 
     return (
@@ -57,7 +53,6 @@ const ExecutionNode = ({ data, isConnectable, selected }: NodeProps) => {
                 border: '1px solid #d9d9d9',
                 borderLeft: `3px solid ${statusColor || color}`,
                 transition: 'all 0.3s',
-                overflow: 'visible',
                 animation: isCurrent ? 'currentNodePulse 2s ease-in-out infinite' : undefined,
                 ...getNodeOutlineStyle(isCurrent, !!selected),
             }}>
@@ -73,7 +68,8 @@ const ExecutionNode = ({ data, isConnectable, selected }: NodeProps) => {
                     height: NODE_HEADER_HEIGHT,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8
+                    gap: 8,
+                    background: headerBg,
                 }}>
                     <CodeOutlined style={{ fontSize: 16, color: statusColor || color, flexShrink: 0 }} />
                     <Text style={{ fontSize: 13, userSelect: 'none', flex: 1 }} ellipsis>
@@ -89,13 +85,13 @@ const ExecutionNode = ({ data, isConnectable, selected }: NodeProps) => {
                 <div style={{
                     height: NODE_FOOTER_HEIGHT,
                     display: 'flex',
-                    borderTop: '1px solid #f5f5f5'
+                    borderTop: '1px solid #f0f0f0'
                 }}>
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRight: '1px solid #f5f5f5', position: 'relative' }}>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRight: '1px solid #f0f0f0', position: 'relative' }}>
                         <CheckOutlined style={{ fontSize: 12, color: '#52c41a' }} />
                         <Handle type="source" position={Position.Bottom} id="success" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#52c41a', bottom: -4, ...getActiveHandleStyle('success', data.activeHandles, '#52c41a') }} />
                     </div>
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRight: '1px solid #f5f5f5', position: 'relative' }}>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRight: '1px solid #f0f0f0', position: 'relative' }}>
                         <ExclamationCircleOutlined style={{ fontSize: 12, color: '#faad14' }} />
                         <Handle type="source" position={Position.Bottom} id="partial" isConnectable={isConnectable} style={{ ...handleStyle, borderColor: '#faad14', bottom: -4, ...getActiveHandleStyle('partial', data.activeHandles, '#faad14') }} />
                     </div>

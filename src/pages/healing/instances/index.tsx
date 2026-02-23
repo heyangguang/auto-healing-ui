@@ -18,6 +18,7 @@ import SortToolbar from '@/components/SortToolbar';
 import ReactFlow, { Background, BackgroundVariant, Controls, Edge, Node, useNodesState, useEdgesState, ProOptions } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { getLayoutedElements } from './utils/layoutUtils';
+import { buildCanvasElements, normalizeNodeState, STATUS_EDGE_COLOR } from './utils/canvasBuilder';
 import AutoLayoutButton from './components/AutoLayoutButton';
 import { getHealingInstances, getHealingInstanceDetail, getHealingInstanceStats } from '@/services/auto-healing/instances';
 import dayjs from 'dayjs';
@@ -67,66 +68,9 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactElement; l
     simulated: { color: '#13c2c2', icon: <CheckCircleOutlined />, label: '模拟通过' },
 };
 
-// 节点状态 → 边颜色
-const STATUS_EDGE_COLOR: Record<string, string> = {
-    success: '#52c41a',
-    completed: '#52c41a',
-    approved: '#52c41a',
-    failed: '#ff4d4f',
-    rejected: '#ff4d4f',
-    partial: '#faad14',
-    running: '#1890ff',
-    waiting_approval: '#fa8c16',
-};
-
-/**
- * 根据节点类型和状态，返回实际走过的 sourceHandle 名称
- * - 审批节点: approved/rejected
- * - 执行节点: success/partial/failed
- * - 条件节点: true/false
- * 返回 null 表示非分支节点或状态不明
- */
-function getActiveBranchHandle(
-    nodeType: string,
-    nodeStatus: string | undefined,
-): string | null {
-    if (!nodeStatus) return null;
-    switch (nodeType) {
-        case 'approval':
-            if (['approved', 'completed', 'success', 'simulated'].includes(nodeStatus)) return 'approved';
-            if (['rejected'].includes(nodeStatus)) return 'rejected';
-            return null;
-        case 'execution':
-            if (['completed', 'success'].includes(nodeStatus)) return 'success';
-            if (['partial'].includes(nodeStatus)) return 'partial';
-            if (['failed'].includes(nodeStatus)) return 'failed';
-            return null;
-        case 'condition':
-            if (['completed', 'success', 'true'].includes(nodeStatus)) return 'true';
-            if (['failed', 'false'].includes(nodeStatus)) return 'false';
-            return null;
-        default:
-            return null;
-    }
-}
-
 const getStatusConfig = (status: string) => STATUS_CONFIG[status] || STATUS_CONFIG.pending;
 
-// 节点类型中文映射
-const NODE_TYPE_LABELS: Record<string, string> = {
-    start: '开始',
-    end: '结束',
-    execution: '执行',
-    approval: '审批',
-    condition: '条件分支',
-    notification: '通知',
-    host_extractor: '主机提取',
-    cmdb_validator: 'CMDB 校验',
-    set_variable: '变量设置',
-    compute: '计算',
-    trigger: '触发器',
-    custom: '自定义',
-};
+
 
 // ==================== 搜索配置 ====================
 const searchFields: SearchField[] = [
@@ -151,6 +95,14 @@ const searchFields: SearchField[] = [
             { label: '无异常', value: 'false' },
         ],
     },
+    {
+        key: '__enum__approval_status', label: '审批结果',
+        description: '筛选包含特定审批结果的实例',
+        options: [
+            { label: '审批通过', value: 'approved' },
+            { label: '审批拒绝', value: 'rejected' },
+        ],
+    },
 ];
 
 // ==================== 高级搜索 ====================
@@ -172,7 +124,7 @@ const SORT_OPTIONS = [
     { value: 'rule_name', label: '规则名称' },
 ];
 
-/** 检测实例是否有失败节点 */
+/** 检测实例是否有执行失败或错误的节点 */
 function hasFailedNodes(instance: AutoHealing.FlowInstance): boolean {
     if (instance.status !== 'completed') return false;
     if (typeof instance.failed_node_count === 'number') return instance.failed_node_count > 0;
@@ -184,12 +136,21 @@ function hasFailedNodes(instance: AutoHealing.FlowInstance): boolean {
     });
 }
 
-/** 将 node_states 的值统一为对象格式 */
-function normalizeNodeState(raw: any): Record<string, any> | undefined {
-    if (!raw) return undefined;
-    if (typeof raw === 'string') return { status: raw };
-    return raw;
+/** 检测实例是否有被拒绝的审批节点 */
+function hasRejectedNodes(instance: AutoHealing.FlowInstance): boolean {
+    if (instance.status !== 'completed') return false;
+    if (typeof instance.rejected_node_count === 'number') return instance.rejected_node_count > 0;
+    const nodeStates = instance.node_states;
+    if (!nodeStates || typeof nodeStates !== 'object') return false;
+    return Object.values(nodeStates).some((raw: any) => {
+        const ns = typeof raw === 'string' ? { status: raw } : raw;
+        return ns?.status === 'rejected';
+    });
 }
+
+/** 将 node_states 的值统一为对象格式 — 使用共享模块 */
+// normalizeNodeState 已从 canvasBuilder 导入
+
 
 // ==================== 主组件 ====================
 const InstanceList: React.FC = () => {
@@ -249,6 +210,7 @@ const InstanceList: React.FC = () => {
         if (sp.has_error !== undefined && sp.has_error !== '') {
             params.has_error = sp.has_error === 'true';
         }
+        if (sp.approval_status) params.approval_status = sp.approval_status;
         if (sp.flow_name) params.flow_name = sp.flow_name;
         if (sp.rule_name) params.rule_name = sp.rule_name;
         if (sp.error_message) params.error_message = sp.error_message;
@@ -348,170 +310,16 @@ const InstanceList: React.FC = () => {
                     setInstanceDetail(data);
                 });
                 if (data && data.flow_nodes && data.flow_edges) {
-                    const nodeStates: Record<string, any> = data.node_states || {};
-                    const currentNodeId: string | null = data.current_node_id;
-
-                    // ====== 从 current_node_id 回溯已执行路径 ======
-                    // 构建反向邻接表：target → sources
-                    const reverseAdj: Record<string, string[]> = {};
-                    for (const edge of data.flow_edges) {
-                        if (!reverseAdj[edge.target]) reverseAdj[edge.target] = [];
-                        reverseAdj[edge.target].push(edge.source);
-                    }
-
-                    // 从 current_node_id 反向 BFS，找到所有上游已走过的节点
-                    const executedNodeIds = new Set<string>();
-                    if (currentNodeId) {
-                        const queue = [currentNodeId];
-                        executedNodeIds.add(currentNodeId);
-                        while (queue.length > 0) {
-                            const nodeId = queue.shift()!;
-                            for (const parent of (reverseAdj[nodeId] || [])) {
-                                if (!executedNodeIds.has(parent)) {
-                                    executedNodeIds.add(parent);
-                                    queue.push(parent);
-                                }
-                            }
-                        }
-                    }
-                    // 有明确 node_states 记录的节点也算已执行
-                    Object.keys(nodeStates).forEach(id => executedNodeIds.add(id));
-
-                    // 构建正向邻接表：source → targets（用于判断节点是否已被"穿过"）
-                    const forwardAdj: Record<string, string[]> = {};
-                    for (const edge of data.flow_edges) {
-                        if (!forwardAdj[edge.source]) forwardAdj[edge.source] = [];
-                        forwardAdj[edge.source].push(edge.target);
-                    }
-
-                    // 节点映射
-                    let flowNodes = data.flow_nodes.map((node: any) => {
-                        const nodeState = normalizeNodeState(nodeStates[node.id]);
-
-                        // 判断是否"已穿过"：该节点在已执行路径上，且有下游节点也已执行
-                        // → 说明流程已经过了这个节点，不管 node_states 记的是什么，都应该显示 success
-                        const wasPassedThrough = executedNodeIds.has(node.id)
-                            && (forwardAdj[node.id] || []).some(child => executedNodeIds.has(child));
-
-                        const nodeStatus = wasPassedThrough
-                            ? 'success'   // 流程已走过 → 绿色
-                            : (nodeState?.status  // 当前节点 → 用后端真实状态
-                                || (executedNodeIds.has(node.id) ? undefined : undefined));
-
-                        return {
-                            ...node,
-                            draggable: false,
-                            connectable: false,
-                            selectable: true,
-                            data: {
-                                ...node.config,
-                                label: node.name,
-                                type: node.type,
-                                status: nodeStatus,
-                                dryRunMessage: nodeState?.error_message || nodeState?.message || nodeState?.description,
-                                nodeState: nodeState,
-                                // 唯一蓝色光晕：只有 current_node_id 才高亮
-                                isCurrent: node.id === currentNodeId,
-                            },
-                        } as Node;
+                    // 使用共享画布构建函数 — 与详情页逻辑完全一致
+                    const { nodes: builtNodes, edges: builtEdges } = buildCanvasElements({
+                        flowNodes: data.flow_nodes,
+                        flowEdges: data.flow_edges,
+                        nodeStates: data.node_states || {},
+                        currentNodeId: data.current_node_id,
+                        rule: data.rule,
                     });
 
-                    // 边着色：分支感知 — 只高亮实际走过的分支
-                    // 先构建节点类型 + 状态查找表
-                    const nodeTypeMap: Record<string, string> = {};
-                    const nodeEffectiveStatus: Record<string, string | undefined> = {};
-                    for (const node of data.flow_nodes) {
-                        nodeTypeMap[node.id] = node.type;
-                        const ns = normalizeNodeState(nodeStates[node.id]);
-                        nodeEffectiveStatus[node.id] = ns?.status;
-                    }
-
-                    let flowEdges = data.flow_edges.map((edge: any) => {
-                        const bothExecuted = executedNodeIds.has(edge.source) && executedNodeIds.has(edge.target);
-
-                        // 对于有 sourceHandle 的边，需要检查是否走的就是这条分支
-                        let isActiveBranch = true; // 默认 true（无 handle 的线性边）
-                        if (edge.sourceHandle) {
-                            const srcType = nodeTypeMap[edge.source] || '';
-                            const srcStatus = nodeEffectiveStatus[edge.source];
-                            const activeHandle = getActiveBranchHandle(srcType, srcStatus);
-                            isActiveBranch = activeHandle === edge.sourceHandle;
-                        }
-
-                        const isExecutedEdge = bothExecuted && isActiveBranch;
-                        // 未走过的分支边：使用对应分支颜色但半透明
-                        const inactiveBranchColor = edge.sourceHandle
-                            ? (edge.sourceHandle === 'rejected' || edge.sourceHandle === 'failed' || edge.sourceHandle === 'false'
-                                ? '#ff4d4f' : edge.sourceHandle === 'partial' ? '#faad14' : '#52c41a')
-                            : '#d9d9d9';
-
-                        return {
-                            ...edge,
-                            animated: isExecutedEdge,
-                            style: {
-                                stroke: isExecutedEdge
-                                    ? (STATUS_EDGE_COLOR[nodeEffectiveStatus[edge.target] || ''] || '#52c41a')
-                                    : (edge.sourceHandle && bothExecuted ? inactiveBranchColor : '#d9d9d9'),
-                                strokeWidth: isExecutedEdge ? 2.5 : 1,
-                                opacity: isExecutedEdge ? 1 : (edge.sourceHandle && bothExecuted ? 0.2 : 0.35),
-                                strokeDasharray: (!isExecutedEdge && edge.sourceHandle && bothExecuted) ? '5 3' : undefined,
-                            },
-                        };
-                    }) as Edge[];
-
-                    // 注入虚拟触发规则节点
-                    if (data.rule) {
-                        const ruleNodeId = 'virtual-rule-trigger';
-                        const startNode = flowNodes.find((n: Node) => n.type === 'start') || flowNodes[0];
-
-                        const ruleNode: Node = {
-                            id: ruleNodeId,
-                            type: 'custom',
-                            position: {
-                                x: startNode?.position?.x ?? 0,
-                                y: (startNode?.position?.y ?? 0) - 100,
-                            },
-                            data: {
-                                label: `自愈规则: ${data.rule.name}`,
-                                type: 'trigger',
-                                status: 'triggered',
-                                details: data.rule,
-                            },
-                            draggable: false,
-                            connectable: false,
-                        };
-
-                        flowNodes = [ruleNode, ...flowNodes];
-
-                        if (startNode) {
-                            flowEdges = [{
-                                id: `edge-${ruleNodeId}-${startNode.id}`,
-                                source: ruleNodeId,
-                                target: startNode.id,
-                                type: 'smoothstep',
-                                animated: true,
-                                style: { stroke: '#722ed1', strokeWidth: 2 },
-                            }, ...flowEdges];
-                        }
-                    }
-
-                    // 计算每个节点的活跃连接点（在虚拟节点注入之后）
-                    const activeHandlesMap: Record<string, string[]> = {};
-                    for (const edge of flowEdges) {
-                        if (edge.animated) {
-                            const srcH = (edge as any).sourceHandle || 'default';
-                            if (!activeHandlesMap[edge.source]) activeHandlesMap[edge.source] = [];
-                            activeHandlesMap[edge.source].push(srcH);
-                            if (!activeHandlesMap[edge.target]) activeHandlesMap[edge.target] = [];
-                            activeHandlesMap[edge.target].push('target');
-                        }
-                    }
-                    flowNodes = flowNodes.map((node: Node) => ({
-                        ...node,
-                        data: { ...node.data, activeHandles: activeHandlesMap[node.id] || [] },
-                    }));
-
-                    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(flowNodes, flowEdges);
+                    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(builtNodes, builtEdges);
                     startTransition(() => {
                         setNodes(layoutedNodes);
                         setEdges(layoutedEdges);
@@ -627,9 +435,11 @@ const InstanceList: React.FC = () => {
                                 instances.map((item) => {
                                     const statusConfig = getStatusConfig(item.status);
                                     const isSelected = item.id === selectedInstanceId;
-                                    const isAnomalous = hasFailedNodes(item);
+                                    const isFailed = hasFailedNodes(item);
+                                    const isRejected = hasRejectedNodes(item);
                                     const nodeCount = item.node_count ?? 0;
                                     const failedCount = item.failed_node_count ?? 0;
+                                    const rejectedCount = item.rejected_node_count ?? 0;
                                     return (
                                         <div
                                             key={item.id}
@@ -649,7 +459,7 @@ const InstanceList: React.FC = () => {
                                             <div style={{
                                                 position: 'absolute',
                                                 left: 0, top: 0, bottom: 0, width: 3,
-                                                background: isAnomalous ? '#fa8c16' : statusConfig.color
+                                                background: isRejected ? '#ff4d4f' : (isFailed ? '#fa8c16' : statusConfig.color)
                                             }} />
 
                                             {/* 行1: 流程名 + 状态标签 */}
@@ -658,9 +468,14 @@ const InstanceList: React.FC = () => {
                                                     {item.flow_name || '未知流程'}
                                                 </Text>
                                                 <Space size={4} style={{ flexShrink: 0 }}>
-                                                    {isAnomalous && (
+                                                    {isRejected && (
+                                                        <Tag color="error" style={{ margin: 0, border: 'none', fontSize: 10, lineHeight: '18px', padding: '0 4px' }}>
+                                                            审批拒绝
+                                                        </Tag>
+                                                    )}
+                                                    {isFailed && (
                                                         <Tag color="warning" style={{ margin: 0, border: 'none', fontSize: 10, lineHeight: '18px', padding: '0 4px' }}>
-                                                            <WarningOutlined />
+                                                            包含失败
                                                         </Tag>
                                                     )}
                                                     <Tag color={statusConfig.color} style={{ margin: 0, border: 'none', fontSize: 10, lineHeight: '18px', padding: '0 6px' }}>
@@ -702,7 +517,10 @@ const InstanceList: React.FC = () => {
                                                         <span><BranchesOutlined style={{ fontSize: 10 }} /> {nodeCount}节点</span>
                                                     )}
                                                     {failedCount > 0 && (
-                                                        <span style={{ color: '#ff4d4f' }}><CloseCircleOutlined style={{ fontSize: 10 }} /> {failedCount}失败</span>
+                                                        <span style={{ color: '#fa8c16' }}><CloseCircleOutlined style={{ fontSize: 10 }} /> {failedCount}失败</span>
+                                                    )}
+                                                    {rejectedCount > 0 && (
+                                                        <span style={{ color: '#ff4d4f' }}><CloseCircleOutlined style={{ fontSize: 10 }} /> {rejectedCount}拒绝</span>
                                                     )}
                                                 </Space>
                                             </div>

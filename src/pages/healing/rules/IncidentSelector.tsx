@@ -8,6 +8,7 @@ import {
     LoadingOutlined, DatabaseOutlined, DesktopOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { getIncidents } from '@/services/auto-healing/incidents';
+import { INCIDENT_SEVERITY_MAP, INCIDENT_STATUS_MAP, INCIDENT_HEALING_MAP } from '@/constants/incidentDicts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -25,30 +26,16 @@ interface IncidentSelectorProps {
     onCancel: () => void;
 }
 
-// ==================== Severity Metadata ====================
-const SEVERITY_META: Record<string, { label: string; color: string }> = {
-    critical: { label: '严重', color: '#cf1322' },
-    high: { label: '高', color: '#fa541c' },
-    medium: { label: '中', color: '#faad14' },
-    low: { label: '低', color: '#1890ff' },
-    info: { label: '信息', color: '#8c8c8c' },
-};
-
-const STATUS_META: Record<string, { label: string; color: string }> = {
-    open: { label: '打开', color: 'blue' },
-    in_progress: { label: '处理中', color: 'processing' },
-    resolved: { label: '已解决', color: 'success' },
-    closed: { label: '已关闭', color: 'default' },
-};
-
-const HEALING_STATUS_META: Record<string, { label: string; color: string }> = {
-    pending: { label: '待处理', color: 'default' },
-    matched: { label: '已匹配', color: 'processing' },
-    healing: { label: '自愈中', color: 'blue' },
-    healed: { label: '已自愈', color: 'success' },
-    failed: { label: '自愈失败', color: 'error' },
-    skipped: { label: '已跳过', color: 'default' },
-};
+// 本地适配器：将集中化字典的 { text, color } 转为本文件需要的 { label, color }
+const SEVERITY_META: Record<string, { label: string; color: string }> = Object.fromEntries(
+    Object.entries(INCIDENT_SEVERITY_MAP).map(([k, v]) => [k, { label: v.text, color: v.color }])
+);
+const STATUS_META: Record<string, { label: string; color: string }> = Object.fromEntries(
+    Object.entries(INCIDENT_STATUS_MAP).map(([k, v]) => [k, { label: v.text, color: v.color }])
+);
+const HEALING_STATUS_META: Record<string, { label: string; color: string }> = Object.fromEntries(
+    Object.entries(INCIDENT_HEALING_MAP).map(([k, v]) => [k, { label: v.text, color: v.color }])
+);
 
 const PAGE_SIZE = 15;
 

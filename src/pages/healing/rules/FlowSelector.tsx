@@ -27,15 +27,17 @@ interface FlowSelectorProps {
     onCancel: () => void;
 }
 
+import { NODE_TYPE_COLORS } from '../nodeConfig';
+
 // ==================== Node Type Metadata ====================
 const NODE_TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-    execution: { label: '执行', icon: <ThunderboltOutlined />, color: '#1890ff' },
-    approval: { label: '审批', icon: <AuditOutlined />, color: '#faad14' },
-    condition: { label: '条件', icon: <ForkOutlined />, color: '#722ed1' },
-    notification: { label: '通知', icon: <BellOutlined />, color: '#52c41a' },
-    host_extractor: { label: '主机提取', icon: <ApiOutlined />, color: '#13c2c2' },
-    cmdb_validator: { label: 'CMDB验证', icon: <EyeOutlined />, color: '#eb2f96' },
-    compute: { label: '计算', icon: <NodeIndexOutlined />, color: '#fa8c16' },
+    execution: { label: '执行', icon: <ThunderboltOutlined />, color: NODE_TYPE_COLORS.execution },
+    approval: { label: '审批', icon: <AuditOutlined />, color: NODE_TYPE_COLORS.approval },
+    condition: { label: '条件', icon: <ForkOutlined />, color: NODE_TYPE_COLORS.condition },
+    notification: { label: '通知', icon: <BellOutlined />, color: NODE_TYPE_COLORS.notification },
+    host_extractor: { label: '主机提取', icon: <ApiOutlined />, color: NODE_TYPE_COLORS.host_extractor },
+    cmdb_validator: { label: 'CMDB验证', icon: <EyeOutlined />, color: NODE_TYPE_COLORS.cmdb_validator },
+    compute: { label: '计算', icon: <NodeIndexOutlined />, color: NODE_TYPE_COLORS.compute },
 };
 
 /** 统计流程中有意义的节点 (排除 start/end) */

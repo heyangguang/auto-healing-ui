@@ -1,3 +1,8 @@
+/* ReactFlow — 允许节点内容溢出（徽章/badge 需要在节点外部显示） */
+.react-flow__node {
+    overflow: visible !important;
+}
+
 /* Node detail drawer — Tabs 自适应高度 */
 
 /* Tabs 根元素：撑满 drawer 剩余空间 */
