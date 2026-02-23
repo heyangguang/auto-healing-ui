@@ -1,8 +1,8 @@
 import React, { useMemo, startTransition } from 'react';
-import { history, useLocation } from '@umijs/max';
+import { history, useLocation, useAccess } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { Drawer } from 'antd';
-import { CATEGORIES, SERVICES } from '@/config/menu';
+import { CATEGORIES, SERVICES } from '@/config/navData';
 
 const NAV_HEIGHT = 58;
 const SIDE_WIDTH = 200;
@@ -92,10 +92,13 @@ const SideNav: React.FC<SideNavProps> = ({ isMobile, drawerOpen, onDrawerClose }
         return null;
     }, [location.pathname]);
 
+    const access = useAccess() as unknown as Record<string, boolean>;
+
     const menuItems = useMemo(() => {
         if (!activeCategory) return [];
-        return SERVICES[activeCategory.id] || [];
-    }, [activeCategory]);
+        const items = SERVICES[activeCategory.id] || [];
+        return items.filter(svc => !svc.access || access[svc.access]);
+    }, [activeCategory, access]);
 
     if (!activeCategory || menuItems.length === 0) {
         return null;

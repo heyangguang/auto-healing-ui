@@ -24,6 +24,7 @@ import { history } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { globalSearch } from '@/services/auto-healing/search';
 import type { SearchCategoryResult, SearchResultItem } from '@/services/auto-healing/search';
+import './search-glow.css';
 
 /* ── 分类图标 & 颜色 ── */
 const CATEGORY_META: Record<string, { icon: React.ReactNode; color: string }> = {
@@ -71,28 +72,36 @@ const useStyles = createStyles(({ token }) => ({
         minWidth: 0,
         padding: '0 16px',
         position: 'relative' as const,
+        zIndex: 100, /* 高于星空背景，保证 dropdown 可见 */
     },
     searchInput: {
         width: '100%',
-        maxWidth: 460,
-        background: 'rgba(255,255,255,0.10) !important',
-        borderColor: 'rgba(255,255,255,0.15) !important',
+        maxWidth: 320,
+        position: 'relative' as const,
+        zIndex: 1,
+        background: '#010201 !important',
+        border: 'none !important',
         borderRadius: '0 !important',
         color: '#fff !important',
-        '&::placeholder': { color: 'rgba(255,255,255,0.45) !important' },
+        '&::placeholder': { color: 'rgba(192,185,192,0.6) !important' },
         '&:hover': {
-            borderColor: 'rgba(255,255,255,0.35) !important',
-            background: 'rgba(255,255,255,0.14) !important',
+            background: '#0a0a0a !important',
         },
         '&:focus, &.ant-input-affix-wrapper-focused': {
-            borderColor: `${token.colorPrimary} !important`,
-            background: 'rgba(255,255,255,0.14) !important',
-            boxShadow: `0 0 0 2px rgba(24,144,255,0.12) !important`,
+            background: '#010201 !important',
+            borderColor: 'transparent !important',
+            boxShadow: 'none !important',
+            outline: 'none',
         },
         '.ant-input': {
             color: '#fff !important',
             background: 'transparent !important',
-            '&::placeholder': { color: 'rgba(255,255,255,0.45) !important' },
+            WebkitTextFillColor: '#fff !important',
+            '&::placeholder': {
+                color: 'rgba(192,185,192,0.6) !important',
+                WebkitTextFillColor: 'rgba(192,185,192,0.6) !important',
+            },
+            '&:focus': { outline: 'none' },
         },
         '.ant-input-prefix': { color: 'rgba(255,255,255,0.45)', marginInlineEnd: 8 },
         '.ant-input-clear-icon': {
@@ -108,7 +117,7 @@ const useStyles = createStyles(({ token }) => ({
         left: '50%',
         transform: 'translateX(-50%)',
         width: '100%',
-        maxWidth: 460,
+        maxWidth: 320,
         maxHeight: 420,
         overflowY: 'auto' as const,
         background: '#1a1a1a',
@@ -385,20 +394,28 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
     let gi = 0;  // global index for keyboard nav
     return (
         <div className={styles.searchWrapper} ref={boxRef}>
-            <Input
-                ref={inRef}
-                className={styles.searchInput}
-                style={compact ? { maxWidth: 240 } : undefined}
-                prefix={loading ? <LoadingOutlined spin /> : <SearchOutlined />}
-                suffix={<span className={styles.kbdInline}>⌘K</span>}
-                placeholder={compact ? '搜索...' : '搜索产品、资源...'}
-                allowClear
-                size="middle"
-                value={kw}
-                onChange={onChange}
-                onFocus={onFocus}
-                onKeyDown={onKey}
-            />
+            {/* uiverse.io 发光搜索框结构 */}
+            <div className="search-poda" style={compact ? { maxWidth: 240 } : { maxWidth: 320 }}>
+                <div className="gs-glow" />
+                <div className="gs-darkBorderBg" />
+                <div className="gs-darkBorderBg" />
+                <div className="gs-darkBorderBg" />
+                <div className="gs-white" />
+                <div className="gs-border" />
+                <Input
+                    ref={inRef}
+                    className={styles.searchInput}
+                    prefix={loading ? <LoadingOutlined spin /> : <SearchOutlined />}
+                    suffix={<span className={styles.kbdInline}>⌘K</span>}
+                    placeholder={compact ? '搜索...' : '搜索产品、资源...'}
+                    allowClear
+                    size="middle"
+                    value={kw}
+                    onChange={onChange}
+                    onFocus={onFocus}
+                    onKeyDown={onKey}
+                />
+            </div>
 
             {open && (
                 <div className={styles.dropdown}>

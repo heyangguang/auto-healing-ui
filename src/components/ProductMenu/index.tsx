@@ -10,7 +10,7 @@ import {
 import { history, useAccess } from '@umijs/max';
 import { Drawer, message, Tooltip } from 'antd';
 import { createStyles } from 'antd-style';
-import { CATEGORIES, SERVICES, type ServiceItem } from '@/config/menu';
+import { CATEGORIES, SERVICES, type ServiceItem } from '@/config/navData';
 import {
     getFavorites,
     addFavorite,

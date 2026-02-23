@@ -8,14 +8,16 @@ import {
     UpOutlined,
     MenuOutlined,
 } from '@ant-design/icons';
-import { history, useLocation, useAccess } from '@umijs/max';
+import { history, useLocation, useAccess, useModel } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { AvatarDropdown, AvatarName, AvatarFullName } from '@/components/RightContent/AvatarDropdown';
 import GlobalSearch from '@/components/GlobalSearch';
 import NotificationBell from '@/components/NotificationBell';
 import TenantSwitcher from '@/components/TenantSwitcher';
+import ImpersonationBanner from '@/components/ImpersonationBanner';
+import StarryBackground from './StarryBackground';
 const ProductMenu = lazy(() => import('@/components/ProductMenu'));
-import { CATEGORIES, SERVICES } from '@/config/menu';
+import { CATEGORIES, SERVICES } from '@/config/navData';
 
 const MOBILE_BP = 768;
 const TABLET_BP = 1200;
@@ -32,8 +34,11 @@ const useStyles = createStyles(({ token }) => ({
         top: 0,
         zIndex: 1001,
         borderBottom: '1px solid #333',
+        /* 不要 overflow:hidden，否则搜索下拉面板会被裁剪 */
     },
     leftSection: {
+        position: 'relative' as const,
+        zIndex: 1,
         display: 'flex',
         alignItems: 'center',
         gap: 0,
@@ -117,6 +122,8 @@ const useStyles = createStyles(({ token }) => ({
     /* 移动端隐藏导航文字 */
     navLabel: {},
     rightSection: {
+        position: 'relative' as const,
+        zIndex: 1,
         display: 'flex',
         alignItems: 'center',
         gap: 4,
@@ -184,6 +191,8 @@ const TopNavBar: React.FC = () => {
     const { styles, cx } = useStyles();
     const location = useLocation();
     const access = useAccess() as unknown as Record<string, boolean>;
+    const { initialState } = useModel('@@initialState');
+    const realPlatformAdmin = initialState?.currentUser?.is_platform_admin === true;
     const [menuOpen, setMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(
         typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BP : false
@@ -218,9 +227,24 @@ const TopNavBar: React.FC = () => {
     // 判断当前页面是否有侧边栏
     const hasSideNav = !isWorkbench && !isDashboard;
 
+    // 🆕 检查 Impersonation 状态（严格校验：isImpersonating + 未过期）
+    const isImpersonating = React.useMemo(() => {
+        try {
+            const raw = localStorage.getItem('impersonation-storage');
+            if (raw) {
+                const imp = JSON.parse(raw);
+                if (imp?.isImpersonating && imp?.session?.expiresAt) {
+                    return new Date(imp.session.expiresAt) > new Date();
+                }
+            }
+        } catch { /* ignore */ }
+        return false;
+    }, []);
+
     return (
         <>
             <div id="top-nav-bar" className={styles.navBar}>
+                <StarryBackground />
                 <div className={styles.leftSection}>
 
                     {/* 汉堡菜单: 仅移动端 + 有侧边栏时显示 */}
@@ -239,17 +263,19 @@ const TopNavBar: React.FC = () => {
                         {!isMobile && <span className={styles.logoText}>Auto Healing</span>}
                     </div>
 
-                    {/* 导航链接 */}
+                    {/* 导航链接 - 平台管理员未 Impersonation 时隐藏租户级导航 */}
                     <div className={styles.navLinks}>
-                        <div
-                            className={cx(styles.navItem, isWorkbench && !menuOpen && styles.navItemActive)}
-                            onClick={() => { setMenuOpen(false); startTransition(() => history.push('/')); }}
-                        >
-                            <HomeOutlined className={styles.navIcon} />
-                            {!isTablet && <span>工作台</span>}
-                        </div>
+                        {(!access.isPlatformAdmin || isImpersonating) && (
+                            <div
+                                className={cx(styles.navItem, isWorkbench && !menuOpen && styles.navItemActive)}
+                                onClick={() => { setMenuOpen(false); startTransition(() => history.push('/')); }}
+                            >
+                                <HomeOutlined className={styles.navIcon} />
+                                {!isTablet && <span>工作台</span>}
+                            </div>
+                        )}
 
-                        {showDashboard && (
+                        {(!access.isPlatformAdmin || isImpersonating) && showDashboard && (
                             <div
                                 className={cx(styles.navItem, isDashboard && !menuOpen && styles.navItemActive)}
                                 onClick={() => { setMenuOpen(false); startTransition(() => history.push('/dashboard')); }}
@@ -259,7 +285,7 @@ const TopNavBar: React.FC = () => {
                             </div>
                         )}
 
-                        {hasAnyService && (
+                        {(!access.isPlatformAdmin || isImpersonating) && hasAnyService && (
                             <div
                                 id="tour-product-menu"
                                 className={cx(styles.navItem, menuOpen && styles.navItemActive)}
@@ -277,8 +303,8 @@ const TopNavBar: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 全局搜索 - 移动端隐藏 */}
-                {!isMobile && <GlobalSearch compact={isTablet} />}
+                {/* 全局搜索 - 平台管理员未 Impersonation 时隐藏 */}
+                {!isMobile && (!access.isPlatformAdmin || isImpersonating) && <GlobalSearch compact={isTablet} />}
 
                 {/* 右侧操作 */}
                 <div className={styles.rightSection}>
@@ -287,8 +313,15 @@ const TopNavBar: React.FC = () => {
                             <div className={styles.iconBtn} title="帮助文档" onClick={() => startTransition(() => history.push('/guide'))}>
                                 <QuestionCircleOutlined />
                             </div>
-                            <span id="tour-notification-bell"><NotificationBell /></span>
-                            <TenantSwitcher />
+                            {(!access.isPlatformAdmin || isImpersonating) && (
+                                <span id="tour-notification-bell"><NotificationBell /></span>
+                            )}
+                            {/* 平台管理员：impersonation 时显示 Banner，否则不显示 */}
+                            {/* 普通用户：显示 TenantSwitcher */}
+                            {realPlatformAdmin
+                                ? <ImpersonationBanner />
+                                : <TenantSwitcher />
+                            }
                             <div className={styles.divider} />
                         </>
                     )}

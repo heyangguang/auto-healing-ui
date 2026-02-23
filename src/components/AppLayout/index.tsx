@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useLocation } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import SideNav from '@/components/SideNav';
-import { findServiceByPath } from '@/config/menu';
+import { findServiceByPath } from '@/config/navData';
 import { recordRecent } from '@/services/auto-healing/userNav';
 
 
