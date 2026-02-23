@@ -5,7 +5,7 @@ import {
     AlertOutlined, WarningOutlined, InfoCircleOutlined,
     CheckCircleOutlined, ClockCircleOutlined, ThunderboltOutlined, StopOutlined, UndoOutlined,
 } from '@ant-design/icons';
-import StandardTable, { type StandardColumnDef, type SearchField } from '@/components/StandardTable';
+import StandardTable, { type StandardColumnDef, type SearchField, type AdvancedSearchField } from '@/components/StandardTable';
 import { getPendingTriggers, getDismissedTriggers, triggerHealing, dismissIncident, resetIncidentScan } from '@/services/auto-healing/healing';
 import dayjs from 'dayjs';
 import { INCIDENT_SEVERITY_MAP, SEVERITY_TAG_COLORS, CATEGORY_LABELS } from '@/constants/incidentDicts';
@@ -45,7 +45,20 @@ const formatTime = (t: string | null | undefined) => {
 /* ============================== 搜索字段 ============================== */
 
 const searchFields: SearchField[] = [
-    { key: 'search', label: '关键字', placeholder: '搜索标题/ID/CI' },
+    { key: 'title', label: '工单标题', placeholder: '搜索标题/ID/CI' },
+];
+
+const advancedSearchFields: AdvancedSearchField[] = [
+    {
+        key: 'severity', label: '等级', type: 'select',
+        options: [
+            { label: '严重', value: 'critical' },
+            { label: '高', value: 'high' },
+            { label: '中', value: 'medium' },
+            { label: '低', value: 'low' },
+        ],
+    },
+    { key: 'created_at', label: '创建时间', type: 'dateRange' },
 ];
 
 /* ============================== 组件 ============================== */
@@ -306,13 +319,23 @@ const PendingTriggers: React.FC = () => {
             page_size: params.pageSize,
         };
 
+        // 快速搜索 → 后端 title 参数
+        if (params.searchValue) {
+            apiParams.title = params.searchValue;
+        }
+
+        // 高级搜索 — 通用字段传递（支持 __exact 后缀）
         if (params.advancedSearch) {
-            if (params.advancedSearch.search) {
-                apiParams.search = params.advancedSearch.search;
-            }
-            if (params.advancedSearch.severity) {
-                apiParams.severity = params.advancedSearch.severity;
-            }
+            Object.entries(params.advancedSearch).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') return;
+                // dateRange 类型拆分为 date_from/date_to
+                if (key === 'created_at' && Array.isArray(value) && value.length === 2) {
+                    if (value[0]) apiParams.date_from = dayjs(value[0]).format('YYYY-MM-DD');
+                    if (value[1]) apiParams.date_to = dayjs(value[1]).format('YYYY-MM-DD');
+                    return;
+                }
+                apiParams[key] = value;
+            });
         }
 
         if (params.sorter) {
@@ -339,13 +362,23 @@ const PendingTriggers: React.FC = () => {
             page_size: params.pageSize,
         };
 
+        // 快速搜索 → 后端 title 参数
+        if (params.searchValue) {
+            apiParams.title = params.searchValue;
+        }
+
+        // 高级搜索 — 通用字段传递（支持 __exact 后缀）
         if (params.advancedSearch) {
-            if (params.advancedSearch.search) {
-                apiParams.search = params.advancedSearch.search;
-            }
-            if (params.advancedSearch.severity) {
-                apiParams.severity = params.advancedSearch.severity;
-            }
+            Object.entries(params.advancedSearch).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') return;
+                // dateRange 类型拆分为 date_from/date_to
+                if (key === 'created_at' && Array.isArray(value) && value.length === 2) {
+                    if (value[0]) apiParams.date_from = dayjs(value[0]).format('YYYY-MM-DD');
+                    if (value[1]) apiParams.date_to = dayjs(value[1]).format('YYYY-MM-DD');
+                    return;
+                }
+                apiParams[key] = value;
+            });
         }
 
         if (params.sorter) {
@@ -548,6 +581,7 @@ const PendingTriggers: React.FC = () => {
                 }
                 headerIcon={headerIcon}
                 searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
                 columns={isPending ? pendingColumns : dismissedColumns}
                 rowKey="id"
                 onRowClick={openDetail}

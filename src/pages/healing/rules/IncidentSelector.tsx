@@ -64,7 +64,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
         setLoading(true);
         try {
             const params: any = { page: p, page_size: PAGE_SIZE };
-            if (q.trim()) params.search = q.trim();
+            if (q.trim()) params.title = q.trim();
             if (severity) params.severity = severity;
             if (status) params.status = status;
             const res = await getIncidents(params);

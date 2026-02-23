@@ -134,7 +134,7 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
             }
         }
 
-        if (search) params.search = search;
+        if (search) params.name = search;
         if (executorType) params.executor_type = executorType;
         if (statusFilter === 'ready') params.status = 'ready';
         else if (statusFilter === 'review') params.status = 'pending_review';

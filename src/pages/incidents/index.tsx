@@ -30,12 +30,13 @@ import {
 
 /* ========== 搜索字段 ========== */
 const searchFields: SearchField[] = [
-    { key: 'keyword', label: '关键字' },
+    { key: 'title', label: '关键字' },
     { key: 'external_id', label: '外部 ID' },
 ];
 
 const advancedSearchFields: AdvancedSearchField[] = [
-    { key: 'keyword', label: '关键字', type: 'input', placeholder: '搜索标题 / 外部ID' },
+    { key: 'title', label: '标题', type: 'input', placeholder: '事件标题' },
+    { key: 'external_id', label: '外部 ID', type: 'input', placeholder: '外部工单 ID' },
     { key: 'source_plugin_name', label: '来源插件', type: 'input', placeholder: '插件名称' },
     {
         key: 'severity', label: '严重程度', type: 'select', placeholder: '全部级别',
@@ -302,23 +303,30 @@ const IncidentList: React.FC = () => {
 
         // 简单搜索
         if (params.searchValue) {
-            const field = params.searchField || 'keyword';
+            const field = params.searchField || 'search';
             if (field === 'external_id') {
                 apiParams.external_id = params.searchValue;
             } else {
-                apiParams.search = params.searchValue;
+                apiParams.title = params.searchValue;
             }
         }
 
         // 高级搜索
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            if (adv.keyword) apiParams.search = adv.keyword;
+            // 标题 → 直接传独立参数
+            if (adv.title) apiParams.title = adv.title;
+            if (adv.title__exact) apiParams.title__exact = adv.title__exact;
+            // external_id → 后端已支持独立参数
             if (adv.external_id) apiParams.external_id = adv.external_id;
+            if (adv.external_id__exact) apiParams.external_id__exact = adv.external_id__exact;
+            // 其他字段
             if (adv.source_plugin_name) apiParams.source_plugin_name = adv.source_plugin_name;
+            if (adv.source_plugin_name__exact) apiParams.source_plugin_name__exact = adv.source_plugin_name__exact;
             if (adv.severity) apiParams.severity = adv.severity;
             if (adv.healing_status) apiParams.healing_status = adv.healing_status;
             if (adv.status) apiParams.status = adv.status;
+            // 布尔字段转换
             if (adv.has_plugin !== undefined && adv.has_plugin !== '') {
                 apiParams.has_plugin = adv.has_plugin === 'true';
             }
@@ -334,10 +342,8 @@ const IncidentList: React.FC = () => {
         const items = (res as any)?.data || [];
         const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? 0;
 
-        // 异步刷新统计
-        loadStats();
         return { data: items, total };
-    }, [loadStats]);
+    }, []);
 
     /* ========== 统计栏 ========== */
     const statsBar = useMemo(() => {
@@ -417,6 +423,7 @@ const IncidentList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
+                searchSchemaUrl="/api/v1/incidents/search-schema"
                 extraToolbarActions={batchToolbar}
                 columns={columns}
                 rowKey="id"

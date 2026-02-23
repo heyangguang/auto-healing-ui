@@ -75,9 +75,10 @@ const getStatusConfig = (status: string) => STATUS_CONFIG[status] || STATUS_CONF
 
 // ==================== 搜索配置 ====================
 const searchFields: SearchField[] = [
-    { key: 'search', label: '搜索', placeholder: '搜索流程名称 / 规则名称...' },
+    { key: 'flow_name', label: '流程名称', placeholder: '搜索流程名称...', description: '按流程名称模糊搜索' },
     {
-        key: '__enum__status', label: '状态',
+        key: '__enum__status', label: '实例状态',
+        description: '筛选实例执行状态',
         options: getInstanceStatusOptions(),
     },
     { key: 'flow_name', label: '流程名称', placeholder: '输入流程名称搜索' },
@@ -200,7 +201,6 @@ const InstanceList: React.FC = () => {
     // ==================== 构建 API 参数 ====================
     const buildApiParams = useCallback((sp: Record<string, any>, p: number) => {
         const params: any = { page: p, page_size: PAGE_SIZE, sort_by: sortBy, sort_order: sortOrder };
-        if (sp.search) params.search = sp.search;
         if (sp.status) params.status = sp.status;
         if (sp.has_error !== undefined && sp.has_error !== '') {
             params.has_error = sp.has_error === 'true';
@@ -283,10 +283,9 @@ const InstanceList: React.FC = () => {
                 if ((res.data || []).length > 0) {
                     setSelectedInstanceId((res.data || [])[0]?.id);
                 }
-                loadStats();
             } catch { /* */ } finally { setLoading(false); }
         })();
-    }, [buildApiParams, loadStats]);
+    }, [buildApiParams]);
 
     // ==================== 加载实例详情 → 构建画布 ====================
     useEffect(() => {
@@ -413,6 +412,7 @@ const InstanceList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
+                searchSchemaUrl="/api/v1/healing/instances/search-schema"
                 onSearch={handleSearch}
                 extraToolbarActions={sortToolbar}
             >

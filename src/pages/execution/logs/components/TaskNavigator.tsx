@@ -10,6 +10,8 @@ const { Text } = Typography;
 
 interface TaskFilters {
     search?: string;
+    name?: string;
+    description?: string;
     executor_type?: string;
     target_hosts?: string;
     playbook_name?: string;
@@ -17,6 +19,7 @@ interface TaskFilters {
     status?: string;
     has_runs?: boolean;
     has_logs?: boolean;
+    needs_review?: boolean;
     min_run_count?: number;
     last_run_status?: string;
 }
@@ -62,24 +65,30 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
     const PAGE_SIZE = 10;
 
     const loadingRef = useRef(false);
+    const externalFiltersRef = useRef(externalFilters);
+    externalFiltersRef.current = externalFilters;
+
     const fetchTasks = useCallback(async (currentPage: number, isReset: boolean) => {
         if (loadingRef.current) return;
         loadingRef.current = true;
         setLoading(true);
         try {
+            const ef = externalFiltersRef.current;
             const res = await getExecutionTasks({
                 page: currentPage,
                 page_size: PAGE_SIZE,
-                search: externalFilters.search,
-                executor_type: externalFilters.executor_type,
-                target_hosts: externalFilters.target_hosts,
-                playbook_name: externalFilters.playbook_name,
-                repository_name: externalFilters.repository_name,
-                status: externalFilters.status,
-                has_runs: externalFilters.has_runs,
-                has_logs: externalFilters.has_logs,
-                min_run_count: externalFilters.min_run_count,
-                last_run_status: externalFilters.last_run_status,
+                name: ef.name,
+                description: ef.description,
+                executor_type: ef.executor_type,
+                target_hosts: ef.target_hosts,
+                playbook_name: ef.playbook_name,
+                repository_name: ef.repository_name,
+                status: ef.status,
+                has_runs: ef.has_runs,
+                has_logs: ef.has_logs,
+                needs_review: ef.needs_review,
+                min_run_count: ef.min_run_count,
+                last_run_status: ef.last_run_status,
             });
             const newTasks = res.data || [];
 
@@ -103,6 +112,8 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
     useEffect(() => {
         fetchTasks(1, true);
     }, [
+        externalFilters.name,
+        externalFilters.description,
         externalFilters.search,
         externalFilters.executor_type,
         externalFilters.target_hosts,
@@ -111,6 +122,7 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
         externalFilters.status,
         externalFilters.has_runs,
         externalFilters.has_logs,
+        externalFilters.needs_review,
         externalFilters.min_run_count,
         externalFilters.last_run_status,
     ]);

@@ -23,6 +23,8 @@ export async function getExecutionTasks(params?: {
     page_size?: number;
     playbook_id?: string;
     search?: string;
+    name?: string;
+    description?: string;
     executor_type?: string;
     status?: string;
     needs_review?: boolean;
@@ -37,6 +39,8 @@ export async function getExecutionTasks(params?: {
     sort_order?: string;
     created_from?: string;
     created_to?: string;
+    // 允许透传任意参数（如 name__exact 精确匹配）
+    [key: string]: any;
 }) {
     return request<{ data: AutoHealing.ExecutionTask[]; total: number }>('/api/v1/execution-tasks', {
         method: 'GET',
@@ -132,9 +136,11 @@ export async function getTaskRuns(id: string, params?: {
 export async function getExecutionRuns(params?: {
     page?: number;
     page_size?: number;
+    run_id?: string;
+    task_name?: string;
     status?: string;
     task_id?: string;
-    search?: string; // Support Global ID/Keyword search
+    search?: string;
     triggered_by?: string;
     started_after?: string;
     started_before?: string;

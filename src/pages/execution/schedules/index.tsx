@@ -334,13 +334,15 @@ const ExecutionSchedulePage: React.FC = () => {
     // ==================== Search Fields ====================
     const searchFields = [
         {
-            key: 'search',
-            label: '搜索',
-            placeholder: '搜索调度名称...',
+            key: 'name',
+            label: '调度名称',
+            placeholder: '输入调度名称搜索...',
+            description: '按调度名称模糊搜索',
         },
         {
             key: '__enum__schedule_type',
-            label: '类型',
+            label: '调度类型',
+            description: '筛选调度类型（定时循环/单次执行）',
             options: [
                 { label: '全部', value: '' },
                 { label: '定时循环', value: 'cron' },
@@ -350,6 +352,7 @@ const ExecutionSchedulePage: React.FC = () => {
         {
             key: '__enum__enabled',
             label: '启用状态',
+            description: '筛选调度启用/禁用状态',
             options: [
                 { label: '全部', value: '' },
                 { label: '已启用', value: 'true' },
@@ -358,7 +361,8 @@ const ExecutionSchedulePage: React.FC = () => {
         },
         {
             key: '__enum__status',
-            label: '状态',
+            label: '调度状态',
+            description: '筛选调度执行状态',
             options: [
                 { label: '全部', value: '' },
                 { label: '运行中', value: 'running' },
@@ -419,37 +423,27 @@ const ExecutionSchedulePage: React.FC = () => {
                 page_size: params.pageSize || 15,
             };
 
+            // 高级搜索 — 通用字段传递（支持 __exact 后缀）
             if (params.advancedSearch) {
-                // 去掉 __enum__ 前缀，统一 key 格式
-                const adv: Record<string, any> = {};
-                for (const [k, v] of Object.entries(params.advancedSearch)) {
-                    adv[k.replace(/^__enum__/, '')] = v;
-                }
-                // 全局搜索
-                if (adv.search) apiParams.search = adv.search;
-                // 名称精确模糊匹配
-                if (adv.name) apiParams.name = adv.name;
-                // 调度类型 — 兼容快速筛选 (schedule_type) 和高级搜索
-                if (adv.schedule_type) apiParams.schedule_type = adv.schedule_type;
-                // 启用状态 — 兼容快速筛选 (enabled) 和高级搜索
-                if (adv.enabled !== undefined && adv.enabled !== null && adv.enabled !== '') {
-                    apiParams.enabled = adv.enabled === 'true' || adv.enabled === true;
-                }
-                // 调度状态
-                if (adv.status) apiParams.status = adv.status;
-                // 跳过通知
-                if (adv.skip_notification !== undefined && adv.skip_notification !== null) {
-                    apiParams.skip_notification = adv.skip_notification === 'true' || adv.skip_notification === true;
-                }
-                // 有覆盖参数
-                if (adv.has_overrides !== undefined && adv.has_overrides !== null) {
-                    apiParams.has_overrides = adv.has_overrides === 'true' || adv.has_overrides === true;
-                }
-                // 创建时间范围 (dateRange → created_from / created_to)
+                const adv = params.advancedSearch;
+                // 布尔字段转换
+                const boolKeys = ['enabled', 'skip_notification', 'has_overrides'];
+                boolKeys.forEach(bk => {
+                    if (adv[bk] !== undefined && adv[bk] !== null && adv[bk] !== '') {
+                        apiParams[bk] = adv[bk] === 'true' || adv[bk] === true;
+                    }
+                });
+                // 日期范围
                 if (adv.created_at && Array.isArray(adv.created_at) && adv.created_at.length === 2) {
                     apiParams.created_from = adv.created_at[0].toISOString();
                     apiParams.created_to = adv.created_at[1].toISOString();
                 }
+                // 通用字段传递
+                const specialKeys = [...boolKeys, 'created_at'];
+                Object.entries(adv).forEach(([key, value]) => {
+                    if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
+                    apiParams[key] = value;
+                });
             }
 
             // 排序

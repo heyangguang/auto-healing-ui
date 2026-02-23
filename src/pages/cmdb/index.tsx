@@ -41,19 +41,21 @@ const getOSIcon = (os: string) => {
 
 /* ========== 搜索字段 ========== */
 const searchFields: SearchField[] = [
-    { key: 'keyword', label: '关键字' },
-    { key: 'ip_address', label: 'IP 地址' },
-    { key: 'hostname', label: '主机名' },
+    { key: 'name', label: '关键字' },
+    { key: 'ip_search', label: 'IP 地址' },
+    { key: 'host_search', label: '主机名' },
 ];
 
 const advancedSearchFields: AdvancedSearchField[] = [
-    { key: 'keyword', label: '关键字', type: 'input', placeholder: '搜索名称 / IP / 主机名' },
+    { key: 'name', label: '名称', type: 'input', placeholder: '资产名称' },
+    { key: 'ip_address', label: 'IP 地址', type: 'input', placeholder: 'IP 地址' },
+    { key: 'hostname', label: '主机名', type: 'input', placeholder: '主机名' },
     {
-        key: 'type', label: '类型', type: 'select', placeholder: '全部类型',
+        key: 'type', label: '资产类型', type: 'select', placeholder: '全部类型',
         options: Object.entries(TYPE_MAP).map(([v, t]) => ({ label: t.text, value: v })),
     },
     {
-        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        key: 'status', label: '资产状态', type: 'select', placeholder: '全部状态',
         options: Object.entries(STATUS_MAP).map(([v, s]) => ({ label: s.text, value: v })),
     },
     {
@@ -400,26 +402,26 @@ const CMDBList: React.FC = () => {
 
         // 简单搜索
         if (params.searchValue) {
-            const field = params.searchField || 'keyword';
-            if (field === 'ip_address') {
-                apiParams.ip_address = params.searchValue;
-            } else if (field === 'hostname') {
-                apiParams.hostname = params.searchValue;
-            } else {
-                apiParams.keyword = params.searchValue;
-            }
+            apiParams.name = params.searchValue;
         }
 
         // 高级搜索
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            if (adv.keyword) apiParams.keyword = adv.keyword;
-            if (adv.ip_address) apiParams.ip_address = adv.ip_address;
+            // 名称/IP/主机名 → 直接传独立参数
+            if (adv.name) apiParams.name = adv.name;
+            if (adv.name__exact) apiParams.name__exact = adv.name__exact;
             if (adv.hostname) apiParams.hostname = adv.hostname;
+            if (adv.hostname__exact) apiParams.hostname__exact = adv.hostname__exact;
+            if (adv.ip_address) apiParams.ip_address = adv.ip_address;
+            if (adv.ip_address__exact) apiParams.ip_address__exact = adv.ip_address__exact;
+            // 其他字段直接传
             if (adv.type) apiParams.type = adv.type;
             if (adv.status) apiParams.status = adv.status;
             if (adv.environment) apiParams.environment = adv.environment;
             if (adv.source_plugin_name) apiParams.source_plugin_name = adv.source_plugin_name;
+            if (adv.source_plugin_name__exact) apiParams.source_plugin_name__exact = adv.source_plugin_name__exact;
+            if (adv.has_plugin !== undefined && adv.has_plugin !== '' && adv.has_plugin !== null) apiParams.has_plugin = adv.has_plugin;
         }
 
         // 排序
@@ -433,10 +435,8 @@ const CMDBList: React.FC = () => {
         const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? 0;
 
         totalCountRef.current = total;
-        // 异步刷新统计，不阻塞表格渲染
-        loadStats();
         return { data: items, total };
-    }, [loadStats]);
+    }, []);
 
     /* ========== 统计卡片 (memoized) ========== */
     const statsBar = useMemo(() => {
@@ -539,6 +539,7 @@ const CMDBList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
+                searchSchemaUrl="/api/v1/cmdb/search-schema"
                 extraToolbarActions={batchToolbar}
                 columns={columns}
                 rowKey="id"

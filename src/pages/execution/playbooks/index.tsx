@@ -131,10 +131,12 @@ const formatDefaultDisplay = (value: any, _type: string): React.ReactNode => {
 
 // ============ 搜索配置 ============
 const playbookSearchFields: SearchField[] = [
-    { key: 'search', label: '名称/路径' },
+    { key: 'name', label: '模板名称' },
     { key: 'file_path', label: '入口文件' },
     {
-        key: '__enum__status', label: '状态', options: PLAYBOOK_STATUS_OPTIONS,
+        key: '__enum__status', label: 'Playbook 状态',
+        description: '筛选 Playbook 生命周期状态',
+        options: PLAYBOOK_STATUS_OPTIONS,
     },
     {
         key: '__enum__config_mode', label: '扫描模式', options: SCAN_MODE_OPTIONS,
@@ -151,7 +153,7 @@ const playbookAdvancedSearchFields: AdvancedSearchField[] = [
     { key: 'name', label: '模板名称', type: 'input', placeholder: '输入模板名称' },
     { key: 'file_path', label: '入口文件', type: 'input', placeholder: '输入文件路径' },
     {
-        key: 'status', label: '状态', type: 'select', options: PLAYBOOK_STATUS_OPTIONS,
+        key: 'status', label: 'Playbook 状态', type: 'select', options: PLAYBOOK_STATUS_OPTIONS,
     },
     {
         key: 'config_mode', label: '扫描模式', type: 'select', options: SCAN_MODE_OPTIONS,
@@ -220,9 +222,11 @@ const PlaybookList: React.FC = () => {
         try {
             const queryParams: any = { page: 1, page_size: 100 };
             const p = params || searchParams;
-            if (p.search) queryParams.search = p.search;
-            if (p.name) queryParams.name = p.name;
-            if (p.file_path) queryParams.file_path = p.file_path;
+            // 支持精确匹配：name__exact / file_path__exact 直接传给后端
+            if (p.name__exact) queryParams.name__exact = p.name__exact;
+            else if (p.name) queryParams.name = p.name;
+            if (p.file_path__exact) queryParams.file_path__exact = p.file_path__exact;
+            else if (p.file_path) queryParams.file_path = p.file_path;
             if (p.status) queryParams.status = p.status;
             if (p.config_mode) queryParams.config_mode = p.config_mode;
             if (p.has_variables) queryParams.has_variables = p.has_variables;
@@ -231,24 +235,9 @@ const PlaybookList: React.FC = () => {
             if (p.created_from) queryParams.created_from = p.created_from;
             if (p.created_to) queryParams.created_to = p.created_to;
 
-            const [playbooksRes, reposRes, statsRes] = await Promise.all([
-                getPlaybooks(queryParams),
-                getGitRepos({ status: 'ready' }),
-                getPlaybookStats(),
-            ]);
+            // 搜索时只请求 playbooks 列表，stats 和 repos 在首次加载时已获取
+            const playbooksRes = await getPlaybooks(queryParams);
             setPlaybooks(playbooksRes.data || playbooksRes.items || []);
-            setRepos(reposRes.data || []);
-            if (statsRes?.data) {
-                const byStatus = statsRes.data.by_status || [];
-                const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
-                setStats({
-                    total: statsRes.data.total || 0,
-                    ready: getCount('ready'),
-                    pendingScan: getCount('pending'),
-                    pendingOnline: getCount('scanned'),
-                    error: getCount('error') + getCount('invalid'),
-                });
-            }
         } catch { /* ignore */ }
         finally { setLoading(false); }
     }, [searchParams]);
@@ -1714,6 +1703,7 @@ const PlaybookList: React.FC = () => {
                 const raw = advancedSearch || {};
                 const params: Record<string, any> = {};
                 // 处理所有 key：去掉 __enum__ 前缀，转换 dateRange 键
+                // 同时保留 __exact 后缀以支持精确匹配
                 Object.entries(raw).forEach(([key, value]) => {
                     if (!value && value !== false && value !== 0) return;
                     const cleanKey = key.replace(/^__enum__/, '');
@@ -1722,6 +1712,7 @@ const PlaybookList: React.FC = () => {
                     } else if (cleanKey === 'created_at_to') {
                         params.created_to = value;
                     } else {
+                        // 保留 __exact 后缀，如 name__exact, file_path__exact
                         params[cleanKey] = value;
                     }
                 });

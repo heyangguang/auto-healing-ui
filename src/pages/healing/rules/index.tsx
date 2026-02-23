@@ -172,7 +172,10 @@ const HealingRulesPage: React.FC = () => {
         try {
             const params: any = { page: p, page_size: ps, sort_by: sortBy, sort_order: sortOrder };
             const sp = searchParamsRef.current;
-            if (sp.name) params.search = sp.name;
+            if (sp.name) params.name = sp.name;
+            if (sp.name__exact) params.name__exact = sp.name__exact;
+            if (sp.description) params.description = sp.description;
+            if (sp.description__exact) params.description__exact = sp.description__exact;
             if (sp.is_active !== undefined && sp.is_active !== '') {
                 params.is_active = sp.is_active === 'true';
             }
@@ -217,7 +220,10 @@ const HealingRulesPage: React.FC = () => {
             setLoading(true);
             try {
                 const apiParams: any = { page: 1, page_size: pageSize, sort_by: sortBy, sort_order: sortOrder };
-                if (merged.name) apiParams.search = merged.name;
+                if (merged.name) apiParams.name = merged.name;
+                if (merged.name__exact) apiParams.name__exact = merged.name__exact;
+                if (merged.description) apiParams.description = merged.description;
+                if (merged.description__exact) apiParams.description__exact = merged.description__exact;
                 if (merged.is_active !== undefined && merged.is_active !== '') {
                     apiParams.is_active = merged.is_active === 'true';
                 }
@@ -235,10 +241,9 @@ const HealingRulesPage: React.FC = () => {
                 const res = await getHealingRules(apiParams);
                 setRules(res.data || []);
                 setTotal(res.total || 0);
-                loadStats();
             } catch { /* */ } finally { setLoading(false); }
         })();
-    }, [pageSize, sortBy, sortOrder, loadStats]);
+    }, [pageSize, sortBy, sortOrder]);
 
     // ==================== Actions ====================
     const handleToggle = async (rule: AutoHealing.HealingRule, checked: boolean) => {
@@ -604,6 +609,7 @@ const HealingRulesPage: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
+                searchSchemaUrl="/api/v1/healing/rules/search-schema"
                 onSearch={handleSearch}
                 primaryActionLabel="新建规则"
                 primaryActionIcon={<PlusOutlined />}

@@ -47,13 +47,13 @@ const getAuthTypeConfig = (authType: string) => AUTH_TYPES.find(t => t.value ===
 
 /* ========== 搜索字段 ========== */
 const searchFields: SearchField[] = [
-    { key: 'keyword', label: '名称' },
+    { key: 'name', label: '密钥源名称', description: '按密钥源名称模糊搜索' },
 ];
 
 const advancedSearchFields: AdvancedSearchField[] = [
-    { key: 'keyword', label: '名称', type: 'input', placeholder: '密钥源名称' },
+    { key: 'name', label: '密钥源名称', type: 'input', placeholder: '密钥源名称' },
     {
-        key: 'type', label: '类型', type: 'select', placeholder: '全部类型',
+        key: 'type', label: '密钥源类型', type: 'select', placeholder: '全部类型',
         options: SECRETS_SOURCE_OPTIONS,
     },
     {
@@ -61,7 +61,7 @@ const advancedSearchFields: AdvancedSearchField[] = [
         options: CREDENTIAL_TYPE_OPTIONS,
     },
     {
-        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        key: 'status', label: '密钥源状态', type: 'select', placeholder: '全部状态',
         options: SECRETS_STATUS_OPTIONS,
     },
 ];
@@ -384,12 +384,16 @@ const SecretsSourceList: React.FC = () => {
             items = items.filter(s => s.name.toLowerCase().includes(keyword));
         }
 
-        // 高级搜索
+        // 高级搜索（客户端过滤，支持 __exact 后缀）
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            if (adv.keyword) {
-                const kw = adv.keyword.toLowerCase();
+            if (adv.name) {
+                const kw = adv.name.toLowerCase();
                 items = items.filter(s => s.name.toLowerCase().includes(kw));
+            }
+            // name__exact: 精确匹配名称
+            if (adv.name__exact) {
+                items = items.filter(s => s.name === adv.name__exact);
             }
             if (adv.type) items = items.filter(s => s.type === adv.type);
             if (adv.auth_type) items = items.filter(s => s.auth_type === adv.auth_type);

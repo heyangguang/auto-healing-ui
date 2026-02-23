@@ -39,7 +39,7 @@ const executorConfig: Record<string, { color: string; text: string }> = Object.f
 
 // ==================== 搜索配置 ====================
 const templateAdvancedSearchFields: AdvancedSearchField[] = [
-    { key: 'playbook_name', label: 'Playbook', type: 'input', placeholder: '输入 Playbook 名称' },
+    { key: 'playbook_name', label: 'Playbook 名称', type: 'input', placeholder: '输入 Playbook 名称' },
     { key: 'target_hosts', label: '目标主机', type: 'input', placeholder: '输入主机地址' },
     {
         key: 'executor_type', label: '执行器类型', type: 'select', options: [
@@ -48,7 +48,9 @@ const templateAdvancedSearchFields: AdvancedSearchField[] = [
         ]
     },
     {
-        key: 'needs_review', label: '审核状态', type: 'select', options: [
+        key: 'needs_review', label: '审核状态', type: 'select',
+        description: '筛选模板审核状态',
+        options: [
             { label: '需审核', value: 'true' },
             { label: '正常', value: 'false' },
         ]
@@ -419,6 +421,27 @@ const ExecutionTemplateList: React.FC = () => {
     // 刷新触发器
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    // 稳定引用：避免每次重渲染创建新数组导致 StandardTable 误清空筛选条件
+    const templateSearchFields = useMemo(() => [
+        { key: 'name', label: '模板名称', placeholder: '搜索模板名称或 ID', description: '按模板名称或 ID 模糊搜索' },
+        {
+            key: '__enum__executor', label: '执行器类型',
+            description: '筛选执行器类型',
+            options: [
+                { label: 'SSH / Local', value: 'local' },
+                { label: 'Docker', value: 'docker' },
+            ]
+        },
+        {
+            key: '__enum__needs_review', label: '审核状态',
+            description: '筛选模板审核状态',
+            options: [
+                { label: '需审核', value: 'true' },
+                { label: '正常', value: 'false' },
+            ]
+        },
+    ], []);
+
 
 
     // 加载引用数据
@@ -428,12 +451,22 @@ const ExecutionTemplateList: React.FC = () => {
             getSecretsSources(),
             getChannels({ page_size: 100 }),
             getTemplates({ page_size: 100 }),
-
-        ]).then(([pbRes, secRes, chRes, tplRes]) => {
+            getExecutionTaskStats(),
+        ]).then(([pbRes, secRes, chRes, tplRes, statsRes]) => {
             setPlaybooks(pbRes.data || pbRes.items || []);
             setSecretsSources(secRes.data || []);
             setNotifyChannels(chRes.data || []);
             setNotifyTemplates(tplRes.data || []);
+            const s = (statsRes as any)?.data || statsRes;
+            if (s) {
+                setStats({
+                    total: s.total ?? 0,
+                    docker: s.docker ?? 0,
+                    local: s.local ?? 0,
+                    needsReview: s.needs_review ?? 0,
+                    changedPlaybooks: s.changed_playbooks ?? 0,
+                });
+            }
         }).catch(() => { /* ignore */ });
     }, []);
 
@@ -755,8 +788,10 @@ const ExecutionTemplateList: React.FC = () => {
                 cleanedSearch[k.replace(/^__enum__/, '')] = v;
             }
             const adv = cleanedSearch;
-            // 全局搜索
-            if (adv.search) apiParams.search = adv.search;
+            if (adv.name) apiParams.name = adv.name;
+            if (adv.name__exact) apiParams.name__exact = adv.name__exact;
+            if (adv.description) apiParams.description = adv.description;
+            if (adv.description__exact) apiParams.description__exact = adv.description__exact;
             // 执行器类型 — 兼容快速筛选 (executor) 和高级搜索 (executor_type)
             if (adv.executor) apiParams.executor_type = adv.executor;
             if (adv.executor_type) apiParams.executor_type = adv.executor_type;
@@ -790,25 +825,6 @@ const ExecutionTemplateList: React.FC = () => {
         const res = await getExecutionTasks(apiParams);
         const tasks = res.data || [];
         const total = res.total || tasks.length;
-
-        // 更新统计 — 调用后端 GET /api/v1/execution-tasks/stats
-        if (page === 1) {
-            try {
-                const statsRes = await getExecutionTaskStats();
-                const s = (statsRes as any)?.data || statsRes;
-                setStats({
-                    total: s.total ?? (res.total || 0),
-                    docker: s.docker ?? 0,
-                    local: s.local ?? 0,
-                    needsReview: s.needs_review ?? 0,
-                    changedPlaybooks: s.changed_playbooks ?? 0,
-                });
-            } catch {
-                // stats 接口异常时，使用列表 total 兜底
-                setStats(prev => ({ ...prev, total: res.total || 0 }));
-            }
-        }
-
         return { data: tasks, total };
     }, []);
 
@@ -845,22 +861,9 @@ const ExecutionTemplateList: React.FC = () => {
                         ))}
                     </div>
                 }
-                searchFields={[
-                    { key: 'search', label: '名称 / ID', placeholder: '搜索模板名称或 ID' },
-                    {
-                        key: '__enum__executor', label: '执行器类型', options: [
-                            { label: 'SSH / Local', value: 'local' },
-                            { label: 'Docker', value: 'docker' },
-                        ]
-                    },
-                    {
-                        key: '__enum__needs_review', label: '审核状态', options: [
-                            { label: '需审核', value: 'true' },
-                            { label: '正常', value: 'false' },
-                        ]
-                    },
-                ]}
+                searchFields={templateSearchFields}
                 advancedSearchFields={templateAdvancedSearchFields}
+                searchSchemaUrl="/api/v1/execution-tasks/search-schema"
                 columns={columns}
                 rowKey="id"
                 request={handleRequest}

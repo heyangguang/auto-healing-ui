@@ -23,7 +23,7 @@ import {
     getFiles, getCommits, getSyncLogs, getGitRepoStats,
 } from '@/services/auto-healing/git-repos';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
-import { REPO_STATUS_OPTIONS, AUTH_TYPE_OPTIONS, SYNC_ENABLED_OPTIONS } from '@/constants/gitRepoDicts';
+import { getDictionaries, DictItem } from '@/services/auto-healing/dictionary';
 import './index.css';
 
 dayjs.extend(relativeTime);
@@ -48,23 +48,11 @@ const authLabels: Record<string, { icon: React.ReactNode; text: string }> = {
 
 // ============ 搜索 ============
 const searchFields: SearchField[] = [
-    { key: 'search', label: '名称/URL' },
     { key: 'name', label: '名称' },
     { key: 'url', label: '仓库地址' },
 ];
 
 const advancedSearchFields: AdvancedSearchField[] = [
-    { key: 'name', label: '仓库名称', type: 'input', placeholder: '输入仓库名称' },
-    { key: 'url', label: '仓库地址', type: 'input', placeholder: '输入仓库 URL' },
-    {
-        key: 'status', label: '状态', type: 'select', options: REPO_STATUS_OPTIONS,
-    },
-    {
-        key: 'auth_type', label: '认证方式', type: 'select', options: AUTH_TYPE_OPTIONS,
-    },
-    {
-        key: 'sync_enabled', label: '定时同步', type: 'select', options: SYNC_ENABLED_OPTIONS,
-    },
     { key: 'created_at', label: '创建时间', type: 'dateRange' },
 ];
 
@@ -126,6 +114,34 @@ const GitRepoList: React.FC = () => {
     const [stats, setStats] = useState({ total: 0, ready: 0, pending: 0, error: 0 });
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [syncing, setSyncing] = useState<string>();
+
+    // 初始化加载统计
+    useEffect(() => {
+        getGitRepoStats().then(statsRes => {
+            if (statsRes?.data) {
+                const byStatus = statsRes.data.by_status || [];
+                const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
+                setStats({
+                    total: statsRes.data.total || 0,
+                    ready: getCount('ready'),
+                    pending: getCount('pending'),
+                    error: getCount('error'),
+                });
+            }
+        }).catch(() => { });
+    }, []);
+
+    // 字典数据（用于列头筛选器）
+    const [statusOptions, setStatusOptions] = useState<{ label: string; value: string }[]>([]);
+    const [authTypeOptions, setAuthTypeOptions] = useState<{ label: string; value: string }[]>([]);
+
+    useEffect(() => {
+        getDictionaries(['git_repo_status', 'git_auth_type']).then(res => {
+            const toOptions = (items: DictItem[]) => items.map(d => ({ label: d.label, value: d.dict_key }));
+            if (res.data?.git_repo_status) setStatusOptions(toOptions(res.data.git_repo_status));
+            if (res.data?.git_auth_type) setAuthTypeOptions(toOptions(res.data.git_auth_type));
+        }).catch(() => { });
+    }, []);
 
     // 详情 Drawer
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -278,7 +294,7 @@ const GitRepoList: React.FC = () => {
         },
         {
             columnKey: 'status', columnTitle: '状态', dataIndex: 'status', width: 90, sorter: true,
-            headerFilters: REPO_STATUS_OPTIONS,
+            headerFilters: statusOptions,
             render: (_: any, r: AutoHealing.GitRepository) => {
                 const st = statusConfig[r.status] || statusConfig.pending;
                 return <Badge status={st.badge} text={st.text} />;
@@ -286,7 +302,7 @@ const GitRepoList: React.FC = () => {
         },
         {
             columnKey: 'auth_type', columnTitle: '认证', dataIndex: 'auth_type', width: 80,
-            headerFilters: AUTH_TYPE_OPTIONS,
+            headerFilters: authTypeOptions,
             render: (v: string) => {
                 const auth = authLabels[v] || authLabels.none;
                 return <Space size={4}><Text type="secondary">{auth.icon}</Text><Text type="secondary">{auth.text}</Text></Space>;
@@ -337,7 +353,7 @@ const GitRepoList: React.FC = () => {
                 </Space>
             ),
         },
-    ], [openDetail, openEdit, handleSync, handleDelete, syncing, access, loadFileTree]);
+    ], [openDetail, openEdit, handleSync, handleDelete, syncing, access, loadFileTree, statusOptions, authTypeOptions]);
 
     // ======= 数据请求 =======
     const handleRequest = useCallback(async (params: {
@@ -355,22 +371,24 @@ const GitRepoList: React.FC = () => {
                 if (params.searchField) {
                     apiParams[params.searchField] = params.searchValue;
                 } else {
-                    apiParams.search = params.searchValue;
+                    apiParams.name = params.searchValue;
                 }
             }
 
-            // 高级搜索
+            // 高级搜索 — 通用字段传递（支持 __exact 后缀）
             if (params.advancedSearch) {
                 const adv = params.advancedSearch;
-                if (adv.name) apiParams.name = adv.name;
-                if (adv.url) apiParams.url = adv.url;
-                if (adv.status) apiParams.status = adv.status;
-                if (adv.auth_type) apiParams.auth_type = adv.auth_type;
-                if (adv.sync_enabled) apiParams.sync_enabled = adv.sync_enabled;
+                // 特殊字段：日期范围
                 if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
                     apiParams.created_from = adv.created_at[0].toISOString();
                     apiParams.created_to = adv.created_at[1].toISOString();
                 }
+                // 通用字段传递
+                const specialKeys = ['created_at'];
+                Object.entries(adv).forEach(([key, value]) => {
+                    if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
+                    apiParams[key] = value;
+                });
             }
 
             // 排序
@@ -382,20 +400,6 @@ const GitRepoList: React.FC = () => {
             const res = await getGitRepos(apiParams);
             const items = res.data || [];
             const total = (res as any)?.total ?? items.length;
-
-            // 更新统计（使用后端 stats API）
-            getGitRepoStats().then(statsRes => {
-                if (statsRes?.data) {
-                    const byStatus = statsRes.data.by_status || [];
-                    const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
-                    setStats({
-                        total: statsRes.data.total || 0,
-                        ready: getCount('ready'),
-                        pending: getCount('pending'),
-                        error: getCount('error'),
-                    });
-                }
-            }).catch(() => { });
 
             return { data: items, total };
         } catch {
@@ -716,6 +720,7 @@ const GitRepoList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
+                searchSchemaUrl="/api/v1/git-repos/search-schema"
                 primaryActionLabel="添加仓库"
                 primaryActionIcon={<PlusOutlined />}
                 primaryActionDisabled={!access.canManageGitRepo}

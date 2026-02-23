@@ -325,15 +325,15 @@ const NotificationRecords: React.FC = () => {
                 columns={columns}
                 rowKey="id"
                 searchFields={[
-                    { key: 'search', label: '通知主题' },
+                    { key: 'subject', label: '通知主题' },
                     { key: 'task_name', label: '任务名称' },
                     { key: 'recipient', label: '接收者' },
                 ]}
                 advancedSearchFields={[
-                    { key: 'search', label: '通知主题', type: 'input', placeholder: '搜索通知主题' },
+                    { key: 'subject', label: '通知主题', type: 'input', placeholder: '搜索通知主题' },
                     { key: 'task_name', label: '任务名称', type: 'input', placeholder: '模糊搜索任务模板名称' },
                     {
-                        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+                        key: 'status', label: '发送状态', type: 'select', placeholder: '全部状态',
                         options: [
                             { label: '已发送', value: 'sent' },
                             { label: '已送达', value: 'delivered' },
@@ -369,7 +369,7 @@ const NotificationRecords: React.FC = () => {
 
                     // 搜索字段映射
                     if (params.searchValue) {
-                        apiParams[params.searchField || 'search'] = params.searchValue;
+                        apiParams[params.searchField || 'subject'] = params.searchValue;
                     }
 
                     // 排序映射
@@ -378,22 +378,23 @@ const NotificationRecords: React.FC = () => {
                         apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
                     }
 
-                    // 高级搜索映射（含左侧快速搜索筛选标签）
+                    // 高级搜索 — 通用字段传递（支持 __exact 后缀）
                     if (params.advancedSearch) {
                         const adv = params.advancedSearch;
-                        if (adv.search) apiParams.search = adv.search;
-                        if (adv.status) apiParams.status = adv.status;
-                        if (adv.channel_id) apiParams.channel_id = adv.channel_id;
-                        if (adv.channel) apiParams.channel_id = adv.channel; // 左侧枚举筛选
-                        if (adv.template_id) apiParams.template_id = adv.template_id;
-                        if (adv.task_name) apiParams.task_name = adv.task_name;
-                        if (adv.triggered_by) apiParams.triggered_by = adv.triggered_by;
-                        if (adv.recipient) apiParams.recipient = adv.recipient;
+                        // 特殊字段：左侧枚举筛选 channel → channel_id
+                        if (adv.channel) { apiParams.channel_id = adv.channel; }
+                        // 日期范围
                         if (adv.created_at) {
                             const [start, end] = adv.created_at;
                             if (start) apiParams.created_after = start;
                             if (end) apiParams.created_before = end;
                         }
+                        // 通用字段传递
+                        const specialKeys = ['channel', 'created_at'];
+                        Object.entries(adv).forEach(([key, value]) => {
+                            if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
+                            apiParams[key] = value;
+                        });
                     }
 
                     const res = await getNotifications(apiParams);

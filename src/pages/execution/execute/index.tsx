@@ -80,7 +80,7 @@ const ExecuteTaskPage: React.FC = () => {
 
     const loadTemplates = useCallback(async (params?: {
         page?: number;
-        search?: string;
+        name?: string;
         executor_type?: string;
         status?: string;
         playbook_id?: string;
@@ -91,23 +91,32 @@ const ExecuteTaskPage: React.FC = () => {
         has_runs?: boolean;
         created_from?: string;
         created_to?: string;
+        // ★ 允许透传任意参数（如 name__exact, playbook_name__exact 等精确匹配字段）
+        [key: string]: any;
     }) => {
         setLoading(true);
         try {
+            // 提取已知字段，剩余透传（支持 __exact 后缀等动态参数）
+            const {
+                page: pg, name, executor_type, status, playbook_id, playbook_name,
+                target_hosts, needs_review, last_run_status, has_runs,
+                created_from, created_to, ...rest
+            } = params || {};
             const res = await getExecutionTasks({
-                page: params?.page || 1,
+                page: pg || 1,
                 page_size: pageSize,
-                search: params?.search || undefined,
-                executor_type: params?.executor_type || undefined,
-                status: params?.status || undefined,
-                playbook_id: params?.playbook_id || undefined,
-                playbook_name: params?.playbook_name || undefined,
-                target_hosts: params?.target_hosts || undefined,
-                needs_review: params?.needs_review,
-                last_run_status: params?.last_run_status || undefined,
-                has_runs: params?.has_runs,
-                created_from: params?.created_from || undefined,
-                created_to: params?.created_to || undefined,
+                name: name || undefined,
+                executor_type: executor_type || undefined,
+                status: status || undefined,
+                playbook_id: playbook_id || undefined,
+                playbook_name: playbook_name || undefined,
+                target_hosts: target_hosts || undefined,
+                needs_review: needs_review,
+                last_run_status: last_run_status || undefined,
+                has_runs: has_runs,
+                created_from: created_from || undefined,
+                created_to: created_to || undefined,
+                ...rest,
             });
             setTotalTemplates(res.total || 0);
             return res.data || [];
@@ -171,7 +180,7 @@ const ExecuteTaskPage: React.FC = () => {
 
             const loadedTemplates = await loadTemplates({
                 page: currentPage,
-                search: searchText || undefined,
+                name: searchText || undefined,
                 executor_type: filterExecutor || undefined,
                 status: apiStatus || undefined,
                 playbook_id: filterPlaybook || undefined,
@@ -198,7 +207,7 @@ const ExecuteTaskPage: React.FC = () => {
         } catch { /* ignore */ }
     }, []);
 
-    // 刷新列表 + 统计（任何操作后调用）
+    // 刷新列表（操作后调用，stats 只在初始化时加载一次）
     const refreshData = useCallback(async () => {
         // Map frontend status values to backend API values
         let apiStatus = '';
@@ -207,16 +216,14 @@ const ExecuteTaskPage: React.FC = () => {
 
         const loadedTemplates = await loadTemplates({
             page: currentPage,
-            search: searchText || undefined,
+            name: searchText || undefined,
             executor_type: filterExecutor || undefined,
             status: apiStatus || undefined,
             playbook_id: filterPlaybook || undefined,
             ...advancedParams,
         });
         setTemplates(loadedTemplates);
-        // 同时刷新统计
-        refreshStats();
-    }, [currentPage, searchText, filterExecutor, filterStatus, filterPlaybook, advancedParams, loadTemplates, refreshStats]);
+    }, [currentPage, searchText, filterExecutor, filterStatus, filterPlaybook, advancedParams, loadTemplates]);
 
     // ==================== Actions ====================
 
@@ -357,9 +364,11 @@ const ExecuteTaskPage: React.FC = () => {
         template.needs_review || template.playbook?.status !== 'ready';
 
     // ==================== Search Fields ====================
-    const launchpadSearchFields: SearchField[] = [
-        { key: 'search', label: '模板名称' },
-        { key: 'playbook_name', label: 'Playbook' },
+    // ★ 必须用 useMemo 保持引用稳定，否则每次父组件 re-render 时
+    //   StandardTable 会检测到 searchFields 引用变化，清空筛选标签
+    const launchpadSearchFields: SearchField[] = useMemo(() => [
+        { key: 'name', label: '模板名称' },
+        { key: 'playbook_name', label: 'Playbook 名称' },
         { key: 'target_hosts', label: '目标主机' },
         {
             key: '__enum__executor_type', label: '执行器类型',
@@ -369,20 +378,23 @@ const ExecuteTaskPage: React.FC = () => {
             ],
         },
         {
-            key: '__enum__status', label: '状态',
+            key: '__enum__status', label: '模板状态',
+            description: '筛选模板就绪/审核状态',
             options: [
                 { label: '就绪', value: 'ready' },
                 { label: '需审核', value: 'review' },
             ],
         },
         {
-            key: '__enum__last_run_status', label: '最后执行',
+            key: '__enum__last_run_status', label: '最后执行状态',
+            description: '按最后一次执行结果筛选',
             options: getRunStatusOptions().slice(0, 3),
         },
-    ];
+    ], []);
 
-    const launchpadAdvancedSearchFields: AdvancedSearchField[] = [
-        { key: 'playbook_name', label: 'Playbook', type: 'input', placeholder: '输入 Playbook 名称' },
+    const launchpadAdvancedSearchFields: AdvancedSearchField[] = useMemo(() => [
+        { key: 'name', label: '模板名称', type: 'input', placeholder: '输入模板名称' },
+        { key: 'playbook_name', label: 'Playbook 名称', type: 'input', placeholder: '输入 Playbook 名称' },
         { key: 'target_hosts', label: '目标主机', type: 'input', placeholder: '输入主机地址' },
         {
             key: 'needs_review', label: '审核状态', type: 'select', options: [
@@ -404,7 +416,7 @@ const ExecuteTaskPage: React.FC = () => {
             ]
         },
         { key: 'created_at', label: '创建时间', type: 'dateRange' },
-    ];
+    ], []);
 
     const handleLaunchpadSearch = useCallback((params: {
         searchField?: string;
@@ -419,7 +431,7 @@ const ExecuteTaskPage: React.FC = () => {
         const extra: Record<string, any> = {};
 
         for (const f of filters) {
-            if (f.field === 'search') newSearch = f.value;
+            if (f.field === 'name') newSearch = f.value;
             else if (f.field === 'playbook_name') extra.playbook_name = f.value;
             else if (f.field === 'target_hosts') extra.target_hosts = f.value;
             else if (f.field === '__enum__executor_type') newExecutor = f.value;
@@ -431,22 +443,27 @@ const ExecuteTaskPage: React.FC = () => {
         setFilterExecutor(newExecutor);
         setFilterStatus(newStatus);
 
-        // 高级搜索参数
+        // 高级搜索参数 — 通用字段传递（支持 __exact 后缀）
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            if (adv.playbook_name) extra.playbook_name = adv.playbook_name;
-            if (adv.target_hosts) extra.target_hosts = adv.target_hosts;
+            // 布尔字段转换
             if (adv.needs_review !== undefined && adv.needs_review !== null && adv.needs_review !== '') {
                 extra.needs_review = adv.needs_review === 'true' || adv.needs_review === true;
             }
-            if (adv.last_run_status) extra.last_run_status = adv.last_run_status;
             if (adv.has_runs !== undefined && adv.has_runs !== null && adv.has_runs !== '') {
                 extra.has_runs = adv.has_runs === 'true' || adv.has_runs === true;
             }
+            // 日期范围
             if (adv.created_at && Array.isArray(adv.created_at) && adv.created_at.length === 2) {
                 extra.created_from = adv.created_at[0].toISOString();
                 extra.created_to = adv.created_at[1].toISOString();
             }
+            // 通用字段传递
+            const specialKeys = ['needs_review', 'has_runs', 'created_at'];
+            Object.entries(adv).forEach(([key, value]) => {
+                if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
+                extra[key] = value;
+            });
         }
         setAdvancedParams(extra);
     }, []);

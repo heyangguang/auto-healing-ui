@@ -104,13 +104,13 @@ const NotificationTemplatesPage: React.FC = () => {
     // StandardTable onSearch callback
     const handleSearchChange = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => {
         const filters = params.filters || [];
-        const nameFilter = filters.find(f => f.field === 'search');
+        const nameFilter = filters.find(f => f.field === 'name');
         const eventTypeFilter = filters.find(f => f.field === '__enum__event_type');
         const statusFilter = filters.find(f => f.field === '__enum__status');
         const formatFilter = filters.find(f => f.field === '__enum__format');
         const channelFilter = filters.find(f => f.field === '__enum__channel_type');
 
-        setSearchText(nameFilter?.value || params.advancedSearch?.search || '');
+        setSearchText(nameFilter?.value || params.advancedSearch?.name || '');
         setFilterEventType(eventTypeFilter?.value || params.advancedSearch?.event_type || 'all');
         setFilterStatus(statusFilter?.value || params.advancedSearch?.status || 'all');
         setFilterFormat(formatFilter?.value || params.advancedSearch?.format || 'all');
@@ -140,7 +140,7 @@ const NotificationTemplatesPage: React.FC = () => {
             sort_by: sortBy,
             sort_order: sortOrder,
         };
-        if (searchText.trim()) params.search = searchText.trim();
+        if (searchText.trim()) params.name = searchText.trim();
         if (filterEventType !== 'all') params.event_type = filterEventType;
         if (filterStatus !== 'all') params.is_active = filterStatus === 'active';
         if (filterFormat !== 'all') params.format = filterFormat;
@@ -491,7 +491,7 @@ const NotificationTemplatesPage: React.FC = () => {
                     </svg>
                 }
                 searchFields={[
-                    { key: 'search', label: '模板名称' },
+                    { key: 'name', label: '模板名称' },
                 ]}
                 columns={[
                     {
@@ -567,7 +567,7 @@ const NotificationTemplatesPage: React.FC = () => {
                 </svg>
             }
             searchFields={[
-                { key: 'search', label: '模板名称' },
+                { key: 'name', label: '模板名称' },
             ]}
             columns={[
                 {

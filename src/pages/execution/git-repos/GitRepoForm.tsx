@@ -9,7 +9,7 @@ import {
 import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
-    validateGitRepo, createGitRepo, getGitRepo, updateGitRepo, getBranches,
+    validateGitRepo, createGitRepo, getGitRepo, updateGitRepo,
 } from '@/services/auto-healing/git-repos';
 import './GitRepoForm.css';
 
@@ -67,18 +67,7 @@ const GitRepoFormPage: React.FC = () => {
             // 编辑模式下已验证
             setValidated(true);
             setDefaultBranch(r.default_branch || 'main');
-            // 加载该仓库的完整分支列表
-            getBranches(params.id!).then(branchRes => {
-                const branches = branchRes.data?.branches || [];
-                if (branches.length > 0) {
-                    setAvailableBranches(branches);
-                } else {
-                    setAvailableBranches([r.default_branch || 'main']);
-                }
-            }).catch(() => {
-                // 分支加载失败时至少显示当前默认分支
-                setAvailableBranches([r.default_branch || 'main']);
-            });
+            setAvailableBranches([r.default_branch || 'main']);
         }).catch(() => {
             message.error('加载仓库信息失败');
         }).finally(() => setLoading(false));

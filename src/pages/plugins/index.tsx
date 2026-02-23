@@ -63,15 +63,16 @@ const CMDB_FIELDS = [
 const getTypeConfig = (type: string) => PLUGIN_TYPES.find(t => t.value === type) || PLUGIN_TYPES[0];
 
 // ============ 搜索 ============
-const searchFields: SearchField[] = [{ key: 'keyword', label: '名称' }];
+const searchFields: SearchField[] = [{ key: 'name', label: '名称' }];
 const advancedSearchFields: AdvancedSearchField[] = [
-    { key: 'keyword', label: '名称', type: 'input', placeholder: '插件名称' },
+    { key: 'name', label: '名称', type: 'input', placeholder: '插件名称' },
+    { key: 'description', label: '描述', type: 'input', placeholder: '插件描述' },
     {
-        key: 'type', label: '类型', type: 'select', placeholder: '全部类型',
+        key: 'type', label: '插件类型', type: 'select', placeholder: '全部类型',
         options: [{ label: 'ITSM', value: 'itsm' }, { label: 'CMDB', value: 'cmdb' }]
     },
     {
-        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        key: 'status', label: '插件状态', type: 'select', placeholder: '全部状态',
         options: Object.entries(PLUGIN_STATUS_LABELS).map(([value, label]) => ({ label, value }))
     },
 ];
@@ -281,13 +282,21 @@ const PluginList: React.FC = () => {
         advancedSearch?: Record<string, any>; sorter?: { field: string; order: 'ascend' | 'descend' };
     }) => {
         const apiParams: any = { page: params.page, page_size: params.pageSize };
-        // 类型/状态筛选
-        if (params.advancedSearch?.type) apiParams.type = params.advancedSearch.type;
-        if (params.advancedSearch?.status) apiParams.status = params.advancedSearch.status;
-
-        // 搜索（后端支持）
-        const kw = params.searchValue || params.advancedSearch?.keyword;
-        if (kw) apiParams.search = kw;
+        // 简单搜索
+        if (params.searchValue) {
+            apiParams.name = params.searchValue;
+        }
+        // 高级搜索
+        if (params.advancedSearch) {
+            const adv = params.advancedSearch;
+            // 名称/描述 → 直接传独立参数
+            if (adv.name) apiParams.name = adv.name;
+            if (adv.name__exact) apiParams.name__exact = adv.name__exact;
+            if (adv.description) apiParams.description = adv.description;
+            if (adv.description__exact) apiParams.description__exact = adv.description__exact;
+            if (adv.type) apiParams.type = adv.type;
+            if (adv.status) apiParams.status = adv.status;
+        }
 
         // 排序（后端支持）
         if (params.sorter?.field) {
@@ -340,6 +349,7 @@ const PluginList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
+                searchSchemaUrl="/api/v1/plugins/search-schema"
                 primaryActionLabel="新建插件"
                 primaryActionIcon={<PlusOutlined />}
                 primaryActionDisabled={!access.canCreatePlugin}

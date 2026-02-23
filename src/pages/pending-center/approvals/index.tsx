@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useAccess } from '@umijs/max';
 import { Button, message, Space, Tag, Modal, Input, Drawer, Descriptions, Typography } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
-import StandardTable, { type StandardColumnDef, type SearchField } from '@/components/StandardTable';
+import StandardTable, { type StandardColumnDef, type SearchField, type AdvancedSearchField } from '@/components/StandardTable';
 import { getPendingApprovals, approveTask, rejectTask } from '@/services/auto-healing/healing';
 import { getSimpleUsers } from '@/services/auto-healing/users';
 import dayjs from 'dayjs';
@@ -19,7 +19,11 @@ const formatTime = (t: string | null | undefined) => {
 /* ============================== 搜索字段 ============================== */
 
 const searchFields: SearchField[] = [
-    { key: 'search', label: '关键字', placeholder: '搜索节点名/流程ID' },
+    { key: 'node_name', label: '节点名称', placeholder: '搜索节点名/流程ID' },
+];
+
+const advancedSearchFields: AdvancedSearchField[] = [
+    { key: 'created_at', label: '创建时间', type: 'dateRange' },
 ];
 
 /* ============================== 组件 ============================== */
@@ -213,10 +217,23 @@ const PendingApprovals: React.FC = () => {
             page_size: params.pageSize,
         };
 
+        // 快速搜索 → 后端 node_name 参数
+        if (params.searchValue) {
+            apiParams.node_name = params.searchValue;
+        }
+
+        // 高级搜索 — 通用字段传递（支持 __exact 后缀）
         if (params.advancedSearch) {
-            if (params.advancedSearch.search) {
-                apiParams.search = params.advancedSearch.search;
-            }
+            Object.entries(params.advancedSearch).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') return;
+                // dateRange 类型拆分为 date_from/date_to
+                if (key === 'created_at' && Array.isArray(value) && value.length === 2) {
+                    if (value[0]) apiParams.date_from = dayjs(value[0]).format('YYYY-MM-DD');
+                    if (value[1]) apiParams.date_to = dayjs(value[1]).format('YYYY-MM-DD');
+                    return;
+                }
+                apiParams[key] = value;
+            });
         }
 
         if (params.sorter) {
@@ -312,6 +329,7 @@ const PendingApprovals: React.FC = () => {
                 description="查看待审批的流程任务，执行批准或拒绝操作。"
                 headerIcon={headerIcon}
                 searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
                 columns={columns}
                 rowKey="id"
                 onRowClick={openDetail}

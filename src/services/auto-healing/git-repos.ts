@@ -102,26 +102,6 @@ export async function syncGitRepo(id: string) {
     });
 }
 
-/**
- * 检测远程分支
- * POST /api/v1/git-repos/{id}/detect-branches
- */
-export async function detectBranches(id: string) {
-    return request<{ data: { branches: string[] } }>(`/api/v1/git-repos/${id}/detect-branches`, {
-        method: 'POST',
-    });
-}
-
-/**
- * 获取分支列表（缓存）
- * GET /api/v1/git-repos/{id}/branches
- */
-export async function getBranches(id: string) {
-    return request<{ data: { branches: string[] } }>(`/api/v1/git-repos/${id}/branches`, {
-        method: 'GET',
-    });
-}
-
 // ==================== 文件与历史 ====================
 
 /**

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import TeamsAvatar from '@/components/TeamsAvatar';
 import {
     ACTION_LABELS as _ACTION_LABELS,
     ALL_RESOURCE_LABELS as _ALL_RESOURCE_LABELS,
@@ -54,7 +55,7 @@ import {
 } from '@/services/auto-healing/workbench';
 import { getSiteMessages, markAsRead, type SiteMessage } from '@/services/auto-healing/siteMessage';
 import { getAuditLogs } from '@/services/auto-healing/auditLogs';
-import { SERVICES } from '@/config/menu';
+import { SERVICES } from '@/config/navData';
 import { getPendingApprovals, getPendingTriggers } from '@/services/auto-healing/healing';
 import { GUIDE_ARTICLES, type GuideArticle } from '@/pages/guide/guideData';
 import GuideDrawer from './GuideDrawer';
@@ -675,7 +676,7 @@ const WorkbenchPage: React.FC = () => {
     const { initialState } = useModel('@@initialState');
     const user = initialState?.currentUser;
     const displayName = user?.name || (user as any)?.display_name || (user as any)?.username || '用户';
-    const firstChar = displayName.charAt(0).toUpperCase();
+    const seed = (user as any)?.username || displayName;
     const role = (user as any)?.access === 'admin' ? '系统管理员' : '普通用户';
 
     /* ══ 数据状态 ══ */
@@ -1045,9 +1046,7 @@ const WorkbenchPage: React.FC = () => {
                                         const userName = log.username || log.user?.username || '系统';
                                         return (
                                             <div key={log.id} className={styles.changeItem}>
-                                                <div className={styles.changeAvatar}>
-                                                    {userName.charAt(0).toUpperCase()}
-                                                </div>
+                                                <TeamsAvatar seed={userName} name={userName} size={32} />
                                                 <div className={styles.changeContent}>
                                                     <div className={styles.changeText}>
                                                         <strong>{userName}</strong> {actionLabel} <span style={{ color: '#1677ff' }}>{log.resource_name || resLabel}</span>
@@ -1117,7 +1116,7 @@ const WorkbenchPage: React.FC = () => {
                     {/* 用户信息 */}
                     <Card className={styles.card} styles={{ body: { padding: 16 } }}>
                         <div className={styles.userHeader}>
-                            <Avatar size={44} style={{ background: '#0f62fe', fontWeight: 600 }}>{firstChar}</Avatar>
+                            <TeamsAvatar seed={seed} name={displayName} size={44} />
                             <div>
                                 <div className={styles.userName}>{displayName}</div>
                                 <div className={styles.userRole}><Tag color="blue" style={{ margin: 0, fontSize: 11 }}>{role}</Tag></div>

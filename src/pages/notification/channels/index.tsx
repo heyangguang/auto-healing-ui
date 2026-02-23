@@ -54,7 +54,7 @@ const NotificationChannelsPage: React.FC = () => {
                 page: currentPage,
                 page_size: pageSize,
                 type: filterType as AutoHealing.ChannelType || undefined,
-                search: searchText || undefined,
+                name: searchText || undefined,
             } as any);
             setChannels(res.data || []);
             setTotal(res.total || 0);
@@ -77,7 +77,7 @@ const NotificationChannelsPage: React.FC = () => {
     // StandardTable onSearch callback
     const handleSearchChange = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => {
         const filters = params.filters || [];
-        const nameFilter = filters.find(f => f.field === 'search');
+        const nameFilter = filters.find(f => f.field === 'name');
         const typeFilter = filters.find(f => f.field === '__enum__type');
         const advType = params.advancedSearch?.type;
         const advSearch = params.advancedSearch?.search;
@@ -270,7 +270,7 @@ const NotificationChannelsPage: React.FC = () => {
                 </svg>
             }
             searchFields={[
-                { key: 'search', label: '渠道名称' },
+                { key: 'name', label: '渠道名称' },
             ]}
             columns={[
                 {

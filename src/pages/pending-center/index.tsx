@@ -56,11 +56,11 @@ const formatTime = (t: string | null | undefined) => {
 /* ============================== 搜索字段 ============================== */
 
 const triggerSearchFields: SearchField[] = [
-    { key: 'search', label: '关键字', placeholder: '搜索标题/ID/CI' },
+    { key: 'title', label: '关键字', placeholder: '搜索标题/ID/CI' },
 ];
 
 const approvalSearchFields: SearchField[] = [
-    { key: 'search', label: '关键字', placeholder: '搜索节点名/流程ID' },
+    { key: 'node_name', label: '关键字', placeholder: '搜索节点名/流程ID' },
 ];
 
 /* ============================== 组件 ============================== */
@@ -374,8 +374,11 @@ const PendingCenter: React.FC = () => {
         };
 
         if (params.advancedSearch) {
-            if (params.advancedSearch.search) {
-                apiParams.search = params.advancedSearch.search;
+            if (params.advancedSearch.title) {
+                apiParams.title = params.advancedSearch.title;
+            }
+            if (params.advancedSearch.node_name) {
+                apiParams.node_name = params.advancedSearch.node_name;
             }
             if (params.advancedSearch.severity) {
                 apiParams.severity = params.advancedSearch.severity;

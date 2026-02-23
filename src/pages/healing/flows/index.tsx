@@ -40,7 +40,8 @@ const searchFields: SearchField[] = [
     { key: 'name', label: '名称', placeholder: '输入流程名称搜索' },
     { key: 'description', label: '描述', placeholder: '输入描述关键字搜索' },
     {
-        key: '__enum__is_active', label: '状态',
+        key: '__enum__is_active', label: '流程状态',
+        description: '筛选流程启用/停用状态',
         options: [
             { label: '已启用', value: 'true' },
             { label: '已停用', value: 'false' },
@@ -154,8 +155,10 @@ const HealingFlowsPage: React.FC = () => {
     // ==================== Param Builder ====================
     const buildApiParams = useCallback((sp: Record<string, any>, p: number, ps: number) => {
         const params: any = { page: p, page_size: ps, sort_by: sortBy, sort_order: sortOrder };
-        if (sp.name) params.search = sp.name;
+        if (sp.name) params.name = sp.name;
+        if (sp.name__exact) params.name__exact = sp.name__exact;
         if (sp.description) params.description = sp.description;
+        if (sp.description__exact) params.description__exact = sp.description__exact;
         if (sp.is_active !== undefined && sp.is_active !== '') {
             params.is_active = sp.is_active === 'true';
         }
@@ -217,10 +220,9 @@ const HealingFlowsPage: React.FC = () => {
                 const res = await getFlows(apiParams);
                 setFlows(res.data || []);
                 setTotal(res.total || 0);
-                loadStats();
             } catch { /* */ } finally { setLoading(false); }
         })();
-    }, [pageSize, buildApiParams, loadStats]);
+    }, [pageSize, buildApiParams]);
 
     // ==================== Actions ====================
     const handleToggle = async (flow: AutoHealing.HealingFlow, checked: boolean) => {
@@ -821,6 +823,7 @@ const HealingFlowsPage: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
+                searchSchemaUrl="/api/v1/healing/flows/search-schema"
                 onSearch={handleSearch}
                 primaryActionLabel="新建流程"
                 primaryActionIcon={<PlusOutlined />}

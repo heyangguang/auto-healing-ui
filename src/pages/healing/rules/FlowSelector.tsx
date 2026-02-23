@@ -80,7 +80,7 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
             const params: any = { page: p, page_size: PAGE_SIZE };
             if (status === 'active') params.is_active = true;
             else if (status === 'inactive') params.is_active = false;
-            if (q.trim()) params.search = q.trim();
+            if (q.trim()) params.name = q.trim();
             const res = await getFlows(params);
             setFlows(res.data || []);
             setTotal(res.total || 0);
