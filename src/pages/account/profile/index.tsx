@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import TeamsAvatar from '@/components/TeamsAvatar';
 import {
     Tag, Space, Button, Form, Input, message, Row, Col,
     Modal, Typography, Avatar, Skeleton, Divider,
@@ -9,10 +10,10 @@ import {
     SafetyOutlined, SaveOutlined, CloseOutlined,
     HistoryOutlined, LoginOutlined,
     MobileOutlined, DesktopOutlined,
+    AppstoreOutlined, ApartmentOutlined,
 } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
-import { getProfile, updateProfile, changePassword } from '@/services/auto-healing/auth';
-import { getAuditLogs } from '@/services/auto-healing/auditLogs';
+import { getProfile, updateProfile, changePassword, getProfileLoginHistory, getProfileActivities } from '@/services/auto-healing/auth';
 import { history } from '@umijs/max';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -28,6 +29,8 @@ import {
     ACTION_COLORS,
     ACTION_VERBS as ACTION_VERB,
 } from '@/constants/auditDicts';
+import { PERMISSION_MODULE_META } from '@/constants/permissionDicts';
+import { USER_STATUS_MAP } from '@/constants/commonDicts';
 
 const { Text } = Typography;
 
@@ -35,24 +38,26 @@ const ACTION_MAP: Record<string, { label: string; color: string }> = Object.from
     Object.entries(ACTION_LABELS).map(([k, label]) => [k, { label, color: ACTION_COLORS[k] || 'default' }]),
 );
 
-function describeLog(log: any): { who: string; action: string; resource: string; color: string } {
-    const act = log.action || '';
-    const who = log.user?.display_name || log.username || '';
-    let name = log.resource_name || (log.resource_id ? `#${String(log.resource_id).slice(0, 8)}` : '');
-    const rType = RESOURCE_MAP[log.resource_type] || log.resource_type || '';
-
-    // 当 resource_name 和 resource_id 都为空时，从 request_body 提取摘要
-    if (!name && log.request_body && typeof log.request_body === 'object') {
-        const rb = log.request_body;
-        if (rb.title) name = rb.title;
-        else if (rb.name) name = rb.name;
-        else if (rb.retention_days) name = `保留 ${rb.retention_days} 天`;
-        else if (rb.ids && Array.isArray(rb.ids)) name = `${rb.ids.length} 条记录`;
+/** 将 permissions 按模块分组, e.g. "healing:rules:view" → module="healing", action="rules:view" */
+function groupPermissions(permissions: string[]): Record<string, string[]> {
+    const groups: Record<string, string[]> = {};
+    for (const p of permissions) {
+        const idx = p.indexOf(':');
+        const module = idx > 0 ? p.slice(0, idx) : 'other';
+        const action = idx > 0 ? p.slice(idx + 1) : p;
+        if (!groups[module]) groups[module] = [];
+        groups[module].push(action);
     }
+    return groups;
+}
 
+function describeActivity(log: any): { action: string; resource: string; color: string } {
+    const act = log.action || '';
+    const name = log.resource_name || '';
+    const rType = RESOURCE_MAP[log.resource_type] || log.resource_type || '';
     const v = ACTION_VERB[act] || { verb: act || 'GET', color: '#8c8c8c' };
     const actionText = rType ? `${v.verb} ${rType}` : v.verb;
-    return { who, action: actionText, resource: name, color: v.color };
+    return { action: actionText, resource: name, color: v.color };
 }
 
 /* 简单解析 User-Agent */
@@ -76,6 +81,37 @@ function parseUA(ua: string): string {
     return '未知设备';
 }
 
+/** 权限网格：按模块分组卡片式展示 */
+const PermissionGrid: React.FC<{ permissions: string[] }> = ({ permissions }) => {
+    const groups = useMemo(() => {
+        const g = groupPermissions(permissions);
+        return Object.entries(g)
+            .sort((a, b) => b[1].length - a[1].length);
+    }, [permissions]);
+
+    return (
+        <div className="perm-grid">
+            {groups.map(([module, actions]) => {
+                const meta = PERMISSION_MODULE_META[module] || { label: module, color: '#8c8c8c' };
+                return (
+                    <div key={module} className="perm-grid-card">
+                        <div className="perm-grid-header">
+                            <span className="perm-module-dot" style={{ background: meta.color }} />
+                            <span className="perm-grid-label">{meta.label}</span>
+                            <span className="perm-module-count">{actions.length}</span>
+                        </div>
+                        <div className="perm-grid-body">
+                            {actions.sort().map(a => (
+                                <span key={a} className="perm-chip">{a}</span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 const ProfilePage: React.FC = () => {
     const [profile, setProfile] = useState<AutoHealing.UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -96,18 +132,27 @@ const ProfilePage: React.FC = () => {
 
     const loadSidebar = async () => {
         try {
-            // 最近 30 天
-            const since = dayjs().subtract(30, 'day').toISOString();
             const [loginRes, opRes] = await Promise.all([
-                getAuditLogs({ page_size: 10, sort_by: 'created_at', sort_order: 'desc', action: 'login' }),
-                getAuditLogs({ page_size: 50, sort_by: 'created_at', sort_order: 'desc', created_after: since }),
+                getProfileLoginHistory(8),
+                getProfileActivities(10),
             ]);
-            setLoginLogs(loginRes?.data?.slice(0, 8) || []);
-            setOpLogs((opRes?.data || []).filter((l: any) => l.action !== 'login').slice(0, 10));
+            setLoginLogs(loginRes?.data?.items || []);
+            setOpLogs(opRes?.data?.items || []);
         } catch { /* silent */ }
     };
 
     useEffect(() => { load(); loadSidebar(); }, []);
+
+    // 获取当前租户名（必须在所有条件 return 之前调用）
+    const tenantName = useMemo(() => {
+        if (!profile || profile.is_platform_admin) return '';
+        try {
+            const raw = localStorage.getItem('tenant-storage');
+            if (!raw) return '';
+            const { currentTenantId, tenants } = JSON.parse(raw);
+            return tenants?.find((t: any) => t.id === currentTenantId)?.name || '';
+        } catch { return ''; }
+    }, [profile]);
 
     const enterEdit = () => {
         if (!profile) return;
@@ -167,6 +212,7 @@ const ProfilePage: React.FC = () => {
     const accountAge = dayjs().diff(dayjs(profile.created_at), 'day');
     const pwdAge = profile.password_changed_at ? dayjs().diff(dayjs(profile.password_changed_at), 'day') : null;
 
+
     return (
         <div className="profile-page">
             <SubPageHeader title="个人中心" onBack={() => history.push('/workbench')} />
@@ -177,13 +223,12 @@ const ProfilePage: React.FC = () => {
                     <Col span={16}>
                         {/* Hero */}
                         <Card style={{ marginBottom: 16 }} styles={{ body: { display: 'flex', alignItems: 'center', gap: 16 } }}>
-                            <Avatar size={52} icon={<UserOutlined />} src={profile.avatar_url || undefined}
-                                style={{ backgroundColor: '#1677ff', flexShrink: 0 }} />
+                            <TeamsAvatar seed={profile.username || ''} name={profile.display_name || profile.username || '用户'} size={52} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <h2 className="profile-hero-name">
                                     {profile.display_name || profile.username}
-                                    <Tag color={profile.status === 'active' ? 'success' : 'default'}>
-                                        {profile.status === 'active' ? '正常' : '已禁用'}
+                                    <Tag color={(USER_STATUS_MAP[profile.status] || USER_STATUS_MAP['inactive']).tagColor}>
+                                        {(USER_STATUS_MAP[profile.status] || USER_STATUS_MAP['inactive']).label}
                                     </Tag>
                                 </h2>
                                 <div className="profile-hero-meta">
@@ -270,40 +315,65 @@ const ProfilePage: React.FC = () => {
                                     ) : '-'}
                                 </Descriptions.Item>
                                 <Descriptions.Item label="账户状态">
-                                    <Tag color={profile.status === 'active' ? 'success' : 'error'}>
-                                        {profile.status === 'active' ? '正常' : '已禁用'}
+                                    <Tag color={(USER_STATUS_MAP[profile.status] || USER_STATUS_MAP['inactive']).tagColor}>
+                                        {(USER_STATUS_MAP[profile.status] || USER_STATUS_MAP['inactive']).label}
                                     </Tag>
                                 </Descriptions.Item>
                             </Descriptions>
                         </Card>
 
                         {/* 角色与权限 */}
-                        <Card title="角色与权限">
-                            <Descriptions column={1} colon={false}
-                                labelStyle={{ color: '#8c8c8c', width: 90 }}>
-                                <Descriptions.Item label="角色">
-                                    <Space size={4} wrap>
-                                        {profile.roles.map(r => (
-                                            <Tag key={r.id} color={r.is_system ? 'blue' : 'default'}
-                                                icon={r.is_system ? <CrownOutlined /> : <SafetyOutlined />}>
-                                                {r.display_name || r.name}{r.is_system ? '（系统）' : ''}
-                                            </Tag>
-                                        ))}
-                                    </Space>
-                                </Descriptions.Item>
-                                <Descriptions.Item label="权限">
-                                    {isSuperAdmin ? (
-                                        <Space size={4}>
-                                            <Tag color="gold" icon={<CrownOutlined />}>超级管理员</Tag>
-                                            <Text type="secondary" style={{ fontSize: 12 }}>拥有系统所有权限</Text>
+                        <Card title="角色与权限" styles={{ body: { padding: 0 } }}>
+                            {/* ── 身份信息 ── */}
+                            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
+                                <Descriptions column={2} colon={false}
+                                    labelStyle={{ color: '#8c8c8c', width: 90 }}>
+                                    <Descriptions.Item label="身份类型">
+                                        {profile.is_platform_admin
+                                            ? <Tag color="purple" icon={<CrownOutlined />}>平台管理员</Tag>
+                                            : <Tag color="blue" icon={<AppstoreOutlined />}>租户用户</Tag>}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label={profile.is_platform_admin ? '管理范围' : '所属租户'}>
+                                        {profile.is_platform_admin
+                                            ? <Text type="secondary">全局平台</Text>
+                                            : tenantName
+                                                ? <Tag>{tenantName}</Tag>
+                                                : <Text type="secondary">-</Text>}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="角色" span={2}>
+                                        <Space size={4} wrap>
+                                            {profile.roles.map(r => (
+                                                <Tag key={r.id} color={r.is_system ? 'blue' : 'default'}
+                                                    icon={r.is_system ? <CrownOutlined /> : <SafetyOutlined />}>
+                                                    {r.display_name || r.name}{r.is_system ? '（系统）' : ''}
+                                                </Tag>
+                                            ))}
                                         </Space>
-                                    ) : profile.permissions.length > 0 ? (
-                                        <Space size={[4, 4]} wrap>
-                                            {profile.permissions.map(p => <Tag key={p} style={{ fontSize: 12 }}>{p}</Tag>)}
-                                        </Space>
-                                    ) : <Text type="secondary">暂无权限</Text>}
-                                </Descriptions.Item>
-                            </Descriptions>
+                                    </Descriptions.Item>
+                                </Descriptions>
+                            </div>
+
+                            {/* ── 功能权限 ── */}
+                            <div style={{ padding: '16px 20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <Text strong style={{ fontSize: 13 }}>
+                                        <SafetyOutlined style={{ marginRight: 6, color: '#8c8c8c' }} />功能权限
+                                    </Text>
+                                    {!isSuperAdmin && (
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                            共 {profile.permissions.length} 项 · {Object.keys(groupPermissions(profile.permissions)).length} 个模块
+                                        </Text>
+                                    )}
+                                </div>
+                                {isSuperAdmin ? (
+                                    <div style={{ padding: '10px 14px', background: '#fffbe6', border: '1px solid #ffe58f' }}>
+                                        <CrownOutlined style={{ color: '#faad14', marginRight: 8 }} />
+                                        <Text style={{ color: '#ad6800', fontSize: 13 }}>超级管理员 · 拥有系统所有权限</Text>
+                                    </div>
+                                ) : profile.permissions.length > 0 ? (
+                                    <PermissionGrid permissions={profile.permissions} />
+                                ) : <Text type="secondary">暂无权限</Text>}
+                            </div>
                         </Card>
                     </Col>
 
@@ -362,18 +432,14 @@ const ProfilePage: React.FC = () => {
                             {opLogs.length > 0 ? (
                                 <ul className="op-timeline">
                                     {opLogs.map((log: any) => {
-                                        const { who, action, resource, color } = describeLog(log);
-                                        const changeCount = log.changes ? Object.keys(log.changes).length : 0;
+                                        const { action, resource, color } = describeActivity(log);
                                         return (
                                             <li key={log.id}>
                                                 <span className="op-dot" style={{ background: color }} />
                                                 <span className="op-main">
-                                                    <span className="op-who">{who}</span>
+                                                    <strong style={{ marginRight: 4 }}>{profile.display_name || profile.username}</strong>
                                                     <span className="op-action">{action}</span>
                                                     {resource && <span className="op-resource">{resource}</span>}
-                                                    {changeCount > 0 && (
-                                                        <span className="op-changes-badge">{changeCount} 项变更</span>
-                                                    )}
                                                 </span>
                                                 <span className="op-time">{dayjs(log.created_at).format('MM-DD HH:mm')}</span>
                                             </li>

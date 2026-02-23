@@ -67,3 +67,23 @@ export async function updateProfile(data: AutoHealing.UpdateProfileRequest) {
         data,
     });
 }
+
+/**
+ * 获取当前用户登录历史（个人中心）
+ */
+export async function getProfileLoginHistory(limit: number = 10) {
+    return request<any>('/api/v1/auth/profile/login-history', {
+        method: 'GET',
+        params: { limit },
+    });
+}
+
+/**
+ * 获取当前用户操作记录（个人中心）
+ */
+export async function getProfileActivities(limit: number = 15) {
+    return request<any>('/api/v1/auth/profile/activities', {
+        method: 'GET',
+        params: { limit },
+    });
+}
