@@ -115,7 +115,7 @@ const PlatformUsersPage: React.FC = () => {
         e?.stopPropagation();
         try {
             await deletePlatformUser(user.id);
-            message.success('已删除平台管理员');
+            message.success('已删除平台用户');
             setDrawerOpen(false);
             // 乐观更新：直接从列表移除，不重新加载
             setData(prev => prev.filter(u => u.id !== user.id));
@@ -128,7 +128,7 @@ const PlatformUsersPage: React.FC = () => {
                     : { inactive: prev.inactive - 1 }),
             }));
         } catch (err: any) {
-            message.error(err?.response?.data?.message || '删除失败（最后一个平台管理员不可删除）');
+            message.error(err?.response?.data?.message || '删除失败');
         }
     };
 
@@ -268,8 +268,8 @@ const PlatformUsersPage: React.FC = () => {
                                 )}
                                 {access.canDeletePlatformUser && (
                                     <Popconfirm
-                                        title="确认删除该平台管理员？"
-                                        description="最后一位平台管理员不可删除。"
+                                        title="确认删除该平台用户？"
+                                        description="删除后不可恢复。"
                                         onConfirm={(e) => handleDelete(e as any, user)}
                                         okText="删除" okButtonProps={{ danger: true }}
                                     >
@@ -320,14 +320,14 @@ const PlatformUsersPage: React.FC = () => {
     return (
         <>
             <StandardTable<any>
-                tabs={[{ key: 'list', label: '平台管理员' }]}
+                tabs={[{ key: 'list', label: '平台用户' }]}
                 title="平台用户"
-                description="管理所有平台管理员账号（platform_admin 角色）。新建账号后端自动赋予此角色。租户内普通用户由租户管理员自行管理。"
+                description="管理平台级用户账号，可分配不同平台角色（管理员、运维、审计员等）。租户内普通用户由租户管理员自行管理。"
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 onSearch={handleSearch}
-                primaryActionLabel="新建管理员"
+                primaryActionLabel="新建用户"
                 primaryActionIcon={<PlusOutlined />}
                 onPrimaryAction={access.canCreatePlatformUser ? () => history.push('/platform/users/create') : undefined}
             >
@@ -337,9 +337,9 @@ const PlatformUsersPage: React.FC = () => {
                     </div>
                 ) : data.length === 0 ? (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        description={<Text type="secondary">暂无平台管理员</Text>}>
+                        description={<Text type="secondary">暂无平台用户</Text>}>
                         <Button type="dashed" onClick={() => history.push('/platform/users/create')}>
-                            新建第一个管理员
+                            新建第一个用户
                         </Button>
                     </Empty>
                 ) : (
@@ -405,7 +405,7 @@ const PlatformUsersPage: React.FC = () => {
                                     </Button>
                                 )}
                                 {access.canDeletePlatformUser && (
-                                    <Popconfirm title="确认删除该平台管理员？" description="最后一位平台管理员不可删除"
+                                    <Popconfirm title="确认删除该平台用户？" description="删除后不可恢复"
                                         onConfirm={(e) => handleDelete(e as any, drawerUser)}>
                                         <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
                                     </Popconfirm>
@@ -496,13 +496,12 @@ const PlatformUsersPage: React.FC = () => {
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                                             <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                                            <b style={{ color: '#1a1a1a' }}>平台管理员权限</b>
+                                            <b style={{ color: '#1a1a1a' }}>平台用户权限</b>
                                         </div>
-                                        该账号持有 <Tag color="gold" style={{ margin: '0 2px', fontSize: 11 }}>platform_admin</Tag> 角色，
-                                        可访问所有租户，管理租户和租户管理员账号。
+                                        该账号持有平台级角色，可根据角色权限访问平台管理功能。
                                         <br />
                                         <StopOutlined style={{ color: '#ff4d4f', marginRight: 4 }} />
-                                        不干预租户内用户的日常增删改，租户内部由租户 admin 自治。
+                                        租户内部用户管理由租户 admin 自治。
                                     </div>
                                 </div>
                             </div>

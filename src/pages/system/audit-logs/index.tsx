@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef, Key } from 'react';
+import { useAccess } from '@umijs/max';
 import {
     Tag, Space, message, Drawer, Descriptions, Typography,
     Button, Tooltip, Modal, Select, DatePicker, Form, Alert, Input,
@@ -23,86 +24,18 @@ import {
 } from '@/services/auto-healing/auditLogs';
 import dayjs from 'dayjs';
 import './index.css';
+import {
+    TENANT_RESOURCE_LABELS as RESOURCE_LABELS,
+    ACTION_LABELS,
+    ACTION_COLORS,
+    HTTP_METHOD_COLORS as METHOD_COLORS,
+} from '@/constants/auditDicts';
+
+/* ========== 登录日志专用 action/resource 常量 ========== */
+const LOGIN_ACTIONS = ['login', 'logout'];
+const LOGIN_RESOURCES = ['auth', 'auth-logout'];
 
 const { Text } = Typography;
-
-/* ========== 枚举映射 ========== */
-const ACTION_LABELS: Record<string, string> = {
-    activate: '激活',
-    approve: '审批通过',
-    assign_role: '分配角色',
-    batch_create: '批量创建',
-    confirm_review: '确认复核',
-    create: '创建',
-    deactivate: '停用',
-    delete: '删除',
-    disable: '禁用',
-    enable: '启用',
-    execute: '执行',
-    login: '登录',
-    maintenance: '维护',
-    preview: '预览',
-    ready: '就绪',
-    reject: '审批拒绝',
-    resume: '恢复',
-    scan: '扫描',
-    sync: '同步',
-    test: '测试',
-    trigger: '触发',
-    update: '更新',
-    update_variables: '更新变量',
-};
-
-const ACTION_COLORS: Record<string, string> = {
-    activate: 'green',
-    approve: 'green',
-    assign_role: 'magenta',
-    batch_create: 'lime',
-    confirm_review: 'cyan',
-    create: 'green',
-    deactivate: 'orange',
-    delete: 'red',
-    disable: 'orange',
-    enable: 'green',
-    execute: 'geekblue',
-    login: 'purple',
-    maintenance: 'orange',
-    preview: 'default',
-    ready: 'cyan',
-    reject: 'red',
-    resume: 'geekblue',
-    scan: 'blue',
-    sync: 'purple',
-    test: 'default',
-    trigger: 'gold',
-    update: 'blue',
-    update_variables: 'blue',
-};
-
-const RESOURCE_LABELS: Record<string, string> = {
-    auth: '认证',
-    channels: '通知渠道',
-    cmdb: '资产管理',
-    'execution-schedules': '定时任务',
-    'execution-tasks': '执行任务',
-    'git-repos': 'Git 仓库',
-    healing: '自愈管理',
-    incidents: '事件管理',
-    playbooks: 'Playbook',
-    plugins: '插件管理',
-    'secrets-sources': '密钥管理',
-    'site-messages': '站内信',
-    templates: '通知模板',
-    users: '用户管理',
-};
-
-const METHOD_COLORS: Record<string, string> = {
-    GET: '#61affe',
-    POST: '#49cc90',
-    PUT: '#fca130',
-    PATCH: '#50e3c2',
-    DELETE: '#f93e3e',
-};
 
 /* ========== 工具函数 ========== */
 const formatChangeValue = (v: any): string => {
@@ -111,23 +44,28 @@ const formatChangeValue = (v: any): string => {
     return String(v);
 };
 
-/* ========== 搜索字段配置 ========== */
-const searchFields: SearchField[] = [
+/* ========== 搜索字段配置（按 Tab 区分） ========== */
+
+/** 操作日志 - 搜索字段 */
+const operationSearchFields: SearchField[] = [
     { key: 'search', label: '全局搜索' },
     { key: 'username', label: '用户名' },
     { key: 'request_path', label: '请求路径' },
 ];
-
-const advancedSearchFields: AdvancedSearchField[] = [
+const operationAdvancedSearchFields: AdvancedSearchField[] = [
     { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / 资源名 / 路径' },
     { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
     {
         key: 'action', label: '操作类型', type: 'select', placeholder: '全部操作',
-        options: Object.entries(ACTION_LABELS).map(([v, l]) => ({ label: l, value: v })),
+        options: Object.entries(ACTION_LABELS)
+            .filter(([v]) => !LOGIN_ACTIONS.includes(v))
+            .map(([v, l]) => ({ label: l, value: v })),
     },
     {
         key: 'resource_type', label: '资源类型', type: 'select', placeholder: '全部资源',
-        options: Object.entries(RESOURCE_LABELS).map(([v, l]) => ({ label: l, value: v })),
+        options: Object.entries(RESOURCE_LABELS)
+            .filter(([v]) => !LOGIN_RESOURCES.includes(v))
+            .map(([v, l]) => ({ label: l, value: v })),
     },
     {
         key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
@@ -138,20 +76,29 @@ const advancedSearchFields: AdvancedSearchField[] = [
         options: [{ label: '高危', value: 'high' }, { label: '正常', value: 'normal' }],
     },
     { key: 'created_at', label: '时间范围', type: 'dateRange' },
+];
+
+/** 登录日志 - 搜索字段 */
+const loginSearchFields: SearchField[] = [
+    { key: 'search', label: '全局搜索' },
+    { key: 'username', label: '用户名' },
+];
+const loginAdvancedSearchFields: AdvancedSearchField[] = [
+    { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
+    { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
     {
-        key: 'exclude_action', label: '排除操作', type: 'multiSelect', placeholder: '选择要排除的操作类型',
-        description: '排除指定的操作类型，如排除登录记录',
-        options: Object.entries(ACTION_LABELS).map(([v, l]) => ({ label: l, value: v })),
+        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        options: [{ label: '成功', value: 'success' }, { label: '失败', value: 'failed' }],
     },
-    {
-        key: 'exclude_resource_type', label: '排除资源', type: 'multiSelect', placeholder: '选择要排除的资源类型',
-        description: '排除指定的资源类型，如排除认证类型',
-        options: Object.entries(RESOURCE_LABELS).map(([v, l]) => ({ label: l, value: v })),
-    },
+    { key: 'created_at', label: '时间范围', type: 'dateRange' },
 ];
 
 /* ========== 页面组件 ========== */
 const AuditLogsPage: React.FC = () => {
+    const access = useAccess();
+
+    /* ---- Tab 状态 ---- */
+    const [activeTab, setActiveTab] = useState<string>('operation');
     /* ---- 统计数据 ---- */
     const [stats, setStats] = useState<any>(null);
     const [trendData, setTrendData] = useState<any[]>([]);
@@ -292,9 +239,9 @@ const AuditLogsPage: React.FC = () => {
         );
     }, [trendData]);
 
-    /* ========== 列定义 ========== */
-    const columns: StandardColumnDef<any>[] = [
-        {
+    /* ========== 列定义（useMemo 缓存） ========== */
+    const { operationColumns, loginColumns } = useMemo(() => {
+        const colTime: StandardColumnDef<any> = {
             columnKey: 'created_at',
             columnTitle: '时间',
             dataIndex: 'created_at',
@@ -302,10 +249,10 @@ const AuditLogsPage: React.FC = () => {
             sorter: true,
             render: (_: any, record: any) =>
                 record.created_at ? dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss') : '-',
-        },
-        {
+        };
+        const colUser: StandardColumnDef<any> = {
             columnKey: 'username',
-            columnTitle: '操作用户',
+            columnTitle: '用户',
             dataIndex: 'username',
             width: 120,
             sorter: true,
@@ -315,50 +262,8 @@ const AuditLogsPage: React.FC = () => {
                     <span className="audit-user-sub">{record.username}</span>
                 </span>
             ),
-        },
-        {
-            columnKey: 'action',
-            columnTitle: '操作',
-            dataIndex: 'action',
-            width: 110,
-            headerFilters: Object.entries(ACTION_LABELS).map(([v, l]) => ({ label: l, value: v })),
-            render: (_: any, record: any) => (
-                <Tag color={ACTION_COLORS[record.action] || 'default'} style={{ margin: 0 }}>
-                    {ACTION_LABELS[record.action] || record.action}
-                </Tag>
-            ),
-        },
-        {
-            columnKey: 'resource_type',
-            columnTitle: '资源类型',
-            dataIndex: 'resource_type',
-            width: 110,
-            headerFilters: Object.entries(RESOURCE_LABELS).map(([v, l]) => ({ label: l, value: v })),
-            render: (_: any, record: any) => (
-                <span className="audit-resource-cell">
-                    {RESOURCE_LABELS[record.resource_type] || record.resource_type}
-                </span>
-            ),
-        },
-        {
-            columnKey: 'request_path',
-            columnTitle: '请求',
-            dataIndex: 'request_path',
-            width: 280,
-            ellipsis: true,
-            render: (_: any, record: any) => (
-                <span className="audit-request-cell">
-                    <span
-                        className="audit-method-badge"
-                        style={{ color: METHOD_COLORS[record.request_method] || '#999' }}
-                    >
-                        {record.request_method}
-                    </span>
-                    <span className="audit-path">{record.request_path}</span>
-                </span>
-            ),
-        },
-        {
+        };
+        const colStatus: StandardColumnDef<any> = {
             columnKey: 'status',
             columnTitle: '状态',
             dataIndex: 'status',
@@ -379,64 +284,151 @@ const AuditLogsPage: React.FC = () => {
                     </Tag>
                 );
             },
-        },
-        {
-            columnKey: 'risk_level',
-            columnTitle: '风险',
-            dataIndex: 'risk_level',
-            width: 80,
-            headerFilters: [
-                { label: '高危', value: 'high' },
-                { label: '正常', value: 'normal' },
-            ],
-            render: (_: any, record: any) => {
-                if (record.risk_level === 'high') {
-                    return (
-                        <Tooltip title={record.risk_reason || '高危操作'}>
-                            <Tag color="orange" icon={<WarningOutlined />} style={{ margin: 0 }}>高危</Tag>
-                        </Tooltip>
-                    );
-                }
-                return <Text type="secondary" style={{ fontSize: 12 }}>正常</Text>;
-            },
-        },
-        {
-            columnKey: 'changes',
-            columnTitle: '变更',
-            dataIndex: 'changes',
-            width: 100,
-            render: (_: any, record: any) => {
-                if (!record.changes) return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>;
-                if (record.changes.deleted) {
-                    return <Tag color="red" icon={<DeleteOutlined />} style={{ margin: 0 }}>删除详情</Tag>;
-                }
-                const count = Object.keys(record.changes).length;
-                return <Tag color="blue" icon={<DiffOutlined />} style={{ margin: 0 }}>{count} 项变更</Tag>;
-            },
-        },
-        {
-            columnKey: 'response_status',
-            columnTitle: 'HTTP',
-            dataIndex: 'response_status',
-            width: 70,
-            defaultVisible: false,
-            render: (_: any, record: any) => {
-                const code = record.response_status;
-                const color = code >= 400 ? '#f93e3e' : code >= 300 ? '#fca130' : '#49cc90';
-                return <span style={{ fontFamily: 'monospace', fontSize: 12, color }}>{code}</span>;
-            },
-        },
-        {
+        };
+        const colIP: StandardColumnDef<any> = {
             columnKey: 'ip_address',
-            columnTitle: 'IP',
+            columnTitle: 'IP 地址',
             dataIndex: 'ip_address',
-            width: 130,
-            defaultVisible: false,
+            width: 140,
             render: (_: any, record: any) => (
                 <Text style={{ fontFamily: 'monospace', fontSize: 12 }}>{record.ip_address || '-'}</Text>
             ),
-        },
-    ];
+        };
+
+        const opCols: StandardColumnDef<any>[] = [
+            colTime,
+            colUser,
+            {
+                columnKey: 'action',
+                columnTitle: '操作',
+                dataIndex: 'action',
+                width: 110,
+                headerFilters: Object.entries(ACTION_LABELS)
+                    .filter(([v]) => !LOGIN_ACTIONS.includes(v))
+                    .map(([v, l]) => ({ label: l, value: v })),
+                render: (_: any, record: any) => (
+                    <Tag color={ACTION_COLORS[record.action] || 'default'} style={{ margin: 0 }}>
+                        {ACTION_LABELS[record.action] || record.action}
+                    </Tag>
+                ),
+            },
+            {
+                columnKey: 'resource_type',
+                columnTitle: '资源类型',
+                dataIndex: 'resource_type',
+                width: 110,
+                headerFilters: Object.entries(RESOURCE_LABELS)
+                    .filter(([v]) => !LOGIN_RESOURCES.includes(v))
+                    .map(([v, l]) => ({ label: l, value: v })),
+                render: (_: any, record: any) => (
+                    <span className="audit-resource-cell">
+                        {RESOURCE_LABELS[record.resource_type] || record.resource_type}
+                    </span>
+                ),
+            },
+            {
+                columnKey: 'request_path',
+                columnTitle: '请求',
+                dataIndex: 'request_path',
+                width: 280,
+                ellipsis: true,
+                render: (_: any, record: any) => (
+                    <span className="audit-request-cell">
+                        <span
+                            className="audit-method-badge"
+                            style={{ color: METHOD_COLORS[record.request_method] || '#999' }}
+                        >
+                            {record.request_method}
+                        </span>
+                        <span className="audit-path">{record.request_path}</span>
+                    </span>
+                ),
+            },
+            colStatus,
+            {
+                columnKey: 'risk_level',
+                columnTitle: '风险',
+                dataIndex: 'risk_level',
+                width: 80,
+                headerFilters: [
+                    { label: '高危', value: 'high' },
+                    { label: '正常', value: 'normal' },
+                ],
+                render: (_: any, record: any) => {
+                    if (record.risk_level === 'high') {
+                        return (
+                            <Tooltip title={record.risk_reason || '高危操作'}>
+                                <Tag color="orange" icon={<WarningOutlined />} style={{ margin: 0 }}>高危</Tag>
+                            </Tooltip>
+                        );
+                    }
+                    return <Text type="secondary" style={{ fontSize: 12 }}>正常</Text>;
+                },
+            },
+            {
+                columnKey: 'changes',
+                columnTitle: '变更',
+                dataIndex: 'changes',
+                width: 100,
+                render: (_: any, record: any) => {
+                    if (!record.changes) return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>;
+                    if (record.changes.deleted) {
+                        return <Tag color="red" icon={<DeleteOutlined />} style={{ margin: 0 }}>删除详情</Tag>;
+                    }
+                    const count = Object.keys(record.changes).length;
+                    return <Tag color="blue" icon={<DiffOutlined />} style={{ margin: 0 }}>{count} 项变更</Tag>;
+                },
+            },
+            {
+                columnKey: 'response_status',
+                columnTitle: 'HTTP',
+                dataIndex: 'response_status',
+                width: 70,
+                defaultVisible: false,
+                render: (_: any, record: any) => {
+                    const code = record.response_status;
+                    const color = code >= 400 ? '#f93e3e' : code >= 300 ? '#fca130' : '#49cc90';
+                    return <span style={{ fontFamily: 'monospace', fontSize: 12, color }}>{code}</span>;
+                },
+            },
+            { ...colIP, defaultVisible: false },
+        ];
+
+        const loginCols: StandardColumnDef<any>[] = [
+            colTime,
+            colUser,
+            {
+                columnKey: 'action',
+                columnTitle: '操作',
+                dataIndex: 'action',
+                width: 90,
+                render: (_: any, record: any) => (
+                    <Tag color={record.action === 'login' ? 'blue' : 'default'} style={{ margin: 0 }}>
+                        {record.action === 'login' ? '登录' : '登出'}
+                    </Tag>
+                ),
+            },
+            colStatus,
+            colIP,
+            {
+                columnKey: 'user_agent',
+                columnTitle: '客户端',
+                dataIndex: 'user_agent',
+                width: 200,
+                ellipsis: true,
+                render: (_: any, record: any) => (
+                    <Text type="secondary" style={{ fontSize: 12 }}>{record.user_agent || '-'}</Text>
+                ),
+            },
+        ];
+
+        return { operationColumns: opCols, loginColumns: loginCols };
+    }, []);
+
+    /** 根据 activeTab 选取列和搜索字段 */
+    const columns = useMemo(() => activeTab === 'login' ? loginColumns : operationColumns, [activeTab, loginColumns, operationColumns]);
+    const searchFields = useMemo(() => activeTab === 'login' ? loginSearchFields : operationSearchFields, [activeTab]);
+    const advancedSearchFields = useMemo(() => activeTab === 'login' ? loginAdvancedSearchFields : operationAdvancedSearchFields, [activeTab]);
 
     /* ========== 数据请求 ========== */
     const handleRequest = useCallback(async (params: {
@@ -450,6 +442,7 @@ const AuditLogsPage: React.FC = () => {
         const apiParams: Record<string, any> = {
             page: params.page,
             page_size: params.pageSize,
+            category: activeTab,
         };
 
         if (params.searchValue) {
@@ -464,6 +457,7 @@ const AuditLogsPage: React.FC = () => {
             const adv = params.advancedSearch;
             if (adv.search) apiParams.search = adv.search;
             if (adv.username) apiParams.username = adv.username;
+            if (adv.request_path) apiParams.request_path = adv.request_path;
             if (adv.action) apiParams.action = adv.action;
             if (adv.resource_type) apiParams.resource_type = adv.resource_type;
             if (adv.status) apiParams.status = adv.status;
@@ -489,20 +483,20 @@ const AuditLogsPage: React.FC = () => {
         const items = (res as any)?.data || [];
         const total = (res as any)?.total ?? 0;
         return { data: items, total };
-    }, []);
+    }, [activeTab]);
 
-    /* ========== 头部图标 ========== */
-    const headerIcon = (
+    /* ========== 头部图标（缓存） ========== */
+    const headerIcon = useMemo(() => (
         <svg viewBox="0 0 48 48" fill="none">
             <rect x="8" y="6" width="32" height="36" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
             <path d="M16 16h16M16 24h16M16 32h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             <circle cx="36" cy="36" r="7" stroke="currentColor" strokeWidth="2" fill="none" />
             <path d="M34 36l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-    );
+    ), []);
 
-    /* ========== 统计卡片 ========== */
-    const statsBar = stats ? (
+    /* ========== 统计卡片（缓存） ========== */
+    const statsBar = useMemo(() => stats ? (
         <div className="audit-stats-bar">
             <div className="audit-stat-item">
                 <FileTextOutlined className="audit-stat-icon audit-stat-icon-total" />
@@ -551,37 +545,47 @@ const AuditLogsPage: React.FC = () => {
                 </div>
             </div>
         </div>
-    ) : null;
+    ) : null, [stats, trendSvg]);
 
-    /* ========== 导出按钮 ========== */
-    const exportBtn = (
+    /* ========== 导出按钮（缓存） ========== */
+    const exportBtn = useMemo(() => (
         <Tooltip title="导出 CSV">
             <Button
                 icon={<DownloadOutlined />}
                 onClick={() => setExportModalOpen(true)}
+                disabled={!access.canExportAuditLogs}
             >
                 导出
             </Button>
         </Tooltip>
-    );
+    ), [access.canExportAuditLogs]);
 
     return (
         <>
             <StandardTable<any>
-                tabs={[{ key: 'list', label: '操作日志' }]}
+                key={activeTab}
+                tabs={[
+                    { key: 'operation', label: '操作日志' },
+                    { key: 'login', label: '登录日志' },
+                ]}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
                 title="审计日志"
-                description="记录系统中所有用户操作，用于安全审计和合规追溯。支持按操作类型、资源、用户、时间范围等多维筛选。"
+                description={activeTab === 'login'
+                    ? '记录所有用户的登录和登出活动，用于安全审计和异常登录排查。'
+                    : '记录系统中所有用户操作，用于安全审计和合规追溯。支持按操作类型、资源、用户、时间范围等多维筛选。'
+                }
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                extraToolbarActions={exportBtn}
+                extraToolbarActions={activeTab === 'operation' ? exportBtn : undefined}
                 columns={columns}
                 rowKey="id"
                 onRowClick={openDetail}
                 request={handleRequest}
                 defaultPageSize={20}
-                preferenceKey="audit_log_list"
+                preferenceKey={`audit_log_${activeTab}`}
             />
 
             {/* 详情抽屉 */}

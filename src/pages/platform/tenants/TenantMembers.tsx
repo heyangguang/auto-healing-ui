@@ -7,7 +7,7 @@ import {
     ArrowLeftOutlined, CrownOutlined, PlusOutlined,
     TeamOutlined, UserAddOutlined, SettingOutlined,
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
     getTenant, getTenantMembers, setTenantAdmin,
@@ -28,6 +28,7 @@ const ROLE_COLOR: Record<string, string> = {
 
 const TenantMembersPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const access = useAccess();
     const [tenant, setTenant] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<any[]>([]);
@@ -234,6 +235,7 @@ const TenantMembersPage: React.FC = () => {
                 <Button
                     type="link" size="small"
                     icon={<SettingOutlined />}
+                    disabled={!access.canManagePlatformTenants}
                     onClick={() => openChangeRole(record)}
                     style={{ padding: 0, fontSize: 12 }}
                 >
@@ -253,12 +255,14 @@ const TenantMembersPage: React.FC = () => {
                         <Button
                             type="primary"
                             icon={<CrownOutlined />}
+                            disabled={!access.canManagePlatformTenants}
                             onClick={() => setSetAdminModalOpen(true)}
                         >
                             设置管理员
                         </Button>
                         <Button
                             icon={<PlusOutlined />}
+                            disabled={!access.canManagePlatformTenants}
                             onClick={() => setCreateUserModalOpen(true)}
                         >
                             新建用户
@@ -399,7 +403,7 @@ const TenantMembersPage: React.FC = () => {
                                     <Space size={6}>
                                         <Tag color={ROLE_COLOR[role.name] || 'default'} style={{ margin: 0 }}>{role.display_name}</Tag>
                                         <Text type="secondary" style={{ fontSize: 12 }}>
-                                            {role.name === 'admin' ? '管理租户内所有资源' : role.name === 'operator' ? '执行操作，无管理权限' : '只读用户'}
+                                            {role.description || role.name}
                                         </Text>
                                     </Space>
                                 </Select.Option>

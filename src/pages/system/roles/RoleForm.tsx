@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import { Form, Input, Button, message, Spin, Checkbox, Tag, Transfer } from 'antd';
 import { SaveOutlined, UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
@@ -12,19 +12,10 @@ import './RoleForm.css';
 const { TextArea } = Input;
 
 /* 权限模块中文映射 */
-const MODULE_LABELS: Record<string, string> = {
-    system: '系统管理',
-    user: '用户管理',
-    role: '角色管理',
-    plugin: '插件管理',
-    execution: '作业中心',
-    notification: '通知中心',
-    healing: '自愈引擎',
-    workflow: '工作流',
-    dashboard: '仪表盘',
-};
+import { PERMISSION_MODULE_LABELS as MODULE_LABELS } from '@/constants/permissionDicts';
 
 const RoleFormPage: React.FC = () => {
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const isEdit = !!params.id;
     const [form] = Form.useForm();
@@ -446,7 +437,7 @@ const RoleFormPage: React.FC = () => {
 
                             <div className="role-form-divider" />
                             <div className="role-form-actions">
-                                <Button type="primary" icon={<SaveOutlined />} loading={submitting} onClick={handleSubmit}>
+                                <Button type="primary" icon={<SaveOutlined />} loading={submitting} disabled={isEdit ? !access.canUpdateRole : !access.canCreateRole} onClick={handleSubmit}>
                                     {isSystemRole ? '保存分配' : isEdit ? '保存修改' : '创建角色'}
                                 </Button>
                                 <Button onClick={() => history.push('/system/roles')}>取消</Button>

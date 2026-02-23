@@ -5,17 +5,7 @@ import StandardTable from '@/components/StandardTable';
 import GroupedCardList from '@/components/GroupedCardList';
 
 /* 权限模块中文映射 & 颜色 */
-const MODULE_META: Record<string, { label: string; color: string }> = {
-    system: { label: '系统管理', color: '#722ed1' },
-    user: { label: '用户管理', color: '#1677ff' },
-    role: { label: '角色管理', color: '#13c2c2' },
-    plugin: { label: '插件管理', color: '#52c41a' },
-    execution: { label: '执行管理', color: '#fa8c16' },
-    notification: { label: '通知管理', color: '#eb2f96' },
-    healing: { label: '自愈引擎', color: '#f5222d' },
-    workflow: { label: '工作流', color: '#2f54eb' },
-    dashboard: { label: '仪表盘', color: '#faad14' },
-};
+import { PERMISSION_MODULE_META as MODULE_META } from '@/constants/permissionDicts';
 
 /* action 标签颜色 */
 const ACTION_COLORS: Record<string, string> = {

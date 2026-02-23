@@ -106,6 +106,9 @@ const PlatformMessagesPage: React.FC = () => {
             apiParams.keyword = params.searchValue;
         }
         if (params.advancedSearch) {
+            if (params.advancedSearch.keyword) {
+                apiParams.keyword = params.advancedSearch.keyword;
+            }
             if (params.advancedSearch.category) {
                 apiParams.category = params.advancedSearch.category;
             }

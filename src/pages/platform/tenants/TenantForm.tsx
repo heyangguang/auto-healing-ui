@@ -13,7 +13,7 @@ import {
     ProductOutlined, AlertOutlined, AuditOutlined, FireOutlined,
     CustomerServiceOutlined, ControlOutlined, SendOutlined, FolderOpenOutlined,
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
     getTenant, createTenant, updateTenant,
@@ -59,6 +59,7 @@ const ICON_OPTIONS: { label: string; value: string; icon: React.ReactNode }[] = 
 
 const TenantForm: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const access = useAccess();
     const isEdit = !!id;
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
@@ -116,6 +117,7 @@ const TenantForm: React.FC = () => {
                         <Button
                             type="primary"
                             loading={submitting}
+                            disabled={!access.canManagePlatformTenants}
                             onClick={() => form.submit()}
                         >
                             {isEdit ? '保存修改' : '创建租户'}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import { Form, Input, Select, Button, message, Spin } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
@@ -8,6 +8,7 @@ import { getRoles } from '@/services/auto-healing/roles';
 import './UserForm.css';
 
 const UserFormPage: React.FC = () => {
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const isEdit = !!params.id;
     const [form] = Form.useForm();
@@ -125,7 +126,7 @@ const UserFormPage: React.FC = () => {
                         </Form.Item>
                         <div className="user-form-divider" />
                         <div className="user-form-actions">
-                            <Button type="primary" icon={<SaveOutlined />} loading={submitting} onClick={handleSubmit}>
+                            <Button type="primary" icon={<SaveOutlined />} loading={submitting} disabled={isEdit ? !access.canUpdateUser : !access.canCreateUser} onClick={handleSubmit}>
                                 {isEdit ? '保存修改' : '创建用户'}
                             </Button>
                             <Button onClick={() => history.push('/system/users')}>取消</Button>

@@ -26,12 +26,7 @@ dayjs.locale('zh-cn');
 
 const { Text } = Typography;
 
-const MODULE_LABELS: Record<string, string> = {
-    system: '系统管理', user: '用户管理', role: '角色管理',
-    plugin: '插件管理', execution: '执行管理', notification: '通知管理',
-    healing: '自愈引擎', workflow: '工作流', dashboard: '仪表盘',
-    platform: '平台管理', 'site-message': '站内信',
-};
+import { PERMISSION_MODULE_LABELS as MODULE_LABELS } from '@/constants/permissionDicts';
 
 const searchFields: SearchField[] = [
     { key: 'display_name', label: '角色名称' },

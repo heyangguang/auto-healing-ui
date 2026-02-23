@@ -1,32 +1,50 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-    Form, Input, Button, message, Spin, Space,
+    Form, Input, Button, message, Spin, Space, Select,
 } from 'antd';
 import {
     UserOutlined, CrownOutlined, LockOutlined, MailOutlined, IdcardOutlined,
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
     getPlatformUser, createPlatformUser, updatePlatformUser,
 } from '@/services/auto-healing/platform/users';
+import { getPlatformRoles } from '@/services/auto-healing/roles';
 import './UserForm.css';
 
 /* ===================================================
    平台用户表单（创建 / 编辑）
-   - 创建：POST /platform/users（后端自动赋予 platform_admin）
+   - 创建：POST /platform/users（可选择平台角色，不选默认 platform_admin）
    - 编辑：PUT /platform/users/:id（只修改 display_name / email）
    =================================================== */
 const UserForm: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const access = useAccess();
     const isEdit = !!id;
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [platformRoles, setPlatformRoles] = useState<{ id: string; name: string; display_name: string }[]>([]);
+    const [rolesLoading, setRolesLoading] = useState(false);
 
     const handleGoBack = useCallback(() => {
         if (window.history.length > 1) history.back();
         else history.push('/platform/users');
+    }, []);
+
+    // 加载平台角色列表
+    useEffect(() => {
+        setRolesLoading(true);
+        getPlatformRoles()
+            .then((res: any) => {
+                const roles = res?.data || [];
+                setPlatformRoles(roles);
+            })
+            .catch(() => {
+                message.error('加载平台角色失败');
+            })
+            .finally(() => setRolesLoading(false));
     }, []);
 
     // 编辑模式：加载用户数据
@@ -39,6 +57,7 @@ const UserForm: React.FC = () => {
                 username: user.username,
                 display_name: user.display_name,
                 email: user.email,
+                role_id: user.roles?.[0]?.id,
             });
         }).catch(() => {
             message.error('加载用户信息失败');
@@ -52,6 +71,7 @@ const UserForm: React.FC = () => {
                 await updatePlatformUser(id!, {
                     display_name: values.display_name,
                     email: values.email,
+                    role_id: values.role_id,
                 });
                 message.success('用户信息更新成功');
             } else {
@@ -60,8 +80,10 @@ const UserForm: React.FC = () => {
                     password: values.password,
                     display_name: values.display_name,
                     email: values.email,
+                    role_id: values.role_id,
                 });
-                message.success('平台管理员创建成功，已自动赋予 platform_admin 角色');
+                const roleName = platformRoles.find(r => r.id === values.role_id)?.display_name || '平台管理员';
+                message.success(`用户创建成功，已赋予「${roleName}」角色`);
             }
             history.push('/platform/users');
         } catch {
@@ -74,7 +96,7 @@ const UserForm: React.FC = () => {
     return (
         <div className="user-form-page">
             <SubPageHeader
-                title={isEdit ? '编辑平台管理员' : '新建平台管理员'}
+                title={isEdit ? '编辑平台用户' : '新建平台用户'}
                 onBack={handleGoBack}
                 actions={
                     <div className="user-form-actions">
@@ -82,6 +104,7 @@ const UserForm: React.FC = () => {
                         <Button
                             type="primary"
                             loading={submitting}
+                            disabled={!access.canManagePlatformTenants}
                             onClick={() => form.submit()}
                         >
                             {isEdit ? '保存' : '创建'}
@@ -174,18 +197,32 @@ const UserForm: React.FC = () => {
                             </div>
                         )}
 
-                        {/* 角色说明 */}
+                        {/* 角色选择 */}
                         <div className="user-form-card">
                             <div className="user-form-section-title">
-                                <CrownOutlined /> 角色说明
+                                <CrownOutlined /> 平台角色
                             </div>
-                            <div style={{ padding: '10px 14px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 2, fontSize: 12, color: '#7c5c00', lineHeight: 1.8 }}>
-                                {isEdit ? (
-                                    '该用户持有 platform_admin 角色，可访问所有租户并管理平台级资源。'
-                                ) : (
-                                    '创建后后端自动赋予 platform_admin 角色，无需手动选择。该角色可访问所有租户并管理平台级资源。'
-                                )}
-                            </div>
+                            <Form.Item
+                                name="role_id"
+                                label="选择角色"
+                                extra="选择用户在平台级别的角色，不同角色拥有不同权限"
+                            >
+                                <Select
+                                    placeholder="请选择平台角色（不选默认平台管理员）"
+                                    loading={rolesLoading}
+                                    options={platformRoles.map(r => ({
+                                        label: `${r.display_name}（${r.name}）`,
+                                        value: r.id,
+                                    }))}
+                                    style={{ maxWidth: 400 }}
+                                    allowClear
+                                />
+                            </Form.Item>
+                            {!isEdit && (
+                                <div style={{ padding: '8px 14px', background: '#f5f5f5', borderRadius: 2, fontSize: 12, color: '#8c8c8c', lineHeight: 1.8 }}>
+                                    不选择角色时，默认赋予「平台管理员」角色（拥有所有权限）。
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Form>
