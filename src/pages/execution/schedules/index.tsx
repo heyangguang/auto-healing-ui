@@ -14,7 +14,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import {
     getExecutionSchedules, deleteExecutionSchedule,
     enableExecutionSchedule, disableExecutionSchedule, updateExecutionSchedule,
@@ -50,6 +50,7 @@ const headerIcon = (
 );
 
 const ExecutionSchedulePage: React.FC = () => {
+    const access = useAccess();
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Stats — updated from tableRequest
@@ -275,6 +276,7 @@ const ExecutionSchedulePage: React.FC = () => {
                     checked={enabled}
                     loading={actionLoading === record.id}
                     onChange={checked => handleToggle(record, checked)}
+                    disabled={!access.canManageSchedule}
                 />
             ),
         },
@@ -307,19 +309,23 @@ const ExecutionSchedulePage: React.FC = () => {
                     <a onClick={() => { setSelectedSchedule(record); setDrawerVisible(true); }}>
                         <Tooltip title="查看详情"><EyeOutlined style={{ fontSize: 16 }} /></Tooltip>
                     </a>
-                    <a onClick={() => history.push(`/execution/schedules/${record.id}/edit`)}>
-                        <Tooltip title="编辑"><EditOutlined style={{ fontSize: 16 }} /></Tooltip>
-                    </a>
-                    <Popconfirm
-                        title="确认删除此调度？"
-                        onConfirm={() => handleDelete(record)}
-                        okText="确认"
-                        cancelText="取消"
-                    >
-                        <a style={{ color: '#ff4d4f' }}>
-                            <Tooltip title="删除"><DeleteOutlined style={{ fontSize: 16 }} /></Tooltip>
+                    {access.canManageSchedule && (
+                        <a onClick={() => history.push(`/execution/schedules/${record.id}/edit`)}>
+                            <Tooltip title="编辑"><EditOutlined style={{ fontSize: 16 }} /></Tooltip>
                         </a>
-                    </Popconfirm>
+                    )}
+                    {access.canManageSchedule && (
+                        <Popconfirm
+                            title="确认删除此调度？"
+                            onConfirm={() => handleDelete(record)}
+                            okText="确认"
+                            cancelText="取消"
+                        >
+                            <a style={{ color: '#ff4d4f' }}>
+                                <Tooltip title="删除"><DeleteOutlined style={{ fontSize: 16 }} /></Tooltip>
+                            </a>
+                        </Popconfirm>
+                    )}
                 </Space>
             ),
         },
@@ -496,6 +502,7 @@ const ExecutionSchedulePage: React.FC = () => {
                     <Button
                         icon={<EditOutlined />}
                         onClick={() => history.push(`/execution/schedules/${selectedSchedule.id}/edit`)}
+                        disabled={!access.canManageSchedule}
                     >
                         编辑
                     </Button>
@@ -533,6 +540,7 @@ const ExecutionSchedulePage: React.FC = () => {
                             checked={selectedSchedule.enabled}
                             loading={actionLoading === selectedSchedule.id}
                             onChange={checked => handleToggle(selectedSchedule, checked)}
+                            disabled={!access.canManageSchedule}
                         />
                     </div>
 
@@ -784,6 +792,7 @@ const ExecutionSchedulePage: React.FC = () => {
                 refreshTrigger={refreshTrigger}
                 primaryActionLabel="创建调度"
                 primaryActionIcon={<PlusOutlined />}
+                primaryActionDisabled={!access.canManageSchedule}
                 onPrimaryAction={() => history.push('/execution/schedules/create')}
                 onRowClick={(record) => {
                     setSelectedSchedule(record);

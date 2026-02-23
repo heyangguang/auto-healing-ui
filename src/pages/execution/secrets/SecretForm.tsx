@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import {
     Form, Input, Select, Button, message, Spin, Row, Col, Checkbox, Alert, InputNumber, Divider, Typography,
 } from 'antd';
@@ -36,6 +36,7 @@ const WEBHOOK_AUTH_TYPES = [
 
 const SecretFormPage: React.FC = () => {
     const params = useParams<{ id?: string }>();
+    const access = useAccess();
     const isEdit = !!params.id;
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
@@ -551,7 +552,7 @@ const SecretFormPage: React.FC = () => {
 
                         <Divider style={{ margin: '16px 0 24px' }} />
                         <div className="secret-form-actions">
-                            <Button type="primary" icon={<SaveOutlined />} loading={submitting} onClick={handleSubmit}>
+                            <Button type="primary" icon={<SaveOutlined />} loading={submitting} disabled={!access.canManageSecrets} onClick={handleSubmit}>
                                 {isEdit ? '保存修改' : '创建密钥源'}
                             </Button>
                             <Button onClick={() => history.push('/resources/secrets')}>取消</Button>

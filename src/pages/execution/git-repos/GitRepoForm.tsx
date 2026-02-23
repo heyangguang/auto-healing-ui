@@ -6,10 +6,10 @@ import {
     LinkOutlined, GithubOutlined, GlobalOutlined, KeyOutlined, LockOutlined,
     SafetyCertificateOutlined, BranchesOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
-    validateGitRepo, createGitRepo, getGitRepo, updateGitRepo,
+    validateGitRepo, createGitRepo, getGitRepo, updateGitRepo, getBranches,
 } from '@/services/auto-healing/git-repos';
 import './GitRepoForm.css';
 
@@ -23,6 +23,7 @@ const authTypeOptions = [
 ];
 
 const GitRepoFormPage: React.FC = () => {
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const isEdit = !!params.id;
     const [form] = Form.useForm();
@@ -65,7 +66,19 @@ const GitRepoFormPage: React.FC = () => {
             });
             // 编辑模式下已验证
             setValidated(true);
-            setAvailableBranches([r.default_branch || 'main']);
+            setDefaultBranch(r.default_branch || 'main');
+            // 加载该仓库的完整分支列表
+            getBranches(params.id!).then(branchRes => {
+                const branches = branchRes.data?.branches || [];
+                if (branches.length > 0) {
+                    setAvailableBranches(branches);
+                } else {
+                    setAvailableBranches([r.default_branch || 'main']);
+                }
+            }).catch(() => {
+                // 分支加载失败时至少显示当前默认分支
+                setAvailableBranches([r.default_branch || 'main']);
+            });
         }).catch(() => {
             message.error('加载仓库信息失败');
         }).finally(() => setLoading(false));
@@ -177,7 +190,7 @@ const GitRepoFormPage: React.FC = () => {
                 actions={
                     <div className="git-form-actions">
                         <Button onClick={() => history.push('/execution/git-repos')}>取消</Button>
-                        <Button type="primary" onClick={handleSubmit} loading={submitting}>
+                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={!access.canManageGitRepo}>
                             {isEdit ? '保存' : '创建'}
                         </Button>
                     </div>
@@ -253,6 +266,7 @@ const GitRepoFormPage: React.FC = () => {
                         {!isEdit && (
                             <Form.Item>
                                 <Button onClick={handleValidate} loading={validating} icon={<CheckCircleOutlined />}
+                                    disabled={!access.canManageGitRepo}
                                     type={validated ? 'default' : 'primary'}>
                                     {validating ? '验证中...' : validated ? '重新验证' : '验证并获取分支'}
                                 </Button>

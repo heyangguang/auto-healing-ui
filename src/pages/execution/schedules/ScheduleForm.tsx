@@ -10,7 +10,7 @@ import {
     SearchOutlined, ThunderboltOutlined,
     PlayCircleOutlined
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import dayjs from 'dayjs';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
@@ -33,6 +33,7 @@ import './schedule.css';
 const { Text } = Typography;
 
 const ScheduleForm: React.FC = () => {
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const isEdit = !!params.id;
 
@@ -385,7 +386,7 @@ const ScheduleForm: React.FC = () => {
                 actions={
                     <div className="template-form-actions">
                         <Button onClick={() => isEdit ? history.push('/execution/schedules') : setStep('select')}>取消</Button>
-                        <Button type="primary" onClick={handleSubmit} loading={submitting}>
+                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={!access.canManageSchedule}>
                             {isEdit ? '保存配置' : '创建调度'}
                         </Button>
                     </div>

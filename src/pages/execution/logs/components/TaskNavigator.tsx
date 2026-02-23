@@ -28,11 +28,19 @@ interface TaskNavigatorProps {
     externalFilters?: TaskFilters;
 }
 
-/* 执行器类型配置 */
-const executorConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    local: { icon: <DesktopOutlined />, label: '本地', color: '#52c41a' },
-    docker: { icon: <CloudServerOutlined />, label: 'Docker', color: '#1677ff' },
+import { EXECUTOR_TYPE_CONFIG } from '@/constants/executionDicts';
+
+/* 执行器类型配置（从集中化字典 + 本地 icon 组装） */
+const EXECUTOR_ICON_MAP: Record<string, React.ReactNode> = {
+    local: <DesktopOutlined />,
+    docker: <CloudServerOutlined />,
+    ssh: <RocketOutlined />,
 };
+const executorConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = Object.fromEntries(
+    Object.entries(EXECUTOR_TYPE_CONFIG).map(([k, v]) => [
+        k, { icon: EXECUTOR_ICON_MAP[k] || <DesktopOutlined />, label: v.label, color: v.color },
+    ])
+);
 
 /* 解析 hosts */
 const parseHosts = (hosts?: string) => {

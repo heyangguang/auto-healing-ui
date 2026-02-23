@@ -6,7 +6,7 @@ import {
     StopOutlined, SendOutlined, ExclamationCircleOutlined, CheckOutlined,
     ThunderboltOutlined,
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import {
     Button, Tag, Space, Typography, message, Spin, Divider, Empty, Alert,
 } from 'antd';
@@ -22,6 +22,7 @@ const { Text } = Typography;
 
 const TaskTemplateDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const access = useAccess();
     const fromUrl = new URLSearchParams(window.location.search).get('from');
     const handleGoBack = useCallback(() => {
         if (fromUrl) { history.push(fromUrl); }
@@ -155,15 +156,17 @@ const TaskTemplateDetail: React.FC = () => {
                                     检测到 Playbook 定义已更新，以下变量发生了变更，请确认：
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
-                                    {task.changed_variables.map(v => (
-                                        <Tag key={v} color="orange" style={{ margin: 0, fontSize: 11 }}>{v}</Tag>
-                                    ))}
+                                    {task.changed_variables.map((v: any) => {
+                                        const name = typeof v === 'string' ? v : v?.name;
+                                        return <Tag key={name} color="orange" style={{ margin: 0, fontSize: 11 }}>{name}</Tag>;
+                                    })}
                                 </div>
                                 <Button
                                     type="primary"
                                     size="small"
                                     icon={<CheckOutlined />}
                                     loading={confirming}
+                                    disabled={!access.canUpdateTask}
                                     onClick={handleConfirmReview}
                                     style={{ background: '#faad14', borderColor: '#faad14' }}
                                 >

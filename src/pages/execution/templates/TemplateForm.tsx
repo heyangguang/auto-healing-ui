@@ -9,7 +9,7 @@ import {
     ExclamationCircleOutlined, SettingOutlined, PlusOutlined,
     SafetyCertificateOutlined,
 } from '@ant-design/icons';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import HostSelector from '@/components/HostSelector';
 import VariableInput, { extractDefaultValue } from '@/components/VariableInput';
@@ -29,6 +29,7 @@ import './TemplateForm.css';
 const { Text } = Typography;
 
 const TemplateFormPage: React.FC = () => {
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const isEdit = !!params.id;
     const [form] = Form.useForm();
@@ -50,7 +51,7 @@ const TemplateFormPage: React.FC = () => {
 
     // 审核状态
     const [needsReview, setNeedsReview] = useState(false);
-    const [changedVariables, setChangedVariables] = useState<string[]>([]);
+    const [changedVariables, setChangedVariables] = useState<any[]>([]);
 
     // 凭据选择器
     const [secretsModalOpen, setSecretsModalOpen] = useState(false);
@@ -238,7 +239,7 @@ const TemplateFormPage: React.FC = () => {
                 actions={
                     <div className="template-form-actions">
                         <Button onClick={() => history.push('/execution/templates')}>取消</Button>
-                        <Button type="primary" onClick={handleSubmit} loading={submitting}>
+                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={isEdit ? !access.canUpdateTask : !access.canCreateTask}>
                             {isEdit ? '保存' : '创建'}
                         </Button>
                     </div>
@@ -259,9 +260,10 @@ const TemplateFormPage: React.FC = () => {
                                             检测到 Playbook 定义已更新。保存将自动确认变更。
                                         </div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                            {changedVariables.map(v => (
-                                                <Tag key={v} color="orange">{v}</Tag>
-                                            ))}
+                                            {changedVariables.map((v: any) => {
+                                                const name = typeof v === 'string' ? v : v?.name;
+                                                return <Tag key={name} color="orange">{name}</Tag>;
+                                            })}
                                         </div>
                                     </div>
                                 }

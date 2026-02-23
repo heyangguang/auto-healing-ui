@@ -342,7 +342,7 @@ const GitRepoList: React.FC = () => {
                     <Tooltip title="手动同步">
                         <Button type="link" size="small"
                             icon={syncing === r.id ? <Spin size="small" /> : <SyncOutlined />}
-                            onClick={() => handleSync(r)} disabled={!!syncing} />
+                            onClick={() => handleSync(r)} disabled={!!syncing || !access.canManageGitRepo} />
                     </Tooltip>
                     <Tooltip title="文件浏览">
                         <Button type="link" size="small" icon={<FolderOutlined />}
@@ -354,7 +354,7 @@ const GitRepoList: React.FC = () => {
                             onClick={() => openEdit(r)} disabled={!access.canManageGitRepo} />
                     </Tooltip>
                     <Popconfirm title="确定删除？" description="本地代码也会被清除，不可恢复" onConfirm={() => handleDelete(r.id)}>
-                        <Button type="link" size="small" danger icon={<DeleteOutlined />} disabled={!access.canManageGitRepo} />
+                        <Button type="link" size="small" danger icon={<DeleteOutlined />} disabled={!access.canDeleteRepo} />
                     </Popconfirm>
                 </Space>
             ),
@@ -477,14 +477,14 @@ const GitRepoList: React.FC = () => {
                     </div>
                     <Space size="small">
                         <Button size="small" icon={<SyncOutlined spin={syncing === currentRow.id} />}
-                            onClick={() => handleSync(currentRow)} disabled={!!syncing}>同步</Button>
+                            onClick={() => handleSync(currentRow)} disabled={!!syncing || !access.canManageGitRepo}>同步</Button>
                         <Button size="small" icon={<FolderOutlined />}
                             onClick={() => { loadFileTree(currentRow.id); setFileBrowserOpen(true); }}
                             disabled={currentRow.status !== 'ready'}>文件</Button>
                         <Button size="small" icon={<SettingOutlined />}
-                            onClick={() => { setDrawerOpen(false); openEdit(currentRow); }}>编辑</Button>
+                            onClick={() => { setDrawerOpen(false); openEdit(currentRow); }} disabled={!access.canManageGitRepo}>编辑</Button>
                         <Popconfirm title="确定删除？" description="本地代码也会被清除" onConfirm={() => handleDelete(currentRow.id)}>
-                            <Button size="small" danger icon={<DeleteOutlined />} disabled={!access.canManageGitRepo}>删除</Button>
+                            <Button size="small" danger icon={<DeleteOutlined />} disabled={!access.canDeleteRepo}>删除</Button>
                         </Popconfirm>
                     </Space>
                 </div>

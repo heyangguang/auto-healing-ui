@@ -11,7 +11,7 @@ import {
 } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import { getGitRepos, getFiles } from '@/services/auto-healing/git-repos';
 import { createPlaybook } from '@/services/auto-healing/playbooks';
@@ -57,6 +57,7 @@ const getProviderInfo = (url: string) => {
 };
 
 const PlaybookImport: React.FC = () => {
+    const access = useAccess();
     const [repos, setRepos] = useState<AutoHealing.GitRepository[]>([]);
     const [loadingRepos, setLoadingRepos] = useState(true);
     const [selectedRepoId, setSelectedRepoId] = useState<string>();
@@ -391,7 +392,7 @@ const PlaybookImport: React.FC = () => {
                                     type="primary"
                                     onClick={handleCreate}
                                     loading={creating}
-                                    disabled={playbooks.length === 0 || playbooks.some(p => !p.name)}
+                                    disabled={playbooks.length === 0 || playbooks.some(p => !p.name) || !access.canManagePlaybook}
                                     icon={<CloudDownloadOutlined />}
                                 >
                                     导入 {playbooks.length} 个 Playbook

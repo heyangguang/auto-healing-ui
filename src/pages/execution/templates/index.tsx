@@ -28,15 +28,14 @@ import type { StandardColumnDef, AdvancedSearchField } from '@/components/Standa
 import { ExecutorIcon, DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import dayjs from 'dayjs';
 import './index.css';
+import { EXECUTOR_TYPE_CONFIG } from '@/constants/executionDicts';
 
 const { Text } = Typography;
 
-// 执行器配置
-const executorConfig: Record<string, { color: string; text: string }> = {
-    local: { color: 'blue', text: 'Local' },
-    docker: { color: 'blue', text: 'Docker' },
-    ssh: { color: 'purple', text: 'SSH' },
-};
+// 执行器配置（从集中化字典适配为本地接口）
+const executorConfig: Record<string, { color: string; text: string }> = Object.fromEntries(
+    Object.entries(EXECUTOR_TYPE_CONFIG).map(([k, v]) => [k, { color: k === 'ssh' ? 'purple' : 'blue', text: v.label }])
+);
 
 // ==================== 搜索配置 ====================
 const templateAdvancedSearchFields: AdvancedSearchField[] = [
@@ -85,7 +84,8 @@ const TemplateDetailDrawer: React.FC<{
     notifyChannels: AutoHealing.NotificationChannel[];
     notifyTemplates: AutoHealing.NotificationTemplate[];
     onConfirmReview: (id: string) => Promise<void>;
-}> = ({ open, template, onClose, playbooks, secretsSources, notifyChannels, notifyTemplates, onConfirmReview }) => {
+    canConfirmReview?: boolean;
+}> = ({ open, template, onClose, playbooks, secretsSources, notifyChannels, notifyTemplates, onConfirmReview, canConfirmReview = true }) => {
     const [hostSearch, setHostSearch] = useState('');
     const [confirming, setConfirming] = useState(false);
 
@@ -164,13 +164,15 @@ const TemplateDetailDrawer: React.FC<{
                                     background: 'rgba(255,255,255,0.6)', border: '1px dashed #ffd591',
                                     padding: 10, marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 6
                                 }}>
-                                    {template.changed_variables?.map(v => (
-                                        <Tag key={v} color="orange" style={{ margin: 0 }}>{v}</Tag>
-                                    ))}
+                                    {template.changed_variables?.map((v: any) => {
+                                        const name = typeof v === 'string' ? v : v?.name;
+                                        return <Tag key={name} color="orange" style={{ margin: 0 }}>{name}</Tag>;
+                                    })}
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <Button type="primary" size="small" icon={<CheckCircleOutlined />}
                                         loading={confirming}
+                                        disabled={!canConfirmReview}
                                         style={{ background: '#faad14', borderColor: '#faad14' }}
                                         onClick={async () => {
                                             setConfirming(true);
@@ -530,7 +532,7 @@ const ExecutionTemplateList: React.FC = () => {
                                         <div>
                                             Playbook 变量发生变更
                                             <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>
-                                                变更变量: {record.changed_variables?.join(', ') || '—'}
+                                                变更变量: {record.changed_variables?.map((v: any) => typeof v === 'string' ? v : v?.name).join(', ') || '—'}
                                             </div>
                                         </div>
                                     }>
@@ -649,7 +651,7 @@ const ExecutionTemplateList: React.FC = () => {
             ],
             render: (_, record) => (
                 record.needs_review ? (
-                    <Tooltip title={`变更变量: ${record.changed_variables?.join(', ') || '—'}`}>
+                    <Tooltip title={`变更变量: ${record.changed_variables?.map((v: any) => typeof v === 'string' ? v : v?.name).join(', ') || '—'}`}>
                         <Tag color="error" style={{ margin: 0, fontSize: 11, cursor: 'help' }}>
                             <ExclamationCircleOutlined style={{ marginRight: 3 }} />需审核
                         </Tag>
@@ -711,7 +713,7 @@ const ExecutionTemplateList: React.FC = () => {
                         <Tooltip title={record.needs_review ? '需确认变更后方可执行' : !pb || pb.status !== 'ready' ? 'Playbook 未就绪' : '执行'}>
                             <Button type="link" size="small"
                                 icon={<PlayCircleOutlined style={{ color: canExecute ? '#52c41a' : undefined }} />}
-                                disabled={!canExecute}
+                                disabled={!canExecute || !access.canExecuteTask}
                                 onClick={() => history.push(`/execution/execute?template=${record.id}`)} />
                         </Tooltip>
                         <Tooltip title="编辑">
@@ -726,7 +728,7 @@ const ExecutionTemplateList: React.FC = () => {
                             description={hasSchedules ? '请先删除关联的调度任务' : undefined}
                         >
                             <Button type="link" size="small" danger icon={<DeleteOutlined />}
-                                disabled={hasSchedules} />
+                                disabled={hasSchedules || !access.canDeleteTask} />
                         </Popconfirm>
                     </Space>
                 );
@@ -877,7 +879,7 @@ const ExecutionTemplateList: React.FC = () => {
                 extraToolbarActions={stats.needsReview > 0 ? (
                     <Tooltip title={`${stats.needsReview} 个模板待审核，点击批量确认`}>
                         <Badge dot offset={[-4, 4]}>
-                            <Button icon={<AlertOutlined />} onClick={openBatchReview} />
+                            <Button icon={<AlertOutlined />} onClick={openBatchReview} disabled={!access.canUpdateTask} />
                         </Badge>
                     </Tooltip>
                 ) : undefined}
@@ -896,6 +898,7 @@ const ExecutionTemplateList: React.FC = () => {
                 notifyChannels={notifyChannels}
                 notifyTemplates={notifyTemplates}
                 onConfirmReview={handleConfirmReview}
+                canConfirmReview={access.canUpdateTask}
             />
             {/* 批量审核 Modal */}
             <Modal

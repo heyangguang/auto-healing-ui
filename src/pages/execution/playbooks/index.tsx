@@ -703,7 +703,7 @@ const PlaybookList: React.FC = () => {
                         </div>
                     </div>
                     <Space>
-                        <Button icon={<SyncOutlined spin={scanning === selectedPlaybook.id} />} onClick={handleScan} disabled={scanning === selectedPlaybook.id}>
+                        <Button icon={<SyncOutlined spin={scanning === selectedPlaybook.id} />} onClick={handleScan} disabled={scanning === selectedPlaybook.id || !access.canManagePlaybook}>
                             扫描变量
                         </Button>
                         {selectedPlaybook.status === 'scanned' && (
@@ -890,7 +890,7 @@ const PlaybookList: React.FC = () => {
                                         {editedVariables.length > 0 ? (
                                             <>
                                                 <div style={{ marginBottom: 16 }}>
-                                                    <Text type="secondary">共 {editedVariables.length} 个变量，修改后自动保存</Text>
+                                                    <Text type="secondary">共 {editedVariables.length} 个变量{access.canManagePlaybook ? '，修改后自动保存' : '（只读）'}</Text>
                                                 </div>
                                                 <Table
                                                     size="middle"
@@ -916,6 +916,7 @@ const PlaybookList: React.FC = () => {
                                                                         variant="borderless"
                                                                         value={v}
                                                                         popupMatchSelectWidth={false}
+                                                                        disabled={!access.canManagePlaybook}
                                                                         style={{ width: 90, color: cfg.color, fontWeight: 500 }}
                                                                         onChange={val => {
                                                                             autoSaveVariables(
@@ -939,6 +940,7 @@ const PlaybookList: React.FC = () => {
                                                                 <Switch
                                                                     size="small"
                                                                     checked={v}
+                                                                    disabled={!access.canManagePlaybook}
                                                                     onChange={val => {
                                                                         autoSaveVariables(
                                                                             editedVariables.map(v => v.name === record.name ? { ...v, required: val } : v)
@@ -968,6 +970,7 @@ const PlaybookList: React.FC = () => {
                                                                                 variant="borderless"
                                                                                 defaultValue={parsed ? Number(parsed) : undefined}
                                                                                 placeholder="数字"
+                                                                                disabled={!access.canManagePlaybook}
                                                                                 style={{ width: '100%' }}
                                                                                 onBlur={e => {
                                                                                     const val = e.target.value;
@@ -981,6 +984,7 @@ const PlaybookList: React.FC = () => {
                                                                                 variant="borderless"
                                                                                 value={parsed === 'true' ? 'true' : parsed === 'false' ? 'false' : undefined}
                                                                                 placeholder="选择"
+                                                                                disabled={!access.canManagePlaybook}
                                                                                 style={{ width: '100%' }}
                                                                                 allowClear
                                                                                 onChange={val => saveDefault(val)}
@@ -1069,7 +1073,7 @@ const PlaybookList: React.FC = () => {
                                                                                     </div>
                                                                                 }
                                                                             >
-                                                                                <Button type="link" style={{ padding: 0 }}>
+                                                                                <Button type="link" style={{ padding: 0 }} disabled={!access.canManagePlaybook}>
                                                                                     {enumVals.length > 0 ? (
                                                                                         <span>
                                                                                             {enumVals.join(' / ')}
@@ -1174,7 +1178,7 @@ const PlaybookList: React.FC = () => {
                                                                                     </div>
                                                                                 }
                                                                             >
-                                                                                <Button type="link" style={{ padding: 0 }}>
+                                                                                <Button type="link" style={{ padding: 0 }} disabled={!access.canManagePlaybook}>
                                                                                     {options.length > 0 ? (
                                                                                         <span>
                                                                                             [{options.length}可选/{defaultVals.length}默认]
@@ -1296,7 +1300,7 @@ const PlaybookList: React.FC = () => {
                                                                                     </div>
                                                                                 }
                                                                             >
-                                                                                <Button type="link" style={{ padding: 0 }}>
+                                                                                <Button type="link" style={{ padding: 0 }} disabled={!access.canManagePlaybook}>
                                                                                     {options.length > 0 ? (
                                                                                         <span>
                                                                                             {`{${options.length}可选/${selectedKeys.length}默认}`}
@@ -1313,6 +1317,7 @@ const PlaybookList: React.FC = () => {
                                                                                 variant="borderless"
                                                                                 defaultValue={parsed}
                                                                                 placeholder="-"
+                                                                                disabled={!access.canManagePlaybook}
                                                                                 style={{ width: '100%' }}
                                                                                 onBlur={e => {
                                                                                     if (e.target.value !== parsed) saveDefault(e.target.value);
@@ -1334,6 +1339,7 @@ const PlaybookList: React.FC = () => {
                                                                     variant="borderless"
                                                                     defaultValue={v || ''}
                                                                     placeholder="-"
+                                                                    disabled={!access.canManagePlaybook}
                                                                     style={{ width: '100%' }}
                                                                     onBlur={e => {
                                                                         const newVal = e.target.value;
@@ -1434,6 +1440,7 @@ const PlaybookList: React.FC = () => {
                                                                             type="text"
                                                                             size="small"
                                                                             icon={<SettingOutlined />}
+                                                                            disabled={!access.canManagePlaybook}
                                                                             style={{ color: hasValidation ? '#1677ff' : '#bbb' }}
                                                                         />
                                                                     </Popover>
