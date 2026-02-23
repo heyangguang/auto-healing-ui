@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useAccess } from '@umijs/max';
 import {
     CheckCircleOutlined, CloseCircleOutlined, ToolOutlined,
     ApiOutlined, CloudServerOutlined,
-    DesktopOutlined, AppstoreOutlined, GlobalOutlined, HddOutlined,
     LinuxOutlined, WindowsOutlined, CloudOutlined,
 } from '@ant-design/icons';
 import {
@@ -21,30 +21,15 @@ import {
     getCMDBMaintenanceLogs,
 } from '@/services/auto-healing/cmdb';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
+import { CMDB_TYPE_MAP, CMDB_STATUS_MAP, CMDB_ENV_MAP } from '@/constants/cmdbDicts';
 import './index.css';
 
 const { Text } = Typography;
 
-/* ========== 枚举映射 ========== */
-const TYPE_MAP: Record<string, { text: string; icon: React.ReactNode; color: string }> = {
-    server: { text: '服务器', icon: <DesktopOutlined />, color: '#1890ff' },
-    application: { text: '应用', icon: <AppstoreOutlined />, color: '#13c2c2' },
-    network: { text: '网络', icon: <GlobalOutlined />, color: '#722ed1' },
-    database: { text: '数据库', icon: <HddOutlined />, color: '#fa8c16' },
-};
-
-const STATUS_MAP: Record<string, { text: string; color: string; badge: 'success' | 'error' | 'warning' | 'default' }> = {
-    active: { text: '活跃', color: '#52c41a', badge: 'success' },
-    inactive: { text: '离线', color: '#ff4d4f', badge: 'error' },
-    maintenance: { text: '维护', color: '#faad14', badge: 'warning' },
-};
-
-const ENV_MAP: Record<string, { text: string; color: string }> = {
-    production: { text: '生产', color: 'red' },
-    staging: { text: '预发', color: 'orange' },
-    test: { text: '测试', color: 'green' },
-    development: { text: '开发', color: 'blue' },
-};
+/* ========== 枚举映射（已集中化到 constants/cmdbDicts.tsx，此处为别名） ========== */
+const TYPE_MAP = CMDB_TYPE_MAP;
+const STATUS_MAP = CMDB_STATUS_MAP;
+const ENV_MAP = CMDB_ENV_MAP;
 
 const getOSIcon = (os: string) => {
     const o = os?.toLowerCase() || '';
@@ -94,6 +79,7 @@ const headerIcon = (
 
 /* ========== 组件 ========== */
 const CMDBList: React.FC = () => {
+    const access = useAccess();
     /* ---- 统计 ---- */
     const [stats, setStats] = useState<AutoHealing.CMDBStats | null>(null);
 
@@ -366,6 +352,7 @@ const CMDBList: React.FC = () => {
                     <Tooltip title="密钥测试">
                         <Button
                             type="link" size="small" icon={<ApiOutlined />}
+                            disabled={!access.canTestPlugin}
                             onClick={(e) => { e.stopPropagation(); handleOpenTestModal(record); }}
                         />
                     </Tooltip>
@@ -374,6 +361,7 @@ const CMDBList: React.FC = () => {
                             <Button
                                 type="link" size="small" icon={<CheckCircleOutlined />}
                                 style={{ color: '#52c41a' }}
+                                disabled={!access.canUpdatePlugin}
                                 onClick={(e) => { e.stopPropagation(); handleResumeMaintenance(record); }}
                             />
                         </Tooltip>
@@ -382,6 +370,7 @@ const CMDBList: React.FC = () => {
                             <Button
                                 type="link" size="small" icon={<ToolOutlined />}
                                 style={{ color: '#faad14' }}
+                                disabled={!access.canUpdatePlugin}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setMaintenanceTarget(record);
@@ -425,6 +414,8 @@ const CMDBList: React.FC = () => {
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
             if (adv.keyword) apiParams.keyword = adv.keyword;
+            if (adv.ip_address) apiParams.ip_address = adv.ip_address;
+            if (adv.hostname) apiParams.hostname = adv.hostname;
             if (adv.type) apiParams.type = adv.type;
             if (adv.status) apiParams.status = adv.status;
             if (adv.environment) apiParams.environment = adv.environment;
@@ -513,15 +504,18 @@ const CMDBList: React.FC = () => {
                     全选所有
                 </Button>
                 <Button size="small" icon={<ApiOutlined />}
+                    disabled={!access.canTestPlugin}
                     onClick={() => handleOpenTestModal(null)}>
                     测试密钥
                 </Button>
                 <Button size="small" icon={<ToolOutlined />}
+                    disabled={!access.canUpdatePlugin}
                     onClick={() => { setMaintenanceTarget(null); setMaintenanceModalOpen(true); }}
                     style={{ borderColor: '#faad14', color: '#faad14' }}>
                     维护
                 </Button>
                 <Button size="small" icon={<CheckCircleOutlined />}
+                    disabled={!access.canUpdatePlugin}
                     onClick={handleBatchResume}
                     style={{ borderColor: '#52c41a', color: '#52c41a' }}>
                     恢复
@@ -602,12 +596,13 @@ const CMDBList: React.FC = () => {
                                 />
                             </div>
                             <Space size={8}>
-                                <Button size="small" icon={<ApiOutlined />} onClick={() => handleOpenTestModal(currentRow)}>
+                                <Button size="small" icon={<ApiOutlined />} disabled={!access.canTestPlugin} onClick={() => handleOpenTestModal(currentRow)}>
                                     密钥测试
                                 </Button>
                                 {currentRow.status === 'maintenance' ? (
                                     <Button
                                         size="small" icon={<CheckCircleOutlined />}
+                                        disabled={!access.canUpdatePlugin}
                                         onClick={async () => {
                                             await handleResumeMaintenance(currentRow);
                                             setDrawerOpen(false);
@@ -618,6 +613,7 @@ const CMDBList: React.FC = () => {
                                 ) : (
                                     <Button
                                         size="small" icon={<ToolOutlined />}
+                                        disabled={!access.canUpdatePlugin}
                                         onClick={() => { setMaintenanceTarget(currentRow); setMaintenanceModalOpen(true); }}
                                     >
                                         进入维护

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { history, useParams } from '@umijs/max';
+import { history, useParams, useAccess } from '@umijs/max';
 import {
     Form, Input, Select, Button, message, Spin, Row, Col, Alert, Switch, Typography, InputNumber, Divider,
 } from 'antd';
@@ -52,6 +52,7 @@ const CMDB_FIELDS = [
 ];
 
 const PluginFormPage: React.FC = () => {
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const isEdit = !!params.id;
     const [form] = Form.useForm();
@@ -565,7 +566,7 @@ const PluginFormPage: React.FC = () => {
 
                         <Divider style={{ margin: '16px 0 24px' }} />
                         <div className="plugin-form-actions">
-                            <Button type="primary" icon={<SaveOutlined />} loading={submitting} onClick={handleSubmit}>
+                            <Button type="primary" icon={<SaveOutlined />} loading={submitting} disabled={isEdit ? !access.canUpdatePlugin : !access.canCreatePlugin} onClick={handleSubmit}>
                                 {isEdit ? '保存修改' : '创建插件'}
                             </Button>
                             <Button onClick={() => history.push('/resources/plugins')}>取消</Button>

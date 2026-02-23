@@ -22,54 +22,18 @@ import './index.css';
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
+import {
+    ALL_RESOURCE_LABELS as RESOURCE_MAP,
+    ACTION_LABELS,
+    ACTION_COLORS,
+    ACTION_VERBS as ACTION_VERB,
+} from '@/constants/auditDicts';
+
 const { Text } = Typography;
 
-const ACTION_MAP: Record<string, { label: string; color: string }> = {
-    create: { label: '创建', color: 'green' },
-    update: { label: '更新', color: 'blue' },
-    delete: { label: '删除', color: 'red' },
-    login: { label: '登录', color: 'purple' },
-    logout: { label: '登出', color: 'default' },
-    patch: { label: '修改', color: 'blue' },
-    read: { label: '查看', color: 'default' },
-};
-
-const RESOURCE_MAP: Record<string, string> = {
-    auth: '认证', users: '用户', channels: '通知渠道',
-    cmdb: '资产', 'execution-schedules': '定时任务',
-    'execution-tasks': '执行任务', 'git-repos': 'Git 仓库',
-    healing: '自愈流程', incidents: '事件',
-    playbooks: 'Playbook', plugins: '插件',
-    'secrets-sources': '密钥', 'site-messages': '站内信',
-    templates: '通知模板',
-};
-
-/* action 字段 → 中文动词 + 颜色 */
-const ACTION_VERB: Record<string, { verb: string; color: string }> = {
-    activate: { verb: '激活了', color: '#52c41a' },
-    approve: { verb: '通过了', color: '#52c41a' },
-    assign_role: { verb: '分配了角色', color: '#eb2f96' },
-    batch_create: { verb: '批量创建了', color: '#52c41a' },
-    confirm_review: { verb: '确认复核了', color: '#13c2c2' },
-    create: { verb: '创建了', color: '#52c41a' },
-    deactivate: { verb: '停用了', color: '#fa8c16' },
-    delete: { verb: '删除了', color: '#f5222d' },
-    disable: { verb: '禁用了', color: '#fa8c16' },
-    enable: { verb: '启用了', color: '#52c41a' },
-    execute: { verb: '执行了', color: '#fa8c16' },
-    login: { verb: '登录了', color: '#722ed1' },
-    maintenance: { verb: '维护了', color: '#fa8c16' },
-    preview: { verb: '预览了', color: '#8c8c8c' },
-    ready: { verb: '就绪了', color: '#13c2c2' },
-    reject: { verb: '拒绝了', color: '#f5222d' },
-    resume: { verb: '恢复了', color: '#1890ff' },
-    scan: { verb: '扫描了', color: '#1890ff' },
-    sync: { verb: '同步了', color: '#722ed1' },
-    test: { verb: '测试了', color: '#8c8c8c' },
-    trigger: { verb: '触发了', color: '#fa8c16' },
-    update: { verb: '更新了', color: '#1890ff' },
-    update_variables: { verb: '更新了变量', color: '#1890ff' },
-};
+const ACTION_MAP: Record<string, { label: string; color: string }> = Object.fromEntries(
+    Object.entries(ACTION_LABELS).map(([k, label]) => [k, { label, color: ACTION_COLORS[k] || 'default' }]),
+);
 
 function describeLog(log: any): { who: string; action: string; resource: string; color: string } {
     const act = log.action || '';

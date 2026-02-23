@@ -245,7 +245,7 @@ const PluginList: React.FC = () => {
                         <Tooltip title="测试连接">
                             <Button type="link" size="small"
                                 icon={testingId === r.id ? <Spin size="small" /> : <ApiOutlined />}
-                                onClick={() => handleTest(r.id)} disabled={!!testingId} />
+                                onClick={() => handleTest(r.id)} disabled={!!testingId || !access.canUpdatePlugin} />
                         </Tooltip>
                         {isActive ? (
                             <Tooltip title="停用">
@@ -263,7 +263,7 @@ const PluginList: React.FC = () => {
                         <Tooltip title={isActive ? '手动同步' : '需先激活'}>
                             <Button type="link" size="small"
                                 icon={syncingId === r.id ? <Spin size="small" /> : <SyncOutlined />}
-                                onClick={() => handleSync(r.id)} disabled={!!syncingId || !isActive} />
+                                onClick={() => handleSync(r.id)} disabled={!!syncingId || !isActive || !access.canUpdatePlugin} />
                         </Tooltip>
                         <Tooltip title="编辑"><Button type="link" size="small" icon={<SettingOutlined />}
                             onClick={() => openEdit(r)} disabled={!access.canUpdatePlugin} /></Tooltip>
@@ -378,11 +378,11 @@ const PluginList: React.FC = () => {
                                     text={currentPlugin.status === 'active' ? '运行中' : currentPlugin.status === 'error' ? '异常' : '未激活'} />
                             </div>
                             <Space size="small">
-                                <Button size="small" icon={<ApiOutlined />} onClick={() => handleTest(currentPlugin.id)}>测试</Button>
+                                <Button size="small" icon={<ApiOutlined />} onClick={() => handleTest(currentPlugin.id)} disabled={!access.canUpdatePlugin}>测试</Button>
                                 <Button size="small" icon={<SyncOutlined />} onClick={() => handleSync(currentPlugin.id)}
-                                    disabled={currentPlugin.status !== 'active'}>同步</Button>
+                                    disabled={currentPlugin.status !== 'active' || !access.canUpdatePlugin}>同步</Button>
                                 <Button size="small" icon={<SettingOutlined />}
-                                    onClick={() => { setDrawerOpen(false); history.push(`/resources/plugins/${currentPlugin.id}/edit`); }}>编辑</Button>
+                                    onClick={() => { setDrawerOpen(false); history.push(`/resources/plugins/${currentPlugin.id}/edit`); }} disabled={!access.canUpdatePlugin}>编辑</Button>
                             </Space>
                         </div>
 

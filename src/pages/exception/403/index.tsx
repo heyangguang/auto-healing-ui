@@ -1,17 +1,23 @@
 import { Link } from '@umijs/max';
-import { Button, Card, Result } from 'antd';
+import { Button, Result } from 'antd';
 
 export default () => (
-  <Card variant="borderless">
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 'calc(100vh - 58px)',
+    background: '#fff',
+  }}>
     <Result
       status="403"
       title="403"
-      subTitle="Sorry, you are not authorized to access this page."
+      subTitle="抱歉，您无权访问此页面。"
       extra={
         <Link to="/">
-          <Button type="primary">Back to home</Button>
+          <Button type="primary">返回首页</Button>
         </Link>
       }
     />
-  </Card>
+  </div>
 );
