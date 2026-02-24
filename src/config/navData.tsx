@@ -39,6 +39,7 @@ import {
     EyeOutlined,
     UserSwitchOutlined,
     BarChartOutlined,
+    StopOutlined,
 } from '@ant-design/icons';
 import routes from '../../config/routes';
 
@@ -78,6 +79,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
     userSwitch: <UserSwitchOutlined />,
     barChart: <BarChartOutlined />,
     home: <DashboardOutlined />,
+    stop: <StopOutlined />,
 };
 
 /* ──── 类型定义 ──── */
@@ -100,7 +102,7 @@ export interface ServiceItem {
 /* ──── 分类排序优先级 ──── */
 const CATEGORY_ORDER = [
     'dashboard', 'assets', 'execution', 'healing',
-    'notification', 'pending', 'system', 'platform', 'guide',
+    'notification', 'pending', 'security', 'system', 'platform', 'guide',
 ];
 
 /* ──── 从 routes 构建 CATEGORIES 和 SERVICES ──── */
