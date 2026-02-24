@@ -6,11 +6,12 @@ import { request } from '@umijs/max';
  */
 
 /** GET /api/v1/dashboard/overview?sections=... */
-export async function getDashboardOverview(sections: string[]) {
+export async function getDashboardOverview(sections: string[], options?: Record<string, any>) {
     return request<any>('/api/v1/dashboard/overview', {
         method: 'GET',
         params: { sections: sections.join(',') },
         skipErrorHandler: true,
+        ...options,
     });
 }
 

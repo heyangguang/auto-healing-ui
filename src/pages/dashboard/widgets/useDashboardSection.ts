@@ -13,7 +13,7 @@ import { getDashboardOverview } from '@/services/auto-healing/dashboard';
  */
 export function useDashboardSection(section: string) {
     const { data: rawData, loading, refresh } = useRequest(
-        () => getDashboardOverview([section]),
+        () => getDashboardOverview([section], { skipTokenRefresh: true }),
         {
             cacheKey: `dashboard-section-${section}`,
             staleTime: 30000,     // 30s 内使用缓存，不重新请求

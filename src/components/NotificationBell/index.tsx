@@ -138,18 +138,18 @@ const NotificationBell: React.FC = () => {
 
     const getDotColor = (cat: string) => DOT_COLORS[cat] || '#1677ff';
 
-    /** 获取未读数 */
+    /** 获取未读数（后台轮询用，不刷新 token） */
     const refreshUnreadCount = useCallback(async () => {
         try {
-            const res = await getUnreadCount();
+            const res = await getUnreadCount({ skipTokenRefresh: true });
             setUnreadCount(res?.data?.unread_count ?? 0);
         } catch { /* silent */ }
     }, []);
 
-    /** 获取消息列表 */
+    /** 获取消息列表（后台轮询用，不刷新 token） */
     const refreshMessages = useCallback(async () => {
         try {
-            const listRes = await getSiteMessages({ page: 1, page_size: 10 });
+            const listRes = await getSiteMessages({ page: 1, page_size: 10 }, { skipTokenRefresh: true });
             const items = listRes?.data || [];
             setMsgs(items.slice(0, 10).map((m: any) => ({
                 title: m.title || '站内信',
@@ -186,10 +186,10 @@ const NotificationBell: React.FC = () => {
         });
 
         es.addEventListener('new_message', () => {
-            getUnreadCount()
+            getUnreadCount({ skipTokenRefresh: true })
                 .then((res) => setUnreadCount(res?.data?.unread_count ?? 0))
                 .catch(() => { });
-            getSiteMessages({ page: 1, page_size: 10 })
+            getSiteMessages({ page: 1, page_size: 10 }, { skipTokenRefresh: true })
                 .then((res) => {
                     const items = res?.data || [];
                     setMsgs(items.slice(0, 10).map((m: any) => ({

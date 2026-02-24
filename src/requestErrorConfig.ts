@@ -8,23 +8,43 @@ const loginPath = '/user/login';
 // Token 存储 key
 const TOKEN_KEY = 'auto_healing_token';
 const REFRESH_TOKEN_KEY = 'auto_healing_refresh_token';
+const REMEMBER_KEY = 'auto_healing_remember';
+
+// 获取当前存储引擎：记住登录 → localStorage，否则 → sessionStorage
+const getStorage = (): Storage => {
+  return localStorage.getItem(REMEMBER_KEY) === 'true' ? localStorage : sessionStorage;
+};
 
 // Token 管理工具
 export const TokenManager = {
-  getToken: () => localStorage.getItem(TOKEN_KEY),
-  getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
+  getToken: () => getStorage().getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY),
+  getRefreshToken: () => getStorage().getItem(REFRESH_TOKEN_KEY) || localStorage.getItem(REFRESH_TOKEN_KEY),
   setTokens: (accessToken: string, refreshToken?: string) => {
-    localStorage.setItem(TOKEN_KEY, accessToken);
+    const storage = getStorage();
+    storage.setItem(TOKEN_KEY, accessToken);
     if (refreshToken) {
-      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
     cachedTokenExpiry = null; // 清除缓存，强制重新解析
   },
   clearTokens: () => {
+    // 清除两个存储中的 token + 记住登录偏好
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     cachedTokenExpiry = null;
   },
+  // 设置"记住登录"偏好
+  setRememberMe: (remember: boolean) => {
+    if (remember) {
+      localStorage.setItem(REMEMBER_KEY, 'true');
+    } else {
+      localStorage.removeItem(REMEMBER_KEY);
+    }
+  },
+  getRememberMe: () => localStorage.getItem(REMEMBER_KEY) === 'true',
 };
 
 // ==================== 主动刷新 Token 机制 ====================
@@ -282,8 +302,13 @@ export const errorConfig: RequestConfig = {
         return config;
       }
 
-      // 主动检查并刷新 token
-      const token = await ensureFreshToken();
+      // 主动检查并刷新 token（轮询请求跳过刷新，避免后台请求续期）
+      let token: string | null;
+      if ((config as any).skipTokenRefresh) {
+        token = TokenManager.getToken();
+      } else {
+        token = await ensureFreshToken();
+      }
       const headers = config.headers || {};
 
       if (token) {

@@ -65,6 +65,39 @@ export async function getInitialState(): Promise<{
 
       return currentUserObj;
     } catch (_error) {
+      // Token 可能已过期，尝试用 refresh_token 刷新
+      const refreshTokenValue = TokenManager.getRefreshToken();
+      if (refreshTokenValue) {
+        try {
+          const refreshRes = await fetch('/api/v1/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshTokenValue }),
+          });
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            if (refreshData.access_token) {
+              TokenManager.setTokens(refreshData.access_token, refreshData.refresh_token);
+              console.log('[Auth] 启动时 Token 已自动刷新');
+              // 刷新成功，重新获取用户信息
+              const retryResponse = await getCurrentUser({ skipErrorHandler: true });
+              const retryUser = (retryResponse as any).data || retryResponse;
+              const retryObj = {
+                userid: retryUser.id,
+                name: retryUser.display_name || retryUser.username,
+                username: retryUser.username,
+                display_name: retryUser.display_name,
+                avatar: undefined,
+                access: retryUser.roles?.[0] || 'user',
+                permissions: retryUser.permissions || [],
+                ...retryUser,
+              } as API.CurrentUser;
+              localStorage.setItem('is-platform-admin', retryObj.is_platform_admin ? 'true' : 'false');
+              return retryObj;
+            }
+          }
+        } catch { /* refresh 也失败了，走下面的清理逻辑 */ }
+      }
       TokenManager.clearTokens();
       history.push(loginPath);
     }

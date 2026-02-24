@@ -7,6 +7,7 @@ export async function login(data: AutoHealing.LoginRequest) {
     return request<AutoHealing.LoginResponse>('/api/v1/auth/login', {
         method: 'POST',
         data,
+        skipErrorHandler: true,
     });
 }
 

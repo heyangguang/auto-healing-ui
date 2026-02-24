@@ -29,7 +29,7 @@ export async function getSiteMessages(params?: {
     page_size?: number;
     keyword?: string;
     category?: string;
-}) {
+}, options?: Record<string, any>) {
     return request<{
         code: number;
         message: string;
@@ -37,16 +37,16 @@ export async function getSiteMessages(params?: {
         total: number;
         page: number;
         page_size: number;
-    }>('/api/v1/site-messages', { method: 'GET', params });
+    }>('/api/v1/site-messages', { method: 'GET', params, ...options });
 }
 
 /** 获取未读消息数 */
-export async function getUnreadCount() {
+export async function getUnreadCount(options?: Record<string, any>) {
     return request<{
         code: number;
         message: string;
         data: { unread_count: number };
-    }>('/api/v1/site-messages/unread-count', { method: 'GET' });
+    }>('/api/v1/site-messages/unread-count', { method: 'GET', ...options });
 }
 
 /** 标记消息为已读 */
