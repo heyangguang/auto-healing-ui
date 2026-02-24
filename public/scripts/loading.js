@@ -1,200 +1,218 @@
 /**
- * loading 占位
+ * Pangolin loading 占位
  * 解决首次加载时白屏的问题
+ * 卡车运输动画 + Pangolin Logo
  */
 (function () {
   const _root = document.querySelector('#root');
   if (_root && _root.innerHTML === '') {
     _root.innerHTML = `
       <style>
-        html,
-        body,
-        #root {
+        html, body, #root {
           height: 100%;
           margin: 0;
           padding: 0;
         }
         #root {
-          background-repeat: no-repeat;
-          background-size: 100% auto;
+          background: #ffffff;
         }
 
-        .loading-title {
-          font-size: 1.1rem;
+        .pangolin-loading-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          min-height: 362px;
+          gap: 0;
+          user-select: none;
         }
 
-        .loading-sub-title {
-          margin-top: 20px;
-          font-size: 1rem;
-          color: #888;
+        /* ─── Logo ─── */
+        .pangolin-loading-logo {
+          margin-top: 32px;
+        }
+        .pangolin-loading-logo img {
+          height: 48px;
         }
 
-        .page-loading-warp {
+        /* ─── Truck Loader ─── */
+        .loader {
+          width: fit-content;
+          height: fit-content;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 26px;
-        }
-        .ant-spin {
-          position: absolute;
-          display: none;
-          -webkit-box-sizing: border-box;
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-          color: rgba(0, 0, 0, 0.65);
-          color: #1890ff;
-          font-size: 14px;
-          font-variant: tabular-nums;
-          line-height: 1.5;
-          text-align: center;
-          list-style: none;
-          opacity: 0;
-          -webkit-transition: -webkit-transform 0.3s
-            cubic-bezier(0.78, 0.14, 0.15, 0.86);
-          transition: -webkit-transform 0.3s
-            cubic-bezier(0.78, 0.14, 0.15, 0.86);
-          transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
-          transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86),
-            -webkit-transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
-          -webkit-font-feature-settings: "tnum";
-          font-feature-settings: "tnum";
         }
 
-        .ant-spin-spinning {
-          position: static;
-          display: inline-block;
-          opacity: 1;
-        }
-
-        .ant-spin-dot {
+        .truckWrapper {
+          width: 200px;
+          height: 100px;
+          display: flex;
+          flex-direction: column;
           position: relative;
-          display: inline-block;
-          width: 20px;
-          height: 20px;
-          font-size: 20px;
+          align-items: center;
+          justify-content: flex-end;
+          overflow-x: hidden;
         }
 
-        .ant-spin-dot-item {
+        .truckBody {
+          width: 130px;
+          height: fit-content;
+          margin-bottom: 6px;
+          animation: truckMotion 1s linear infinite;
+        }
+
+        @keyframes truckMotion {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(3px); }
+          100% { transform: translateY(0px); }
+        }
+
+        .truckTires {
+          width: 130px;
+          height: fit-content;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0px 10px 0px 15px;
           position: absolute;
-          display: block;
-          width: 9px;
-          height: 9px;
-          background-color: #1890ff;
-          border-radius: 100%;
-          -webkit-transform: scale(0.75);
-          -ms-transform: scale(0.75);
-          transform: scale(0.75);
-          -webkit-transform-origin: 50% 50%;
-          -ms-transform-origin: 50% 50%;
-          transform-origin: 50% 50%;
-          opacity: 0.3;
-          -webkit-animation: antspinmove 1s infinite linear alternate;
-          animation: antSpinMove 1s infinite linear alternate;
-        }
-
-        .ant-spin-dot-item:nth-child(1) {
-          top: 0;
-          left: 0;
-        }
-
-        .ant-spin-dot-item:nth-child(2) {
-          top: 0;
-          right: 0;
-          -webkit-animation-delay: 0.4s;
-          animation-delay: 0.4s;
-        }
-
-        .ant-spin-dot-item:nth-child(3) {
-          right: 0;
           bottom: 0;
-          -webkit-animation-delay: 0.8s;
-          animation-delay: 0.8s;
+        }
+        .truckTires svg {
+          width: 24px;
         }
 
-        .ant-spin-dot-item:nth-child(4) {
+        .road {
+          width: 100%;
+          height: 1.5px;
+          background-color: #282828;
+          position: relative;
           bottom: 0;
-          left: 0;
-          -webkit-animation-delay: 1.2s;
-          animation-delay: 1.2s;
+          align-self: flex-end;
+          border-radius: 3px;
+        }
+        .road::before {
+          content: "";
+          position: absolute;
+          width: 20px;
+          height: 100%;
+          background-color: #282828;
+          right: -50%;
+          border-radius: 3px;
+          animation: roadAnimation 1.4s linear infinite;
+          border-left: 10px solid #ffffff;
+        }
+        .road::after {
+          content: "";
+          position: absolute;
+          width: 10px;
+          height: 100%;
+          background-color: #282828;
+          right: -65%;
+          border-radius: 3px;
+          animation: roadAnimation 1.4s linear infinite;
+          border-left: 4px solid #ffffff;
         }
 
-        .ant-spin-dot-spin {
-          -webkit-transform: rotate(45deg);
-          -ms-transform: rotate(45deg);
-          transform: rotate(45deg);
-          -webkit-animation: antrotate 1.2s infinite linear;
-          animation: antRotate 1.2s infinite linear;
+        .lampPost {
+          position: absolute;
+          bottom: 0;
+          right: -90%;
+          height: 90px;
+          animation: roadAnimation 1.4s linear infinite;
         }
 
-        .ant-spin-lg .ant-spin-dot {
-          width: 32px;
-          height: 32px;
-          font-size: 32px;
+        @keyframes roadAnimation {
+          0% { transform: translateX(0px); }
+          100% { transform: translateX(-350px); }
         }
 
-        .ant-spin-lg .ant-spin-dot i {
-          width: 14px;
-          height: 14px;
+        /* ─── Text ─── */
+        .pangolin-loading-text {
+          margin-top: 32px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #333333;
+          letter-spacing: 2px;
+          font-family: 'Inter', 'Noto Sans SC', 'PingFang SC', sans-serif;
+        }
+        .pangolin-loading-sub {
+          margin-top: 10px;
+          font-size: 12px;
+          color: #999999;
+          font-family: 'Inter', 'Noto Sans SC', 'PingFang SC', sans-serif;
         }
 
-        @media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
-          .ant-spin-blur {
-            background: #fff;
-            opacity: 0.5;
-          }
+        /* ─── Progress bar ─── */
+        .pangolin-progress-bar {
+          margin-top: 24px;
+          width: 200px;
+          height: 2px;
+          background: #e8e8e8;
+          border-radius: 1px;
+          overflow: hidden;
         }
-
-        @-webkit-keyframes antSpinMove {
-          to {
-            opacity: 1;
-          }
+        .pangolin-progress-bar-inner {
+          width: 40%;
+          height: 100%;
+          background: linear-gradient(90deg, #4eaca3, #6ec6bd);
+          border-radius: 1px;
+          animation: progressSlide 1.8s ease-in-out infinite;
         }
-
-        @keyframes antSpinMove {
-          to {
-            opacity: 1;
-          }
-        }
-
-        @-webkit-keyframes antRotate {
-          to {
-            -webkit-transform: rotate(405deg);
-            transform: rotate(405deg);
-          }
-        }
-
-        @keyframes antRotate {
-          to {
-            -webkit-transform: rotate(405deg);
-            transform: rotate(405deg);
-          }
+        @keyframes progressSlide {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(350%); }
         }
       </style>
 
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        min-height: 362px;
-      ">
-        <div class="page-loading-warp">
-          <div class="ant-spin ant-spin-lg ant-spin-spinning">
-            <span class="ant-spin-dot ant-spin-dot-spin">
-              <i class="ant-spin-dot-item"></i>
-              <i class="ant-spin-dot-item"></i>
-              <i class="ant-spin-dot-item"></i>
-              <i class="ant-spin-dot-item"></i>
-            </span>
+      <div class="pangolin-loading-wrap">
+        <!-- Truck Animation -->
+        <div class="loader">
+          <div class="truckWrapper">
+            <div class="truckBody">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 198 93" class="trucksvg">
+                <path stroke-width="3" stroke="#282828" fill="#4eaca3" d="M135 22.5H177.264C178.295 22.5 179.22 23.133 179.594 24.0939L192.33 56.8443C192.442 57.1332 192.5 57.4404 192.5 57.7504V89C192.5 90.3807 191.381 91.5 190 91.5H135C133.619 91.5 132.5 90.3807 132.5 89V25C132.5 23.6193 133.619 22.5 135 22.5Z" />
+                <path stroke-width="3" stroke="#282828" fill="#3d8a83" d="M146 33.5H181.741C182.779 33.5 183.709 34.1415 184.078 35.112L190.538 52.112C191.16 53.748 189.951 55.5 188.201 55.5H146C144.619 55.5 143.5 54.3807 143.5 53V36C143.5 34.6193 144.619 33.5 146 33.5Z" />
+                <path stroke-width="2" stroke="#282828" fill="#282828" d="M150 65C150 65.39 149.763 65.8656 149.127 66.2893C148.499 66.7083 147.573 67 146.5 67C145.427 67 144.501 66.7083 143.873 66.2893C143.237 65.8656 143 65.39 143 65C143 64.61 143.237 64.1344 143.873 63.7107C144.501 63.2917 145.427 63 146.5 63C147.573 63 148.499 63.2917 149.127 63.7107C149.763 64.1344 150 64.61 150 65Z" />
+                <rect stroke-width="2" stroke="#282828" fill="#FFFCAB" rx="1" height="7" width="5" y="63" x="187" />
+                <rect stroke-width="2" stroke="#282828" fill="#282828" rx="1" height="11" width="4" y="81" x="193" />
+                <rect stroke-width="3" stroke="#282828" fill="#DFDFDF" rx="2.5" height="90" width="121" y="1.5" x="6.5" />
+                <rect stroke-width="2" stroke="#282828" fill="#DFDFDF" rx="2" height="4" width="6" y="84" x="1" />
+              </svg>
+            </div>
+            <div class="truckTires">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 30 30" class="tiresvg">
+                <circle stroke-width="3" stroke="#282828" fill="#282828" r="13.5" cy="15" cx="15" />
+                <circle fill="#DFDFDF" r="7" cy="15" cx="15" />
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 30 30" class="tiresvg">
+                <circle stroke-width="3" stroke="#282828" fill="#282828" r="13.5" cy="15" cx="15" />
+                <circle fill="#DFDFDF" r="7" cy="15" cx="15" />
+              </svg>
+            </div>
+            <div class="road"></div>
+            <svg xml:space="preserve" viewBox="0 0 453.459 453.459" xmlns="http://www.w3.org/2000/svg" version="1.1" fill="#282828" class="lampPost">
+              <path d="M252.882,0c-37.781,0-68.686,29.953-70.245,67.358h-6.917v8.954c-26.109,2.163-45.463,10.011-45.463,19.366h9.993
+        c-1.65,5.146-2.507,10.54-2.507,16.017c0,28.956,23.558,52.514,52.514,52.514c28.956,0,52.514-23.558,52.514-52.514
+        c0-5.478-0.856-10.872-2.506-16.017h9.992c0-9.354-19.352-17.204-45.463-19.366v-8.954h-6.149C200.189,38.779,223.924,16,252.882,16
+        c29.952,0,54.32,24.368,54.32,54.32c0,28.774-11.078,37.009-25.105,47.437c-17.444,12.968-37.216,27.667-37.216,78.884v113.914
+        h-0.797c-5.068,0-9.174,4.108-9.174,9.177c0,2.844,1.293,5.383,3.321,7.066c-3.432,27.933-26.851,95.744-8.226,115.459v11.202h45.75
+        v-11.202c18.625-19.715-4.794-87.527-8.227-115.459c2.029-1.683,3.322-4.223,3.322-7.066c0-5.068-4.107-9.177-9.176-9.177h-0.795
+        V196.641c0-43.174,14.942-54.283,30.762-66.043c14.793-10.997,31.559-23.461,31.559-60.277C323.202,31.545,291.656,0,252.882,0z
+        M232.77,111.694c0,23.442-19.071,42.514-42.514,42.514c-23.442,0-42.514-19.072-42.514-42.514c0-5.531,1.078-10.957,3.141-16.017
+        h78.747C231.693,100.736,232.77,106.162,232.77,111.694z" />
+            </svg>
           </div>
         </div>
-        <div class="loading-title">
-          正在加载资源
-        </div>
-        <div class="loading-sub-title">
-          初次加载资源可能需要较多时间 请耐心等待
+
+        <!-- Text -->
+        <div class="pangolin-loading-text">正在加载资源</div>
+        <div class="pangolin-loading-sub">初次加载资源可能需要较多时间 请耐心等待</div>
+
+        <!-- Logo -->
+        <div class="pangolin-loading-logo">
+          <img src="/pangolin-logo.png" alt="Pangolin" />
         </div>
       </div>
     `;

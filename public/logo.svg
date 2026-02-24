@@ -1,7 +1,0 @@
-<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="20" y="20" width="80" height="80" rx="4" stroke="#0F62FE" stroke-width="8"/>
-  <path d="M40 40H80V80H40V40Z" fill="#0F62FE" fill-opacity="0.1"/>
-  <rect x="50" y="50" width="20" height="20" fill="#0F62FE"/>
-  <path d="M70 50L80 40" stroke="#0F62FE" stroke-width="4"/>
-  <path d="M50 70L40 80" stroke="#0F62FE" stroke-width="4"/>
-</svg>
