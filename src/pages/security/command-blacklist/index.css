@@ -1,0 +1,249 @@
+/* ========== 高危指令黑名单页面 ========== */
+
+/* ---- 统计面板 ---- */
+.blacklist-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.blacklist-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+}
+
+.blacklist-stat-item:first-child {
+    padding-left: 0;
+}
+
+.blacklist-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+}
+
+.blacklist-stat-icon {
+    font-size: 22px;
+    opacity: 0.75;
+}
+
+.blacklist-stat-icon-total { color: #1677ff; }
+.blacklist-stat-icon-active { color: #52c41a; }
+.blacklist-stat-icon-critical { color: #ff4d4f; }
+.blacklist-stat-icon-high { color: #fa8c16; }
+.blacklist-stat-icon-medium { color: #fadb14; }
+
+.blacklist-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.blacklist-stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.88);
+    font-variant-numeric: tabular-nums;
+}
+
+.blacklist-stat-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    line-height: 1.4;
+}
+
+/* ---- 模式展示 ---- */
+.blacklist-pattern-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+}
+
+.blacklist-pattern-code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 12px;
+    padding: 2px 8px;
+    background: #f6f8fa;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    color: #cf1322;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    line-height: 20px;
+}
+
+/* ---- 严重级别 Tag 动效 ---- */
+.blacklist-severity-critical {
+    animation: blacklist-severity-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes blacklist-severity-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ---- 系统标记 ---- */
+.blacklist-system-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: #8c8c8c;
+    background: #f5f5f5;
+    padding: 1px 6px;
+    border-radius: 2px;
+    line-height: 18px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* ---- Modal 表单 ---- */
+.blacklist-form-section {
+    margin-bottom: 20px;
+}
+
+.blacklist-form-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.65);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.blacklist-form-section-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    background: #1677ff;
+    border-radius: 1px;
+}
+
+/* ---- 描述区域 ---- */
+.blacklist-desc-cell {
+    font-size: 12px;
+    color: #8c8c8c;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- 匹配类型选择卡片 ---- */
+.blacklist-match-type-cards {
+    display: flex;
+    gap: 8px;
+}
+
+.blacklist-match-type-card {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1.5px solid #e8e8e8;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.blacklist-match-type-card:hover {
+    border-color: #1677ff;
+    background: #f0f5ff;
+}
+
+.blacklist-match-type-card.active {
+    border-color: #1677ff;
+    background: #e6f4ff;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.blacklist-match-type-card-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+    color: #1677ff;
+}
+
+.blacklist-match-type-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.88);
+}
+
+.blacklist-match-type-card-desc {
+    font-size: 11px;
+    color: #8c8c8c;
+    margin-top: 2px;
+}
+
+/* ---- 规则预览面板 ---- */
+.blacklist-preview-panel {
+    background: #1e1e1e;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    overflow: hidden;
+}
+
+.blacklist-preview-title {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.blacklist-preview-content {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 13px;
+    color: #e06c75;
+    line-height: 1.6;
+    word-break: break-all;
+}
+
+.blacklist-preview-match {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.blacklist-preview-match-label {
+    font-size: 11px;
+    color: #888;
+}
+
+.blacklist-preview-match-type {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(22, 119, 255, 0.15);
+    color: #61afef;
+}
+
+/* ---- 行动画 ---- */
+.blacklist-row-enter {
+    animation: blacklist-row-slide-in 0.3s ease-out;
+}
+
+@keyframes blacklist-row-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
