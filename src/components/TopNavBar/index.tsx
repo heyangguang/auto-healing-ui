@@ -71,15 +71,11 @@ const useStyles = createStyles(({ token }) => ({
         boxSizing: 'border-box' as const,
     },
     logoIcon: {
-        width: 28,
-        height: 28,
-        background: token.colorPrimary,
+        height: 32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#fff',
-        fontWeight: 700,
-        fontSize: 10,
+        flexShrink: 0,
     },
     logoText: {
         fontSize: 15,
@@ -259,8 +255,7 @@ const TopNavBar: React.FC = () => {
 
                     {/* Logo */}
                     <div className={styles.logo} onClick={() => startTransition(() => history.push('/'))}>
-                        <div className={styles.logoIcon}>AH</div>
-                        {!isMobile && <span className={styles.logoText}>Auto Healing</span>}
+                        <div className={styles.logoIcon}><img src="/pangolin-logo.png" alt="Pangolin" style={{ height: 38 }} /></div>
                     </div>
 
                     {/* 导航链接 - 平台管理员未 Impersonation 时隐藏租户级导航 */}

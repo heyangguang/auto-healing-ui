@@ -7,11 +7,11 @@ const Footer: React.FC = () => {
       style={{
         background: 'none',
       }}
-      copyright={`${new Date().getFullYear()} KY-AHS 运维自愈平台 · Kyndryl`}
+      copyright={`${new Date().getFullYear()} Pangolin 运维自愈平台`}
       links={[
         {
-          key: 'KY-AHS',
-          title: 'KY-AHS v1.0',
+          key: 'Pangolin',
+          title: 'Pangolin v1.0',
           href: '/dashboard',
           blankTarget: false,
         },

@@ -83,7 +83,8 @@ export default defineConfig({
    * @name layout 插件
    * @doc https://umijs.org/docs/max/layout-menu
    */
-  title: '运维自愈平台',
+  title: 'Pangolin',
+  favicons: ['/pangolin-favicon.png'],
   layout: {
     locale: false,  // 禁用 ProLayout 菜单国际化（我们使用自定义导航，不需要翻译 menu.xxx）
     ...defaultSettings,

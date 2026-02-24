@@ -16,9 +16,9 @@ const Settings: ProLayoutProps & {
   fixedHeader: true,
   fixSiderbar: false,
   colorWeak: false,
-  title: 'Auto Healing',
+  title: 'Pangolin',
   pwa: true,
-  logo: '/logo.svg',
+  logo: '/pangolin-logo-full.png',
   iconfontUrl: '',
   token: {
     header: {
