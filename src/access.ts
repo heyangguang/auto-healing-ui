@@ -255,6 +255,19 @@ export default function access(
     canManageSystemSettings: hasPermission('system:settings'),
 
     // ===============================
+    // 安全防护 (security:*)
+    // ===============================
+    canViewBlacklist: hasPermission('security:blacklist:view'),
+    canCreateBlacklist: hasPermission('security:blacklist:create'),
+    canUpdateBlacklist: hasPermission('security:blacklist:update'),
+    canDeleteBlacklist: hasPermission('security:blacklist:delete'),
+    canManageBlacklist: hasAnyPermission('security:blacklist:create', 'security:blacklist:update'),
+    // 安全豁免
+    canViewExemptions: hasPermission('security:exemption:view'),
+    canCreateExemption: hasPermission('security:exemption:create'),
+    canApproveExemption: hasPermission('security:exemption:approve'),
+
+    // ===============================
     // 工作流（预留）
     // ===============================
     canViewWorkflows: hasPermission('workflow:list'),
