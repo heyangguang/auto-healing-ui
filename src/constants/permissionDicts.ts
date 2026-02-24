@@ -14,6 +14,7 @@ const FB_LABELS: Record<string, string> = {
     platform: '平台管理', 'site-message': '站内信', tenant: '租户管理',
     audit: '审计日志', channel: '通知渠道', playbook: '自动化剧本',
     repository: '代码仓库', task: '任务管理', template: '模板管理',
+    security: '安全防护',
 };
 
 const FB_META: Record<string, { label: string; color: string }> = {
@@ -35,6 +36,7 @@ const FB_META: Record<string, { label: string; color: string }> = {
     repository: { label: '代码仓库', color: '#2f54eb' },
     task: { label: '任务管理', color: '#fa8c16' },
     template: { label: '模板管理', color: '#13c2c2' },
+    security: { label: '安全防护', color: '#f5222d' },
 };
 
 // ==================== 动态变量 ====================

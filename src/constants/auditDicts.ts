@@ -19,6 +19,7 @@ const FB_TENANT_RESOURCE: Record<string, string> = {
     'secrets-sources': '凭据管理', 'site-messages': '站内信',
     templates: '通知模板', 'tenant-impersonation': '临时提权',
     user: '用户', users: '用户管理',
+    'command-blacklist': '命令黑名单', 'blacklist-exemptions': '豁免规则',
 };
 
 const FB_PLATFORM_RESOURCE: Record<string, string> = {
@@ -31,6 +32,8 @@ const FB_PLATFORM_RESOURCE: Record<string, string> = {
     tenant: '租户', 'tenant-impersonation': '临时提权',
     'tenant-users': '租户用户',
     tenants: '租户管理', users: '用户管理',
+    'command-blacklist': '命令黑名单', 'blacklist-exemptions': '豁免规则',
+    dictionaries: '字典管理',
 };
 
 const FB_ACTION_LABELS: Record<string, string> = {
