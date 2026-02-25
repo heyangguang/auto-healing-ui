@@ -13,6 +13,7 @@ import SubPageHeader from '@/components/SubPageHeader';
 import TaskTemplateSelector from '@/pages/healing/flows/editor/TaskTemplateSelector';
 import { getCommandBlacklist } from '@/services/auto-healing/commandBlacklist';
 import { createBlacklistExemption } from '@/services/auto-healing/blacklistExemption';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import '../command-blacklist/BlacklistRuleForm.css';
 
 const { TextArea } = Input;
@@ -277,7 +278,7 @@ const ExemptionForm: React.FC = () => {
             history.push('/security/exemptions');
         } catch (err: any) {
             if (err?.errorFields) return;
-            message.error(err?.data?.error || err?.message || '提交失败');
+            /* 全局 errorHandler 已显示错误 */
         } finally {
             setSubmitting(false);
         }

@@ -130,8 +130,8 @@ const ImpersonationApprovalsPage: React.FC = () => {
             message.success('已批准该请求');
             setDrawerOpen(false);
             setRefreshTrigger(prev => prev + 1);
-        } catch (err: any) {
-            message.error(extractErrorMsg(err, '审批失败'));
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         } finally {
             setActionLoading(null);
         }
@@ -153,8 +153,8 @@ const ImpersonationApprovalsPage: React.FC = () => {
             setRejectModalOpen(false);
             setDrawerOpen(false);
             setRefreshTrigger(prev => prev + 1);
-        } catch (err: any) {
-            message.error(extractErrorMsg(err, '拒绝失败'));
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         } finally {
             setActionLoading(null);
         }

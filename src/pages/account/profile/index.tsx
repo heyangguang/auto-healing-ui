@@ -18,6 +18,7 @@ import { history } from '@umijs/max';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import './index.css';
 
 dayjs.extend(relativeTime);
@@ -185,7 +186,7 @@ const ProfilePage: React.FC = () => {
             setPwdOpen(false);
         } catch (e: any) {
             if (e?.errorFields) return;
-            message.error(e?.message || '修改失败');
+            /* 全局 errorHandler 已显示错误 */
         }
     };
 

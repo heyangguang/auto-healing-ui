@@ -21,6 +21,7 @@ import {
 import { getPlatformUsersSimple } from '@/services/auto-healing/platform/users';
 import { getRoles } from '@/services/auto-healing/roles';
 import dayjs from 'dayjs';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import './TenantMembers.css';
 
 const { Text } = Typography;
@@ -158,8 +159,8 @@ const TenantMembersPage: React.FC = () => {
             addMemberForm.resetFields();
             loadMembers();
             loadSimpleUsers();
-        } catch (e: any) {
-            message.error(e?.response?.data?.message || e?.data?.message || '添加失败');
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         } finally {
             setSubmitting(false);
         }
@@ -173,8 +174,8 @@ const TenantMembersPage: React.FC = () => {
             message.success('成员已移除');
             loadMembers();
             loadSimpleUsers();
-        } catch (e: any) {
-            message.error(e?.response?.data?.message || e?.data?.message || '移除失败');
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         }
     };
 
@@ -189,8 +190,8 @@ const TenantMembersPage: React.FC = () => {
             message.success('邀请已创建');
             inviteForm.resetFields();
             loadInvitations();
-        } catch (e: any) {
-            message.error(e?.response?.data?.message || e?.data?.message || '邀请失败');
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         } finally {
             setSubmitting(false);
         }
@@ -203,8 +204,8 @@ const TenantMembersPage: React.FC = () => {
             await cancelTenantInvitation(id, invId);
             message.success('邀请已取消');
             loadInvitations(invPage);
-        } catch (e: any) {
-            message.error(e?.response?.data?.message || e?.data?.message || '取消失败');
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         }
     };
 

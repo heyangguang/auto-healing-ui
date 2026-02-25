@@ -25,6 +25,7 @@ import {
 } from '@/services/auto-healing/platform/impersonation';
 import { getTenants } from '@/services/auto-healing/platform/tenants';
 import { saveImpersonationState, clearImpersonationState } from '@/store/impersonation';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import '../../system/audit-logs/index.css';
 
 dayjs.extend(relativeTime);
@@ -92,7 +93,7 @@ const ImpersonationPage: React.FC = () => {
             const res = await getTenants({ page: 1, page_size: 100 });
             const list = (res as any)?.data || [];
             setTenants(list.map((t: any) => ({ id: t.id, name: t.name })));
-        } catch { message.error('加载租户列表失败'); }
+        } catch { /* 全局 errorHandler 已显示错误 */ }
     }, []);
 
     /* ── 提交申请 ── */
@@ -109,8 +110,8 @@ const ImpersonationPage: React.FC = () => {
             setModalOpen(false);
             form.resetFields();
             setRefreshTrigger(prev => prev + 1);
-        } catch (err: any) {
-            if (err?.data?.message) message.error(err.data.message);
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         } finally {
             setSubmitLoading(false);
         }
@@ -139,8 +140,8 @@ const ImpersonationPage: React.FC = () => {
                 // 跳转到工作台再 reload，避免在 /platform/* 页面 reload 后因 isPlatformAdmin=false 导致 403
                 setTimeout(() => { window.location.href = '/workbench'; }, 500);
             }
-        } catch (err: any) {
-            message.error(err?.data?.message || '进入失败');
+        } catch {
+            /* 全局 errorHandler 已显示错误 */
         } finally {
             setActionLoading(null);
         }

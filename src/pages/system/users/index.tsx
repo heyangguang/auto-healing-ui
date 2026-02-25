@@ -15,6 +15,7 @@ import { getUsers, deleteUser, resetUserPassword, updateUser } from '@/services/
 import { getRoles } from '@/services/auto-healing/roles';
 import { USER_STATUS_OPTIONS, USER_STATUS_MAP } from '@/constants/commonDicts';
 import dayjs from 'dayjs';
+import { extractErrorMsg } from '@/utils/errorMsg';
 
 const { Text } = Typography;
 
@@ -210,7 +211,7 @@ const UsersPage: React.FC = () => {
                     </Tooltip>
                     <Popconfirm title="确定要删除此用户吗？" onConfirm={async () => {
                         try { await deleteUser(record.id); message.success('删除成功'); triggerRefresh(); }
-                        catch { message.error('删除失败'); }
+                        catch { /* 全局 errorHandler 已显示错误 */ }
                     }}>
                         <Tooltip title="删除">
                             <Button type="link" size="small" danger disabled={!access.canDeleteUser} icon={<DeleteOutlined />} />
