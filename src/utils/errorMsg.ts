@@ -9,6 +9,8 @@
  * umi-request 抛出的 error 对象中 response.data 包含上述结构
  */
 export function extractErrorMsg(err: any, fallback: string): string {
+    // 全局 errorHandler 挂载的后端消息（最高优先级）
+    if (typeof err?._backendMessage === 'string' && err._backendMessage) return err._backendMessage;
     // 来自 umi-request 的错误
     const data = err?.response?.data || err?.data;
     if (data) {
