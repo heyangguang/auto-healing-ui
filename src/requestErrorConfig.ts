@@ -282,7 +282,14 @@ export const errorConfig: RequestConfig = {
           return;
         }
 
-        const errorMsg = data?.error?.message || data?.message || `请求失败 (${status})`;
+        // 后端错误响应有两种格式：
+        // 1. {error: {code: "...", message: "..."}} — response.Error() 标准格式
+        // 2. {error: "错误信息"}                     — gin.H{} 简单格式
+        // 3. {message: "错误信息"}                   — 部分旧接口
+        const rawError = data?.error;
+        const errorMsg = (typeof rawError === 'string' ? rawError : rawError?.message)
+          || data?.message
+          || `请求失败 (${status})`;
         message.error(errorMsg);
       } else if (error.request) {
         message.error('网络连接失败，请检查网络');
