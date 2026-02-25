@@ -61,6 +61,7 @@ export async function createBlacklistExemption(data: {
 export async function approveBlacklistExemption(id: string) {
     return request<{ message: string }>(`/api/v1/tenant/blacklist-exemptions/${id}/approve`, {
         method: 'POST',
+        skipErrorHandler: true,
     });
 }
 
@@ -69,6 +70,7 @@ export async function rejectBlacklistExemption(id: string, rejectReason?: string
     return request<{ message: string }>(`/api/v1/tenant/blacklist-exemptions/${id}/reject`, {
         method: 'POST',
         data: { reject_reason: rejectReason },
+        skipErrorHandler: true,
     });
 }
 

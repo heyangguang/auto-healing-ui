@@ -177,7 +177,7 @@ const NotificationTemplatesPage: React.FC = () => {
             setHasMore(currentPage * PAGE_SIZE < total);
         } catch (error) {
             console.error('Failed to load templates:', error);
-            message.error('加载模板列表失败');
+            /* global error handler */
         } finally {
             if (!silent) setLoading(false);
             setLoadingMore(false);
@@ -329,7 +329,7 @@ const NotificationTemplatesPage: React.FC = () => {
             setIsDirty(false);
         } catch (error) {
             if (!(error as any).errorFields) {
-                message.error('保存失败');
+                /* global error handler */
             }
         } finally {
             setSaving(false);

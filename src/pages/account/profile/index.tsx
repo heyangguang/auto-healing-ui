@@ -174,7 +174,7 @@ const ProfilePage: React.FC = () => {
             load();
         } catch (e: any) {
             if (e?.errorFields) return;
-            message.error('更新失败');
+            /* global error handler */
         } finally { setSaving(false); }
     };
     const handlePwd = async () => {

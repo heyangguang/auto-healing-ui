@@ -93,7 +93,7 @@ const PlatformRolesPage: React.FC = () => {
             const start = (p - 1) * ps;
             setData(list.slice(start, start + ps));
         } catch {
-            message.error('加载角色列表失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -178,7 +178,7 @@ const PlatformRolesPage: React.FC = () => {
             message.success('删除成功');
             loadData(page, pageSize, searchValue);
         } catch {
-            message.error('删除失败');
+            /* global error handler */
         }
     }, [page, pageSize, searchValue, loadData]);
 

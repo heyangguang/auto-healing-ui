@@ -99,7 +99,7 @@ const PendingTriggers: React.FC = () => {
                     refreshCountRef.current += 1;
                     setRefreshKey(prev => prev + 1);
                 } catch {
-                    message.error('启动失败');
+                    /* global error handler */
                 }
             },
         });
@@ -119,7 +119,7 @@ const PendingTriggers: React.FC = () => {
                     refreshCountRef.current += 1;
                     setRefreshKey(prev => prev + 1);
                 } catch {
-                    message.error('忽略失败');
+                    /* global error handler */
                 }
             },
         });
@@ -138,7 +138,7 @@ const PendingTriggers: React.FC = () => {
                     refreshCountRef.current += 1;
                     setRefreshKey(prev => prev + 1);
                 } catch {
-                    message.error('恢复失败');
+                    /* global error handler */
                 }
             },
         });

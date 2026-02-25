@@ -114,7 +114,7 @@ const IncidentList: React.FC = () => {
             await resetIncidentScan(record.id);
             message.success('已重置扫描状态');
             triggerRefresh();
-        } catch { message.error('重置失败'); }
+        } catch { /* global error handler */ }
     }, [triggerRefresh]);
 
     const handleBatchResetScan = useCallback(async () => {
@@ -131,7 +131,7 @@ const IncidentList: React.FC = () => {
                     message.success(`成功重置 ${res.data.affected_count} 条工单`);
                     setSelectedRowMap(new Map());
                     triggerRefresh();
-                } catch { message.error('批量重置失败'); }
+                } catch { /* global error handler */ }
             },
         });
     }, [selectedRows, triggerRefresh]);

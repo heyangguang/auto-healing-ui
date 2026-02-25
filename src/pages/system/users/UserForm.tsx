@@ -44,7 +44,7 @@ const UserFormPage: React.FC = () => {
                     role_ids: roleIds,
                 });
             } catch {
-                message.error('加载用户数据失败');
+                /* global error handler */
             } finally {
                 setLoading(false);
             }

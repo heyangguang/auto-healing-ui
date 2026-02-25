@@ -49,7 +49,7 @@ const TaskTemplateDetail: React.FC = () => {
             setSecretsSources((secretsRes as any).data || []);
             setChannels((channelsRes as any).data || []);
         } catch (e: any) {
-            message.error('获取任务模板失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -66,7 +66,7 @@ const TaskTemplateDetail: React.FC = () => {
             message.success('变量变更已确认');
             fetchData();
         } catch {
-            message.error('确认失败');
+            /* global error handler */
         } finally {
             setConfirming(false);
         }

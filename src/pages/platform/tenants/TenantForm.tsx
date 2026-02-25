@@ -84,7 +84,7 @@ const TenantForm: React.FC = () => {
                 status: tenant.status,
             });
         }).catch(() => {
-            message.error('加载租户信息失败');
+            /* global error handler */
         }).finally(() => setLoading(false));
     }, [id, isEdit, form]);
 

@@ -84,7 +84,7 @@ const UsersPage: React.FC = () => {
             // 回滚
             record.status = oldStatus;
             forceUpdate(n => n + 1);
-            message.error('状态切换失败');
+            /* global error handler */
         }
     }, []);
 
@@ -368,7 +368,7 @@ const UsersPage: React.FC = () => {
                                             message.success('删除成功');
                                             setDetailDrawerOpen(false);
                                             triggerRefresh();
-                                        } catch { message.error('删除失败'); }
+                                        } catch { /* global error handler */ }
                                     }}
                                 >
                                     <Button size="small" danger icon={<DeleteOutlined />} disabled={!access.canDeleteUser}>
@@ -468,7 +468,7 @@ const UsersPage: React.FC = () => {
                     if (!currentUser) return;
                     const values = await resetPwdForm.validateFields();
                     try { await resetUserPassword(currentUser.id, { new_password: values.new_password }); message.success('密码重置成功'); setResetPwdModalOpen(false); }
-                    catch { message.error('重置失败'); }
+                    catch { /* global error handler */ }
                 }}
                 destroyOnHidden
             >

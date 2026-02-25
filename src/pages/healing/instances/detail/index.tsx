@@ -436,7 +436,7 @@ const HealingInstanceDetail: React.FC = () => {
             message.success('已发送取消请求');
             refresh();
         } catch (error) {
-            message.error('取消失败');
+            /* global error handler */
         }
     };
 
@@ -447,7 +447,7 @@ const HealingInstanceDetail: React.FC = () => {
             message.success('已开始重试');
             refresh();
         } catch (error) {
-            message.error('重试失败');
+            /* global error handler */
         }
     };
 

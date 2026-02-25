@@ -36,7 +36,7 @@ const handleAdd = async (fields: TableListItem) => {
     return true;
   } catch (_error) {
     hide();
-    message.error('添加失败请重试！');
+    /* global error handler */
     return false;
   }
 };
@@ -62,7 +62,7 @@ const handleUpdate = async (
     return true;
   } catch (_error) {
     hide();
-    message.error('配置失败请重试！');
+    /* global error handler */
     return false;
   }
 };
@@ -85,7 +85,7 @@ const handleRemove = async (selectedRows: TableListItem[]) => {
     return true;
   } catch (_error) {
     hide();
-    message.error('删除失败，请重试');
+    /* global error handler */
     return false;
   }
 };

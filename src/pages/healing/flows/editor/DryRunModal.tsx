@@ -50,7 +50,7 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
                 try {
                     mockIncident = JSON.parse(values.rawJson);
                 } catch (e) {
-                    message.error('JSON 格式错误');
+                    /* global error handler */
                     setLoading(false);
                     return;
                 }
@@ -116,7 +116,7 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
             abortControllerRef.current = controller;
 
         } catch (error: any) {
-            message.error('Dry-Run 执行失败');
+            /* global error handler */
             onRunComplete(false, '执行失败');
             setLoading(false);
         }

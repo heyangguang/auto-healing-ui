@@ -81,7 +81,7 @@ const RuleFormPage: React.FC = () => {
             });
             setConditions(rule.conditions || []);
         } catch {
-            message.error('加载规则失败');
+            /* global error handler */
             history.push('/healing/rules');
         } finally {
             setLoading(false);

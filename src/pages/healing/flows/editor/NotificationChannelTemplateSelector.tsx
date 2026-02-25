@@ -87,7 +87,7 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
                 enabled: c.enabled
             })));
         } catch (e) {
-            message.error('加载通知渠道失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -105,7 +105,7 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
                 description: t.description
             })));
         } catch (e) {
-            message.error('加载通知模板失败');
+            /* global error handler */
         } finally {
             setLoadingTemplates(false);
         }

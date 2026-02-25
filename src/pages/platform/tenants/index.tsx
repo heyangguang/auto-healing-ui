@@ -116,7 +116,7 @@ const TenantsPage: React.FC = () => {
                 setStats({ total: tot, active: activeCount, inactive: tot - activeCount });
             }
         } catch {
-            message.error('加载租户列表失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -194,7 +194,7 @@ const TenantsPage: React.FC = () => {
                     : { inactive: prev.inactive - 1 }),
             }));
         } catch {
-            message.error('租户删除失败');
+            /* global error handler */
         } finally {
             setActionLoading(null);
         }

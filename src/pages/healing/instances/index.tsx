@@ -248,7 +248,7 @@ const InstanceList: React.FC = () => {
             setPage(currentPage);
             setTotal(res.total || data.length);
         } catch (error) {
-            message.error('加载实例列表失败');
+            /* global error handler */
             if (isReset) setInstances([]);
         } finally {
             setLoading(false);
@@ -321,7 +321,7 @@ const InstanceList: React.FC = () => {
                 }
             })
             .catch(() => {
-                message.error('加载实例详情失败');
+                /* global error handler */
             })
             .finally(() => {
                 setDetailLoading(false);

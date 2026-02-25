@@ -93,7 +93,7 @@ const PendingApprovals: React.FC = () => {
                     refreshCountRef.current += 1;
                     setRefreshKey(prev => prev + 1);
                 } catch {
-                    message.error('操作失败');
+                    /* global error handler */
                 }
             },
         });
@@ -125,7 +125,7 @@ const PendingApprovals: React.FC = () => {
                     refreshCountRef.current += 1;
                     setRefreshKey(prev => prev + 1);
                 } catch {
-                    message.error('操作失败');
+                    /* global error handler */
                 }
             },
         });

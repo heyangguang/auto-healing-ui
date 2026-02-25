@@ -124,7 +124,7 @@ const AuditLogsPage: React.FC = () => {
             const res = await getAuditLogDetail(record.id);
             setDetail((res as any)?.data || res);
         } catch {
-            message.error('加载详情失败');
+            /* global error handler */
         } finally {
             setDetailLoading(false);
         }
@@ -208,7 +208,7 @@ const AuditLogsPage: React.FC = () => {
             setExportModalOpen(false);
             exportForm.resetFields();
         } catch {
-            message.error('导出失败');
+            /* global error handler */
         } finally {
             setExporting(false);
         }

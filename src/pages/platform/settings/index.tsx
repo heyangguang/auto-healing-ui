@@ -32,7 +32,7 @@ const PlatformSettingsPage: React.FC = () => {
             const res = await getPlatformSettings();
             setModules(res?.data || []);
         } catch {
-            message.error('加载平台设置失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -86,7 +86,7 @@ const PlatformSettingsPage: React.FC = () => {
             cancelEdit();
             loadSettings();
         } catch {
-            message.error('保存失败');
+            /* global error handler */
         } finally {
             setSaving(false);
         }

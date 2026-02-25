@@ -327,7 +327,7 @@ const BlacklistRuleForm: React.FC = () => {
                 message.warning('Playbook 无文件内容');
             }
         } catch {
-            message.error('加载 Playbook 文件失败');
+            /* global error handler */
         } finally {
             setLoadingPlaybook(false);
             setLoadProgress(100);
@@ -435,7 +435,7 @@ const BlacklistRuleForm: React.FC = () => {
                 setSelectedMatchType(rule.match_type);
                 setIsSystem(rule.is_system);
             } catch {
-                message.error('加载规则失败');
+                /* global error handler */
             } finally {
                 setLoading(false);
             }
@@ -459,7 +459,7 @@ const BlacklistRuleForm: React.FC = () => {
             history.push('/security/command-blacklist');
         } catch (error) {
             if (!(error as any).errorFields) {
-                message.error('保存失败');
+                /* global error handler */
             }
         } finally {
             setSubmitting(false);

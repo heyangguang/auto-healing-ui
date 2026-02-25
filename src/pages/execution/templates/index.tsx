@@ -502,7 +502,7 @@ const ExecutionTemplateList: React.FC = () => {
             setReviewGroups(Array.from(groups.values()));
             setSelectedPlaybooks(Array.from(groups.keys()));
             setBatchReviewOpen(true);
-        } catch { message.error('获取待审核列表失败'); }
+        } catch { /* global error handler */ }
     };
 
     // 执行批量审核
@@ -519,7 +519,7 @@ const ExecutionTemplateList: React.FC = () => {
             message.success(`已批量确认 ${totalConfirmed} 个任务模板`);
             setBatchReviewOpen(false);
             setRefreshTrigger(v => v + 1);
-        } catch { message.error('批量审核失败'); }
+        } catch { /* global error handler */ }
         setBatchReviewLoading(false);
     };
 

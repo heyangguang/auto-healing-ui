@@ -47,7 +47,7 @@ const PlatformMessagesPage: React.FC = () => {
                 setCategoryMap(map);
             })
             .catch(() => {
-                message.error('加载消息分类失败');
+                /* global error handler */
             })
             .finally(() => setCategoriesLoading(false));
     }, []);
@@ -83,7 +83,7 @@ const PlatformMessagesPage: React.FC = () => {
             setRefreshTrigger((n) => n + 1);
             window.dispatchEvent(new Event('site-messages:new'));
         } catch {
-            message.error('消息发送失败');
+            /* global error handler */
         } finally {
             setSubmitting(false);
         }

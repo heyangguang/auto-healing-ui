@@ -60,7 +60,7 @@ const NotificationChannelsPage: React.FC = () => {
             setTotal(res.total || 0);
         } catch (error) {
             console.error('Failed to load channels:', error);
-            message.error('加载渠道列表失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }

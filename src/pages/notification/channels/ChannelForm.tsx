@@ -53,7 +53,7 @@ const ChannelFormPage: React.FC = () => {
                     setWebhookAuthType('headers');
                 }
             } catch {
-                message.error('加载渠道数据失败');
+                /* global error handler */
             } finally {
                 setLoading(false);
             }
@@ -123,7 +123,7 @@ const ChannelFormPage: React.FC = () => {
             history.push('/notification/channels');
         } catch (error) {
             if (!(error as any).errorFields) {
-                message.error('保存失败');
+                /* global error handler */
             }
         } finally {
             setSubmitting(false);

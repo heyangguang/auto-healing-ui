@@ -137,7 +137,7 @@ const ExecutionRunDetail: React.FC = () => {
             const res = await executeTask(run.task_id, retryParams);
             message.success('任务已重新触发');
             if (res.data?.id) history.push(`/execution/runs/${res.data.id}`);
-        } catch { message.error('重试失败'); }
+        } catch { /* global error handler */ }
         finally { setRetrying(false); }
     };
 

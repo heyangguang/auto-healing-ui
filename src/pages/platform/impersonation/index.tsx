@@ -155,7 +155,7 @@ const ImpersonationPage: React.FC = () => {
             message.success('已退出租户视角');
             setTimeout(() => window.location.reload(), 500);
         } catch {
-            message.error('退出失败');
+            /* global error handler */
         } finally {
             setActionLoading(null);
         }
@@ -174,7 +174,7 @@ const ImpersonationPage: React.FC = () => {
                 setTimeout(() => window.location.reload(), 500);
             }
         } catch {
-            message.error('终止会话失败');
+            /* global error handler */
         } finally {
             setActionLoading(null);
         }
@@ -188,7 +188,7 @@ const ImpersonationPage: React.FC = () => {
             message.success('申请已撤销');
             setRefreshTrigger(prev => prev + 1);
         } catch {
-            message.error('撤销失败');
+            /* global error handler */
         } finally {
             setActionLoading(null);
         }

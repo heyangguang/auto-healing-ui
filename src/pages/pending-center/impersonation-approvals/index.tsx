@@ -21,6 +21,7 @@ import {
     rejectImpersonation,
     type ImpersonationRequest,
 } from '@/services/auto-healing/platform/impersonation';
+import { extractErrorMsg } from '@/utils/errorMsg';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -130,7 +131,7 @@ const ImpersonationApprovalsPage: React.FC = () => {
             setDrawerOpen(false);
             setRefreshTrigger(prev => prev + 1);
         } catch (err: any) {
-            message.error(err?.data?.message || '审批失败');
+            message.error(extractErrorMsg(err, '审批失败'));
         } finally {
             setActionLoading(null);
         }
@@ -153,7 +154,7 @@ const ImpersonationApprovalsPage: React.FC = () => {
             setDrawerOpen(false);
             setRefreshTrigger(prev => prev + 1);
         } catch (err: any) {
-            message.error(err?.data?.message || '拒绝失败');
+            message.error(extractErrorMsg(err, '拒绝失败'));
         } finally {
             setActionLoading(null);
         }

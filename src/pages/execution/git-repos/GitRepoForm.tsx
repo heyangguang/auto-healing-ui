@@ -69,7 +69,7 @@ const GitRepoFormPage: React.FC = () => {
             setDefaultBranch(r.default_branch || 'main');
             setAvailableBranches([r.default_branch || 'main']);
         }).catch(() => {
-            message.error('加载仓库信息失败');
+            /* global error handler */
         }).finally(() => setLoading(false));
     }, [isEdit, params.id, form]);
 
@@ -156,7 +156,7 @@ const GitRepoFormPage: React.FC = () => {
             history.push('/execution/git-repos');
         } catch (error) {
             if (!(error as any).errorFields) {
-                message.error('保存失败');
+                /* global error handler */
             }
         } finally {
             setSubmitting(false);

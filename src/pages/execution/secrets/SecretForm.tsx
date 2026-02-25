@@ -97,7 +97,7 @@ const SecretFormPage: React.FC = () => {
                     webhook_field_private_key: config.field_mapping?.private_key,
                 });
             } catch {
-                message.error('加载密钥源数据失败');
+                /* global error handler */
             } finally {
                 setLoading(false);
             }
@@ -171,7 +171,7 @@ const SecretFormPage: React.FC = () => {
             history.push('/resources/secrets');
         } catch (error) {
             if (!(error as any).errorFields) {
-                message.error('保存失败');
+                /* global error handler */
             }
         } finally {
             setSubmitting(false);

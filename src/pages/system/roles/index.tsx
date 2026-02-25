@@ -54,7 +54,7 @@ const RolesPage: React.FC = () => {
             roleData._workspaceNames = wsNames;
             setDetailRole(roleData);
         } catch {
-            message.error('加载角色详情失败');
+            /* global error handler */
         } finally {
             setDetailLoading(false);
         }
@@ -194,7 +194,7 @@ const RolesPage: React.FC = () => {
                                         message.success('删除成功');
                                         triggerRefresh();
                                     } catch {
-                                        message.error('删除失败');
+                                        /* global error handler */
                                     }
                                 }}
                             >
@@ -376,7 +376,7 @@ const RolesPage: React.FC = () => {
                                                         setDetailDrawerOpen(false);
                                                         refreshCountRef.current += 1;
                                                         forceUpdate(n => n + 1);
-                                                    } catch { message.error('删除失败'); }
+                                                    } catch { /* global error handler */ }
                                                 }}
                                             >
                                                 <Button size="small" danger icon={<DeleteOutlined />} disabled={!access.canDeleteRole}>

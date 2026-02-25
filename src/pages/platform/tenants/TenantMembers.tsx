@@ -82,7 +82,7 @@ const TenantMembersPage: React.FC = () => {
             const res = await getTenant(id);
             setTenant((res as any)?.data || res);
         } catch {
-            message.error('加载租户信息失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -95,7 +95,7 @@ const TenantMembersPage: React.FC = () => {
             const res = await getTenantMembers(id);
             setMembers((res as any)?.data || []);
         } catch {
-            message.error('加载成员列表失败');
+            /* global error handler */
         } finally {
             setMembersLoading(false);
         }
@@ -117,7 +117,7 @@ const TenantMembersPage: React.FC = () => {
             setInvTotal((res as any)?.total || 0);
             setInvPage(page);
         } catch {
-            message.error('加载邀请列表失败');
+            /* global error handler */
         } finally {
             setInvLoading(false);
         }
@@ -225,7 +225,7 @@ const TenantMembersPage: React.FC = () => {
             changeRoleForm.resetFields();
             loadMembers();
         } catch {
-            message.error('更新角色失败');
+            /* global error handler */
         } finally {
             setSubmitting(false);
         }

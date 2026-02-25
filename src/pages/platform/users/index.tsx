@@ -104,7 +104,7 @@ const PlatformUsersPage: React.FC = () => {
                 setStats({ total: tot, active: activeCount, inactive: tot - activeCount });
             }
         } catch {
-            message.error('加载用户列表失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -170,7 +170,7 @@ const PlatformUsersPage: React.FC = () => {
             setResetPwdOpen(false);
             resetPwdForm.resetFields();
         } catch {
-            message.error('密码重置失败');
+            /* global error handler */
         } finally {
             setSubmitting(false);
         }
@@ -199,7 +199,7 @@ const PlatformUsersPage: React.FC = () => {
             if (drawerUser?.id === user.id) {
                 setDrawerUser((prev: any) => prev ? { ...prev, status: originalStatus } : prev);
             }
-            message.error('操作失败');
+            /* global error handler */
         }
     };
 

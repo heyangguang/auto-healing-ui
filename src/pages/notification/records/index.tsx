@@ -224,7 +224,7 @@ const NotificationRecords: React.FC = () => {
                                 try {
                                     const res = await getExecutionRun(record.execution_run_id!);
                                     setExecDetail(res.data || res);
-                                } catch { message.error('加载执行详情失败'); }
+                                } catch { /* global error handler */ }
                                 finally { setExecLoading(false); }
                             }} style={{ fontWeight: 500, cursor: 'pointer' }}>
                                 {execRun.task.name}

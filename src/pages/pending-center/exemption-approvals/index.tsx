@@ -17,6 +17,7 @@ import {
     approveBlacklistExemption,
     rejectBlacklistExemption,
 } from '@/services/auto-healing/blacklistExemption';
+import { extractErrorMsg } from '@/utils/errorMsg';
 
 const { Text } = Typography;
 
@@ -125,7 +126,7 @@ const ExemptionApprovalsPage: React.FC = () => {
             setDrawerOpen(false);
             setRefreshTrigger(prev => prev + 1);
         } catch (err: any) {
-            message.error(err?.data?.error || err?.message || '审批失败');
+            message.error(extractErrorMsg(err, '审批失败'));
         } finally {
             setActionLoading(null);
         }
@@ -148,7 +149,7 @@ const ExemptionApprovalsPage: React.FC = () => {
             setDrawerOpen(false);
             setRefreshTrigger(prev => prev + 1);
         } catch (err: any) {
-            message.error(err?.data?.error || err?.message || '拒绝失败');
+            message.error(extractErrorMsg(err, '拒绝失败'));
         } finally {
             setActionLoading(null);
         }

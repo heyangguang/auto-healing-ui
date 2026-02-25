@@ -102,7 +102,7 @@ const RoleFormPage: React.FC = () => {
                 const permIds = (role.permissions || []).map((p: any) => p.id);
                 setCheckedKeys(permIds);
             } catch {
-                message.error('加载角色数据失败');
+                /* global error handler */
             } finally {
                 setRoleLoading(false);
             }

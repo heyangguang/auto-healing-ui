@@ -116,7 +116,7 @@ const PlatformAuditLogsPage: React.FC = () => {
             const res = await getPlatformAuditLogDetail(record.id);
             setDetail((res as any)?.data || res);
         } catch {
-            message.error('加载详情失败');
+            /* global error handler */
         } finally {
             setDetailLoading(false);
         }

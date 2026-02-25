@@ -133,7 +133,7 @@ const ScheduleForm: React.FC = () => {
                     }
                 }
             } catch (e) {
-                message.error('加载数据失败');
+                /* global error handler */
             } finally {
                 setLoading(false);
             }
@@ -223,7 +223,7 @@ const ScheduleForm: React.FC = () => {
             history.push('/execution/schedules');
         } catch (error) {
             if (!(error as any).errorFields) {
-                message.error('提交失败，请重试');
+                /* global error handler */
             }
         } finally {
             setSubmitting(false);

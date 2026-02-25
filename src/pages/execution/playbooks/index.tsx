@@ -458,7 +458,7 @@ const PlaybookList: React.FC = () => {
                     const detail = await getPlaybook(selectedPlaybook.id);
                     setSelectedPlaybook(detail.data);
                 } catch {
-                    message.error('自动保存失败');
+                    /* global error handler */
                 }
             }
         }, 500);

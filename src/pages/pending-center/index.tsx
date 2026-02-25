@@ -121,7 +121,7 @@ const PendingCenter: React.FC = () => {
                     refreshCountRef.current += 1;
                     setActiveTab(prev => prev);
                 } catch {
-                    message.error('启动失败');
+                    /* global error handler */
                 }
             },
         });
@@ -141,7 +141,7 @@ const PendingCenter: React.FC = () => {
                     refreshCountRef.current += 1;
                     setActiveTab(prev => prev);
                 } catch {
-                    message.error('忽略失败');
+                    /* global error handler */
                 }
             },
         });
@@ -169,7 +169,7 @@ const PendingCenter: React.FC = () => {
                     refreshCountRef.current += 1;
                     setActiveTab(prev => prev);
                 } catch {
-                    message.error('操作失败');
+                    /* global error handler */
                 }
             },
         });
@@ -201,7 +201,7 @@ const PendingCenter: React.FC = () => {
                     refreshCountRef.current += 1;
                     setActiveTab(prev => prev);
                 } catch {
-                    message.error('操作失败');
+                    /* global error handler */
                 }
             },
         });

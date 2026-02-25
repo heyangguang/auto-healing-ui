@@ -172,7 +172,7 @@ const ExecutionSchedulePage: React.FC = () => {
             setEnableOnceModal({ visible: false, schedule: null, newScheduledAt: null });
             setRefreshTrigger(t => t + 1);
         } catch {
-            message.error('启用失败');
+            /* global error handler */
         }
         setActionLoading(null);
     };
@@ -184,7 +184,7 @@ const ExecutionSchedulePage: React.FC = () => {
             message.success('调度已删除');
             setRefreshTrigger(t => t + 1);
         } catch {
-            message.error('删除失败');
+            /* global error handler */
         }
         setActionLoading(null);
     };

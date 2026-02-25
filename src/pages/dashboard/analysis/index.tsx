@@ -437,7 +437,7 @@ const DashboardBuilder: React.FC = () => {
       });
       setIsEditing(false);
     } catch (err) {
-      message.error('保存失败');
+      /* global error handler */
     }
   }, [systemWsName, systemWsDesc, activeWorkspace]);
 
@@ -459,7 +459,7 @@ const DashboardBuilder: React.FC = () => {
         await deleteSystemWorkspace(realId);
         message.success('系统工作区已删除');
       } catch {
-        message.error('删除失败');
+        /* global error handler */
         return;
       }
     }

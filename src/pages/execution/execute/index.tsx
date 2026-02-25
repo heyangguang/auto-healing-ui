@@ -306,7 +306,7 @@ const ExecuteTaskPage: React.FC = () => {
             // 异步刷新列表和统计
             refreshData();
         } catch {
-            message.error('确认审核失败');
+            /* global error handler */
         } finally { setSyncing(false); }
     };
 

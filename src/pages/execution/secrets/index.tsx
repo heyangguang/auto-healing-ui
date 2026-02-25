@@ -202,7 +202,7 @@ const SecretsSourceList: React.FC = () => {
             setTestResults(data);
             setTestResultModalOpen(true);
             loadSources();
-        } catch { message.error('测试请求失败'); }
+        } catch { /* global error handler */ }
         finally { setTestingId(undefined); }
     }, [testQuerySource, selectedTestHostIps, loadSources]);
 

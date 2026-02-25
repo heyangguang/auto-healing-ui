@@ -125,7 +125,7 @@ const PluginFormPage: React.FC = () => {
                     : []);
 
             } catch {
-                message.error('加载插件数据失败');
+                /* global error handler */
             } finally {
                 setLoading(false);
             }
@@ -225,7 +225,7 @@ const PluginFormPage: React.FC = () => {
             history.push('/resources/plugins');
         } catch (error) {
             if (!(error as any).errorFields) {
-                message.error('保存失败');
+                /* global error handler */
             }
         } finally {
             setSubmitting(false);

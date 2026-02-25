@@ -165,7 +165,7 @@ const CMDBList: React.FC = () => {
             }
             setSelectSourceModalOpen(false);
             setTestResultModalOpen(true);
-        } catch { message.error('测试失败'); }
+        } catch { /* global error handler */ }
         finally { setTesting(false); }
     }, [singleTestTarget, selectedRows]);
 
@@ -186,7 +186,7 @@ const CMDBList: React.FC = () => {
             setMaintenanceEndAt(undefined);
             setSelectedRowMap(new Map());
             triggerRefresh();
-        } catch { message.error('操作失败'); }
+        } catch { /* global error handler */ }
     }, [maintenanceTarget, maintenanceReason, maintenanceEndAt, selectedRows, triggerRefresh]);
 
     const handleResumeMaintenance = useCallback(async (record: AutoHealing.CMDBItem) => {
@@ -194,7 +194,7 @@ const CMDBList: React.FC = () => {
             await resumeFromMaintenance(record.id);
             message.success('已退出维护模式');
             triggerRefresh();
-        } catch { message.error('操作失败'); }
+        } catch { /* global error handler */ }
     }, [triggerRefresh]);
 
     const handleBatchResume = useCallback(async () => {
@@ -205,7 +205,7 @@ const CMDBList: React.FC = () => {
             message.success(`批量恢复成功 (${ids.length} 台)`);
             setSelectedRowMap(new Map());
             triggerRefresh();
-        } catch { message.error('操作失败'); }
+        } catch { /* global error handler */ }
     }, [selectedRows, triggerRefresh]);
 
     /* ========== 列定义 (memoized) ========== */
@@ -490,7 +490,7 @@ const CMDBList: React.FC = () => {
             items.forEach((item: any) => newMap.set(item.id, item as AutoHealing.CMDBItem));
             setSelectedRowMap(newMap);
             message.success(`已全选 ${items.length} 项`);
-        } catch { message.error('全选失败'); }
+        } catch { /* global error handler */ }
     }, []);
 
     /* ========== 批量操作栏 (memoized) ========== */

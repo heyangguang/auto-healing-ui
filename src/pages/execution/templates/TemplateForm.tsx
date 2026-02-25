@@ -116,7 +116,7 @@ const TemplateFormPage: React.FC = () => {
                 }
             }
         }).catch(() => {
-            message.error('加载任务模板失败');
+            /* global error handler */
         }).finally(() => {
             setLoading(false);
         });
@@ -141,7 +141,7 @@ const TemplateFormPage: React.FC = () => {
                 setVariableValues(initials);
             }
         } catch {
-            message.error('加载 Playbook 详情失败');
+            /* global error handler */
         } finally {
             setLoadingPlaybook(false);
         }

@@ -42,7 +42,7 @@ const UserForm: React.FC = () => {
                 setPlatformRoles(roles);
             })
             .catch(() => {
-                message.error('加载平台角色失败');
+                /* global error handler */
             })
             .finally(() => setRolesLoading(false));
     }, []);
@@ -60,7 +60,7 @@ const UserForm: React.FC = () => {
                 role_id: user.roles?.[0]?.id,
             });
         }).catch(() => {
-            message.error('加载用户信息失败');
+            /* global error handler */
         }).finally(() => setLoading(false));
     }, [id, isEdit, form]);
 

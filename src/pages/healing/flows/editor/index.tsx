@@ -128,7 +128,7 @@ const FlowEditorInner: React.FC = () => {
                 setEdges(initialEdges);
             }
         } catch (error) {
-            message.error('加载流程失败');
+            /* global error handler */
         } finally {
             setLoading(false);
         }
@@ -456,7 +456,7 @@ const FlowEditorInner: React.FC = () => {
                 history.push(`/healing/flows/editor/${res.data.id}`);
             }
         } catch (error) {
-            message.error('保存失败');
+            /* global error handler */
         }
     };
 
