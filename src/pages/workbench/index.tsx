@@ -864,31 +864,24 @@ const WorkbenchPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div style={{ padding: 0, flex: 1 }}>
-                                    {pendingApprovals.items.slice(0, 4).map((item: any) => {
+                                    {pendingApprovals.items.slice(0, 5).map((item: any) => {
                                         const sev = _SEVERITY_MAP[item.severity] || _SEVERITY_MAP.medium;
-                                        const targetHost = item.raw_data?.cmdb_ci || item.affected_ci || '';
                                         return (
                                             <div key={item.id} className={styles.pendingItem} onClick={() => history.push(item._pendingType === 'trigger' ? '/pending/triggers' : '/pending/approvals')}>
                                                 <span className={styles.pendingDot} style={{ background: sev.color }} />
                                                 <div className={styles.pendingContent}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                        <span className={styles.pendingTitle}>{item.title || item.node_name || '待办任务'}</span>
-                                                        <Tag color={sev.color} style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', borderRadius: 2 }}>{sev.text}</Tag>
-                                                    </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#8c8c8c' }}>
-                                                        <span>{item._pendingType === 'trigger' ? '自愈审批' : '任务审批'}</span>
-                                                        {item.external_id && <span>·  {item.external_id}</span>}
-                                                        {targetHost && <span>·  {targetHost}</span>}
-                                                    </div>
+                                                    <span className={styles.pendingTitle} style={{ flex: 1, minWidth: 0 }}>{item.title || item.node_name || '待办任务'}</span>
+                                                    <Tag color={sev.color} style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', borderRadius: 2, flexShrink: 0 }}>{sev.text}</Tag>
+                                                    <span className={styles.pendingType}>{item._pendingType === 'trigger' ? '自愈' : '任务'}</span>
                                                 </div>
                                                 <span className={styles.pendingTime}>{item.created_at ? formatRelativeTime(item.created_at) : ''}</span>
                                             </div>
                                         );
                                     })}
-                                    {pendingApprovals.total > 4 && (
+                                    {pendingApprovals.total > 5 && (
                                         <div style={{ textAlign: 'center', padding: '8px 0' }}>
                                             <Button type="link" size="small" onClick={() => history.push('/pending/triggers')}>
-                                                还有 {pendingApprovals.total - 4} 条待审批
+                                                还有 {pendingApprovals.total - 5} 条待审批
                                             </Button>
                                         </div>
                                     )}
@@ -904,14 +897,18 @@ const WorkbenchPage: React.FC = () => {
                                 <AppstoreOutlined className={styles.cardTitleIcon} /> 我的收藏
                             </span>
                         </div>
-                        <div className={styles.favGrid}>
-                            {favorites.map((item) => (
-                                <div key={item.key} className={styles.favItem} onClick={() => history.push(item.path)}>
-                                    <span className={styles.favIconWrap} style={{ color: '#1677ff' }}>{resolveFavIcon(item.key)}</span>
-                                    <span className={styles.favName}>{item.label}</span>
-                                </div>
-                            ))}
-                        </div>
+                        {loading ? (
+                            <div className={styles.loadingWrap}><Spin /></div>
+                        ) : (
+                            <div className={styles.favGrid}>
+                                {favorites.map((item) => (
+                                    <div key={item.key} className={styles.favItem} onClick={() => history.push(item.path)}>
+                                        <span className={styles.favIconWrap} style={{ color: '#1677ff' }}>{resolveFavIcon(item.key)}</span>
+                                        <span className={styles.favName}>{item.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </Card>
 
                     {/* ── 指标行（始终显示三张卡片，无权限时显示锁定遮罩） ── */}
@@ -922,16 +919,20 @@ const WorkbenchPage: React.FC = () => {
                                     <BugOutlined className={styles.cardTitleIcon} /> 自愈执行
                                 </span>
                             </div>
-                            <div className={cx(styles.cardBody, styles.metricCenter)}>
-                                <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#52c41a' }}>{overview?.healing_stats?.today_success ?? 0}</div>
-                                    <div className={styles.metricLabel}>今日成功</div>
+                            {loading ? (
+                                <div className={styles.loadingWrap}><Spin /></div>
+                            ) : (
+                                <div className={cx(styles.cardBody, styles.metricCenter)}>
+                                    <div className={styles.metricValue}>
+                                        <div className={styles.metricNumber} style={{ color: '#52c41a' }}>{overview?.healing_stats?.today_success ?? 0}</div>
+                                        <div className={styles.metricLabel}>今日成功</div>
+                                    </div>
+                                    <div className={styles.metricValue}>
+                                        <div className={styles.metricNumber} style={{ color: '#ff4d4f' }}>{overview?.healing_stats?.today_failed ?? 0}</div>
+                                        <div className={styles.metricLabel}>今日失败</div>
+                                    </div>
                                 </div>
-                                <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#ff4d4f' }}>{overview?.healing_stats?.today_failed ?? 0}</div>
-                                    <div className={styles.metricLabel}>今日失败</div>
-                                </div>
-                            </div>
+                            )}
                             {!overview?.healing_stats && !loading && (
                                 <div className={styles.lockedOverlay}>
                                     <LockOutlined className={styles.lockedIcon} />
@@ -946,16 +947,20 @@ const WorkbenchPage: React.FC = () => {
                                     <AlertOutlined className={styles.cardTitleIcon} /> 工单统计
                                 </span>
                             </div>
-                            <div className={cx(styles.cardBody, styles.metricCenter)}>
-                                <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#faad14' }}>{overview?.incident_stats?.pending_count ?? 0}</div>
-                                    <div className={styles.metricLabel}>待处理</div>
+                            {loading ? (
+                                <div className={styles.loadingWrap}><Spin /></div>
+                            ) : (
+                                <div className={cx(styles.cardBody, styles.metricCenter)}>
+                                    <div className={styles.metricValue}>
+                                        <div className={styles.metricNumber} style={{ color: '#faad14' }}>{overview?.incident_stats?.pending_count ?? 0}</div>
+                                        <div className={styles.metricLabel}>待处理</div>
+                                    </div>
+                                    <div className={styles.metricValue}>
+                                        <div className={styles.metricNumber} style={{ color: '#262626' }}>{overview?.incident_stats?.last_7_days_total ?? 0}</div>
+                                        <div className={styles.metricLabel}>近 7 天总计</div>
+                                    </div>
                                 </div>
-                                <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#262626' }}>{overview?.incident_stats?.last_7_days_total ?? 0}</div>
-                                    <div className={styles.metricLabel}>近 7 天总计</div>
-                                </div>
-                            </div>
+                            )}
                             {!overview?.incident_stats && !loading && (
                                 <div className={styles.lockedOverlay}>
                                     <LockOutlined className={styles.lockedIcon} />
@@ -970,16 +975,20 @@ const WorkbenchPage: React.FC = () => {
                                     <CloudServerOutlined className={styles.cardTitleIcon} /> 纳管主机
                                 </span>
                             </div>
-                            <div className={cx(styles.cardBody, styles.metricCenter)}>
-                                <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#1677ff' }}>{overview?.host_stats?.online_count ?? 0}</div>
-                                    <div className={styles.metricLabel}>在线主机</div>
+                            {loading ? (
+                                <div className={styles.loadingWrap}><Spin /></div>
+                            ) : (
+                                <div className={cx(styles.cardBody, styles.metricCenter)}>
+                                    <div className={styles.metricValue}>
+                                        <div className={styles.metricNumber} style={{ color: '#1677ff' }}>{overview?.host_stats?.online_count ?? 0}</div>
+                                        <div className={styles.metricLabel}>在线主机</div>
+                                    </div>
+                                    <div className={styles.metricValue}>
+                                        <div className={styles.metricNumber} style={{ color: '#bfbfbf' }}>{overview?.host_stats?.offline_count ?? 0}</div>
+                                        <div className={styles.metricLabel}>离线</div>
+                                    </div>
                                 </div>
-                                <div className={styles.metricValue}>
-                                    <div className={styles.metricNumber} style={{ color: '#bfbfbf' }}>{overview?.host_stats?.offline_count ?? 0}</div>
-                                    <div className={styles.metricLabel}>离线</div>
-                                </div>
-                            </div>
+                            )}
                             {!overview?.host_stats && !loading && (
                                 <div className={styles.lockedOverlay}>
                                     <LockOutlined className={styles.lockedIcon} />
