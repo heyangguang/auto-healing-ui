@@ -299,7 +299,7 @@ const CATEGORY_LIST: Record<string, string> = {
     playbooks: '/execution/playbooks',
     templates: '/execution/templates',
     schedules: '/execution/schedules',
-    execution_runs: '/execution/runs',
+    execution_runs: '/execution/logs',
     git_repos: '/execution/git-repos',
     secrets: '/resources/secrets',
     plugins: '/resources/plugins',
@@ -452,9 +452,9 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
                                                     >
                                                         {m.icon}
                                                     </div>
-                                                    <span className={styles.itemTitle}>{hl(it.title, kw)}</span>
+                                                    <span className={styles.itemTitle} title={it.title}>{hl(it.title, kw)}</span>
                                                     {it.description && (
-                                                        <span className={styles.itemDesc}>{hl(it.description, kw)}</span>
+                                                        <span className={styles.itemDesc} title={it.description}>{hl(it.description, kw)}</span>
                                                     )}
                                                     {st && (
                                                         <span
