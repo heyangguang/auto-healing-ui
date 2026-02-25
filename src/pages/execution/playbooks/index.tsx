@@ -512,7 +512,7 @@ const PlaybookList: React.FC = () => {
             <div ref={parentRef} style={{ flex: 1, overflowY: 'auto' }}>
                 {!initialized ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                        <Spin tip="加载中..."><div /></Spin>
+                        <Spin />
                     </div>
                 ) : flattenedList.length === 0 ? (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 Playbook" style={{ marginTop: 40 }} />
