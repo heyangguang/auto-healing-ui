@@ -218,14 +218,14 @@ const HealingInstanceDetail: React.FC = () => {
                 const templateId = cfg.template_id || cfg.notification_template_id;
                 if (channelId && !resolvedNames[channelId]) {
                     try {
-                        const res = await request<any>(`/api/v1/channels/${channelId}`);
+                        const res = await request<any>(`/api/v1/tenant/channels/${channelId}`);
                         const data = res?.data || res;
                         if (data?.name) newNames[channelId] = data.name;
                     } catch (e) { /* ignore */ }
                 }
                 if (templateId && !resolvedNames[templateId]) {
                     try {
-                        const res = await request<any>(`/api/v1/templates/${templateId}`);
+                        const res = await request<any>(`/api/v1/tenant/templates/${templateId}`);
                         const data = res?.data || res;
                         if (data?.name) newNames[templateId] = data.name;
                     } catch (e) { /* ignore */ }
@@ -237,7 +237,7 @@ const HealingInstanceDetail: React.FC = () => {
                 const taskId = cfg.task_id || cfg.task_template_id || ns?.task_id || ns?.run?.task_id;
                 if (taskId && !resolvedNames[taskId]) {
                     try {
-                        const res = await request<any>(`/api/v1/execution-tasks/${taskId}`);
+                        const res = await request<any>(`/api/v1/tenant/execution-tasks/${taskId}`);
                         const data = res?.data || res;
                         if (data?.name) newNames[taskId] = data.name;
                     } catch (e) { /* ignore */ }
@@ -246,7 +246,7 @@ const HealingInstanceDetail: React.FC = () => {
                 const runId = ns?.run?.run_id || cfg.run_id;
                 if (runId && !resolvedNames[`run:${runId}`]) {
                     try {
-                        const res = await request<any>(`/api/v1/execution-runs/${runId}`);
+                        const res = await request<any>(`/api/v1/tenant/execution-runs/${runId}`);
                         const data = res?.data || res;
                         if (data?.task?.name) newNames[`task:${data.task_id || taskId}`] = data.task.name;
                         if (data?.task?.target_hosts) newNames[`hosts:${runId}`] = data.task.target_hosts;

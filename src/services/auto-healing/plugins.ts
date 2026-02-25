@@ -9,7 +9,7 @@ export async function getPlugins(params?: {
     type?: 'itsm' | 'cmdb';
     status?: 'active' | 'inactive' | 'error';
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.Plugin>>('/api/v1/plugins', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.Plugin>>('/api/v1/tenant/plugins', {
         method: 'GET',
         params,
     });
@@ -30,7 +30,7 @@ export async function getPluginsStats() {
             inactive_count: number;
             error_count: number;
         }
-    }>('/api/v1/plugins/stats', {
+    }>('/api/v1/tenant/plugins/stats', {
         method: 'GET',
     });
 }
@@ -39,7 +39,7 @@ export async function getPluginsStats() {
  * 获取插件详情
  */
 export async function getPlugin(id: string) {
-    return request<AutoHealing.Plugin>(`/api/v1/plugins/${id}`, {
+    return request<AutoHealing.Plugin>(`/api/v1/tenant/plugins/${id}`, {
         method: 'GET',
     });
 }
@@ -48,7 +48,7 @@ export async function getPlugin(id: string) {
  * 创建插件
  */
 export async function createPlugin(data: AutoHealing.CreatePluginRequest) {
-    return request<AutoHealing.Plugin>('/api/v1/plugins', {
+    return request<AutoHealing.Plugin>('/api/v1/tenant/plugins', {
         method: 'POST',
         data,
     });
@@ -58,7 +58,7 @@ export async function createPlugin(data: AutoHealing.CreatePluginRequest) {
  * 更新插件
  */
 export async function updatePlugin(id: string, data: AutoHealing.UpdatePluginRequest) {
-    return request<AutoHealing.Plugin>(`/api/v1/plugins/${id}`, {
+    return request<AutoHealing.Plugin>(`/api/v1/tenant/plugins/${id}`, {
         method: 'PUT',
         data,
     });
@@ -68,7 +68,7 @@ export async function updatePlugin(id: string, data: AutoHealing.UpdatePluginReq
  * 删除插件
  */
 export async function deletePlugin(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/plugins/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/plugins/${id}`, {
         method: 'DELETE',
     });
 }
@@ -77,7 +77,7 @@ export async function deletePlugin(id: string) {
  * 测试插件连接
  */
 export async function testPlugin(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/plugins/${id}/test`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/plugins/${id}/test`, {
         method: 'POST',
     });
 }
@@ -86,7 +86,7 @@ export async function testPlugin(id: string) {
  * 触发手动同步
  */
 export async function syncPlugin(id: string) {
-    return request<AutoHealing.PluginSyncLog>(`/api/v1/plugins/${id}/sync`, {
+    return request<AutoHealing.PluginSyncLog>(`/api/v1/tenant/plugins/${id}/sync`, {
         method: 'POST',
     });
 }
@@ -98,7 +98,7 @@ export async function getPluginSyncLogs(id: string, params?: {
     page?: number;
     page_size?: number;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.PluginSyncLog>>(`/api/v1/plugins/${id}/logs`, {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.PluginSyncLog>>(`/api/v1/tenant/plugins/${id}/logs`, {
         method: 'GET',
         params,
     });
@@ -108,7 +108,7 @@ export async function getPluginSyncLogs(id: string, params?: {
  * 激活插件（测试连接成功后激活）
  */
 export async function activatePlugin(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/plugins/${id}/activate`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/plugins/${id}/activate`, {
         method: 'POST',
     });
 }
@@ -117,7 +117,7 @@ export async function activatePlugin(id: string) {
  * 停用插件
  */
 export async function deactivatePlugin(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/plugins/${id}/deactivate`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/plugins/${id}/deactivate`, {
         method: 'POST',
     });
 }

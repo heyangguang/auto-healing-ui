@@ -28,7 +28,7 @@ export interface SearchResponse {
  */
 export async function globalSearch(params: { q: string; limit?: number }) {
     const res = await request<{ code: number; message: string; data: SearchResponse }>(
-        '/api/v1/search',
+        '/api/v1/common/search',
         { method: 'GET', params, skipErrorHandler: true },
     );
     return res.data;

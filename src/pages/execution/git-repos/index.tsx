@@ -720,7 +720,7 @@ const GitRepoList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/git-repos/search-schema"
+                searchSchemaUrl="/api/v1/tenant/git-repos/search-schema"
                 primaryActionLabel="添加仓库"
                 primaryActionIcon={<PlusOutlined />}
                 primaryActionDisabled={!access.canManageGitRepo}

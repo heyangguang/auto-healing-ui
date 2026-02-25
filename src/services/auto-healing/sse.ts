@@ -69,7 +69,7 @@ export const createDryRunStream = async (
     const token = getAuthToken();
 
     try {
-        const response = await fetch(`/api/v1/healing/flows/${flowId}/dry-run-stream`, {
+        const response = await fetch(`/api/v1/tenant/healing/flows/${flowId}/dry-run-stream`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -174,7 +174,7 @@ export const createInstanceEventStream = (
     const token = getAuthToken();
     const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
     const eventSource = new EventSource(
-        `${sseBase}/api/v1/healing/instances/${instanceId}/events?token=${token}`
+        `${sseBase}/api/v1/tenant/healing/instances/${instanceId}/events?token=${token}`
     );
 
     eventSource.addEventListener('connected', (event: MessageEvent) => {

@@ -28,7 +28,7 @@ export async function getDictionaries(types?: string[]) {
     return request<{
         data: Record<string, DictItem[]>;
         meta: { types_count: number; items_count: number };
-    }>('/api/v1/dictionaries', {
+    }>('/api/v1/common/dictionaries', {
         method: 'GET',
         params: types?.length ? { types: types.join(',') } : undefined,
     });
@@ -41,7 +41,7 @@ export async function getDictionaryTypes() {
     return request<{
         data: Array<{ dict_type: string; count: number }>;
         total: number;
-    }>('/api/v1/dictionaries/types', {
+    }>('/api/v1/common/dictionaries/types', {
         method: 'GET',
     });
 }

@@ -412,7 +412,7 @@ const InstanceList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/healing/instances/search-schema"
+                searchSchemaUrl="/api/v1/tenant/healing/instances/search-schema"
                 onSearch={handleSearch}
                 extraToolbarActions={sortToolbar}
             >

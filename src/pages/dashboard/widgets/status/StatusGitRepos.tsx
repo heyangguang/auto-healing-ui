@@ -8,7 +8,7 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 async function getGitRepos() {
-    return request('/api/v1/git-repos', {
+    return request('/api/v1/tenant/git-repos', {
         method: 'GET',
         params: { page_size: 20 },
     });

@@ -2,7 +2,7 @@ import { request } from '@umijs/max';
 
 /**
  * 工作台 API 服务层
- * 对接 /api/v1/workbench 后端接口
+ * 对接 /api/v1/common/workbench 后端接口
  */
 
 // ==================== 类型定义 ====================
@@ -93,50 +93,50 @@ export interface FavoriteItem {
 
 // ==================== API 函数 ====================
 
-/** GET /api/v1/workbench/overview */
+/** GET /api/v1/common/workbench/overview */
 export async function getWorkbenchOverview() {
     return request<{ code: number; message: string; data: WorkbenchOverview }>(
-        '/api/v1/workbench/overview',
+        '/api/v1/common/workbench/overview',
         { method: 'GET', skipErrorHandler: true },
     );
 }
 
-/** GET /api/v1/workbench/activities */
+/** GET /api/v1/common/workbench/activities */
 export async function getWorkbenchActivities(limit: number = 10) {
     return request<{ code: number; message: string; data: { items: ActivityItem[] } }>(
-        '/api/v1/workbench/activities',
+        '/api/v1/common/workbench/activities',
         { method: 'GET', params: { limit }, skipErrorHandler: true },
     );
 }
 
-/** GET /api/v1/workbench/schedule-calendar */
+/** GET /api/v1/common/workbench/schedule-calendar */
 export async function getScheduleCalendar(year: number, month: number) {
     return request<{ code: number; message: string; data: ScheduleCalendar }>(
-        '/api/v1/workbench/schedule-calendar',
+        '/api/v1/common/workbench/schedule-calendar',
         { method: 'GET', params: { year, month }, skipErrorHandler: true },
     );
 }
 
-/** GET /api/v1/workbench/announcements */
+/** GET /api/v1/common/workbench/announcements */
 export async function getWorkbenchAnnouncements(limit: number = 5) {
     return request<{ code: number; message: string; data: { items: AnnouncementItem[] } }>(
-        '/api/v1/workbench/announcements',
+        '/api/v1/common/workbench/announcements',
         { method: 'GET', params: { limit }, skipErrorHandler: true },
     );
 }
 
-/** GET /api/v1/workbench/favorites */
+/** GET /api/v1/common/workbench/favorites */
 export async function getWorkbenchFavorites() {
     return request<{ code: number; message: string; data: { items: FavoriteItem[] } }>(
-        '/api/v1/workbench/favorites',
+        '/api/v1/common/workbench/favorites',
         { method: 'GET', skipErrorHandler: true },
     );
 }
 
-/** PUT /api/v1/workbench/favorites */
+/** PUT /api/v1/common/workbench/favorites */
 export async function updateWorkbenchFavorites(items: FavoriteItem[]) {
     return request<{ code: number; message: string }>(
-        '/api/v1/workbench/favorites',
+        '/api/v1/common/workbench/favorites',
         { method: 'PUT', data: { items } },
     );
 }

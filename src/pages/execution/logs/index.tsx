@@ -292,7 +292,7 @@ const ExecutionLogs: React.FC = () => {
             headerExtra={<StatsPanel />}
             searchFields={activeSearchFields}
             advancedSearchFields={searchScope === 'runs' ? RUN_ADVANCED_FIELDS : TEMPLATE_ADVANCED_FIELDS}
-            searchSchemaUrl={searchScope === 'runs' ? '/api/v1/execution-runs/search-schema' : '/api/v1/execution-tasks/search-schema'}
+            searchSchemaUrl={searchScope === 'runs' ? '/api/v1/tenant/execution-runs/search-schema' : '/api/v1/tenant/execution-tasks/search-schema'}
             onSearch={handleSearch}
             searchExtra={searchScopeToggle}
         >

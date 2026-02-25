@@ -11,7 +11,7 @@ export async function getPreferences() {
             user_id: string;
             preferences: Record<string, any>;
         };
-    }>('/api/v1/user/preferences', {
+    }>('/api/v1/common/user/preferences', {
         method: 'GET',
     });
 }
@@ -27,7 +27,7 @@ export async function patchPreferences(preferences: Record<string, any>) {
             user_id: string;
             preferences: Record<string, any>;
         };
-    }>('/api/v1/user/preferences', {
+    }>('/api/v1/common/user/preferences', {
         method: 'PATCH',
         data: { preferences },
     });

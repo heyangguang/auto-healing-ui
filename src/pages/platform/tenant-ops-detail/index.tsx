@@ -226,7 +226,7 @@ const ExpandedRow: React.FC<{ record: TenantStatsItem }> = ({ record }) => {
                                     <div className="ops-metric-info">
                                         <div className="ops-metric-label">{item.label}</div>
                                         <div className="ops-metric-value" style={{
-                                            color: item.value > 0 ? '#1a1a2e' : '#d9d9d9',
+                                            color: Number(item.value) > 0 ? '#1a1a2e' : '#d9d9d9',
                                         }}>{item.value}</div>
                                     </div>
                                 </div>

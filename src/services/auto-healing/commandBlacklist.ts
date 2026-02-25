@@ -22,7 +22,7 @@ export async function getCommandBlacklist(params?: Record<string, any>) {
         total: number;
         page: number;
         page_size: number;
-    }>('/api/v1/command-blacklist', {
+    }>('/api/v1/tenant/command-blacklist', {
         method: 'GET',
         params,
     });
@@ -30,14 +30,14 @@ export async function getCommandBlacklist(params?: Record<string, any>) {
 
 /** 获取详情 */
 export async function getCommandBlacklistRule(id: string) {
-    return request<{ data: CommandBlacklistRule }>(`/api/v1/command-blacklist/${id}`, {
+    return request<{ data: CommandBlacklistRule }>(`/api/v1/tenant/command-blacklist/${id}`, {
         method: 'GET',
     });
 }
 
 /** 创建规则 */
 export async function createCommandBlacklistRule(data: Partial<CommandBlacklistRule>) {
-    return request<{ data: CommandBlacklistRule }>('/api/v1/command-blacklist', {
+    return request<{ data: CommandBlacklistRule }>('/api/v1/tenant/command-blacklist', {
         method: 'POST',
         data,
     });
@@ -45,7 +45,7 @@ export async function createCommandBlacklistRule(data: Partial<CommandBlacklistR
 
 /** 更新规则 */
 export async function updateCommandBlacklistRule(id: string, data: Partial<CommandBlacklistRule>) {
-    return request<{ data: CommandBlacklistRule }>(`/api/v1/command-blacklist/${id}`, {
+    return request<{ data: CommandBlacklistRule }>(`/api/v1/tenant/command-blacklist/${id}`, {
         method: 'PUT',
         data,
     });
@@ -53,21 +53,21 @@ export async function updateCommandBlacklistRule(id: string, data: Partial<Comma
 
 /** 删除规则 */
 export async function deleteCommandBlacklistRule(id: string) {
-    return request<{ message: string }>(`/api/v1/command-blacklist/${id}`, {
+    return request<{ message: string }>(`/api/v1/tenant/command-blacklist/${id}`, {
         method: 'DELETE',
     });
 }
 
 /** 切换启用/禁用 */
 export async function toggleCommandBlacklistRule(id: string) {
-    return request<{ data: CommandBlacklistRule }>(`/api/v1/command-blacklist/${id}/toggle`, {
+    return request<{ data: CommandBlacklistRule }>(`/api/v1/tenant/command-blacklist/${id}/toggle`, {
         method: 'POST',
     });
 }
 
 /** 批量启用/禁用 */
 export async function batchToggleCommandBlacklistRules(ids: string[], isActive: boolean) {
-    return request<{ message: string; count: number }>('/api/v1/command-blacklist/batch-toggle', {
+    return request<{ message: string; count: number }>('/api/v1/tenant/command-blacklist/batch-toggle', {
         method: 'POST',
         data: { ids, is_active: isActive },
     });
@@ -75,7 +75,7 @@ export async function batchToggleCommandBlacklistRules(ids: string[], isActive: 
 
 /** 搜索 Schema */
 export async function getCommandBlacklistSearchSchema() {
-    return request<{ fields: any[] }>('/api/v1/command-blacklist/search-schema', {
+    return request<{ fields: any[] }>('/api/v1/tenant/command-blacklist/search-schema', {
         method: 'GET',
     });
 }
@@ -94,7 +94,7 @@ export async function simulateBlacklist(data: {
             match_count: number;
             matched_files: Record<string, number>;
         };
-    }>('/api/v1/command-blacklist/simulate', {
+    }>('/api/v1/tenant/command-blacklist/simulate', {
         method: 'POST',
         data,
     });

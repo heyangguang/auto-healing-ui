@@ -823,7 +823,7 @@ const HealingFlowsPage: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/healing/flows/search-schema"
+                searchSchemaUrl="/api/v1/tenant/healing/flows/search-schema"
                 onSearch={handleSearch}
                 primaryActionLabel="新建流程"
                 primaryActionIcon={<PlusOutlined />}

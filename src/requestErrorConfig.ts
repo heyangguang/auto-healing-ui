@@ -315,15 +315,9 @@ export const errorConfig: RequestConfig = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // 🆕 注入 X-Tenant-ID (排除不需要租户隔离的 API)
-      // 注意：/api/v1/auth/me 需要发送 X-Tenant-ID 以获取当前租户的精确权限
-      const isExcludedFromTenant = url.startsWith('/api/v1/platform/') ||
-        url.startsWith('/auth/') ||
-        url.startsWith('/api/v1/auth/login') ||
-        url.startsWith('/api/v1/auth/refresh') ||
-        url.startsWith('/api/v1/auth/logout') ||
-        url.startsWith('/api/v1/dictionaries') ||
-        url.startsWith('/api/v1/user/tenants');
+      // 🆕 注入 X-Tenant-ID (仅 /api/v1/tenant/* 路由需要租户上下文)
+      // 新路由结构：public/auth/common/platform 组均不需要 X-Tenant-ID
+      const needsTenantContext = url.startsWith('/api/v1/tenant/');
 
       // 🆕 检查 Impersonation 状态
       const impersonationRaw = localStorage.getItem('impersonation-storage');
@@ -346,12 +340,12 @@ export const errorConfig: RequestConfig = {
       // 🆕 检查是否为平台管理员（从 localStorage 读取标志）
       const isPlatformAdmin = localStorage.getItem('is-platform-admin') === 'true';
 
-      if (isImpersonating && impersonationSession && !isExcludedFromTenant) {
+      if (isImpersonating && impersonationSession && needsTenantContext) {
         // Impersonation 模式：使用申请单指定的租户 ID + Impersonation 请求头
         headers['X-Tenant-ID'] = impersonationSession.tenantId;
         headers['X-Impersonation'] = 'true';
         headers['X-Impersonation-Request-ID'] = impersonationSession.requestId;
-      } else if (!isExcludedFromTenant && !isPlatformAdmin) {
+      } else if (needsTenantContext && !isPlatformAdmin) {
         // 普通用户模式：从 localStorage 读取当前租户 ID
         // 注意：平台管理员未 Impersonation 时不注入 X-Tenant-ID
         const tenantStorage = localStorage.getItem('tenant-storage');

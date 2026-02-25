@@ -539,7 +539,7 @@ const CMDBList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/cmdb/search-schema"
+                searchSchemaUrl="/api/v1/tenant/cmdb/search-schema"
                 extraToolbarActions={batchToolbar}
                 columns={columns}
                 rowKey="id"

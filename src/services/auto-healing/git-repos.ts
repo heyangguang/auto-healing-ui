@@ -9,14 +9,14 @@ import { request } from '@umijs/max';
 
 /**
  * 验证仓库（创建前获取分支列表）
- * POST /api/v1/git-repos/validate
+ * POST /api/v1/tenant/git-repos/validate
  */
 export async function validateGitRepo(data: {
     url: string;
     auth_type?: string;
     auth_config?: Record<string, any>;
 }) {
-    return request<{ data: { branches: string[]; default_branch: string } }>('/api/v1/git-repos/validate', {
+    return request<{ data: { branches: string[]; default_branch: string } }>('/api/v1/tenant/git-repos/validate', {
         method: 'POST',
         data,
     });
@@ -24,10 +24,10 @@ export async function validateGitRepo(data: {
 
 /**
  * 创建 Git 仓库（验证后调用）
- * POST /api/v1/git-repos
+ * POST /api/v1/tenant/git-repos
  */
 export async function createGitRepo(data: AutoHealing.CreateGitRepoRequest) {
-    return request<{ data: AutoHealing.GitRepository }>('/api/v1/git-repos', {
+    return request<{ data: AutoHealing.GitRepository }>('/api/v1/tenant/git-repos', {
         method: 'POST',
         data,
     });
@@ -37,7 +37,7 @@ export async function createGitRepo(data: AutoHealing.CreateGitRepoRequest) {
 
 /**
  * 获取 Git 仓库列表
- * GET /api/v1/git-repos
+ * GET /api/v1/tenant/git-repos
  */
 export async function getGitRepos(params?: {
     page?: number;
@@ -53,7 +53,7 @@ export async function getGitRepos(params?: {
     created_from?: string;
     created_to?: string;
 }) {
-    return request<{ data: AutoHealing.GitRepository[]; total: number; page: number; page_size: number }>('/api/v1/git-repos', {
+    return request<{ data: AutoHealing.GitRepository[]; total: number; page: number; page_size: number }>('/api/v1/tenant/git-repos', {
         method: 'GET',
         params,
     });
@@ -61,20 +61,20 @@ export async function getGitRepos(params?: {
 
 /**
  * 获取仓库详情
- * GET /api/v1/git-repos/{id}
+ * GET /api/v1/tenant/git-repos/{id}
  */
 export async function getGitRepo(id: string) {
-    return request<{ data: AutoHealing.GitRepository }>(`/api/v1/git-repos/${id}`, {
+    return request<{ data: AutoHealing.GitRepository }>(`/api/v1/tenant/git-repos/${id}`, {
         method: 'GET',
     });
 }
 
 /**
  * 更新仓库
- * PUT /api/v1/git-repos/{id}
+ * PUT /api/v1/tenant/git-repos/{id}
  */
 export async function updateGitRepo(id: string, data: AutoHealing.UpdateGitRepoRequest) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/git-repos/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/git-repos/${id}`, {
         method: 'PUT',
         data,
     });
@@ -82,10 +82,10 @@ export async function updateGitRepo(id: string, data: AutoHealing.UpdateGitRepoR
 
 /**
  * 删除仓库
- * DELETE /api/v1/git-repos/{id}
+ * DELETE /api/v1/tenant/git-repos/{id}
  */
 export async function deleteGitRepo(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/git-repos/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/git-repos/${id}`, {
         method: 'DELETE',
     });
 }
@@ -94,10 +94,10 @@ export async function deleteGitRepo(id: string) {
 
 /**
  * 同步仓库（git pull）
- * POST /api/v1/git-repos/{id}/sync
+ * POST /api/v1/tenant/git-repos/{id}/sync
  */
 export async function syncGitRepo(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/git-repos/${id}/sync`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/git-repos/${id}/sync`, {
         method: 'POST',
     });
 }
@@ -106,10 +106,10 @@ export async function syncGitRepo(id: string) {
 
 /**
  * 获取文件树/内容
- * GET /api/v1/git-repos/{id}/files
+ * GET /api/v1/tenant/git-repos/{id}/files
  */
 export async function getFiles(id: string, path?: string) {
-    return request<{ data: { files?: any[]; path?: string; content?: string } }>(`/api/v1/git-repos/${id}/files`, {
+    return request<{ data: { files?: any[]; path?: string; content?: string } }>(`/api/v1/tenant/git-repos/${id}/files`, {
         method: 'GET',
         params: path ? { path } : undefined,
     });
@@ -117,7 +117,7 @@ export async function getFiles(id: string, path?: string) {
 
 /**
  * 获取 Commit 历史
- * GET /api/v1/git-repos/{id}/commits
+ * GET /api/v1/tenant/git-repos/{id}/commits
  */
 export async function getCommits(id: string, limit: number = 10) {
     return request<{
@@ -129,7 +129,7 @@ export async function getCommits(id: string, limit: number = 10) {
             author_email: string;
             date: string;
         }>
-    }>(`/api/v1/git-repos/${id}/commits`, {
+    }>(`/api/v1/tenant/git-repos/${id}/commits`, {
         method: 'GET',
         params: { limit },
     });
@@ -137,10 +137,10 @@ export async function getCommits(id: string, limit: number = 10) {
 
 /**
  * 获取同步日志
- * GET /api/v1/git-repos/{id}/logs
+ * GET /api/v1/tenant/git-repos/{id}/logs
  */
 export async function getSyncLogs(id: string, params?: { page?: number; page_size?: number }) {
-    return request<AutoHealing.PaginatedResponse<any>>(`/api/v1/git-repos/${id}/logs`, {
+    return request<AutoHealing.PaginatedResponse<any>>(`/api/v1/tenant/git-repos/${id}/logs`, {
         method: 'GET',
         params,
     });
@@ -148,7 +148,7 @@ export async function getSyncLogs(id: string, params?: { page?: number; page_siz
 
 /**
  * 获取 Git 仓库统计数据
- * GET /api/v1/git-repos/stats
+ * GET /api/v1/tenant/git-repos/stats
  */
 export async function getGitRepoStats() {
     return request<{
@@ -157,5 +157,5 @@ export async function getGitRepoStats() {
             total: number;
             by_status: Array<{ status: string; count: number }>;
         };
-    }>('/api/v1/git-repos/stats', { method: 'GET' });
+    }>('/api/v1/tenant/git-repos/stats', { method: 'GET' });
 }

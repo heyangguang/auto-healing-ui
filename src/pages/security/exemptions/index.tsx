@@ -158,7 +158,7 @@ const ExemptionListPage: React.FC = () => {
                 description="管理针对高危指令黑名单规则的豁免申请。提交后需管理员审批方可生效。"
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
-                searchSchemaUrl="/api/v1/blacklist-exemptions/search-schema"
+                searchSchemaUrl="/api/v1/tenant/blacklist-exemptions/search-schema"
                 columns={columns}
                 rowKey="id"
                 onRowClick={openDetail}

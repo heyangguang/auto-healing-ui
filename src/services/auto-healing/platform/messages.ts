@@ -34,7 +34,7 @@ export interface CreateSiteMessageParams {
 /** 获取消息分类枚举 */
 export async function getSiteMessageCategories() {
     return request<{ code: number; message: string; data: SiteMessageCategory[] }>(
-        '/api/v1/site-messages/categories',
+        '/api/v1/common/site-messages/categories',
         { method: 'GET' },
     );
 }
@@ -55,7 +55,7 @@ export async function getSiteMessages(params?: {
     category?: string;
 }) {
     return request<{ code: number; message: string; data: SiteMessage[]; total: number; page: number; page_size: number }>(
-        '/api/v1/site-messages',
+        '/api/v1/tenant/site-messages',
         { method: 'GET', params },
     );
 }

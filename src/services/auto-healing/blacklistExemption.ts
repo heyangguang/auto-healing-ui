@@ -27,7 +27,7 @@ export interface ExemptionRecord {
 
 /** 查询豁免列表 */
 export async function getBlacklistExemptions(params?: Record<string, any>) {
-    return request<{ data: ExemptionRecord[]; total: number }>('/api/v1/blacklist-exemptions', {
+    return request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions', {
         method: 'GET',
         params,
     });
@@ -35,7 +35,7 @@ export async function getBlacklistExemptions(params?: Record<string, any>) {
 
 /** 获取单个豁免详情 */
 export async function getBlacklistExemption(id: string) {
-    return request<ExemptionRecord>(`/api/v1/blacklist-exemptions/${id}`, {
+    return request<ExemptionRecord>(`/api/v1/tenant/blacklist-exemptions/${id}`, {
         method: 'GET',
     });
 }
@@ -51,7 +51,7 @@ export async function createBlacklistExemption(data: {
     reason: string;
     validity_days: number;
 }) {
-    return request<ExemptionRecord>('/api/v1/blacklist-exemptions', {
+    return request<ExemptionRecord>('/api/v1/tenant/blacklist-exemptions', {
         method: 'POST',
         data,
     });
@@ -59,14 +59,14 @@ export async function createBlacklistExemption(data: {
 
 /** 审批通过 */
 export async function approveBlacklistExemption(id: string) {
-    return request<{ message: string }>(`/api/v1/blacklist-exemptions/${id}/approve`, {
+    return request<{ message: string }>(`/api/v1/tenant/blacklist-exemptions/${id}/approve`, {
         method: 'POST',
     });
 }
 
 /** 审批拒绝 */
 export async function rejectBlacklistExemption(id: string, rejectReason?: string) {
-    return request<{ message: string }>(`/api/v1/blacklist-exemptions/${id}/reject`, {
+    return request<{ message: string }>(`/api/v1/tenant/blacklist-exemptions/${id}/reject`, {
         method: 'POST',
         data: { reject_reason: rejectReason },
     });
@@ -74,7 +74,7 @@ export async function rejectBlacklistExemption(id: string, rejectReason?: string
 
 /** 获取待审批列表 */
 export async function getPendingExemptions(params?: Record<string, any>) {
-    return request<{ data: ExemptionRecord[]; total: number }>('/api/v1/blacklist-exemptions/pending', {
+    return request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions/pending', {
         method: 'GET',
         params,
     });

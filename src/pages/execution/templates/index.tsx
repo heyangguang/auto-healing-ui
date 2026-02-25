@@ -863,7 +863,7 @@ const ExecutionTemplateList: React.FC = () => {
                 }
                 searchFields={templateSearchFields}
                 advancedSearchFields={templateAdvancedSearchFields}
-                searchSchemaUrl="/api/v1/execution-tasks/search-schema"
+                searchSchemaUrl="/api/v1/tenant/execution-tasks/search-schema"
                 columns={columns}
                 rowKey="id"
                 request={handleRequest}

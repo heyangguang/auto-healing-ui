@@ -14,7 +14,7 @@ export async function getIncidents(params?: {
     healing_status?: AutoHealing.HealingStatus;
     has_plugin?: boolean;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.Incident>>('/api/v1/incidents', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.Incident>>('/api/v1/tenant/incidents', {
         method: 'GET',
         params,
     });
@@ -25,7 +25,7 @@ export async function getIncidents(params?: {
  */
 export async function getIncident(id: string) {
     const res = await request<{ code: number; message: string; data: AutoHealing.Incident }>(
-        `/api/v1/incidents/${id}`,
+        `/api/v1/tenant/incidents/${id}`,
         { method: 'GET' }
     );
     return res.data;
@@ -35,7 +35,7 @@ export async function getIncident(id: string) {
  * 重置单个工单扫描状态
  */
 export async function resetIncidentScan(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/incidents/${id}/reset-scan`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/incidents/${id}/reset-scan`, {
         method: 'POST',
     });
 }
@@ -44,7 +44,7 @@ export async function resetIncidentScan(id: string) {
  * 批量重置工单扫描状态
  */
 export async function batchResetIncidentScan(data: AutoHealing.BatchResetScanRequest) {
-    return request<AutoHealing.BatchResetScanResponse>('/api/v1/incidents/batch-reset-scan', {
+    return request<AutoHealing.BatchResetScanResponse>('/api/v1/tenant/incidents/batch-reset-scan', {
         method: 'POST',
         data,
     });
@@ -55,7 +55,7 @@ export async function batchResetIncidentScan(data: AutoHealing.BatchResetScanReq
  */
 export async function getIncidentStats() {
     const res = await request<{ code: number; message: string; data: AutoHealing.IncidentStats }>(
-        '/api/v1/incidents/stats',
+        '/api/v1/tenant/incidents/stats',
         { method: 'GET' }
     );
     return res.data;

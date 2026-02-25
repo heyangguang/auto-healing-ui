@@ -609,7 +609,7 @@ const HealingRulesPage: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/healing/rules/search-schema"
+                searchSchemaUrl="/api/v1/tenant/healing/rules/search-schema"
                 onSearch={handleSearch}
                 primaryActionLabel="新建规则"
                 primaryActionIcon={<PlusOutlined />}

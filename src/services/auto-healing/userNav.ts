@@ -24,7 +24,7 @@ export interface RecentItem {
 /** 获取收藏列表 */
 export async function getFavorites() {
     return request<{ code: number; message: string; data: FavoriteItem[] }>(
-        '/api/v1/user/favorites',
+        '/api/v1/common/user/favorites',
         { method: 'GET' },
     );
 }
@@ -32,14 +32,14 @@ export async function getFavorites() {
 /** 添加收藏 */
 export async function addFavorite(params: { menu_key: string; name: string; path: string }) {
     return request<{ code: number; message: string; data: FavoriteItem }>(
-        '/api/v1/user/favorites',
+        '/api/v1/common/user/favorites',
         { method: 'POST', data: params },
     );
 }
 
 /** 取消收藏 */
 export async function removeFavorite(menuKey: string) {
-    return request<void>(`/api/v1/user/favorites/${menuKey}`, {
+    return request<void>(`/api/v1/common/user/favorites/${menuKey}`, {
         method: 'DELETE',
     });
 }
@@ -49,7 +49,7 @@ export async function removeFavorite(menuKey: string) {
 /** 获取最近访问 */
 export async function getRecents() {
     return request<{ code: number; message: string; data: RecentItem[] }>(
-        '/api/v1/user/recents',
+        '/api/v1/common/user/recents',
         { method: 'GET' },
     );
 }
@@ -57,7 +57,7 @@ export async function getRecents() {
 /** 记录最近访问 */
 export async function recordRecent(params: { menu_key: string; name: string; path: string }) {
     return request<{ code: number; message: string }>(
-        '/api/v1/user/recents',
+        '/api/v1/common/user/recents',
         { method: 'POST', data: params },
     );
 }

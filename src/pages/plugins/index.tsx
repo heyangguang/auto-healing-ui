@@ -349,7 +349,7 @@ const PluginList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/plugins/search-schema"
+                searchSchemaUrl="/api/v1/tenant/plugins/search-schema"
                 primaryActionLabel="新建插件"
                 primaryActionIcon={<PlusOutlined />}
                 primaryActionDisabled={!access.canCreatePlugin}

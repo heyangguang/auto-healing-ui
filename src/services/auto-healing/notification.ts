@@ -10,7 +10,7 @@ export async function getChannels(params?: {
     page_size?: number;
     type?: AutoHealing.ChannelType;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.NotificationChannel>>('/api/v1/channels', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.NotificationChannel>>('/api/v1/tenant/channels', {
         method: 'GET',
         params,
     });
@@ -20,7 +20,7 @@ export async function getChannels(params?: {
  * 获取渠道详情
  */
 export async function getChannel(id: string) {
-    return request<AutoHealing.NotificationChannel>(`/api/v1/channels/${id}`, {
+    return request<AutoHealing.NotificationChannel>(`/api/v1/tenant/channels/${id}`, {
         method: 'GET',
     });
 }
@@ -29,7 +29,7 @@ export async function getChannel(id: string) {
  * 创建渠道
  */
 export async function createChannel(data: AutoHealing.CreateChannelRequest) {
-    return request<AutoHealing.NotificationChannel>('/api/v1/channels', {
+    return request<AutoHealing.NotificationChannel>('/api/v1/tenant/channels', {
         method: 'POST',
         data,
     });
@@ -39,7 +39,7 @@ export async function createChannel(data: AutoHealing.CreateChannelRequest) {
  * 更新渠道
  */
 export async function updateChannel(id: string, data: AutoHealing.UpdateChannelRequest) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/channels/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/channels/${id}`, {
         method: 'PUT',
         data,
     });
@@ -49,7 +49,7 @@ export async function updateChannel(id: string, data: AutoHealing.UpdateChannelR
  * 删除渠道
  */
 export async function deleteChannel(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/channels/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/channels/${id}`, {
         method: 'DELETE',
     });
 }
@@ -58,7 +58,7 @@ export async function deleteChannel(id: string) {
  * 测试渠道连接
  */
 export async function testChannel(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/channels/${id}/test`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/channels/${id}/test`, {
         method: 'POST',
     });
 }
@@ -73,7 +73,7 @@ export async function getTemplates(params?: {
     page_size?: number;
     event_type?: AutoHealing.EventType;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.NotificationTemplate>>('/api/v1/templates', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.NotificationTemplate>>('/api/v1/tenant/templates', {
         method: 'GET',
         params,
     });
@@ -83,7 +83,7 @@ export async function getTemplates(params?: {
  * 获取模板详情
  */
 export async function getTemplate(id: string) {
-    return request<AutoHealing.NotificationTemplate>(`/api/v1/templates/${id}`, {
+    return request<AutoHealing.NotificationTemplate>(`/api/v1/tenant/templates/${id}`, {
         method: 'GET',
     });
 }
@@ -92,7 +92,7 @@ export async function getTemplate(id: string) {
  * 创建模板
  */
 export async function createTemplate(data: AutoHealing.CreateTemplateRequest) {
-    return request<AutoHealing.NotificationTemplate>('/api/v1/templates', {
+    return request<AutoHealing.NotificationTemplate>('/api/v1/tenant/templates', {
         method: 'POST',
         data,
     });
@@ -102,7 +102,7 @@ export async function createTemplate(data: AutoHealing.CreateTemplateRequest) {
  * 更新模板
  */
 export async function updateTemplate(id: string, data: AutoHealing.UpdateTemplateRequest) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/templates/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/templates/${id}`, {
         method: 'PUT',
         data,
     });
@@ -112,7 +112,7 @@ export async function updateTemplate(id: string, data: AutoHealing.UpdateTemplat
  * 删除模板
  */
 export async function deleteTemplate(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/templates/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/templates/${id}`, {
         method: 'DELETE',
     });
 }
@@ -121,7 +121,7 @@ export async function deleteTemplate(id: string) {
  * 预览模板
  */
 export async function previewTemplate(id: string, data?: AutoHealing.PreviewTemplateRequest) {
-    return request<AutoHealing.PreviewTemplateResponse>(`/api/v1/templates/${id}/preview`, {
+    return request<AutoHealing.PreviewTemplateResponse>(`/api/v1/tenant/templates/${id}/preview`, {
         method: 'POST',
         data,
     });
@@ -133,7 +133,7 @@ export async function previewTemplate(id: string, data?: AutoHealing.PreviewTemp
  * 获取所有可用模板变量
  */
 export async function getTemplateVariables() {
-    return request<AutoHealing.TemplateVariable[]>('/api/v1/template-variables', {
+    return request<AutoHealing.TemplateVariable[]>('/api/v1/tenant/template-variables', {
         method: 'GET',
     });
 }
@@ -144,7 +144,7 @@ export async function getTemplateVariables() {
  * 发送通知
  */
 export async function sendNotification(data: AutoHealing.SendNotificationRequest) {
-    return request<AutoHealing.SendNotificationResponse>('/api/v1/notifications/send', {
+    return request<AutoHealing.SendNotificationResponse>('/api/v1/tenant/notifications/send', {
         method: 'POST',
         data,
     });
@@ -160,7 +160,7 @@ export async function getNotifications(params?: {
     run_id?: string;
     search?: string;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.Notification>>('/api/v1/notifications', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.Notification>>('/api/v1/tenant/notifications', {
         method: 'GET',
         params,
     });
@@ -170,7 +170,7 @@ export async function getNotifications(params?: {
  * 获取通知详情
  */
 export async function getNotification(id: string) {
-    return request<AutoHealing.Notification>(`/api/v1/notifications/${id}`, {
+    return request<AutoHealing.Notification>(`/api/v1/tenant/notifications/${id}`, {
         method: 'GET',
     });
 }
@@ -179,14 +179,14 @@ export async function getNotification(id: string) {
  * 重试发送通知
  */
 export async function retryNotification(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/notifications/${id}/retry`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/notifications/${id}/retry`, {
         method: 'POST',
     });
 }
 
 /**
  * 获取通知统计数据
- * GET /api/v1/notifications/stats
+ * GET /api/v1/tenant/notifications/stats
  */
 export async function getNotificationStats() {
     return request<{
@@ -199,5 +199,5 @@ export async function getNotificationStats() {
             templates_total: number;
             templates_active: number;
         };
-    }>('/api/v1/notifications/stats', { method: 'GET' });
+    }>('/api/v1/tenant/notifications/stats', { method: 'GET' });
 }

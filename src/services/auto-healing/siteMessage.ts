@@ -1,6 +1,6 @@
 /**
  * 站内信 API 服务
- * 对应 /api/v1/site-messages
+ * 对应 /api/v1/tenant/site-messages (用户侧) + /api/v1/common/site-messages/categories
  */
 import { request } from '@umijs/max';
 
@@ -37,7 +37,7 @@ export async function getSiteMessages(params?: {
         total: number;
         page: number;
         page_size: number;
-    }>('/api/v1/site-messages', { method: 'GET', params, ...options });
+    }>('/api/v1/tenant/site-messages', { method: 'GET', params, ...options });
 }
 
 /** 获取未读消息数 */
@@ -46,12 +46,12 @@ export async function getUnreadCount(options?: Record<string, any>) {
         code: number;
         message: string;
         data: { unread_count: number };
-    }>('/api/v1/site-messages/unread-count', { method: 'GET', ...options });
+    }>('/api/v1/tenant/site-messages/unread-count', { method: 'GET', ...options });
 }
 
 /** 标记消息为已读 */
 export async function markAsRead(ids: string[]) {
-    return request<any>('/api/v1/site-messages/read', {
+    return request<any>('/api/v1/tenant/site-messages/read', {
         method: 'PUT',
         data: { ids },
     });
@@ -59,7 +59,7 @@ export async function markAsRead(ids: string[]) {
 
 /** 标记所有消息为已读 */
 export async function markAllAsRead() {
-    return request<any>('/api/v1/site-messages/read-all', { method: 'PUT' });
+    return request<any>('/api/v1/tenant/site-messages/read-all', { method: 'PUT' });
 }
 
 /** 获取消息分类列表 */
@@ -68,5 +68,5 @@ export async function getSiteMessageCategories() {
         code: number;
         message: string;
         data: SiteMessageCategory[];
-    }>('/api/v1/site-messages/categories', { method: 'GET' });
+    }>('/api/v1/common/site-messages/categories', { method: 'GET' });
 }

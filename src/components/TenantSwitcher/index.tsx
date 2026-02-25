@@ -108,7 +108,7 @@ const TenantSwitcher: React.FC = () => {
             if (raw) setCurrentTenantId(JSON.parse(raw).currentTenantId || null);
         } catch { /* ignore */ }
 
-        request('/api/v1/user/tenants')
+        request('/api/v1/common/user/tenants')
             .then((res: any) => {
                 if (res?.data && Array.isArray(res.data)) {
                     setTenants(res.data);
@@ -150,7 +150,7 @@ const TenantSwitcher: React.FC = () => {
             return;
         }
         setSearching(true);
-        request('/api/v1/user/tenants', { params: { search: value.trim() } })
+        request('/api/v1/common/user/tenants', { params: { search: value.trim() } })
             .then((res: any) => {
                 if (res?.data && Array.isArray(res.data)) setSearchResults(res.data);
             })

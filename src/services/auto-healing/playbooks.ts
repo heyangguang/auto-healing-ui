@@ -7,7 +7,7 @@ import { request } from '@umijs/max';
 
 /**
  * 获取 Playbook 列表
- * GET /api/v1/playbooks
+ * GET /api/v1/tenant/playbooks
  */
 export async function getPlaybooks(params?: {
     repository_id?: string;
@@ -27,7 +27,7 @@ export async function getPlaybooks(params?: {
     page?: number;
     page_size?: number;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.Playbook>>('/api/v1/playbooks', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.Playbook>>('/api/v1/tenant/playbooks', {
         method: 'GET',
         params,
     });
@@ -35,20 +35,20 @@ export async function getPlaybooks(params?: {
 
 /**
  * 获取 Playbook 详情
- * GET /api/v1/playbooks/{id}
+ * GET /api/v1/tenant/playbooks/{id}
  */
 export async function getPlaybook(id: string) {
-    return request<{ data: AutoHealing.Playbook }>(`/api/v1/playbooks/${id}`, {
+    return request<{ data: AutoHealing.Playbook }>(`/api/v1/tenant/playbooks/${id}`, {
         method: 'GET',
     });
 }
 
 /**
  * 创建 Playbook
- * POST /api/v1/playbooks
+ * POST /api/v1/tenant/playbooks
  */
 export async function createPlaybook(data: AutoHealing.CreatePlaybookRequest) {
-    return request<{ data: AutoHealing.Playbook }>('/api/v1/playbooks', {
+    return request<{ data: AutoHealing.Playbook }>('/api/v1/tenant/playbooks', {
         method: 'POST',
         data,
     });
@@ -56,10 +56,10 @@ export async function createPlaybook(data: AutoHealing.CreatePlaybookRequest) {
 
 /**
  * 更新 Playbook
- * PUT /api/v1/playbooks/{id}
+ * PUT /api/v1/tenant/playbooks/{id}
  */
 export async function updatePlaybook(id: string, data: AutoHealing.UpdatePlaybookRequest) {
-    return request<{ data: AutoHealing.Playbook }>(`/api/v1/playbooks/${id}`, {
+    return request<{ data: AutoHealing.Playbook }>(`/api/v1/tenant/playbooks/${id}`, {
         method: 'PUT',
         data,
     });
@@ -67,20 +67,20 @@ export async function updatePlaybook(id: string, data: AutoHealing.UpdatePlayboo
 
 /**
  * 删除 Playbook
- * DELETE /api/v1/playbooks/{id}
+ * DELETE /api/v1/tenant/playbooks/{id}
  */
 export async function deletePlaybook(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/playbooks/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/playbooks/${id}`, {
         method: 'DELETE',
     });
 }
 
 /**
  * 扫描 Playbook 变量
- * POST /api/v1/playbooks/{id}/scan
+ * POST /api/v1/tenant/playbooks/{id}/scan
  */
 export async function scanPlaybook(id: string, data?: AutoHealing.ScanPlaybookRequest) {
-    return request<{ data: AutoHealing.PlaybookScanLog }>(`/api/v1/playbooks/${id}/scan`, {
+    return request<{ data: AutoHealing.PlaybookScanLog }>(`/api/v1/tenant/playbooks/${id}/scan`, {
         method: 'POST',
         data,
     });
@@ -88,10 +88,10 @@ export async function scanPlaybook(id: string, data?: AutoHealing.ScanPlaybookRe
 
 /**
  * 更新 Playbook 变量配置
- * PUT /api/v1/playbooks/{id}/variables
+ * PUT /api/v1/tenant/playbooks/{id}/variables
  */
 export async function updatePlaybookVariables(id: string, data: AutoHealing.UpdatePlaybookVariablesRequest) {
-    return request<{ data: AutoHealing.Playbook }>(`/api/v1/playbooks/${id}/variables`, {
+    return request<{ data: AutoHealing.Playbook }>(`/api/v1/tenant/playbooks/${id}/variables`, {
         method: 'PUT',
         data,
     });
@@ -99,23 +99,23 @@ export async function updatePlaybookVariables(id: string, data: AutoHealing.Upda
 
 /**
  * 设置 Playbook 为 Ready 状态
- * POST /api/v1/playbooks/{id}/ready
+ * POST /api/v1/tenant/playbooks/{id}/ready
  */
 export async function setPlaybookReady(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/playbooks/${id}/ready`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/playbooks/${id}/ready`, {
         method: 'POST',
     });
 }
 
 /**
  * 获取 Playbook 扫描日志
- * GET /api/v1/playbooks/{id}/scan-logs
+ * GET /api/v1/tenant/playbooks/{id}/scan-logs
  */
 export async function getPlaybookScanLogs(id: string, params?: {
     page?: number;
     page_size?: number;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.PlaybookScanLog>>(`/api/v1/playbooks/${id}/scan-logs`, {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.PlaybookScanLog>>(`/api/v1/tenant/playbooks/${id}/scan-logs`, {
         method: 'GET',
         params,
     });
@@ -123,27 +123,27 @@ export async function getPlaybookScanLogs(id: string, params?: {
 
 /**
  * 设置 Playbook 为 Pending 状态（下线）
- * POST /api/v1/playbooks/{id}/offline
+ * POST /api/v1/tenant/playbooks/{id}/offline
  */
 export async function setPlaybookOffline(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/playbooks/${id}/offline`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/playbooks/${id}/offline`, {
         method: 'POST',
     });
 }
 
 /**
  * 获取 Playbook 文件列表
- * GET /api/v1/playbooks/{id}/files
+ * GET /api/v1/tenant/playbooks/{id}/files
  */
 export async function getPlaybookFiles(id: string) {
-    return request<{ data: { files: AutoHealing.PlaybookFile[] } }>(`/api/v1/playbooks/${id}/files`, {
+    return request<{ data: { files: AutoHealing.PlaybookFile[] } }>(`/api/v1/tenant/playbooks/${id}/files`, {
         method: 'GET',
     });
 }
 
 /**
  * 获取 Playbook 统计数据
- * GET /api/v1/playbooks/stats
+ * GET /api/v1/tenant/playbooks/stats
  */
 export async function getPlaybookStats() {
     return request<{
@@ -153,5 +153,5 @@ export async function getPlaybookStats() {
             by_status: Array<{ status: string; count: number }>;
             by_config_mode: Array<{ config_mode: string; count: number }>;
         };
-    }>('/api/v1/playbooks/stats', { method: 'GET' });
+    }>('/api/v1/tenant/playbooks/stats', { method: 'GET' });
 }

@@ -21,35 +21,35 @@ export async function getAuditLogs(params?: {
     exclude_action?: string;
     exclude_resource_type?: string;
 }) {
-    return request<any>('/api/v1/audit-logs', { method: 'GET', params });
+    return request<any>('/api/v1/tenant/audit-logs', { method: 'GET', params });
 }
 
 /**
  * 获取审计日志详情
  */
 export async function getAuditLogDetail(id: string) {
-    return request<any>(`/api/v1/audit-logs/${id}`, { method: 'GET' });
+    return request<any>(`/api/v1/tenant/audit-logs/${id}`, { method: 'GET' });
 }
 
 /**
  * 获取审计统计概览
  */
 export async function getAuditStats() {
-    return request<any>('/api/v1/audit-logs/stats', { method: 'GET' });
+    return request<any>('/api/v1/tenant/audit-logs/stats', { method: 'GET' });
 }
 
 /**
  * 获取操作趋势
  */
 export async function getAuditTrend(days: number = 7) {
-    return request<any>('/api/v1/audit-logs/trend', { method: 'GET', params: { days } });
+    return request<any>('/api/v1/tenant/audit-logs/trend', { method: 'GET', params: { days } });
 }
 
 /**
  * 导出审计日志 CSV
  */
 export async function exportAuditLogs(params?: Record<string, any>) {
-    return request<Blob>('/api/v1/audit-logs/export', {
+    return request<Blob>('/api/v1/tenant/audit-logs/export', {
         method: 'GET',
         params,
         responseType: 'blob',
@@ -61,7 +61,7 @@ export async function exportAuditLogs(params?: Record<string, any>) {
  * 用户操作排行（按用户聚合）
  */
 export async function getAuditUserRanking(days: number = 30, limit: number = 50) {
-    return request<any>('/api/v1/audit-logs/user-ranking', {
+    return request<any>('/api/v1/tenant/audit-logs/user-ranking', {
         method: 'GET',
         params: { days, limit },
     });
@@ -71,7 +71,7 @@ export async function getAuditUserRanking(days: number = 30, limit: number = 50)
  * 资源类型统计（按资源聚合）
  */
 export async function getAuditResourceStats(days: number = 30) {
-    return request<any>('/api/v1/audit-logs/resource-stats', {
+    return request<any>('/api/v1/tenant/audit-logs/resource-stats', {
         method: 'GET',
         params: { days },
     });

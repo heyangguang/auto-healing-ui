@@ -3,7 +3,7 @@ import { request } from '@umijs/max';
 // ==================== 任务模板 ====================
 
 /**
- * 获取任务模板统计数据（需后端实现: GET /api/v1/execution-tasks/stats）
+ * 获取任务模板统计数据（需后端实现: GET /api/v1/tenant/execution-tasks/stats）
  */
 export async function getExecutionTaskStats() {
     return request<{
@@ -12,7 +12,7 @@ export async function getExecutionTaskStats() {
         local: number;
         needs_review: number;
         changed_playbooks: number;
-    }>('/api/v1/execution-tasks/stats', { method: 'GET' });
+    }>('/api/v1/tenant/execution-tasks/stats', { method: 'GET' });
 }
 
 /**
@@ -42,7 +42,7 @@ export async function getExecutionTasks(params?: {
     // 允许透传任意参数（如 name__exact 精确匹配）
     [key: string]: any;
 }) {
-    return request<{ data: AutoHealing.ExecutionTask[]; total: number }>('/api/v1/execution-tasks', {
+    return request<{ data: AutoHealing.ExecutionTask[]; total: number }>('/api/v1/tenant/execution-tasks', {
         method: 'GET',
         params,
     });
@@ -52,7 +52,7 @@ export async function getExecutionTasks(params?: {
  * 获取任务模板详情
  */
 export async function getExecutionTask(id: string) {
-    return request<{ data: AutoHealing.ExecutionTask }>(`/api/v1/execution-tasks/${id}`, {
+    return request<{ data: AutoHealing.ExecutionTask }>(`/api/v1/tenant/execution-tasks/${id}`, {
         method: 'GET',
     });
 }
@@ -61,7 +61,7 @@ export async function getExecutionTask(id: string) {
  * 创建任务模板
  */
 export async function createExecutionTask(data: AutoHealing.CreateExecutionTaskRequest) {
-    return request<{ data: AutoHealing.ExecutionTask }>('/api/v1/execution-tasks', {
+    return request<{ data: AutoHealing.ExecutionTask }>('/api/v1/tenant/execution-tasks', {
         method: 'POST',
         data,
     });
@@ -71,7 +71,7 @@ export async function createExecutionTask(data: AutoHealing.CreateExecutionTaskR
  * 更新任务模板
  */
 export async function updateExecutionTask(id: string, data: AutoHealing.UpdateExecutionTaskRequest) {
-    return request<{ data: AutoHealing.ExecutionTask }>(`/api/v1/execution-tasks/${id}`, {
+    return request<{ data: AutoHealing.ExecutionTask }>(`/api/v1/tenant/execution-tasks/${id}`, {
         method: 'PUT',
         data,
     });
@@ -81,7 +81,7 @@ export async function updateExecutionTask(id: string, data: AutoHealing.UpdateEx
  * 删除任务模板
  */
 export async function deleteExecutionTask(id: string) {
-    return request<void>(`/api/v1/execution-tasks/${id}`, {
+    return request<void>(`/api/v1/tenant/execution-tasks/${id}`, {
         method: 'DELETE',
     });
 }
@@ -90,7 +90,7 @@ export async function deleteExecutionTask(id: string) {
  * 执行任务
  */
 export async function executeTask(id: string, data?: AutoHealing.ExecuteTaskRequest) {
-    return request<{ data: AutoHealing.ExecutionRun }>(`/api/v1/execution-tasks/${id}/execute`, {
+    return request<{ data: AutoHealing.ExecutionRun }>(`/api/v1/tenant/execution-tasks/${id}/execute`, {
         method: 'POST',
         data,
     });
@@ -100,7 +100,7 @@ export async function executeTask(id: string, data?: AutoHealing.ExecuteTaskRequ
  * 确认任务模板变量审核
  */
 export async function confirmExecutionTaskReview(id: string) {
-    return request<{ data: AutoHealing.ExecutionTask }>(`/api/v1/execution-tasks/${id}/confirm-review`, {
+    return request<{ data: AutoHealing.ExecutionTask }>(`/api/v1/tenant/execution-tasks/${id}/confirm-review`, {
         method: 'POST',
     });
 }
@@ -109,7 +109,7 @@ export async function confirmExecutionTaskReview(id: string) {
  * 批量确认任务模板审核
  */
 export async function batchConfirmReview(params: { task_ids?: string[]; playbook_id?: string }) {
-    return request<{ confirmed_count: number; message: string }>('/api/v1/execution-tasks/batch-confirm-review', {
+    return request<{ confirmed_count: number; message: string }>('/api/v1/tenant/execution-tasks/batch-confirm-review', {
         method: 'POST',
         data: params,
     });
@@ -122,7 +122,7 @@ export async function getTaskRuns(id: string, params?: {
     page?: number;
     page_size?: number;
 }) {
-    return request<{ data: AutoHealing.ExecutionRun[]; total: number }>(`/api/v1/execution-tasks/${id}/runs`, {
+    return request<{ data: AutoHealing.ExecutionRun[]; total: number }>(`/api/v1/tenant/execution-tasks/${id}/runs`, {
         method: 'GET',
         params,
     });
@@ -145,7 +145,7 @@ export async function getExecutionRuns(params?: {
     started_after?: string;
     started_before?: string;
 }) {
-    return request<{ data: AutoHealing.ExecutionRun[]; total: number }>('/api/v1/execution-runs', {
+    return request<{ data: AutoHealing.ExecutionRun[]; total: number }>('/api/v1/tenant/execution-runs', {
         method: 'GET',
         params,
     });
@@ -166,7 +166,7 @@ export async function getExecutionRunStats() {
             avg_duration_sec: number;
             today_count: number;
         };
-    }>('/api/v1/execution-runs/stats', { method: 'GET' });
+    }>('/api/v1/tenant/execution-runs/stats', { method: 'GET' });
 }
 
 /**
@@ -178,7 +178,7 @@ export async function getExecutionRunTrend(days = 7) {
             days: number;
             items: { date: string; status: string; count: number }[];
         };
-    }>('/api/v1/execution-runs/trend', { method: 'GET', params: { days } });
+    }>('/api/v1/tenant/execution-runs/trend', { method: 'GET', params: { days } });
 }
 
 /**
@@ -187,7 +187,7 @@ export async function getExecutionRunTrend(days = 7) {
 export async function getExecutionTriggerDistribution() {
     return request<{
         data: { triggered_by: string; count: number }[];
-    }>('/api/v1/execution-runs/trigger-distribution', { method: 'GET' });
+    }>('/api/v1/tenant/execution-runs/trigger-distribution', { method: 'GET' });
 }
 
 /**
@@ -196,7 +196,7 @@ export async function getExecutionTriggerDistribution() {
 export async function getExecutionTopFailed(limit = 5) {
     return request<{
         data: { task_id: string; task_name: string; total: number; failed: number; fail_rate: number }[];
-    }>('/api/v1/execution-runs/top-failed', { method: 'GET', params: { limit } });
+    }>('/api/v1/tenant/execution-runs/top-failed', { method: 'GET', params: { limit } });
 }
 
 /**
@@ -205,14 +205,14 @@ export async function getExecutionTopFailed(limit = 5) {
 export async function getExecutionTopActive(limit = 5) {
     return request<{
         data: { task_id: string; task_name: string; total: number }[];
-    }>('/api/v1/execution-runs/top-active', { method: 'GET', params: { limit } });
+    }>('/api/v1/tenant/execution-runs/top-active', { method: 'GET', params: { limit } });
 }
 
 /**
  * 获取执行记录详情
  */
 export async function getExecutionRun(id: string) {
-    return request<{ data: AutoHealing.ExecutionRun }>(`/api/v1/execution-runs/${id}`, {
+    return request<{ data: AutoHealing.ExecutionRun }>(`/api/v1/tenant/execution-runs/${id}`, {
         method: 'GET',
     });
 }
@@ -225,7 +225,7 @@ export async function getExecutionLogs(id: string, params?: {
     page_size?: number;
     log_level?: string;
 }) {
-    return request<{ data: AutoHealing.ExecutionLog[] }>(`/api/v1/execution-runs/${id}/logs`, {
+    return request<{ data: AutoHealing.ExecutionLog[] }>(`/api/v1/tenant/execution-runs/${id}/logs`, {
         method: 'GET',
         params,
     });
@@ -235,7 +235,7 @@ export async function getExecutionLogs(id: string, params?: {
  * 取消执行
  */
 export async function cancelExecutionRun(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/execution-runs/${id}/cancel`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/execution-runs/${id}/cancel`, {
         method: 'POST',
     });
 }
@@ -259,8 +259,8 @@ export function createLogStream(
     // 浏览器 EventSource API 不支持自定义请求头，需通过 URL 参数传递 JWT Token
     const token = localStorage.getItem('auto_healing_token');
     const url = token
-        ? `${sseBase}/api/v1/execution-runs/${id}/stream?token=${encodeURIComponent(token)}`
-        : `${sseBase}/api/v1/execution-runs/${id}/stream`;
+        ? `${sseBase}/api/v1/tenant/execution-runs/${id}/stream?token=${encodeURIComponent(token)}`
+        : `${sseBase}/api/v1/tenant/execution-runs/${id}/stream`;
 
     console.log('[SSE] Creating EventSource:', url);
     const eventSource = new EventSource(url);
@@ -316,7 +316,7 @@ export async function getExecutionSchedules(params?: {
     schedule_type?: string;  // 'cron' | 'once'
     status?: string;         // 'running' | 'pending' | 'completed' | 'disabled'
 }) {
-    return request<{ data: AutoHealing.ExecutionSchedule[]; total: number }>('/api/v1/execution-schedules', {
+    return request<{ data: AutoHealing.ExecutionSchedule[]; total: number }>('/api/v1/tenant/execution-schedules', {
         method: 'GET',
         params,
     });
@@ -326,7 +326,7 @@ export async function getExecutionSchedules(params?: {
  * 获取定时调度详情
  */
 export async function getExecutionSchedule(id: string) {
-    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/execution-schedules/${id}`, {
+    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/tenant/execution-schedules/${id}`, {
         method: 'GET',
     });
 }
@@ -335,7 +335,7 @@ export async function getExecutionSchedule(id: string) {
  * 创建定时调度
  */
 export async function createExecutionSchedule(data: AutoHealing.CreateExecutionScheduleRequest) {
-    return request<{ data: AutoHealing.ExecutionSchedule }>('/api/v1/execution-schedules', {
+    return request<{ data: AutoHealing.ExecutionSchedule }>('/api/v1/tenant/execution-schedules', {
         method: 'POST',
         data,
     });
@@ -345,7 +345,7 @@ export async function createExecutionSchedule(data: AutoHealing.CreateExecutionS
  * 更新定时调度
  */
 export async function updateExecutionSchedule(id: string, data: AutoHealing.UpdateExecutionScheduleRequest) {
-    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/execution-schedules/${id}`, {
+    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/tenant/execution-schedules/${id}`, {
         method: 'PUT',
         data,
     });
@@ -355,7 +355,7 @@ export async function updateExecutionSchedule(id: string, data: AutoHealing.Upda
  * 删除定时调度
  */
 export async function deleteExecutionSchedule(id: string) {
-    return request<void>(`/api/v1/execution-schedules/${id}`, {
+    return request<void>(`/api/v1/tenant/execution-schedules/${id}`, {
         method: 'DELETE',
     });
 }
@@ -364,7 +364,7 @@ export async function deleteExecutionSchedule(id: string) {
  * 启用定时调度
  */
 export async function enableExecutionSchedule(id: string) {
-    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/execution-schedules/${id}/enable`, {
+    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/tenant/execution-schedules/${id}/enable`, {
         method: 'POST',
     });
 }
@@ -373,14 +373,14 @@ export async function enableExecutionSchedule(id: string) {
  * 禁用定时调度
  */
 export async function disableExecutionSchedule(id: string) {
-    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/execution-schedules/${id}/disable`, {
+    return request<{ data: AutoHealing.ExecutionSchedule }>(`/api/v1/tenant/execution-schedules/${id}/disable`, {
         method: 'POST',
     });
 }
 
 /**
  * 获取调度统计数据
- * GET /api/v1/execution-schedules/stats
+ * GET /api/v1/tenant/execution-schedules/stats
  */
 export async function getExecutionScheduleStats() {
     return request<{
@@ -392,12 +392,12 @@ export async function getExecutionScheduleStats() {
             by_status: Array<{ status: string; count: number }>;
             by_schedule_type: Array<{ schedule_type: string; count: number }>;
         };
-    }>('/api/v1/execution-schedules/stats', { method: 'GET' });
+    }>('/api/v1/tenant/execution-schedules/stats', { method: 'GET' });
 }
 
 /**
  * 获取时间轴数据（轻量级，不分页）
- * GET /api/v1/execution-schedules/timeline
+ * GET /api/v1/tenant/execution-schedules/timeline
  */
 export async function getScheduleTimeline(params?: { date?: string }) {
     return request<{
@@ -415,6 +415,6 @@ export async function getScheduleTimeline(params?: { date?: string }) {
             task_id: string;
             task_name: string;
         }>;
-    }>('/api/v1/execution-schedules/timeline', { method: 'GET', params });
+    }>('/api/v1/tenant/execution-schedules/timeline', { method: 'GET', params });
 }
 

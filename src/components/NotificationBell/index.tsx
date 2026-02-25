@@ -171,7 +171,7 @@ const NotificationBell: React.FC = () => {
         if (!token) return;
 
         const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
-        let sseUrl = `${sseBase}/api/v1/site-messages/events?token=${token}`;
+        let sseUrl = `${sseBase}/api/v1/tenant/site-messages/events?token=${token}`;
         // 将当前租户 ID 传入 SSE，确保数据与租户匹配
         if (tenantId) {
             sseUrl += `&tenant_id=${encodeURIComponent(tenantId)}`;
