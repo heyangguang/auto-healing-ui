@@ -204,12 +204,23 @@ const PlatformUsersPage: React.FC = () => {
     };
 
     // ==================== User Card ====================
+    // 判断某用户是否是最后一个可用的平台管理员
+    const isLastPlatformAdmin = useCallback((user: any) => {
+        const activePlatformAdmins = data.filter(
+            (u: any) => u.status === 'active' && u.roles?.some((r: any) => r.name === 'platform_admin')
+        );
+        return activePlatformAdmins.length <= 1
+            && user.status === 'active'
+            && user.roles?.some((r: any) => r.name === 'platform_admin');
+    }, [data]);
+
     const renderUserCard = (user: any) => {
         const isActive = user.status === 'active';
         const statusInfo = USER_STATUS_MAP[user.status] || USER_STATUS_MAP['inactive'];
         const displayName = user.display_name || user.username;
         const firstLetter = displayName?.[0]?.toUpperCase() || 'U';
         const roles = user.roles || [];
+        const isLastAdmin = isLastPlatformAdmin(user);
 
         return (
             <Col key={user.id} xs={24} sm={12} md={12} lg={8} xl={6} xxl={6}>
@@ -286,10 +297,11 @@ const PlatformUsersPage: React.FC = () => {
                                 {user.id?.substring(0, 8)}
                             </span>
                             <Space size={0} onClick={e => e.stopPropagation()}>
-                                <Tooltip title={isActive ? '禁用' : '启用'}>
+                                <Tooltip title={isLastAdmin ? '最后一个平台管理员，无法禁用' : (isActive ? '禁用' : '启用')}>
                                     <Switch
                                         size="small"
                                         checked={isActive}
+                                        disabled={isLastAdmin}
                                         onChange={(_, e) => handleToggleStatus(e, user)}
                                     />
                                 </Tooltip>
@@ -301,16 +313,22 @@ const PlatformUsersPage: React.FC = () => {
                                     </Tooltip>
                                 )}
                                 {access.canDeletePlatformUser && (
-                                    <Popconfirm
-                                        title="确认删除该平台用户？"
-                                        description="删除后不可恢复。"
-                                        onConfirm={(e) => handleDelete(e as any, user)}
-                                        okText="删除" okButtonProps={{ danger: true }}
-                                    >
-                                        <Tooltip title="删除">
-                                            <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                                    isLastAdmin ? (
+                                        <Tooltip title="最后一个平台管理员，无法删除">
+                                            <Button type="text" danger size="small" icon={<DeleteOutlined />} disabled />
                                         </Tooltip>
-                                    </Popconfirm>
+                                    ) : (
+                                        <Popconfirm
+                                            title="确认删除该平台用户？"
+                                            description="删除后不可恢复。"
+                                            onConfirm={(e) => handleDelete(e as any, user)}
+                                            okText="删除" okButtonProps={{ danger: true }}
+                                        >
+                                            <Tooltip title="删除">
+                                                <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                                            </Tooltip>
+                                        </Popconfirm>
+                                    )
                                 )}
                             </Space>
                         </div>
@@ -441,10 +459,16 @@ const PlatformUsersPage: React.FC = () => {
                                     </Button>
                                 )}
                                 {access.canDeletePlatformUser && (
-                                    <Popconfirm title="确认删除该平台用户？" description="删除后不可恢复"
-                                        onConfirm={(e) => handleDelete(e as any, drawerUser)}>
-                                        <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
-                                    </Popconfirm>
+                                    isLastPlatformAdmin(drawerUser) ? (
+                                        <Tooltip title="最后一个平台管理员，无法删除">
+                                            <Button size="small" danger icon={<DeleteOutlined />} disabled>删除</Button>
+                                        </Tooltip>
+                                    ) : (
+                                        <Popconfirm title="确认删除该平台用户？" description="删除后不可恢复"
+                                            onConfirm={(e) => handleDelete(e as any, drawerUser)}>
+                                            <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
+                                        </Popconfirm>
+                                    )
                                 )}
                             </div>
                         </div>
