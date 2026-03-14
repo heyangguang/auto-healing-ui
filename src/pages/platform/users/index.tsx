@@ -306,8 +306,9 @@ const PlatformUsersPage: React.FC = () => {
                                     />
                                 </Tooltip>
                                 {access.canUpdatePlatformUser && (
-                                    <Tooltip title="编辑">
+                                    <Tooltip title={isLastAdmin ? '最后一个平台管理员，无法编辑' : '编辑'}>
                                         <Button type="text" size="small" icon={<EditOutlined />}
+                                            disabled={isLastAdmin}
                                             onClick={() => history.push(`/platform/users/${user.id}/edit`)}
                                         />
                                     </Tooltip>
@@ -447,10 +448,16 @@ const PlatformUsersPage: React.FC = () => {
                             </div>
                             <div className="user-drawer-actions">
                                 {access.canUpdatePlatformUser && (
-                                    <Button size="small" icon={<EditOutlined />}
-                                        onClick={() => { closeDrawer(); history.push(`/platform/users/${drawerUser.id}/edit`); }}>
-                                        编辑
-                                    </Button>
+                                    isLastPlatformAdmin(drawerUser) ? (
+                                        <Tooltip title="最后一个平台管理员，无法编辑">
+                                            <Button size="small" icon={<EditOutlined />} disabled>编辑</Button>
+                                        </Tooltip>
+                                    ) : (
+                                        <Button size="small" icon={<EditOutlined />}
+                                            onClick={() => { closeDrawer(); history.push(`/platform/users/${drawerUser.id}/edit`); }}>
+                                            编辑
+                                        </Button>
+                                    )
                                 )}
                                 {access.canResetPlatformPassword && (
                                     <Button size="small" icon={<LockOutlined />}

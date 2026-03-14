@@ -8,7 +8,7 @@ import {
 import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
-    getPlatformUser, createPlatformUser, updatePlatformUser,
+    getPlatformUser, getPlatformUsers, createPlatformUser, updatePlatformUser,
 } from '@/services/auto-healing/platform/users';
 import { getPlatformRoles } from '@/services/auto-healing/roles';
 import './UserForm.css';
@@ -27,6 +27,7 @@ const UserForm: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [platformRoles, setPlatformRoles] = useState<{ id: string; name: string; display_name: string }[]>([]);
     const [rolesLoading, setRolesLoading] = useState(false);
+    const [isLastAdmin, setIsLastAdmin] = useState(false);
 
     const handleGoBack = useCallback(() => {
         if (window.history.length > 1) history.back();
@@ -47,18 +48,28 @@ const UserForm: React.FC = () => {
             .finally(() => setRolesLoading(false));
     }, []);
 
-    // 编辑模式：加载用户数据
+    // 编辑模式：加载用户数据 + 检测是否为最后一个管理员
     useEffect(() => {
         if (!isEdit) return;
         setLoading(true);
-        getPlatformUser(id!).then((res: any) => {
-            const user = res?.data || res;
+        Promise.all([
+            getPlatformUser(id!),
+            getPlatformUsers({ page: 1, page_size: 100 }),
+        ]).then(([userRes, listRes]: any[]) => {
+            const user = userRes?.data || userRes;
             form.setFieldsValue({
                 username: user.username,
                 display_name: user.display_name,
                 email: user.email,
                 role_id: user.roles?.[0]?.id,
             });
+            // 检测是否为最后一个活跃的 platform_admin
+            const allUsers = listRes?.data || [];
+            const activeAdmins = allUsers.filter(
+                (u: any) => u.status === 'active' && u.roles?.some((r: any) => r.name === 'platform_admin')
+            );
+            const isCurrentAdmin = user.roles?.some((r: any) => r.name === 'platform_admin');
+            setIsLastAdmin(activeAdmins.length <= 1 && isCurrentAdmin);
         }).catch(() => {
             /* global error handler */
         }).finally(() => setLoading(false));
@@ -87,7 +98,7 @@ const UserForm: React.FC = () => {
             }
             history.push('/platform/users');
         } catch {
-            message.error(isEdit ? '更新失败' : '创建失败');
+            /* global error handler */
         } finally {
             setSubmitting(false);
         }
@@ -205,11 +216,14 @@ const UserForm: React.FC = () => {
                             <Form.Item
                                 name="role_id"
                                 label="选择角色"
-                                extra="选择用户在平台级别的角色，不同角色拥有不同权限"
+                                extra={isLastAdmin
+                                    ? '❗当前用户是最后一个活跃的平台管理员，角色不可变更'
+                                    : '选择用户在平台级别的角色，不同角色拥有不同权限'}
                             >
                                 <Select
                                     placeholder="请选择平台角色（不选默认平台管理员）"
                                     loading={rolesLoading}
+                                    disabled={isLastAdmin}
                                     options={platformRoles.map(r => ({
                                         label: `${r.display_name}（${r.name}）`,
                                         value: r.id,
