@@ -20,6 +20,7 @@ const FB_TENANT_RESOURCE: Record<string, string> = {
     templates: '通知模板', 'tenant-impersonation': '临时提权',
     user: '用户', users: '用户管理',
     'command-blacklist': '命令黑名单', 'blacklist-exemptions': '豁免规则',
+    common: '通用操作',
 };
 
 const FB_PLATFORM_RESOURCE: Record<string, string> = {
@@ -34,6 +35,8 @@ const FB_PLATFORM_RESOURCE: Record<string, string> = {
     tenants: '租户管理', users: '用户管理',
     'command-blacklist': '命令黑名单', 'blacklist-exemptions': '豁免规则',
     dictionaries: '字典管理',
+    common: '通用操作', 'git-repos': '代码仓库',
+    playbooks: '自动化剧本',
 };
 
 const FB_ACTION_LABELS: Record<string, string> = {
@@ -42,6 +45,7 @@ const FB_ACTION_LABELS: Record<string, string> = {
     create: '创建', deactivate: '停用', delete: '删除', disable: '禁用',
     dismiss: '驳回', enable: '启用', execute: '执行', login: '登录',
     logout: '登出', impersonation_enter: '提权进入', impersonation_exit: '提权退出',
+    impersonation_terminate: '提权终止',
     maintenance: '维护', preview: '预览', ready: '就绪',
     reject: '审批拒绝', reset_password: '重置密码', reset_scan: '重置扫描',
     resume: '恢复', scan: '扫描', sync: '同步', test: '测试',
@@ -54,6 +58,7 @@ const FB_ACTION_COLORS: Record<string, string> = {
     create: 'green', deactivate: 'orange', delete: 'red', disable: 'orange',
     dismiss: 'volcano', enable: 'green', execute: 'geekblue', login: 'purple',
     logout: 'purple', impersonation_enter: 'purple', impersonation_exit: 'default',
+    impersonation_terminate: 'red',
     maintenance: 'orange', preview: 'default', ready: 'cyan',
     reject: 'red', reset_password: 'orange', reset_scan: 'gold',
     resume: 'geekblue', scan: 'blue', sync: 'purple', test: 'default',
@@ -71,6 +76,7 @@ const FB_ACTION_VERBS: Record<string, { verb: string; color: string }> = {
     logout: { verb: '登出了', color: '#722ed1' },
     impersonation_enter: { verb: '提权进入了', color: '#722ed1' },
     impersonation_exit: { verb: '提权退出了', color: '#722ed1' },
+    impersonation_terminate: { verb: '终止了提权', color: '#f5222d' },
     maintenance: { verb: '维护了', color: '#fa8c16' },
     preview: { verb: '预览了', color: '#8c8c8c' }, ready: { verb: '就绪了', color: '#13c2c2' },
     reject: { verb: '拒绝了', color: '#f5222d' }, reset_password: { verb: '重置了密码', color: '#fa8c16' },
