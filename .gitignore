@@ -51,3 +51,4 @@ build
 logs.json
 runs.json
 .env.local
+docker-images/
