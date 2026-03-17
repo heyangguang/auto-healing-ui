@@ -487,7 +487,7 @@ export default [
         label: '租户管理',
         desc: '多租户创建与配置',
         navIcon: 'global',
-        navAccess: 'isPlatformAdmin',
+        navAccess: 'canViewPlatformTenants',
       },
       {
         path: '/platform/tenants/create',
@@ -512,7 +512,7 @@ export default [
         label: '平台用户',
         desc: '跨租户用户管理',
         navIcon: 'team',
-        navAccess: 'isPlatformAdmin',
+        navAccess: 'canViewPlatformUsers',
       },
       {
         path: '/platform/users/create',
@@ -532,7 +532,7 @@ export default [
         label: '平台角色',
         desc: '平台级角色与权限管理',
         navIcon: 'safetyCertificate',
-        navAccess: 'isPlatformAdmin',
+        navAccess: 'canViewPlatformRoles',
       },
 
       {
@@ -542,7 +542,7 @@ export default [
         label: '平台消息',
         desc: '平台级消息推送',
         navIcon: 'mail',
-        navAccess: 'isPlatformAdmin',
+        navAccess: 'canSendPlatformMessage',
       },
       {
         path: '/platform/settings',
@@ -551,7 +551,7 @@ export default [
         label: '平台设置',
         desc: '全局平台参数配置',
         navIcon: 'control',
-        navAccess: 'isPlatformAdmin',
+        navAccess: 'canManagePlatformSettings',
       },
       {
         path: '/platform/audit-logs',
@@ -560,7 +560,7 @@ export default [
         label: '平台审计日志',
         desc: '平台管理员操作审计',
         navIcon: 'audit',
-        navAccess: 'isPlatformAdmin',
+        navAccess: 'canViewPlatformAudit',
       },
       {
         path: '/platform/impersonation',
