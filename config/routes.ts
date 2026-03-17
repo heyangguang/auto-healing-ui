@@ -651,11 +651,11 @@ export default [
         path: '/system/permissions',
         name: 'permissions',
         component: './system/permissions',
-        access: 'canViewPlatformPermissions',
+        access: 'canViewRoles',
         label: '权限列表',
         desc: '系统功能权限点查询',
         navIcon: 'lock',
-        navAccess: 'canViewPlatformPermissions',
+        navAccess: 'canViewRoles',
       },
 
       {
