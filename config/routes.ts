@@ -478,6 +478,7 @@ export default [
         label: '租户运营总览',
         desc: '所有租户运营数据概览',
         navIcon: 'fundProjectionScreen',
+        access: 'isPlatformAdmin',
         navAccess: 'isPlatformAdmin',
       },
       {
@@ -487,21 +488,25 @@ export default [
         label: '租户管理',
         desc: '多租户创建与配置',
         navIcon: 'global',
+        access: 'canViewPlatformTenants',
         navAccess: 'canViewPlatformTenants',
       },
       {
         path: '/platform/tenants/create',
         component: './platform/tenants/TenantForm',
+        access: 'canManagePlatformTenants',
         hideInMenu: true,
       },
       {
         path: '/platform/tenants/:id/edit',
         component: './platform/tenants/TenantForm',
+        access: 'canManagePlatformTenants',
         hideInMenu: true,
       },
       {
         path: '/platform/tenants/:id/members',
         component: './platform/tenants/TenantMembers',
+        access: 'canViewPlatformTenants',
         hideInMenu: true,
       },
 
@@ -512,16 +517,19 @@ export default [
         label: '平台用户',
         desc: '跨租户用户管理',
         navIcon: 'team',
+        access: 'canViewPlatformUsers',
         navAccess: 'canViewPlatformUsers',
       },
       {
         path: '/platform/users/create',
         component: './platform/users/UserForm',
+        access: 'canCreatePlatformUser',
         hideInMenu: true,
       },
       {
         path: '/platform/users/:id/edit',
         component: './platform/users/UserForm',
+        access: 'canUpdatePlatformUser',
         hideInMenu: true,
       },
 
@@ -532,6 +540,7 @@ export default [
         label: '平台角色',
         desc: '平台级角色与权限管理',
         navIcon: 'safetyCertificate',
+        access: 'canViewPlatformRoles',
         navAccess: 'canViewPlatformRoles',
       },
 
@@ -542,6 +551,7 @@ export default [
         label: '平台消息',
         desc: '平台级消息推送',
         navIcon: 'mail',
+        access: 'canSendPlatformMessage',
         navAccess: 'canSendPlatformMessage',
       },
       {
@@ -551,6 +561,7 @@ export default [
         label: '平台设置',
         desc: '全局平台参数配置',
         navIcon: 'control',
+        access: 'canManagePlatformSettings',
         navAccess: 'canManagePlatformSettings',
       },
       {
@@ -560,6 +571,7 @@ export default [
         label: '平台审计日志',
         desc: '平台管理员操作审计',
         navIcon: 'audit',
+        access: 'canViewPlatformAudit',
         navAccess: 'canViewPlatformAudit',
       },
       {
@@ -569,6 +581,7 @@ export default [
         label: '租户访问管理',
         desc: '审批制租户数据访问',
         navIcon: 'eye',
+        access: 'isPlatformAdmin',
         navAccess: 'isPlatformAdmin',
       },
       {
@@ -578,6 +591,7 @@ export default [
         label: '租户运营明细',
         desc: '租户运营数据明细报表',
         navIcon: 'barChart',
+        access: 'isPlatformAdmin',
         navAccess: 'isPlatformAdmin',
       },
     ],
