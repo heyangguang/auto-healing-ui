@@ -19,6 +19,15 @@ export async function getPlatformRoles() {
 }
 
 /**
+ * 获取系统级租户角色列表（平台页面用，如租户成员管理时选择角色）
+ */
+export async function getSystemTenantRoles() {
+    return request<{ data: AutoHealing.Role[] }>('/api/v1/platform/tenant-roles', {
+        method: 'GET',
+    });
+}
+
+/**
  * 获取角色详情
  */
 export async function getRole(id: string) {

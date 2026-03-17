@@ -19,7 +19,7 @@ import {
     inviteToTenant, getTenantInvitations, cancelTenantInvitation,
 } from '@/services/auto-healing/platform/tenants';
 import { getPlatformUsersSimple } from '@/services/auto-healing/platform/users';
-import { getRoles } from '@/services/auto-healing/roles';
+import { getSystemTenantRoles } from '@/services/auto-healing/roles';
 import dayjs from 'dayjs';
 import { extractErrorMsg } from '@/utils/errorMsg';
 import './TenantMembers.css';
@@ -129,14 +129,8 @@ const TenantMembersPage: React.FC = () => {
         loadMembers();
         loadSimpleUsers();
         loadInvitations();
-        getRoles().then((res: any) => {
-            // 只显示系统级租户角色，排除自定义角色和 impersonation_accessor
-            const roles = (res?.data || []).filter((r: any) =>
-                r.is_system === true &&
-                (r.scope === 'tenant' || !r.name?.startsWith('platform_')) &&
-                r.name !== 'impersonation_accessor'
-            );
-            setTenantRoles(roles);
+        getSystemTenantRoles().then((res: any) => {
+            setTenantRoles(res?.data || []);
         }).catch(() => { });
     }, [loadTenant, loadMembers, loadSimpleUsers, loadInvitations]);
 
