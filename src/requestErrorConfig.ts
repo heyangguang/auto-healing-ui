@@ -32,6 +32,9 @@ export const TokenManager = {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(REMEMBER_KEY);
+    localStorage.removeItem('tenant-storage');
+    localStorage.removeItem('is-platform-admin');
+    localStorage.removeItem('impersonation-storage');
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     cachedTokenExpiry = null;
@@ -105,7 +108,8 @@ const doRefreshToken = async (): Promise<string | null> => {
       console.log('[Auth] Token 已自动刷新');
 
       // 🆕 更新租户信息：只更新列表，保留用户当前选择的租户
-      if (data.tenants) {
+      const isPlatformAdmin = localStorage.getItem('is-platform-admin') === 'true';
+      if (!isPlatformAdmin && data.tenants) {
         const existingRaw = localStorage.getItem('tenant-storage');
         let preservedTenantId = data.current_tenant_id; // 默认使用后端返回的
         if (existingRaw) {
@@ -123,6 +127,8 @@ const doRefreshToken = async (): Promise<string | null> => {
         };
         localStorage.setItem('tenant-storage', JSON.stringify(tenantStorage));
         console.log('[Auth] 租户列表已更新，当前租户:', preservedTenantId);
+      } else if (isPlatformAdmin) {
+        localStorage.removeItem('tenant-storage');
       }
 
       return data.access_token;

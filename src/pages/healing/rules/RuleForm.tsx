@@ -18,6 +18,7 @@ import {
     getHealingRule, createHealingRule, updateHealingRule,
 } from '@/services/auto-healing/healing-rules';
 import { getFlows } from '@/services/auto-healing/healing';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 
 import { NODE_TYPE_COLORS } from '../nodeConfig';
 
@@ -51,12 +52,13 @@ const RuleFormPage: React.FC = () => {
     // FlowSelector
     const [flowSelectorOpen, setFlowSelectorOpen] = useState(false);
     const [selectedFlow, setSelectedFlow] = useState<AutoHealing.HealingFlow | null>(null);
+    const [originalFlowId, setOriginalFlowId] = useState<string | null>(null);
 
     // ==================== Load Selected Flow (for edit mode) ====================
     const loadFlowById = useCallback(async (flowId: string) => {
         try {
-            const res = await getFlows({ page: 1, page_size: 200 });
-            const found = (res.data || []).find(f => f.id === flowId);
+            const flows = await fetchAllPages<AutoHealing.HealingFlow>((page, pageSize) => getFlows({ page, page_size: pageSize }));
+            const found = flows.find(f => f.id === flowId);
             if (found) setSelectedFlow(found);
         } catch { /* */ }
     }, []);
@@ -69,7 +71,10 @@ const RuleFormPage: React.FC = () => {
             const rule = res.data;
             // Load linked flow data
             if (rule.flow_id) {
+                setOriginalFlowId(rule.flow_id);
                 loadFlowById(rule.flow_id);
+            } else {
+                setOriginalFlowId(null);
             }
             form.setFieldsValue({
                 name: rule.name,
@@ -105,7 +110,7 @@ const RuleFormPage: React.FC = () => {
                 description: values.description || '',
                 priority: values.priority,
                 trigger_mode: values.trigger_mode,
-                flow_id: selectedFlow?.id || '',
+                flow_id: selectedFlow?.id || values.flow_id || originalFlowId || null,
                 match_mode: values.match_mode || 'all',
                 conditions: conditions || [],
             };

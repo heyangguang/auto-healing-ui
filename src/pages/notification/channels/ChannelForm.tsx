@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { history, useParams, useAccess } from '@umijs/max';
 import {
     Form, Input, Select, Button, message, Spin, Switch,
@@ -22,16 +22,27 @@ const ChannelFormPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [channelType, setChannelType] = useState<AutoHealing.ChannelType | undefined>(undefined);
     const [webhookAuthType, setWebhookAuthType] = useState<'headers' | 'basic'>('headers');
+    const originalConfigRef = useRef<Record<string, any>>({});
+    const [loadedWebhookAuthType, setLoadedWebhookAuthType] = useState<'headers' | 'basic' | null>(null);
 
     // ==================== Load Data for Edit ====================
     useEffect(() => {
-        if (!isEdit || !params.id) return;
+        if (!isEdit || !params.id) {
+            originalConfigRef.current = {};
+            setLoadedWebhookAuthType(null);
+            return;
+        }
         setLoading(true);
         (async () => {
             try {
                 const res = await getChannel(params.id!);
                 const channel = (res as any)?.data || res;
+                const originalConfig = (channel as any).config || {};
+                originalConfigRef.current = originalConfig;
                 setChannelType(channel.type);
+                const isWebhookBasic = channel.type === 'webhook' && !!originalConfig.username;
+                setWebhookAuthType(isWebhookBasic ? 'basic' : 'headers');
+                setLoadedWebhookAuthType(isWebhookBasic ? 'basic' : 'headers');
                 form.setFieldsValue({
                     name: channel.name,
                     type: channel.type,
@@ -40,18 +51,22 @@ const ChannelFormPage: React.FC = () => {
                     is_default: channel.is_default,
                     max_retries: channel.retry_config?.max_retries ?? 3,
                     rate_limit_per_minute: channel.rate_limit_per_minute,
+                    webhook_url: originalConfig.url || originalConfig.webhook_url,
+                    method: originalConfig.method,
+                    timeout_seconds: originalConfig.timeout_seconds,
+                    username: originalConfig.username,
+                    headers: undefined,
+                    smtp_host: originalConfig.smtp_host,
+                    smtp_port: originalConfig.smtp_port,
+                    from_address: originalConfig.from_address,
+                    use_tls: originalConfig.use_tls ?? true,
+                    secret: undefined,
                 });
                 // Set individual interval fields
                 const intervals = channel.retry_config?.retry_intervals || [1, 5, 15];
                 intervals.forEach((val: number, idx: number) => {
                     form.setFieldValue(`interval_${idx}`, val);
                 });
-                // Determine auth type
-                if (channel.type === 'webhook' && (channel as any).config?.username) {
-                    setWebhookAuthType('basic');
-                } else {
-                    setWebhookAuthType('headers');
-                }
             } catch {
                 /* global error handler */
             } finally {
@@ -66,30 +81,64 @@ const ChannelFormPage: React.FC = () => {
             const values = await form.validateFields();
             setSubmitting(true);
 
+            const originalConfig = originalConfigRef.current || {};
             // Build config
             const config: Record<string, any> = {};
             if (values.type === 'webhook') {
                 if (values.webhook_url) config.url = values.webhook_url;
+                else if (isEdit && (originalConfig.url || originalConfig.webhook_url)) config.url = originalConfig.url || originalConfig.webhook_url;
                 if (values.method) config.method = values.method;
+                else if (isEdit && originalConfig.method) config.method = originalConfig.method;
                 if (values.timeout_seconds) config.timeout_seconds = values.timeout_seconds;
+                else if (isEdit && originalConfig.timeout_seconds) config.timeout_seconds = originalConfig.timeout_seconds;
                 if (webhookAuthType === 'headers') {
                     if (values.headers) {
-                        try { config.headers = JSON.parse(values.headers); } catch (e) { /* ignore */ }
+                        try {
+                            const parsed = JSON.parse(values.headers);
+                            if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+                                message.error('自定义 Headers 必须是 JSON 对象');
+                                return;
+                            }
+                            config.headers = parsed;
+                        } catch (e) {
+                            message.error('自定义 Headers JSON 格式无效');
+                            return;
+                        }
+                    } else if (isEdit && originalConfig.headers) {
+                        config.headers = originalConfig.headers;
                     }
                 } else if (webhookAuthType === 'basic') {
                     if (values.username) config.username = values.username;
-                    if (values.password) config.password = values.password;
+                    else if (isEdit && originalConfig.username) config.username = originalConfig.username;
+                    if (values.password) {
+                        config.password = values.password;
+                    } else if (isEdit && originalConfig.username) {
+                        config.password = originalConfig.password;
+                    }
                 }
             } else if (values.type === 'email') {
                 if (values.smtp_host) config.smtp_host = values.smtp_host;
+                else if (isEdit && originalConfig.smtp_host) config.smtp_host = originalConfig.smtp_host;
                 if (values.smtp_port) config.smtp_port = values.smtp_port;
+                else if (isEdit && originalConfig.smtp_port) config.smtp_port = originalConfig.smtp_port;
                 if (values.username) config.username = values.username;
-                if (values.password) config.password = values.password;
+                else if (isEdit && originalConfig.username) config.username = originalConfig.username;
+                if (values.password) {
+                    config.password = values.password;
+                } else if (isEdit && originalConfig.password) {
+                    config.password = originalConfig.password;
+                }
                 if (values.from_address) config.from_address = values.from_address;
+                else if (isEdit && originalConfig.from_address) config.from_address = originalConfig.from_address;
                 config.use_tls = values.use_tls ?? true;
             } else if (values.type === 'dingtalk') {
                 if (values.webhook_url) config.webhook_url = values.webhook_url;
-                if (values.secret) config.secret = values.secret;
+                else if (isEdit && originalConfig.webhook_url) config.webhook_url = originalConfig.webhook_url;
+                if (values.secret) {
+                    config.secret = values.secret;
+                } else if (isEdit && originalConfig.secret) {
+                    config.secret = originalConfig.secret;
+                }
             }
 
             const maxRetries = values.max_retries ?? 3;
@@ -109,8 +158,9 @@ const ChannelFormPage: React.FC = () => {
                 description: values.description,
                 config: Object.keys(config).length > 0 ? config : {},
                 retry_config,
-                default_recipients: values.recipients || [],
+                recipients: values.recipients || [],
                 is_default: values.is_default || false,
+                rate_limit_per_minute: values.rate_limit_per_minute,
             };
 
             if (isEdit && params.id) {
@@ -174,7 +224,12 @@ const ChannelFormPage: React.FC = () => {
                             name="headers"
                             tooltip="在此处配置 Authorization 头或其他 Token"
                         >
-                            <TextArea placeholder='{"Authorization": "Bearer <token>", "X-Custom-Header": "value"}' autoSize={{ minRows: 2, maxRows: 4 }} />
+                            <TextArea
+                                placeholder={isEdit
+                                    ? '留空保持现有 Headers；如需覆盖，请输入完整 JSON'
+                                    : '{"Authorization": "Bearer <token>", "X-Custom-Header": "value"}'}
+                                autoSize={{ minRows: 2, maxRows: 4 }}
+                            />
                         </Form.Item>
                     ) : (
                         <Row gutter={16}>
@@ -184,7 +239,11 @@ const ChannelFormPage: React.FC = () => {
                                 </Form.Item>
                             </Col>
                             <Col span={12}>
-                                <Form.Item label="密码" name="password" rules={[{ required: !isEdit, message: '请输入密码' }]}>
+                                <Form.Item
+                                    label="密码"
+                                    name="password"
+                                    rules={[{ required: !isEdit || loadedWebhookAuthType !== 'basic', message: '请输入密码' }]}
+                                >
                                     <Input.Password placeholder={isEdit ? '留空保持不变' : ''} />
                                 </Form.Item>
                             </Col>

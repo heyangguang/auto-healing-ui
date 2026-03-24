@@ -9,6 +9,7 @@ export async function getChannels(params?: {
     page?: number;
     page_size?: number;
     type?: AutoHealing.ChannelType;
+    name?: string;
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.NotificationChannel>>('/api/v1/tenant/channels', {
         method: 'GET',
@@ -29,7 +30,7 @@ export async function getChannel(id: string) {
  * 创建渠道
  */
 export async function createChannel(data: AutoHealing.CreateChannelRequest) {
-    return request<AutoHealing.NotificationChannel>('/api/v1/tenant/channels', {
+    return request<{ data: AutoHealing.NotificationChannel }>('/api/v1/tenant/channels', {
         method: 'POST',
         data,
     });
@@ -71,7 +72,13 @@ export async function testChannel(id: string) {
 export async function getTemplates(params?: {
     page?: number;
     page_size?: number;
+    name?: string;
     event_type?: AutoHealing.EventType;
+    is_active?: boolean;
+    format?: string;
+    supported_channel?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.NotificationTemplate>>('/api/v1/tenant/templates', {
         method: 'GET',
@@ -83,7 +90,7 @@ export async function getTemplates(params?: {
  * 获取模板详情
  */
 export async function getTemplate(id: string) {
-    return request<AutoHealing.NotificationTemplate>(`/api/v1/tenant/templates/${id}`, {
+    return request<{ data: AutoHealing.NotificationTemplate }>(`/api/v1/tenant/templates/${id}`, {
         method: 'GET',
     });
 }
@@ -92,7 +99,7 @@ export async function getTemplate(id: string) {
  * 创建模板
  */
 export async function createTemplate(data: AutoHealing.CreateTemplateRequest) {
-    return request<AutoHealing.NotificationTemplate>('/api/v1/tenant/templates', {
+    return request<{ data: AutoHealing.NotificationTemplate }>('/api/v1/tenant/templates', {
         method: 'POST',
         data,
     });
@@ -157,8 +164,17 @@ export async function getNotifications(params?: {
     page?: number;
     page_size?: number;
     status?: AutoHealing.NotificationStatus;
-    run_id?: string;
-    search?: string;
+    channel_id?: string;
+    template_id?: string;
+    task_id?: string;
+    execution_run_id?: string;
+    task_name?: string;
+    subject?: string;
+    triggered_by?: string;
+    created_after?: string;
+    created_before?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.Notification>>('/api/v1/tenant/notifications', {
         method: 'GET',
@@ -172,15 +188,6 @@ export async function getNotifications(params?: {
 export async function getNotification(id: string) {
     return request<AutoHealing.Notification>(`/api/v1/tenant/notifications/${id}`, {
         method: 'GET',
-    });
-}
-
-/**
- * 重试发送通知
- */
-export async function retryNotification(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/notifications/${id}/retry`, {
-        method: 'POST',
     });
 }
 

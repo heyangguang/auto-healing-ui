@@ -11,12 +11,14 @@ import {
 } from 'antd';
 import React, { useState, useEffect, useCallback, startTransition } from 'react';
 import { history, useAccess } from '@umijs/max';
-import { getNotifications, retryNotification, getChannels, getTemplates, getNotificationStats } from '@/services/auto-healing/notification';
+import { getNotifications, getChannels, getTemplates, getNotificationStats } from '@/services/auto-healing/notification';
 import { getExecutionRun } from '@/services/auto-healing/execution';
 import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, AdvancedSearchField } from '@/components/StandardTable';
 import './index.css';
 import { getChannelTypeConfig } from '@/constants/notificationDicts';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 
 const { Text } = Typography;
 
@@ -124,7 +126,6 @@ const NotificationRecords: React.FC = () => {
     const access = useAccess();
     const [detailOpen, setDetailOpen] = useState(false);
     const [currentRecord, setCurrentRecord] = useState<AutoHealing.Notification | null>(null);
-    const [retryLoading, setRetryLoading] = useState<string | null>(null);
     const [allData, setAllData] = useState<AutoHealing.Notification[]>([]);
     const [reloadKey, setReloadKey] = useState(0);
 
@@ -139,29 +140,15 @@ const NotificationRecords: React.FC = () => {
 
     useEffect(() => {
         Promise.all([
-            getChannels({ page_size: 100 }),
-            getTemplates({ page_size: 100 })
-        ]).then(([chRes, tplRes]) => {
-            if (chRes.data) setChannels(chRes.data);
-            if (tplRes.data) setTemplates(tplRes.data);
+            fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize })),
+            fetchAllPages<AutoHealing.NotificationTemplate>((page, pageSize) => getTemplates({ page, page_size: pageSize }))
+        ]).then(([channelItems, templateItems]) => {
+            setChannels(channelItems);
+            setTemplates(templateItems);
         });
     }, []);
 
     // ==================== Actions ====================
-    const handleRetry = useCallback(async (id: string) => {
-        setRetryLoading(id);
-        try {
-            await retryNotification(id);
-            message.success('重试发送成功');
-            setReloadKey(k => k + 1);
-            setDetailOpen(false);
-        } catch {
-            // global error handler
-        } finally {
-            setRetryLoading(null);
-        }
-    }, []);
-
     const handleViewDetail = useCallback((record: AutoHealing.Notification) => {
         setCurrentRecord(record);
         setDetailOpen(true);
@@ -286,19 +273,11 @@ const NotificationRecords: React.FC = () => {
             width: 100,
             fixed: 'right',
             render: (_val, record) => {
-                const isFailed = record.status === 'failed' || record.status === 'bounced';
                 return (
                     <Space size={4} onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="查看详情">
                             <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
                         </Tooltip>
-                        {isFailed && (
-                            <Tooltip title="重试发送">
-                                <Button type="text" size="small" danger icon={<SyncOutlined />}
-                                    disabled={!access.canSendNotification}
-                                    loading={retryLoading === record.id} onClick={() => handleRetry(record.id)} />
-                            </Tooltip>
-                        )}
                     </Space>
                 );
             },
@@ -327,7 +306,6 @@ const NotificationRecords: React.FC = () => {
                 searchFields={[
                     { key: 'subject', label: '通知主题' },
                     { key: 'task_name', label: '任务名称' },
-                    { key: 'recipient', label: '接收者' },
                 ]}
                 advancedSearchFields={[
                     { key: 'subject', label: '通知主题', type: 'input', placeholder: '搜索通知主题' },
@@ -386,8 +364,8 @@ const NotificationRecords: React.FC = () => {
                         // 日期范围
                         if (adv.created_at) {
                             const [start, end] = adv.created_at;
-                            if (start) apiParams.created_after = start;
-                            if (end) apiParams.created_before = end;
+                            if (start) apiParams.created_after = toDayRangeStartISO(start);
+                            if (end) apiParams.created_before = toDayRangeEndISO(end);
                         }
                         // 通用字段传递
                         const specialKeys = ['channel', 'created_at'];
@@ -426,16 +404,7 @@ const NotificationRecords: React.FC = () => {
                 size={700}
                 open={detailOpen}
                 onClose={() => setDetailOpen(false)}
-                extra={
-                    currentRecord && (currentRecord.status === 'failed' || currentRecord.status === 'bounced') && (
-                        <Button type="primary" danger icon={<SendOutlined />}
-                            loading={retryLoading === currentRecord.id}
-                            disabled={!access.canSendNotification}
-                            onClick={() => handleRetry(currentRecord.id)}>
-                            重试发送
-                        </Button>
-                    )
-                }
+                extra={null}
             >
                 {currentRecord && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

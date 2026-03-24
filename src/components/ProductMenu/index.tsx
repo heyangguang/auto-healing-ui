@@ -19,6 +19,7 @@ import {
     type FavoriteItem,
     type RecentItem,
 } from '@/services/auto-healing/userNav';
+import { canAccessPath } from '@/utils/pathAccess';
 
 /* ──── 样式 ──── */
 const useStyles = createStyles(({ token }) => ({
@@ -271,21 +272,30 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
     );
 
     const handleNavigate = (path: string) => {
+        if (!canAccessPath(path, access)) return;
         startTransition(() => {
             history.push(path);
         });
         onClose();
     };
 
+    const hasServiceAccess = useCallback((svc: ServiceItem) => {
+        if (svc.accesses?.length) {
+            return svc.accesses.every((key) => !key || Boolean((access as any)[key]));
+        }
+        if (svc.access) return Boolean((access as any)[svc.access]);
+        return canAccessPath(svc.path, access);
+    }, [access]);
+
     // 根据权限过滤服务和分类
     const filteredServices = React.useMemo(() => {
         const result: Record<string, ServiceItem[]> = {};
         for (const [catId, items] of Object.entries(SERVICES)) {
-            const filtered = items.filter(svc => !svc.access || access[svc.access]);
+            const filtered = items.filter(hasServiceAccess);
             if (filtered.length > 0) result[catId] = filtered;
         }
         return result;
-    }, [access]);
+    }, [hasServiceAccess]);
 
     const filteredCategories = React.useMemo(() => {
         return CATEGORIES.filter(cat => cat.id === 'guide' || filteredServices[cat.id]?.length > 0);
@@ -358,6 +368,7 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
                                     <span
                                         key={f.menu_key}
                                         className={styles.quickLink}
+                                        style={!canAccessPath(f.path, access) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
                                         onClick={() => handleNavigate(f.path)}
                                     >
                                         {f.name}
@@ -379,6 +390,7 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
                                     <span
                                         key={r.menu_key}
                                         className={styles.quickLink}
+                                        style={!canAccessPath(r.path, access) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
                                         onClick={() => handleNavigate(r.path)}
                                     >
                                         {r.name}

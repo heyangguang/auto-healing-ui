@@ -1,6 +1,6 @@
 import { ScheduleOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
-import { useRequest, history } from '@umijs/max';
+import { useAccess, useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getExecutionSchedules } from '@/services/auto-healing/execution';
@@ -8,7 +8,10 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(() => getExecutionSchedules({ page_size: 15 }));
+    const access = useAccess();
+    const { data: rawData, loading, refresh } = useRequest(() => getExecutionSchedules({ page_size: 15 }), {
+        ready: !!access.canViewTasks,
+    });
     const data = rawData as any;
     const items = data?.data ?? data?.items ?? [];
 
@@ -51,13 +54,14 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                                         gridTemplateColumns: '1.2fr 1fr 50px 120px',
                                         gap: 8,
                                         padding: '8px 12px',
-                                        cursor: 'pointer',
+                                        cursor: access.canViewTasks ? 'pointer' : 'default',
                                         background: index % 2 === 1 ? '#fafafa' : '#fff',
                                         borderBottom: '1px solid #f0f0f0',
                                         transition: 'background 0.3s',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        ...(access.canViewTasks ? {} : { opacity: 0.65 }),
                                     }}
-                                    onClick={() => history.push('/execution/schedules')}
+                                    onClick={() => access.canViewTasks && history.push('/execution/schedules')}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                                         <Badge status={item.enabled ? 'success' : 'default'} />
@@ -80,8 +84,8 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                                     </div>
 
                                     <div style={{ textAlign: 'center' }}>
-                                        <Tag color={item.enabled ? 'green' : 'default'} style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>
-                                            {item.enabled ? '启用' : '停用'}
+                                        <Tag color={item.status === 'auto_paused' ? 'orange' : item.enabled ? 'green' : 'default'} style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>
+                                            {item.status === 'auto_paused' ? '自动暂停' : item.enabled ? '启用' : '停用'}
                                         </Tag>
                                     </div>
 

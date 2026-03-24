@@ -10,7 +10,7 @@
  * [role]        role:list | role:create | role:update | role:delete | role:assign
  * [plugin]      plugin:list | plugin:detail | plugin:create | plugin:update | plugin:delete | plugin:sync | plugin:test
  * [execution]   repository:list | repository:create | repository:update | repository:delete | repository:sync
- *               playbook:list | playbook:execute
+ *               playbook:list | playbook:create | playbook:update | playbook:delete | playbook:execute
  *               task:list | task:detail | task:create | task:update | task:delete | task:cancel
  * [notification] channel:list | channel:create | channel:update | channel:delete
  *               template:list | template:create | template:update | template:delete
@@ -36,6 +36,21 @@ export default function access(
   const { currentUser } = initialState ?? {};
   const permissions = currentUser?.permissions ?? [];
 
+  const hasActiveImpersonationSession = (() => {
+    try {
+      const impRaw = localStorage.getItem('impersonation-storage');
+      if (!impRaw) return false;
+      const imp = JSON.parse(impRaw);
+      if (!imp?.isImpersonating || !imp?.session?.expiresAt) return false;
+      const expiresAt = new Date(imp.session.expiresAt);
+      if (expiresAt > new Date()) return true;
+      localStorage.removeItem('impersonation-storage');
+    } catch {
+      // ignore malformed local cache
+    }
+    return false;
+  })();
+
   /**
    * 检查用户是否拥有指定权限
    * 支持：精确匹配、超级管理员通配符 "*"、模块级通配符 "plugin:*"
@@ -60,6 +75,18 @@ export default function access(
   const hasAnyPermission = (...requiredList: string[]): boolean => {
     return requiredList.some((r) => hasPermission(r));
   };
+
+  const canViewImpersonationApprovals = !currentUser?.is_platform_admin
+    && !hasActiveImpersonationSession
+    && hasPermission('tenant:impersonation:view');
+  const canApproveImpersonation = !currentUser?.is_platform_admin
+    && !hasActiveImpersonationSession
+    && hasPermission('tenant:impersonation:approve');
+  const canViewPendingCenter = hasAnyPermission(
+    'healing:approvals:view',
+    'healing:trigger:view',
+    'security:exemption:approve',
+  ) || canViewImpersonationApprovals;
 
   return {
     // ===============================
@@ -118,16 +145,54 @@ export default function access(
     canViewChannels: hasPermission('channel:list'),
     canViewTemplates: hasPermission('template:list'),
     canViewNotifications: hasPermission('notification:list'),
+    canViewExecutionCenter: hasAnyPermission(
+      'task:list',
+      'task:detail',
+      'task:create',
+      'task:update',
+      'playbook:execute',
+      'repository:list',
+      'repository:create',
+      'repository:update',
+      'playbook:list',
+      'playbook:create',
+      'playbook:update',
+      'playbook:delete',
+    ),
     canViewFlows: hasPermission('healing:flows:view'),
     canViewRules: hasPermission('healing:rules:view'),
     canViewInstances: hasPermission('healing:instances:view'),
     canViewApprovals: hasPermission('healing:approvals:view'),
     canViewPendingTrigger: hasPermission('healing:trigger:view'),
+    canViewPendingCenter,
+    canViewHealingCenter: hasAnyPermission(
+      'healing:flows:view',
+      'healing:flows:create',
+      'healing:flows:update',
+      'healing:rules:view',
+      'healing:rules:create',
+      'healing:rules:update',
+      'healing:instances:view',
+    ),
     canViewPlaybooks: hasPermission('playbook:list'),
     canViewRepositories: hasPermission('repository:list'),
+    canViewResources: hasAnyPermission('plugin:list', 'plugin:create', 'plugin:update'),
     canViewAuditLogs: hasPermission('audit:list'),
     canExportAuditLogs: hasPermission('audit:export'),
     canViewDashboard: hasPermission('dashboard:view'),
+    canViewSystemCenter: hasAnyPermission(
+      'user:list',
+      'user:create',
+      'user:update',
+      'role:list',
+      'role:create',
+      'role:update',
+      'audit:list',
+      'site-message:list',
+      'site-message:create',
+      'site-message:settings:view',
+      'site-message:settings:manage',
+    ),
 
     // ===============================
     // 用户管理 (user:*)
@@ -170,11 +235,17 @@ export default function access(
     // ===============================
     // Playbook (playbook:*)
     // ===============================
-    canManagePlaybook: hasPermission('playbook:execute'),
+    canCreatePlaybook: hasPermission('playbook:create'),
+    canUpdatePlaybook: hasPermission('playbook:update'),
+    canDeletePlaybook: hasPermission('playbook:delete'),
+    canManagePlaybook: hasAnyPermission('playbook:create', 'playbook:update', 'playbook:delete'),
+    canImportPlaybook: hasPermission('playbook:create') && hasPermission('repository:list'),
 
     // ===============================
     // Git 仓库 (repository:*)
     // ===============================
+    canCreateGitRepo: hasPermission('repository:create'),
+    canUpdateGitRepo: hasPermission('repository:update'),
     canManageGitRepo: hasAnyPermission('repository:create', 'repository:update'),
     canSyncRepo: hasPermission('repository:sync'),
     canDeleteRepo: hasPermission('repository:delete'),
@@ -183,7 +254,9 @@ export default function access(
     // 执行模块扩展
     // 注意：后端无独立 secrets/schedule 权限码，复用 task:create/task:update
     // ===============================
-    canManageSecrets: hasAnyPermission('task:create', 'task:update'),
+    canCreateSecretsSource: hasPermission('plugin:create'),
+    canUpdateSecretsSource: hasPermission('plugin:update'),
+    canManageSecrets: hasAnyPermission('plugin:create', 'plugin:update'),
     canManageSchedule: hasAnyPermission('task:create', 'task:update'),
 
     // ===============================
@@ -266,6 +339,14 @@ export default function access(
     canViewExemptions: hasPermission('security:exemption:view'),
     canCreateExemption: hasPermission('security:exemption:create'),
     canApproveExemption: hasPermission('security:exemption:approve'),
+    canViewSecurityCenter: hasAnyPermission(
+      'security:blacklist:view',
+      'security:blacklist:create',
+      'security:blacklist:update',
+      'security:exemption:view',
+      'security:exemption:create',
+      'security:exemption:approve',
+    ),
 
     // ===============================
     // 工作流（预留）
@@ -281,35 +362,7 @@ export default function access(
     // ===============================
     // Impersonation 审批
     // ===============================
-    canViewImpersonationApprovals: (() => {
-      // 平台管理员不应该看到审批页面（这是租户级功能）
-      if (currentUser?.is_platform_admin) return false;
-      // 提权用户也不应该看到
-      try {
-        const impRaw = localStorage.getItem('impersonation-storage');
-        if (impRaw) {
-          const imp = JSON.parse(impRaw);
-          if (imp?.isImpersonating && imp?.session?.expiresAt) {
-            if (new Date(imp.session.expiresAt) > new Date()) return false;
-          }
-        }
-      } catch { /* ignore */ }
-      return hasPermission('tenant:impersonation:view');
-    })(),
-    canApproveImpersonation: (() => {
-      // 平台管理员不应该看到审批页面（这是租户级功能）
-      if (currentUser?.is_platform_admin) return false;
-      // 提权用户也不应该看到（避免审批自己的请求）
-      try {
-        const impRaw = localStorage.getItem('impersonation-storage');
-        if (impRaw) {
-          const imp = JSON.parse(impRaw);
-          if (imp?.isImpersonating && imp?.session?.expiresAt) {
-            if (new Date(imp.session.expiresAt) > new Date()) return false;
-          }
-        }
-      } catch { /* ignore */ }
-      return hasPermission('tenant:impersonation:approve');
-    })(),
+    canViewImpersonationApprovals,
+    canApproveImpersonation,
   };
 }

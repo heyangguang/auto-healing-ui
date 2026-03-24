@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     PlusOutlined, StopOutlined, SafetyCertificateOutlined,
     DeleteOutlined, CheckCircleOutlined, ExclamationCircleOutlined,
@@ -90,6 +90,29 @@ const CommandBlacklistPage: React.FC = () => {
 
     /* ---- 统计 ---- */
     const [stats, setStats] = useState({ total: 0, active: 0, critical: 0, high: 0, medium: 0 });
+
+    useEffect(() => {
+        void (async () => {
+            try {
+                const [allRes, activeRes, criticalRes, highRes, mediumRes] = await Promise.all([
+                    getCommandBlacklist({ page: 1, page_size: 1 }),
+                    getCommandBlacklist({ page: 1, page_size: 1, is_active: true }),
+                    getCommandBlacklist({ page: 1, page_size: 1, severity: 'critical' }),
+                    getCommandBlacklist({ page: 1, page_size: 1, severity: 'high' }),
+                    getCommandBlacklist({ page: 1, page_size: 1, severity: 'medium' }),
+                ]);
+                setStats({
+                    total: Number(allRes?.total ?? 0),
+                    active: Number(activeRes?.total ?? 0),
+                    critical: Number(criticalRes?.total ?? 0),
+                    high: Number(highRes?.total ?? 0),
+                    medium: Number(mediumRes?.total ?? 0),
+                });
+            } catch {
+                // ignore
+            }
+        })();
+    }, [refreshTrigger]);
 
     /* ---- 详情抽屉 ---- */
     const [drawerRule, setDrawerRule] = useState<CommandBlacklistRule | null>(null);
@@ -319,14 +342,6 @@ const CommandBlacklistPage: React.FC = () => {
 
         const res = await getCommandBlacklist(apiParams);
         const data = res.data || [];
-
-        setStats({
-            total: res.total || 0,
-            active: data.filter(r => r.is_active).length,
-            critical: data.filter(r => r.severity === 'critical').length,
-            high: data.filter(r => r.severity === 'high').length,
-            medium: data.filter(r => r.severity === 'medium').length,
-        });
 
         return { data, total: res.total || 0 };
     }, []);

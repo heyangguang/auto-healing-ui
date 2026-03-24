@@ -92,7 +92,7 @@ const CMDBList: React.FC = () => {
         } catch { /* ignore */ }
     }, []);
 
-    useEffect(() => { loadStats(); }, []);
+    useEffect(() => { loadStats(); }, [loadStats]);
 
     /* ---- 密钥源 ---- */
     const [secretsSources, setSecretsSources] = useState<AutoHealing.SecretsSource[]>([]);
@@ -140,6 +140,7 @@ const CMDBList: React.FC = () => {
     const [selectedRowMap, setSelectedRowMap] = useState<Map<string, AutoHealing.CMDBItem>>(new Map());
     const selectedRows = useMemo(() => Array.from(selectedRowMap.values()), [selectedRowMap]);
     const totalCountRef = useRef(0);
+    const latestFilterRef = useRef<Record<string, any>>({});
 
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const triggerRefresh = useCallback(() => {
@@ -178,35 +179,38 @@ const CMDBList: React.FC = () => {
                 message.success('已进入维护模式');
             } else {
                 const ids = selectedRows.map(r => r.id);
-                await batchEnterMaintenance(ids, maintenanceReason, maintenanceEndAt);
-                message.success(`批量维护成功 (${ids.length} 台)`);
+                const res = await batchEnterMaintenance(ids, maintenanceReason, maintenanceEndAt);
+                message.success(`批量维护成功 (${res.success}/${res.total} 台)`);
             }
             setMaintenanceModalOpen(false);
             setMaintenanceReason('');
             setMaintenanceEndAt(undefined);
             setSelectedRowMap(new Map());
             triggerRefresh();
+            loadStats();
         } catch { /* global error handler */ }
-    }, [maintenanceTarget, maintenanceReason, maintenanceEndAt, selectedRows, triggerRefresh]);
+    }, [maintenanceTarget, maintenanceReason, maintenanceEndAt, selectedRows, triggerRefresh, loadStats]);
 
     const handleResumeMaintenance = useCallback(async (record: AutoHealing.CMDBItem) => {
         try {
             await resumeFromMaintenance(record.id);
             message.success('已退出维护模式');
             triggerRefresh();
+            loadStats();
         } catch { /* global error handler */ }
-    }, [triggerRefresh]);
+    }, [triggerRefresh, loadStats]);
 
     const handleBatchResume = useCallback(async () => {
         const ids = selectedRows.filter(r => r.status === 'maintenance').map(r => r.id);
         if (ids.length === 0) { message.warning('没有处于维护模式的主机'); return; }
         try {
-            await batchResumeFromMaintenance(ids);
-            message.success(`批量恢复成功 (${ids.length} 台)`);
+            const res = await batchResumeFromMaintenance(ids);
+            message.success(`批量恢复成功 (${res.success}/${res.total} 台)`);
             setSelectedRowMap(new Map());
             triggerRefresh();
+            loadStats();
         } catch { /* global error handler */ }
-    }, [selectedRows, triggerRefresh]);
+    }, [selectedRows, triggerRefresh, loadStats]);
 
     /* ========== 列定义 (memoized) ========== */
     const columns = useMemo<StandardColumnDef<AutoHealing.CMDBItem>[]>(() => [
@@ -402,7 +406,13 @@ const CMDBList: React.FC = () => {
 
         // 简单搜索
         if (params.searchValue) {
-            apiParams.name = params.searchValue;
+            if (params.searchField === 'ip_search') {
+                apiParams.ip_address = params.searchValue;
+            } else if (params.searchField === 'host_search') {
+                apiParams.hostname = params.searchValue;
+            } else {
+                apiParams.name = params.searchValue;
+            }
         }
 
         // 高级搜索
@@ -417,12 +427,13 @@ const CMDBList: React.FC = () => {
             if (adv.ip_address__exact) apiParams.ip_address__exact = adv.ip_address__exact;
             // 其他字段直接传
             if (adv.type) apiParams.type = adv.type;
-            if (adv.status) apiParams.status = adv.status;
+            if (adv.status) apiParams.status = adv.status === 'online' ? 'active' : adv.status;
             if (adv.environment) apiParams.environment = adv.environment;
             if (adv.source_plugin_name) apiParams.source_plugin_name = adv.source_plugin_name;
             if (adv.source_plugin_name__exact) apiParams.source_plugin_name__exact = adv.source_plugin_name__exact;
             if (adv.has_plugin !== undefined && adv.has_plugin !== '' && adv.has_plugin !== null) apiParams.has_plugin = adv.has_plugin;
         }
+        latestFilterRef.current = { ...apiParams };
 
         // 排序
         if (params.sorter?.field) {
@@ -442,7 +453,7 @@ const CMDBList: React.FC = () => {
     const statsBar = useMemo(() => {
         if (!stats) return null;
         const activeCount = stats.by_status?.find(s => s.status === 'active')?.count ?? 0;
-        const inactiveCount = stats.by_status?.find(s => s.status === 'inactive')?.count ?? 0;
+        const inactiveCount = stats.by_status?.find(s => s.status === 'offline')?.count ?? 0;
         const maintenanceCount = stats.by_status?.find(s => s.status === 'maintenance')?.count ?? 0;
         return (
             <div className="cmdb-stats-bar">
@@ -484,8 +495,23 @@ const CMDBList: React.FC = () => {
     /* ========== 全选所有 ========== */
     const handleSelectAll = useCallback(async () => {
         try {
-            const res = await getCMDBItemIds();
-            const items = res?.data?.items || [];
+            const { page, page_size, ...filters } = latestFilterRef.current;
+            const hasTextFilters = Boolean(filters.name || filters.name__exact || filters.hostname || filters.hostname__exact || filters.ip_address || filters.ip_address__exact);
+            let items: any[] = [];
+            if (hasTextFilters) {
+                let currentPage = 1;
+                while (true) {
+                    const res = await getCMDBItems({ ...filters, page: currentPage, page_size: 200 });
+                    const batch = (res as any)?.data || [];
+                    items.push(...batch);
+                    const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? batch.length;
+                    if (items.length >= total || batch.length === 0) break;
+                    currentPage += 1;
+                }
+            } else {
+                const res = await getCMDBItemIds(filters);
+                items = res?.data?.items || [];
+            }
             const newMap = new Map<string, AutoHealing.CMDBItem>();
             items.forEach((item: any) => newMap.set(item.id, item as AutoHealing.CMDBItem));
             setSelectedRowMap(newMap);
@@ -539,7 +565,6 @@ const CMDBList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/tenant/cmdb/search-schema"
                 extraToolbarActions={batchToolbar}
                 columns={columns}
                 rowKey="id"

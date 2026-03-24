@@ -156,18 +156,22 @@ const ExemptionApprovalsPage: React.FC = () => {
     }, [rejectTarget, rejectReason]);
 
     /* ── 数据请求（待审批）── */
-    const handlePendingRequest = useCallback(async () => {
-        const res = await getPendingExemptions({ page: 1, page_size: 100 });
+    const handlePendingRequest = useCallback(async (params?: { page?: number; pageSize?: number }) => {
+        const page = params?.page || 1;
+        const pageSize = params?.pageSize || 20;
+        const res = await getPendingExemptions({ page, page_size: pageSize });
         const items = res?.data || [];
-        const pending = items.filter((d: any) => d.status === 'pending').length;
-        setStatsData({ total: items.length, pending });
-        return { data: items, total: items.length };
+        const total = Number(res?.total ?? items.length);
+        setStatsData({ total, pending: total });
+        return { data: items, total };
     }, []);
 
     /* ── 数据请求（审批记录）── */
     const handleHistoryRequest = useCallback(async (params: {
         page: number;
         pageSize: number;
+        searchField?: string;
+        searchValue?: string;
         advancedSearch?: Record<string, any>;
         sorter?: { field: string; order: 'ascend' | 'descend' };
     }) => {
@@ -175,6 +179,10 @@ const ExemptionApprovalsPage: React.FC = () => {
             page: params.page,
             page_size: params.pageSize,
         };
+        if (params.searchValue) {
+            const field = params.searchField || 'task_name';
+            apiParams[field] = params.searchValue;
+        }
         if (params.advancedSearch) {
             Object.entries(params.advancedSearch).forEach(([key, value]) => {
                 if (value === undefined || value === null || value === '') return;

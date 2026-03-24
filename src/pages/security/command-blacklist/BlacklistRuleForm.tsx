@@ -21,6 +21,7 @@ import {
 import { getExecutionTasks } from '@/services/auto-healing/execution';
 import { getPlaybook, getPlaybooks, getPlaybookFiles } from '@/services/auto-healing/playbooks';
 import { getFiles as getGitRepoFiles, getGitRepos } from '@/services/auto-healing/git-repos';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import type { DataNode } from 'antd/es/tree';
 import './BlacklistRuleForm.css';
 
@@ -129,17 +130,17 @@ const BlacklistRuleForm: React.FC = () => {
         setInitLoading(true);
         try {
             const [playbooksRes, reposRes] = await Promise.all([
-                getPlaybooks({ page_size: 100 }),
-                getGitRepos(),
+                fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ page, page_size: pageSize })),
+                fetchAllPages<AutoHealing.GitRepository>((page, pageSize) => getGitRepos({ page, page_size: pageSize })),
             ]);
-            setPlaybookList(playbooksRes.data || []);
-            setRepositories(reposRes.data || []);
+            setPlaybookList(playbooksRes);
+            setRepositories(reposRes);
 
-            const repos = reposRes.data || [];
+            const repos = reposRes;
             if (repos.length) {
                 setExpandedKeys(repos.slice(0, 3).map((r: any) => `repo-${r.id}`));
             }
-            await loadTasks(1, true, playbooksRes.data || []);
+            await loadTasks(1, true, playbooksRes);
         } catch {
             console.error('[BlacklistRuleForm] loadBaseData error');
         } finally {
@@ -445,6 +446,10 @@ const BlacklistRuleForm: React.FC = () => {
     // ==================== Submit ====================
     const handleSubmit = useCallback(async () => {
         try {
+            if (isEdit && isSystem) {
+                message.warning('系统内置规则不允许编辑');
+                return;
+            }
             const values = await form.validateFields();
             values.match_type = selectedMatchType;
             setSubmitting(true);
@@ -464,13 +469,13 @@ const BlacklistRuleForm: React.FC = () => {
         } finally {
             setSubmitting(false);
         }
-    }, [form, isEdit, params.id, selectedMatchType]);
+    }, [form, isEdit, isSystem, params.id, selectedMatchType]);
 
     // ==================== Render ====================
     return (
         <div className="blacklist-form-page">
             <SubPageHeader
-                title={isEdit ? '编辑黑名单规则' : '添加黑名单规则'}
+                title={isEdit ? (isSystem ? '查看内置黑名单规则' : '编辑黑名单规则') : '添加黑名单规则'}
                 onBack={() => history.push('/security/command-blacklist')}
                 actions={
                     <div className="blacklist-form-header-actions">
@@ -479,7 +484,7 @@ const BlacklistRuleForm: React.FC = () => {
                             type="primary"
                             icon={<SaveOutlined />}
                             loading={submitting}
-                            disabled={!access.canManageBlacklist}
+                            disabled={!access.canManageBlacklist || (isEdit && isSystem)}
                             onClick={handleSubmit}
                         >
                             {isEdit ? '保存修改' : '创建规则'}
@@ -524,12 +529,12 @@ const BlacklistRuleForm: React.FC = () => {
                                         name="severity" label="严重级别"
                                         rules={[{ required: true, message: '请选择严重级别' }]}
                                     >
-                                        <Select options={SEVERITY_OPTIONS} placeholder="选择级别" />
+                                        <Select options={SEVERITY_OPTIONS} placeholder="选择级别" disabled={isSystem} />
                                     </Form.Item>
                                 </Col>
                                 <Col span={6}>
                                     <Form.Item name="category" label="分类">
-                                        <Select options={CATEGORY_OPTIONS} placeholder="选择分类" allowClear />
+                                        <Select options={CATEGORY_OPTIONS} placeholder="选择分类" allowClear disabled={isSystem} />
                                     </Form.Item>
                                 </Col>
                             </Row>
@@ -538,7 +543,13 @@ const BlacklistRuleForm: React.FC = () => {
                                 name="description" label="风险说明"
                                 extra="可选，描述该指令的危险性和可能造成的后果"
                             >
-                                <TextArea placeholder="描述该指令的危险性和可能造成的后果" rows={2} maxLength={500} showCount />
+                                <TextArea
+                                    placeholder="描述该指令的危险性和可能造成的后果"
+                                    rows={2}
+                                    maxLength={500}
+                                    showCount
+                                    disabled={isSystem}
+                                />
                             </Form.Item>
                         </div>
 
@@ -553,11 +564,14 @@ const BlacklistRuleForm: React.FC = () => {
                                     {MATCH_TYPE_OPTIONS.map(opt => (
                                         <div
                                             key={opt.value}
-                                            className={`blacklist-match-type-card ${selectedMatchType === opt.value ? 'active' : ''}`}
+                                            className={`blacklist-match-type-card ${selectedMatchType === opt.value ? 'active' : ''} ${isSystem ? 'disabled' : ''}`}
                                             onClick={() => {
+                                                if (isSystem) return;
                                                 setSelectedMatchType(opt.value);
                                                 form.setFieldsValue({ match_type: opt.value });
                                             }}
+                                            aria-disabled={isSystem}
+                                            style={isSystem ? { cursor: 'not-allowed', opacity: 0.55 } : undefined}
                                         >
                                             <div className="blacklist-match-type-card-icon">{opt.icon}</div>
                                             <div>

@@ -18,6 +18,7 @@ import ImpersonationBanner from '@/components/ImpersonationBanner';
 import StarryBackground from './StarryBackground';
 const ProductMenu = lazy(() => import('@/components/ProductMenu'));
 import { CATEGORIES, SERVICES } from '@/config/navData';
+import { canAccessPath } from '@/utils/pathAccess';
 
 const MOBILE_BP = 768;
 const TABLET_BP = 1200;
@@ -215,7 +216,13 @@ const TopNavBar: React.FC = () => {
     // 权限检查：是否有任何可见的产品服务
     const hasAnyService = React.useMemo(() => {
         for (const [, items] of Object.entries(SERVICES)) {
-            if (items.some(svc => !svc.access || access[svc.access])) return true;
+            if (items.some((svc: any) => {
+                if (svc.accesses?.length) {
+                    return svc.accesses.every((key: string) => !key || Boolean((access as any)[key]));
+                }
+                if (svc.access) return Boolean((access as any)[svc.access]);
+                return canAccessPath(svc.path, access);
+            })) return true;
         }
         return false;
     }, [access]);
@@ -308,7 +315,7 @@ const TopNavBar: React.FC = () => {
                             <div className={styles.iconBtn} title="帮助文档" onClick={() => startTransition(() => history.push('/guide'))}>
                                 <QuestionCircleOutlined />
                             </div>
-                            {(!access.isPlatformAdmin || isImpersonating) && (
+                            {(!access.isPlatformAdmin || isImpersonating) && access.canViewSiteMessages && (
                                 <span id="tour-notification-bell"><NotificationBell /></span>
                             )}
                             {/* 平台管理员：impersonation 时显示 Banner，否则不显示 */}

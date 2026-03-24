@@ -23,7 +23,7 @@ export async function getHealingInstances(
 
 /** 获取自愈实例详情 GET /api/v1/tenant/healing/instances/:id */
 export async function getHealingInstanceDetail(id: string, options?: { [key: string]: any }) {
-    return request<AutoHealing.FlowInstance>(`/api/v1/tenant/healing/instances/${id}`, {
+    return request<{ data: AutoHealing.FlowInstance }>(`/api/v1/tenant/healing/instances/${id}`, {
         method: 'GET',
         ...(options || {}),
     });

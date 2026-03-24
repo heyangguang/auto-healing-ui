@@ -19,7 +19,7 @@ const formatTime = (t: string | null | undefined) => {
 /* ============================== 搜索字段 ============================== */
 
 const searchFields: SearchField[] = [
-    { key: 'node_name', label: '节点名称', placeholder: '搜索节点名/流程ID' },
+    { key: 'node_name', label: '关键字', placeholder: '搜索节点ID/流程ID' },
 ];
 
 const advancedSearchFields: AdvancedSearchField[] = [
@@ -39,6 +39,7 @@ const PendingApprovals: React.FC = () => {
             const map: Record<string, string> = {};
             (res?.data || []).forEach((u: any) => {
                 map[u.id] = u.display_name || u.username || u.id;
+                map[u.username] = u.display_name || u.username || u.id;
             });
             setUserMap(map);
         }).catch(() => { });
@@ -50,8 +51,10 @@ const PendingApprovals: React.FC = () => {
         if (ids.length === 0) return '-';
         // 也利用 record.initiator 补充映射
         const localMap = { ...userMap };
-        if (record.initiator?.id) {
-            localMap[record.initiator.id] = record.initiator.display_name || record.initiator.username || record.initiator.id;
+        if (record.initiator?.id || record.initiator?.username) {
+            const name = record.initiator.display_name || record.initiator.username || record.initiator.id;
+            if (record.initiator.id) localMap[record.initiator.id] = name;
+            if (record.initiator.username) localMap[record.initiator.username] = name;
         }
         return ids.map((id: string) => localMap[id] || id.substring(0, 8) + '...').join(', ');
     }, [userMap]);
@@ -140,7 +143,7 @@ const PendingApprovals: React.FC = () => {
             dataIndex: 'node_name',
             ellipsis: true,
             fixedColumn: true,
-            render: (_: any, record: any) => record.node_name || '审批节点',
+            render: (_: any, record: any) => record.node_name || record.node_id || '审批节点',
         },
         {
             columnKey: 'flow_instance_id',
@@ -184,7 +187,7 @@ const PendingApprovals: React.FC = () => {
                     <Button
                         type="primary"
                         size="small"
-                        onClick={() => handleApprove(record.id, record.node_name || '节点')}
+                        onClick={() => handleApprove(record.id, record.node_name || record.node_id || '节点')}
                         disabled={!access.canApprove}
                     >
                         批准
@@ -192,7 +195,7 @@ const PendingApprovals: React.FC = () => {
                     <Button
                         danger
                         size="small"
-                        onClick={() => handleReject(record.id, record.node_name || '节点')}
+                        onClick={() => handleReject(record.id, record.node_name || record.node_id || '节点')}
                         disabled={!access.canApprove}
                     >
                         拒绝

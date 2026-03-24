@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { createAuthenticatedEventStream } from './sse';
 
 // ==================== 任务模板 ====================
 
@@ -252,52 +253,32 @@ export function createLogStream(
     onLog: (log: AutoHealing.ExecutionLog) => void,
     onDone: (result: { status: string; exit_code: number; stats?: AutoHealing.ExecutionRun['stats'] }) => void,
 ): () => void {
-    // SSE 连接地址：通过 .env.local 中的 SSE_API_BASE 配置
-    // 绕过 dev proxy 的 SSE 缓冲问题
     const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
-
-    // 浏览器 EventSource API 不支持自定义请求头，需通过 URL 参数传递 JWT Token
-    const token = localStorage.getItem('auto_healing_token');
-    const url = token
-        ? `${sseBase}/api/v1/tenant/execution-runs/${id}/stream?token=${encodeURIComponent(token)}`
-        : `${sseBase}/api/v1/tenant/execution-runs/${id}/stream`;
-
-    console.log('[SSE] Creating EventSource:', url);
-    const eventSource = new EventSource(url);
-
-    eventSource.onopen = () => {
-        console.log('[SSE] Connection opened');
-    };
-
-    eventSource.addEventListener('log', (event) => {
-        console.log('[SSE] Received log event:', event.data.substring(0, 100));
-        try {
-            const data = JSON.parse(event.data);
-            onLog(data);
-        } catch (e) {
-            console.error('Failed to parse log event:', e);
-        }
-    });
-
-    eventSource.addEventListener('done', (event) => {
-        console.log('[SSE] Received done event:', event.data);
-        try {
-            const data = JSON.parse(event.data);
-            onDone(data);
-        } catch (e) {
-            console.error('Failed to parse done event:', e);
-        }
-        eventSource.close();
-    });
-
-    eventSource.onerror = (e) => {
-        console.error('[SSE] Error:', e);
-        eventSource.close();
-    };
+    const connection = createAuthenticatedEventStream(
+        `${sseBase}/api/v1/tenant/execution-runs/${id}/stream`,
+        {
+            onOpen: () => {
+                console.log('[SSE] Connection opened');
+            },
+            onEvent: (event, payload) => {
+                if (event === 'log') {
+                    onLog(payload);
+                    return;
+                }
+                if (event === 'done') {
+                    onDone(payload);
+                    connection.close();
+                }
+            },
+            onError: (error) => {
+                console.error('[SSE] Error:', error);
+            },
+        },
+    );
 
     return () => {
         console.log('[SSE] Closing connection');
-        eventSource.close();
+        connection.close();
     };
 }
 
@@ -417,4 +398,3 @@ export async function getScheduleTimeline(params?: { date?: string }) {
         }>;
     }>('/api/v1/tenant/execution-schedules/timeline', { method: 'GET', params });
 }
-

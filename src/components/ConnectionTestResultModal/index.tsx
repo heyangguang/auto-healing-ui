@@ -42,7 +42,8 @@ const TYPE_LABELS: Record<string, { text: string; icon: React.ReactNode }> = {
 const ENV_COLORS: Record<string, string> = {
     production: 'red',
     staging: 'orange',
-    development: 'blue',
+    dev: 'blue',
+    test: 'green',
 };
 
 /* ========== 样式 ========== */

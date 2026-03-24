@@ -20,10 +20,11 @@ import {
     GitlabOutlined,
 } from '@ant-design/icons';
 import { Input, Empty } from 'antd';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { globalSearch } from '@/services/auto-healing/search';
 import type { SearchCategoryResult, SearchResultItem } from '@/services/auto-healing/search';
+import { canAccessPath } from '@/utils/pathAccess';
 import './search-glow.css';
 
 /* ── 分类图标 & 颜色 ── */
@@ -307,18 +308,11 @@ const CATEGORY_LIST: Record<string, string> = {
     notification_channels: '/notification/channels',
 };
 
-/* ── 跳转路径（明细页） ── */
-function toPath(item: SearchResultItem, cat: string): string {
-    if (cat === 'flows') return `/healing/flows/editor/${item.id}`;
-    if (cat === 'instances') return `/healing/instances/${item.id}`;
-    if (cat === 'execution_runs') return `/execution/runs/${item.id}`;
-    return item.path;
-}
-
 const DEBOUNCE = 280;
 
 const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
     const { styles, cx } = useStyles();
+    const access = useAccess();
     const [kw, setKw] = useState('');
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -355,10 +349,24 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
         timer.current = setTimeout(() => search(v), DEBOUNCE);
     }, [search]);
 
+    const resolvePath = useCallback((item: SearchResultItem, cat: string): string => {
+        if (cat === 'flows') {
+            return access.canUpdateFlow ? `/healing/flows/editor/${item.id}` : '/healing/flows';
+        }
+        if (cat === 'instances') {
+            return access.canViewInstances ? `/healing/instances/${item.id}` : (CATEGORY_LIST[cat] || '/healing/instances');
+        }
+        if (cat === 'execution_runs') {
+            return access.canViewTaskDetail ? `/execution/runs/${item.id}` : (CATEGORY_LIST[cat] || '/execution/logs');
+        }
+        if (item.path && canAccessPath(item.path, access)) return item.path;
+        return CATEGORY_LIST[cat] || '/';
+    }, [access]);
+
     const go = useCallback((it: SearchResultItem, cat: string) => {
         setOpen(false); setKw('');
-        startTransition(() => history.push(toPath(it, cat)));
-    }, []);
+        startTransition(() => history.push(resolvePath(it, cat)));
+    }, [resolvePath]);
 
     const onKey = useCallback((e: React.KeyboardEvent) => {
         if (!open || !flat.length) return;
@@ -470,12 +478,14 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
                                             <div
                                                 className={styles.viewMore}
                                                 onClick={() => {
-                                                    setOpen(false); setKw('');
                                                     const listPath = CATEGORY_LIST[cat.category] || '/';
+                                                    if (!canAccessPath(listPath, access)) return;
+                                                    setOpen(false); setKw('');
                                                     startTransition(() => history.push(listPath));
                                                 }}
+                                                style={!canAccessPath(CATEGORY_LIST[cat.category] || '/', access) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
                                             >
-                                                查看全部 {cat.total} 条 <RightOutlined style={{ fontSize: 9 }} />
+                                                前往列表页 <RightOutlined style={{ fontSize: 9 }} />
                                             </div>
                                         )}
                                     </div>

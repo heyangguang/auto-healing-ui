@@ -34,20 +34,20 @@ const FB_TYPE: Record<string, { text: string; icon: React.ReactNode; color: stri
 };
 
 const FB_STATUS: Record<string, { text: string; color: string; badge: 'success' | 'error' | 'warning' | 'default' }> = {
-    active: { text: '活跃', color: '#52c41a', badge: 'success' },
-    inactive: { text: '离线', color: '#ff4d4f', badge: 'error' },
+    active: { text: '在线', color: '#52c41a', badge: 'success' },
+    offline: { text: '离线', color: '#ff4d4f', badge: 'error' },
     maintenance: { text: '维护', color: '#faad14', badge: 'warning' },
 };
 
 const FB_STATUS_LABELS: Record<string, string> = {
-    active: '活跃', inactive: '停用', maintenance: '维护中',
+    active: '在线', offline: '离线', maintenance: '维护中',
 };
 
 const FB_ENV: Record<string, { text: string; color: string }> = {
     production: { text: '生产', color: 'red' },
     staging: { text: '预发', color: 'orange' },
     test: { text: '测试', color: 'green' },
-    development: { text: '开发', color: 'blue' },
+    dev: { text: '开发', color: 'blue' },
 };
 
 // ==================== 动态变量 ====================

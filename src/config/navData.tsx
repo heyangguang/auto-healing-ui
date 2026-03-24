@@ -97,6 +97,7 @@ export interface ServiceItem {
     icon?: React.ReactNode;
     /** access.ts 中的权限变量名，用于菜单可见性过滤 */
     access?: string;
+    accesses?: string[];
 }
 
 /* ──── 分类排序优先级 ──── */
@@ -136,7 +137,8 @@ function buildNavData(): { categories: Category[]; services: Record<string, Serv
                     path: child.path,
                     desc: child.desc,
                     icon: child.navIcon ? ICON_MAP[child.navIcon] : undefined,
-                    access: child.navAccess,
+                    access: child.navAccess || child.access || route.navAccess || route.access,
+                    accesses: [route.access, route.navAccess, child.access, child.navAccess].filter(Boolean),
                 });
             }
             if (items.length > 0) {
@@ -151,6 +153,7 @@ function buildNavData(): { categories: Category[]; services: Record<string, Serv
                 desc: route.desc,
                 icon: route.navIcon ? ICON_MAP[route.navIcon] : undefined,
                 access: route.navAccess || route.access,
+                accesses: [route.access, route.navAccess].filter(Boolean),
             }];
         }
     }

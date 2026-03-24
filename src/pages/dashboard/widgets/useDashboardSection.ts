@@ -1,6 +1,33 @@
 import { useRequest } from '@umijs/max';
 import { getDashboardOverview } from '@/services/auto-healing/dashboard';
 
+const getTenantCacheScope = () => {
+    try {
+        const impersonationRaw = localStorage.getItem('impersonation-storage');
+        if (impersonationRaw) {
+            const impersonation = JSON.parse(impersonationRaw);
+            const tenantId = impersonation?.session?.tenantId;
+            if (tenantId) return `impersonation:${tenantId}`;
+        }
+    } catch {
+        // ignore malformed storage
+    }
+
+    try {
+        const tenantRaw = localStorage.getItem('tenant-storage');
+        if (tenantRaw) {
+            const tenantStorage = JSON.parse(tenantRaw);
+            if (tenantStorage?.currentTenantId) {
+                return `tenant:${tenantStorage.currentTenantId}`;
+            }
+        }
+    } catch {
+        // ignore malformed storage
+    }
+
+    return 'platform';
+};
+
 /**
  * Dashboard Section 数据 Hook
  *
@@ -12,12 +39,13 @@ import { getDashboardOverview } from '@/services/auto-healing/dashboard';
  * 3. pollingInterval — 60秒自动刷新
  */
 export function useDashboardSection(section: string) {
+    const tenantCacheScope = getTenantCacheScope();
     const { data: rawData, loading, refresh } = useRequest(
         () => getDashboardOverview([section], { skipTokenRefresh: true }),
         {
-            cacheKey: `dashboard-section-${section}`,
+            cacheKey: `dashboard-section-${tenantCacheScope}-${section}`,
             staleTime: 30000,     // 30s 内使用缓存，不重新请求
-            refreshDeps: [section],
+            refreshDeps: [section, tenantCacheScope],
             pollingInterval: 60000, // 60s 自动刷新
             formatResult: (res: any) => res,
         }

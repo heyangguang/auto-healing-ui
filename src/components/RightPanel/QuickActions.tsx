@@ -1,7 +1,8 @@
 import React from 'react';
 import { PlusOutlined, CodeOutlined, FileTextOutlined } from '@ant-design/icons';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import { createStyles } from 'antd-style';
+import { canAccessPath } from '@/utils/pathAccess';
 
 const useStyles = createStyles(({ token }) => ({
     card: {
@@ -38,18 +39,24 @@ const useStyles = createStyles(({ token }) => ({
 
 const QuickActions: React.FC = () => {
     const { styles } = useStyles();
+    const access = useAccess();
 
     const actions = [
-        { icon: <PlusOutlined />, label: '新建工单', onClick: () => history.push('/incidents') },
-        { icon: <CodeOutlined />, label: '执行脚本', onClick: () => history.push('/execution/execute') },
-        { icon: <FileTextOutlined />, label: '查看文档', onClick: () => window.open('https://pro.ant.design/docs/getting-started', '_blank') },
+        { icon: <PlusOutlined />, label: '新建工单', path: '/resources/incidents', onClick: () => history.push('/resources/incidents') },
+        { icon: <CodeOutlined />, label: '执行脚本', path: '/execution/execute', onClick: () => history.push('/execution/execute') },
+        { icon: <FileTextOutlined />, label: '查看文档', path: '', onClick: () => window.open('https://pro.ant.design/docs/getting-started', '_blank') },
     ];
 
     return (
         <div className={styles.card}>
             <div className={styles.title}>快速操作</div>
             {actions.map((action, idx) => (
-                <div key={idx} className={styles.actionItem} onClick={action.onClick}>
+                <div
+                    key={idx}
+                    className={styles.actionItem}
+                    onClick={() => (!action.path || canAccessPath(action.path, access)) && action.onClick()}
+                    style={action.path && !canAccessPath(action.path, access) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                >
                     <span className={styles.actionIcon}>{action.icon}</span>
                     <span>{action.label}</span>
                 </div>

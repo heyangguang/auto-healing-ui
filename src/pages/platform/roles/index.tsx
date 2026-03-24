@@ -5,13 +5,13 @@ import {
     Drawer, Tag, Badge, Avatar, Input,
 } from 'antd';
 import {
-    EditOutlined, DeleteOutlined,
+    DeleteOutlined,
     SafetyCertificateOutlined, TeamOutlined,
     ClockCircleOutlined, SecurityScanOutlined,
     IdcardOutlined, CloseOutlined, UserOutlined,
     SearchOutlined,
 } from '@ant-design/icons';
-import { history, useAccess } from '@umijs/max';
+import { useAccess } from '@umijs/max';
 import StandardTable from '@/components/StandardTable';
 import type { SearchField } from '@/components/StandardTable';
 import { getPlatformRoles, deletePlatformRole, getPlatformRoleUsers } from '@/services/auto-healing/roles';
@@ -52,6 +52,7 @@ const PlatformRolesPage: React.FC = () => {
     const [stats, setStats] = useState({ total: 0, system: 0 });
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(16);
+    const [searchField, setSearchField] = useState<'display_name' | 'name'>('display_name');
     const [total, setTotal] = useState(0);
     const [searchValue, setSearchValue] = useState('');
 
@@ -66,7 +67,7 @@ const PlatformRolesPage: React.FC = () => {
     const userPageSize = 20;
     const currentRoleIdRef = useRef<string>('');
 
-    const loadData = useCallback(async (p: number, ps: number, value?: string) => {
+    const loadData = useCallback(async (p: number, ps: number, value?: string, field: 'display_name' | 'name' = 'display_name') => {
         setLoading(true);
         try {
             const res = await getPlatformRoles();
@@ -75,11 +76,11 @@ const PlatformRolesPage: React.FC = () => {
             // 前端搜索
             const sv = value?.trim().toLowerCase();
             if (sv) {
-                list = list.filter(r =>
-                    (r.display_name || '').toLowerCase().includes(sv) ||
-                    (r.name || '').toLowerCase().includes(sv) ||
-                    (r.description || '').toLowerCase().includes(sv)
-                );
+                if (field === 'display_name') {
+                    list = list.filter(r => (r.display_name || '').toLowerCase().includes(sv));
+                } else if (field === 'name') {
+                    list = list.filter(r => (r.name || '').toLowerCase().includes(sv));
+                }
             }
 
             const tot = list.length;
@@ -103,11 +104,19 @@ const PlatformRolesPage: React.FC = () => {
         loadData(1, pageSize);
     }, []);
 
-    const handleSearch = useCallback((params: { searchField?: string; searchValue?: string }) => {
-        const value = params.searchValue || '';
+    const handleSearch = useCallback((params: {
+        searchField?: string;
+        searchValue?: string;
+        advancedSearch?: Record<string, any>;
+        filters?: { field: string; value: string }[];
+    }) => {
+        const quickFilter = params.filters?.[0];
+        const value = quickFilter?.value || params.searchValue || '';
+        const field = (quickFilter?.field || params.searchField || 'display_name') as 'display_name' | 'name';
+        setSearchField(field);
         setSearchValue(value);
         setPage(1);
-        loadData(1, pageSize, value);
+        loadData(1, pageSize, value, field);
     }, [pageSize, loadData]);
 
     // ==================== Drawer ====================
@@ -176,11 +185,15 @@ const PlatformRolesPage: React.FC = () => {
         try {
             await deletePlatformRole(id);
             message.success('删除成功');
-            loadData(page, pageSize, searchValue);
+            const newTotal = Math.max(0, total - 1);
+            const maxPage = Math.max(1, Math.ceil(newTotal / pageSize));
+            const nextPage = Math.min(page, maxPage);
+            setPage(nextPage);
+            loadData(nextPage, pageSize, searchValue, searchField);
         } catch {
             /* global error handler */
         }
-    }, [page, pageSize, searchValue, loadData]);
+    }, [page, pageSize, searchValue, searchField, loadData, total]);
 
     // ==================== 权限分组 ====================
     const groupPermissions = (perms: any[]) => {
@@ -245,16 +258,6 @@ const PlatformRolesPage: React.FC = () => {
                             <Space size={0}>
                                 {!isSystem && access.canManagePlatformRoles && (
                                     <>
-                                        <Tooltip title="编辑">
-                                            <Button
-                                                type="link" size="small"
-                                                icon={<EditOutlined />}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    history.push(`/platform/roles/${role.id}/edit`);
-                                                }}
-                                            />
-                                        </Tooltip>
                                         <Popconfirm
                                             title="确定要删除此角色吗？"
                                             description="删除后不可恢复"
@@ -569,7 +572,7 @@ const PlatformRolesPage: React.FC = () => {
                                     onChange={(p, ps) => {
                                         setPage(p);
                                         setPageSize(ps || pageSize);
-                                        loadData(p, ps || pageSize, searchValue);
+                                        loadData(p, ps || pageSize, searchValue, searchField);
                                     }}
                                 />
                             </div>

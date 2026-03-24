@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Form, Input, Button, Select, Radio, Space, message, Alert, Tag, Row, Col, Typography, Divider,
+    Form, Input, Button, Select, Radio, Space, message, Alert, Tag, Row, Col, Typography, Divider, InputNumber,
 } from 'antd';
 import {
     LinkOutlined, GithubOutlined, GlobalOutlined, KeyOutlined, LockOutlined,
@@ -22,6 +22,8 @@ const authTypeOptions = [
     { value: 'ssh_key', label: 'SSH', icon: <SafetyCertificateOutlined />, desc: 'SSH 密钥' },
 ];
 
+const valuesChangedAuthType = (current?: string, original?: string) => (current || 'none') !== (original || 'none');
+
 const GitRepoFormPage: React.FC = () => {
     const access = useAccess();
     const params = useParams<{ id?: string }>();
@@ -35,6 +37,7 @@ const GitRepoFormPage: React.FC = () => {
     const [validated, setValidated] = useState(false);
     const [availableBranches, setAvailableBranches] = useState<string[]>([]);
     const [defaultBranch, setDefaultBranch] = useState('');
+    const [originalAuthType, setOriginalAuthType] = useState<string>('none');
 
     const authType = Form.useWatch('auth_type', form);
     const syncEnabled = Form.useWatch('sync_enabled', form);
@@ -63,11 +66,13 @@ const GitRepoFormPage: React.FC = () => {
                 sync_enabled: r.sync_enabled || false,
                 interval_value: intervalValue,
                 interval_unit: intervalUnit,
+                max_failures: r.max_failures ?? 5,
             });
             // 编辑模式下已验证
             setValidated(true);
             setDefaultBranch(r.default_branch || 'main');
-            setAvailableBranches([r.default_branch || 'main']);
+            setAvailableBranches(r.branches?.length ? r.branches : [r.default_branch || 'main']);
+            setOriginalAuthType(r.auth_type || 'none');
         }).catch(() => {
             /* global error handler */
         }).finally(() => setLoading(false));
@@ -126,11 +131,34 @@ const GitRepoFormPage: React.FC = () => {
                 syncInterval = `${values.interval_value}${values.interval_unit}`;
             }
 
+            const buildAuthConfig = () => {
+                if (values.auth_type === 'none') return {};
+                if (values.auth_type === 'token') {
+                    if (isEdit && originalAuthType === 'token' && !values.token) return undefined;
+                    return { token: values.token };
+                }
+                if (values.auth_type === 'password') {
+                    const hasUsername = !!values.username;
+                    const hasPassword = !!values.password;
+                    if (isEdit && originalAuthType === 'password' && !hasUsername && !hasPassword) return undefined;
+                    return { username: values.username, password: values.password };
+                }
+                if (values.auth_type === 'ssh_key') {
+                    if (isEdit && originalAuthType === 'ssh_key' && !values.private_key && !values.passphrase) return undefined;
+                    return { private_key: values.private_key, passphrase: values.passphrase };
+                }
+                return undefined;
+            };
+
             if (isEdit && params.id) {
+                const authConfig = buildAuthConfig();
                 await updateGitRepo(params.id, {
                     default_branch: values.default_branch,
+                    auth_type: values.auth_type,
+                    auth_config: authConfig,
                     sync_enabled: values.sync_enabled || false,
                     sync_interval: syncInterval,
+                    max_failures: Number(values.max_failures) || 0,
                 });
                 message.success('更新成功');
             } else {
@@ -150,6 +178,7 @@ const GitRepoFormPage: React.FC = () => {
                     auth_config: req.auth_config,
                     sync_enabled: values.sync_enabled || false,
                     sync_interval: syncInterval,
+                    max_failures: Number(values.max_failures) || 0,
                 });
                 message.success('创建成功');
             }
@@ -179,7 +208,7 @@ const GitRepoFormPage: React.FC = () => {
                 actions={
                     <div className="git-form-actions">
                         <Button onClick={() => history.push('/execution/git-repos')}>取消</Button>
-                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={!access.canManageGitRepo}>
+                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={isEdit ? !access.canUpdateGitRepo : !access.canCreateGitRepo}>
                             {isEdit ? '保存' : '创建'}
                         </Button>
                     </div>
@@ -188,7 +217,7 @@ const GitRepoFormPage: React.FC = () => {
 
             <div className="git-form-card">
                 <div className="git-form-content">
-                    <Form form={form} layout="vertical" requiredMark={false} initialValues={{ auth_type: 'none', sync_enabled: false, interval_value: 1, interval_unit: 'h' }}>
+                    <Form form={form} layout="vertical" requiredMark={false} initialValues={{ auth_type: 'none', sync_enabled: false, interval_value: 1, interval_unit: 'h', max_failures: 5 }}>
 
                         {/* 仓库信息 */}
                         <h4 className="git-form-section-title">
@@ -207,7 +236,7 @@ const GitRepoFormPage: React.FC = () => {
                         </Form.Item>
 
                         <Form.Item name="auth_type" label="认证方式">
-                            <Radio.Group disabled={isEdit}>
+                            <Radio.Group>
                                 <Space size="middle">
                                     {authTypeOptions.map(o => (
                                         <Radio key={o.value} value={o.value}>
@@ -222,31 +251,77 @@ const GitRepoFormPage: React.FC = () => {
                         </Form.Item>
 
                         {authType === 'token' && (
-                            <Form.Item name="token" label="Access Token" rules={[{ required: !isEdit }]}>
-                                <Input.Password placeholder="ghp_xxxx" disabled={isEdit} />
+                            <Form.Item
+                                name="token"
+                                label="Access Token"
+                                rules={[{
+                                    validator: async (_, value) => {
+                                        const changedType = !isEdit || valuesChangedAuthType(form.getFieldValue('auth_type'), originalAuthType);
+                                        if ((changedType && !value) || (!changedType && !isEdit && !value)) {
+                                            throw new Error('请输入 Access Token');
+                                        }
+                                    }
+                                }]}
+                            >
+                                <Input.Password placeholder={isEdit ? '留空保持原值' : 'ghp_xxxx'} />
                             </Form.Item>
                         )}
                         {authType === 'password' && (
                             <Row gutter={12}>
                                 <Col span={12}>
-                                    <Form.Item name="username" label="用户名" rules={[{ required: !isEdit }]}>
-                                        <Input disabled={isEdit} />
+                                    <Form.Item
+                                        name="username"
+                                        label="用户名"
+                                        rules={[{
+                                            validator: async (_, value) => {
+                                                const currentType = form.getFieldValue('auth_type');
+                                                const changedType = valuesChangedAuthType(currentType, originalAuthType);
+                                                const password = form.getFieldValue('password');
+                                                if (changedType && !value) throw new Error('请输入用户名');
+                                                if (!changedType && password && !value) throw new Error('请输入用户名');
+                                            }
+                                        }]}
+                                    >
+                                        <Input placeholder={isEdit ? '留空保持原值' : '请输入用户名'} />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
-                                    <Form.Item name="password" label="密码" rules={[{ required: !isEdit }]}>
-                                        <Input.Password disabled={isEdit} />
+                                    <Form.Item
+                                        name="password"
+                                        label="密码"
+                                        rules={[{
+                                            validator: async (_, value) => {
+                                                const currentType = form.getFieldValue('auth_type');
+                                                const changedType = valuesChangedAuthType(currentType, originalAuthType);
+                                                const username = form.getFieldValue('username');
+                                                if (changedType && !value) throw new Error('请输入密码');
+                                                if (!changedType && username && !value) throw new Error('请输入密码');
+                                            }
+                                        }]}
+                                    >
+                                        <Input.Password placeholder={isEdit ? '留空保持原值' : '请输入密码'} />
                                     </Form.Item>
                                 </Col>
                             </Row>
                         )}
                         {authType === 'ssh_key' && (
                             <>
-                                <Form.Item name="private_key" label="SSH 私钥" rules={[{ required: !isEdit }]}>
-                                    <Input.TextArea rows={3} placeholder="-----BEGIN RSA PRIVATE KEY-----" style={{ fontFamily: 'monospace', fontSize: 11 }} disabled={isEdit} />
+                                <Form.Item
+                                    name="private_key"
+                                    label="SSH 私钥"
+                                    rules={[{
+                                        validator: async (_, value) => {
+                                            const changedType = !isEdit || valuesChangedAuthType(form.getFieldValue('auth_type'), originalAuthType);
+                                            if (changedType && !value) {
+                                                throw new Error('请输入 SSH 私钥');
+                                            }
+                                        }
+                                    }]}
+                                >
+                                    <Input.TextArea rows={3} placeholder={isEdit ? '留空保持原值' : '-----BEGIN RSA PRIVATE KEY-----'} style={{ fontFamily: 'monospace', fontSize: 11 }} />
                                 </Form.Item>
                                 <Form.Item name="passphrase" label="密钥密码">
-                                    <Input.Password placeholder="可选" disabled={isEdit} />
+                                    <Input.Password placeholder={isEdit ? '留空保持原值' : '可选'} />
                                 </Form.Item>
                             </>
                         )}
@@ -255,7 +330,7 @@ const GitRepoFormPage: React.FC = () => {
                         {!isEdit && (
                             <Form.Item>
                                 <Button onClick={handleValidate} loading={validating} icon={<CheckCircleOutlined />}
-                                    disabled={!access.canManageGitRepo}
+                                    disabled={!access.canCreateGitRepo}
                                     type={validated ? 'default' : 'primary'}>
                                     {validating ? '验证中...' : validated ? '重新验证' : '验证并获取分支'}
                                 </Button>
@@ -287,8 +362,13 @@ const GitRepoFormPage: React.FC = () => {
                         <Row gutter={16}>
                             <Col span={12}>
                                 <Form.Item name="name" label="仓库名称" rules={[{ required: true, message: '请输入仓库名称' }]}>
-                                    <Input placeholder="ansible-playbooks" />
+                                    <Input placeholder="ansible-playbooks" disabled={isEdit} />
                                 </Form.Item>
+                                {isEdit && (
+                                    <div style={{ marginTop: -8, marginBottom: 12, fontSize: 12, color: '#8c8c8c' }}>
+                                        仓库名称当前前端仅作展示，编辑时不会提交到后端。
+                                    </div>
+                                )}
                             </Col>
                             <Col span={12}>
                                 <Form.Item name="default_branch" label="默认分支" rules={[{ required: true, message: '请选择分支' }]}>
@@ -318,26 +398,40 @@ const GitRepoFormPage: React.FC = () => {
                         </Form.Item>
 
                         {syncEnabled && (
-                            <Form.Item label="同步频率">
-                                <Space>
-                                    <span>每</span>
-                                    <Form.Item name="interval_value" noStyle>
-                                        <Select style={{ width: 80 }}>
-                                            {[1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30].map(n => (
-                                                <Select.Option key={n} value={n}>{n}</Select.Option>
-                                            ))}
-                                        </Select>
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    <Form.Item label="同步频率">
+                                        <Space>
+                                            <span>每</span>
+                                            <Form.Item name="interval_value" noStyle>
+                                                <Select style={{ width: 80 }}>
+                                                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30].map(n => (
+                                                        <Select.Option key={n} value={n}>{n}</Select.Option>
+                                                    ))}
+                                                </Select>
+                                            </Form.Item>
+                                            <Form.Item name="interval_unit" noStyle>
+                                                <Select style={{ width: 80 }}>
+                                                    <Select.Option value="m">分钟</Select.Option>
+                                                    <Select.Option value="h">小时</Select.Option>
+                                                    <Select.Option value="d">天</Select.Option>
+                                                </Select>
+                                            </Form.Item>
+                                            <span>同步一次</span>
+                                        </Space>
                                     </Form.Item>
-                                    <Form.Item name="interval_unit" noStyle>
-                                        <Select style={{ width: 80 }}>
-                                            <Select.Option value="m">分钟</Select.Option>
-                                            <Select.Option value="h">小时</Select.Option>
-                                            <Select.Option value="d">天</Select.Option>
-                                        </Select>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item
+                                        name="max_failures"
+                                        label="连续失败暂停"
+                                        tooltip="达到该次数后自动暂停定时同步，0 表示不自动暂停"
+                                        extra="默认 5 次"
+                                    >
+                                        <InputNumber min={0} max={100} style={{ width: '100%' }} suffix="次" />
                                     </Form.Item>
-                                    <span>同步一次</span>
-                                </Space>
-                            </Form.Item>
+                                </Col>
+                            </Row>
                         )}
 
                         {syncEnabled && (

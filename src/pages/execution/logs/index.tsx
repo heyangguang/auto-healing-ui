@@ -10,6 +10,7 @@ import StatsPanel from './components/StatsPanel';
 import { getExecutionRuns } from '@/services/auto-healing/execution';
 import dayjs from 'dayjs';
 import { RUN_STATUS_LABELS } from '@/constants/executionDicts';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 import './index.css';
 
 /* ====== 搜索字段定义 ====== */
@@ -71,6 +72,14 @@ const TEMPLATE_ADVANCED_FIELDS: AdvancedSearchField[] = [
     { key: 'playbook_name', label: 'Playbook 名称', type: 'input', description: '按关联的 Playbook 名称搜索' },
     { key: 'repository_name', label: '仓库名称', type: 'input', description: '按关联的 Git 仓库名称搜索' },
     { key: 'target_hosts', label: '目标主机', type: 'input', description: '按任务模板配置的目标主机搜索' },
+    {
+        key: 'task_status', label: '模板状态', type: 'select',
+        description: '按任务模板当前状态筛选左侧导航器',
+        options: [
+            { label: '就绪', value: 'ready' },
+            { label: '待审核', value: 'pending_review' },
+        ],
+    },
     { key: 'min_run_count', label: '最小执行次数', type: 'input', placeholder: '如: 5', description: '筛选执行次数 >= 此值的任务模板' },
     {
         key: 'last_run_status', label: '模板最近状态', type: 'select',
@@ -144,11 +153,11 @@ const parseSearchParams = (params: {
     // --- 执行流高级搜索字段 ---
     if (adv.run_id) runFilters.run_id = adv.run_id;
     if (adv.task_name) runFilters.task_name = adv.task_name;
-    if (adv.status) { runFilters.status = adv.status; taskFilters.status = adv.status; }
+    if (adv.status) { runFilters.status = adv.status; }
     if (adv.triggered_by) runFilters.triggered_by = adv.triggered_by;
     if (adv.run_date_range && adv.run_date_range.length === 2) {
-        runFilters.started_after = adv.run_date_range[0].toISOString();
-        runFilters.started_before = adv.run_date_range[1].toISOString();
+        runFilters.started_after = toDayRangeStartISO(adv.run_date_range[0]);
+        runFilters.started_before = toDayRangeEndISO(adv.run_date_range[1]);
     }
     // --- 模板分组高级搜索字段 ---
     if (adv.name) taskFilters.name = adv.name;
@@ -292,7 +301,6 @@ const ExecutionLogs: React.FC = () => {
             headerExtra={<StatsPanel />}
             searchFields={activeSearchFields}
             advancedSearchFields={searchScope === 'runs' ? RUN_ADVANCED_FIELDS : TEMPLATE_ADVANCED_FIELDS}
-            searchSchemaUrl={searchScope === 'runs' ? '/api/v1/tenant/execution-runs/search-schema' : '/api/v1/tenant/execution-tasks/search-schema'}
             onSearch={handleSearch}
             searchExtra={searchScopeToggle}
         >

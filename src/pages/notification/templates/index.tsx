@@ -64,6 +64,7 @@ const NotificationTemplatesPage: React.FC = () => {
     const access = useAccess();
     // Data State
     const [templates, setTemplates] = useState<AutoHealing.NotificationTemplate[]>([]);
+    const [totalTemplates, setTotalTemplates] = useState(0);
     const [loading, setLoading] = useState(true);
 
     // Selection State
@@ -90,6 +91,7 @@ const NotificationTemplatesPage: React.FC = () => {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const PAGE_SIZE = 20;
+    const loadingMoreRef = useRef(false);
 
     // Preview
     const [showPreview, setShowPreview] = useState(false);
@@ -105,10 +107,10 @@ const NotificationTemplatesPage: React.FC = () => {
     const handleSearchChange = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => {
         const filters = params.filters || [];
         const nameFilter = filters.find(f => f.field === 'name');
-        const eventTypeFilter = filters.find(f => f.field === '__enum__event_type');
-        const statusFilter = filters.find(f => f.field === '__enum__status');
-        const formatFilter = filters.find(f => f.field === '__enum__format');
-        const channelFilter = filters.find(f => f.field === '__enum__channel_type');
+        const eventTypeFilter = filters.find(f => f.field === '__enum__event_type') || filters.find(f => f.field === 'event_type');
+        const statusFilter = filters.find(f => f.field === '__enum__status') || filters.find(f => f.field === 'status') || filters.find(f => f.field === 'is_active');
+        const formatFilter = filters.find(f => f.field === '__enum__format') || filters.find(f => f.field === 'format');
+        const channelFilter = filters.find(f => f.field === '__enum__channel_type') || filters.find(f => f.field === 'channel_type') || filters.find(f => f.field === 'supported_channel');
 
         setSearchText(nameFilter?.value || params.advancedSearch?.name || '');
         setFilterEventType(eventTypeFilter?.value || params.advancedSearch?.event_type || 'all');
@@ -148,20 +150,22 @@ const NotificationTemplatesPage: React.FC = () => {
         return params;
     }, [searchText, filterEventType, filterStatus, filterFormat, filterChannel, sortBy, sortOrder]);
 
-    const loadTemplates = useCallback(async (resetPage = true, silent = false) => {
+    const loadTemplates = useCallback(async (resetPage = true, silent = false, pageOverride?: number) => {
         if (resetPage) {
             if (!silent) setLoading(true);
             setPage(1);
         } else {
             setLoadingMore(true);
+            loadingMoreRef.current = true;
         }
 
         try {
-            const currentPage = resetPage ? 1 : page;
+            const currentPage = pageOverride ?? (resetPage ? 1 : page);
             const params = { ...buildFilterParams(), page: currentPage };
             const res = await getTemplates(params);
             const data = res.data || [];
             const total = res.total || 0;
+            setTotalTemplates(total);
 
             if (resetPage) {
                 setTemplates(data);
@@ -181,22 +185,18 @@ const NotificationTemplatesPage: React.FC = () => {
         } finally {
             if (!silent) setLoading(false);
             setLoadingMore(false);
+            loadingMoreRef.current = false;
         }
     }, [buildFilterParams, page, selectedId, isCreating]);
 
     // Load more (for infinite scroll)
     const loadMore = useCallback(() => {
-        if (!loadingMore && hasMore && !loading) {
-            setPage(p => p + 1);
+        if (!loadingMoreRef.current && hasMore && !loading) {
+            const nextPage = page + 1;
+            setPage(nextPage);
+            loadTemplates(false, false, nextPage);
         }
-    }, [loadingMore, hasMore, loading]);
-
-    // Trigger load when page changes (for infinite scroll)
-    useEffect(() => {
-        if (page > 1) {
-            loadTemplates(false);
-        }
-    }, [page]);
+    }, [hasMore, loading, page, loadTemplates]);
 
     // Debounced search/filter effect
     useEffect(() => {
@@ -317,7 +317,7 @@ const NotificationTemplatesPage: React.FC = () => {
                 const res = await createTemplate(payload);
                 message.success('模板已创建');
                 setIsCreating(false);
-                setSelectedId(res.id);
+                setSelectedId(res?.data?.id || null);
                 // 静默刷新：不闪 loading
                 loadTemplates(true, true);
             } else if (selectedId) {
@@ -370,7 +370,7 @@ const NotificationTemplatesPage: React.FC = () => {
 
         try {
             const res: any = await previewTemplate(id, {
-                sample_data: {
+                variables: {
                     execution: { status: 'success', status_emoji: '✅', duration: '1m 20s' },
                     task: { name: 'Demo Task', target_hosts: '192.168.1.10', host_count: 5 },
                     timestamp: new Date().toLocaleString()
@@ -558,7 +558,7 @@ const NotificationTemplatesPage: React.FC = () => {
         <StandardTable<any>
             tabs={[{ key: 'editor', label: '模板编辑器' }]}
             title="通知模板"
-            description={`管理通知模板，配置不同事件的通知内容和格式，共 ${templates.length} 个模板`}
+            description={`管理通知模板，配置不同事件的通知内容和格式，共 ${totalTemplates} 个模板`}
             headerIcon={
                 <svg viewBox="0 0 48 48" fill="none">
                     <rect x="8" y="6" width="32" height="36" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -866,9 +866,11 @@ const NotificationTemplatesPage: React.FC = () => {
                                                                 { label: 'HTML', value: 'html' },
                                                             ]} />
                                                         </Form.Item>
-                                                        <Form.Item label="状态" name="is_active" valuePropName="checked" style={{ flex: '0 0 80px', marginBottom: 0 }}>
-                                                            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
-                                                        </Form.Item>
+                                                        {!isCreating && (
+                                                            <Form.Item label="状态" name="is_active" valuePropName="checked" style={{ flex: '0 0 80px', marginBottom: 0 }}>
+                                                                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+                                                            </Form.Item>
+                                                        )}
                                                     </div>
                                                 </div>
 

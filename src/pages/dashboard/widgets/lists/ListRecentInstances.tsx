@@ -1,6 +1,6 @@
 import { NodeIndexOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
-import { useRequest, history } from '@umijs/max';
+import { useAccess, useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getHealingInstances } from '@/services/auto-healing/instances';
@@ -9,8 +9,12 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
+    const access = useAccess();
     // 增加 page_size 到 15 以填充大屏幕
-    const { data: rawData, loading, refresh } = useRequest(() => getHealingInstances({ page_size: 15 }), { formatResult: (r: any) => r });
+    const { data: rawData, loading, refresh } = useRequest(() => getHealingInstances({ page_size: 15 }), {
+        formatResult: (r: any) => r,
+        ready: !!access.canViewInstances,
+    });
     const data = rawData as any;
     const items = data?.data ?? data?.items ?? [];
 
@@ -57,13 +61,14 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                                         gridTemplateColumns: '1.5fr 1fr 80px 100px',
                                         gap: 8,
                                         padding: '8px 12px',
-                                        cursor: 'pointer',
+                                        cursor: access.canViewInstances ? 'pointer' : 'default',
                                         background: index % 2 === 1 ? '#fafafa' : '#fff',
                                         borderBottom: '1px solid #f0f0f0',
                                         transition: 'background 0.3s',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        ...(access.canViewInstances ? {} : { opacity: 0.65 }),
                                     }}
-                                    onClick={() => history.push(`/healing/instances/${item.id}`)}
+                                    onClick={() => access.canViewInstances && history.push(`/healing/instances/${item.id}`)}
                                 >
                                     {/* Column 1: ID / Name */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>

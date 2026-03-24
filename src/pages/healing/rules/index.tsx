@@ -19,6 +19,7 @@ import {
     getHealingRules, deleteHealingRule, activateHealingRule, deactivateHealingRule,
 } from '@/services/auto-healing/healing-rules';
 import { getRuleStats } from '@/services/auto-healing/healing';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 import './rules.css';
 import '../../../pages/execution/git-repos/index.css';
 
@@ -187,8 +188,8 @@ const HealingRulesPage: React.FC = () => {
             }
             if (sp.created_at) {
                 const [from, to] = sp.created_at;
-                if (from) params.created_from = from;
-                if (to) params.created_to = to;
+                if (from) params.created_from = toDayRangeStartISO(from);
+                if (to) params.created_to = toDayRangeEndISO(to);
             }
             const res = await getHealingRules(params);
             setRules(res.data || []);
@@ -235,8 +236,8 @@ const HealingRulesPage: React.FC = () => {
                 }
                 if (merged.created_at) {
                     const [from, to] = merged.created_at;
-                    if (from) apiParams.created_from = from;
-                    if (to) apiParams.created_to = to;
+                    if (from) apiParams.created_from = toDayRangeStartISO(from);
+                    if (to) apiParams.created_to = toDayRangeEndISO(to);
                 }
                 const res = await getHealingRules(apiParams);
                 setRules(res.data || []);
@@ -627,7 +628,7 @@ const HealingRulesPage: React.FC = () => {
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                         description={<Text type="secondary">暂无自愈规则</Text>}
                     >
-                        <Button type="dashed" onClick={() => history.push('/healing/rules/create')}>
+                        <Button type="dashed" disabled={!access.canCreateRule} onClick={() => history.push('/healing/rules/create')}>
                             新建规则
                         </Button>
                     </Empty>

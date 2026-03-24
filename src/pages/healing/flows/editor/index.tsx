@@ -49,6 +49,7 @@ const FlowEditorInner: React.FC = () => {
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [flowName, setFlowName] = useState('未命名流程');
+    const [flowIsActive, setFlowIsActive] = useState(true);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [configOpen, setConfigOpen] = useState(false);
     const [dryRunOpen, setDryRunOpen] = useState(false);
@@ -79,6 +80,7 @@ const FlowEditorInner: React.FC = () => {
             ]);
             setEdges([]);
             setFlowName('新建自愈流程');
+            setFlowIsActive(true);
         }
     }, [id]);
 
@@ -88,6 +90,7 @@ const FlowEditorInner: React.FC = () => {
             const res = await getFlow(flowId);
             if (res.data) {
                 setFlowName(res.data.name);
+                setFlowIsActive(res.data.is_active !== false);
 
                 const initialNodes = (res.data.nodes || []).map((n: any) => {
                     let rfType = 'custom';
@@ -115,8 +118,8 @@ const FlowEditorInner: React.FC = () => {
                 // If edges have sourceHandle/targetHandle (saved in DB JSONB), restore them.
                 const initialEdges = (res.data.edges || []).map((e: any, index: number) => ({
                     id: e.id || `e${index}`,
-                    source: e.source,
-                    target: e.target,
+                    source: e.source || e.from,
+                    target: e.target || e.to,
                     sourceHandle: e.sourceHandle,
                     targetHandle: e.targetHandle,
                     label: e.label,
@@ -443,7 +446,7 @@ const FlowEditorInner: React.FC = () => {
             name: flowName,
             nodes: apiNodes,
             edges: apiEdges,
-            is_active: true
+            is_active: flowIsActive
         };
 
         try {

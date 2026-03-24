@@ -16,10 +16,12 @@ import type { SearchField, AdvancedSearchField } from '@/components/StandardTabl
 import {
     getPlatformUsers, deletePlatformUser, getPlatformUser, resetPlatformUserPassword, updatePlatformUser,
 } from '@/services/auto-healing/platform/users';
+import { getPlatformRoles, getPlatformRoleUsers } from '@/services/auto-healing/roles';
 import { USER_STATUS_MAP } from '@/constants/commonDicts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 import './users.css';
 import '../../../pages/execution/git-repos/index.css';
 
@@ -27,6 +29,64 @@ dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
 const { Text } = Typography;
+
+function extractPagedItems(res: any): any[] {
+    if (!res) return [];
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.items)) return res.items;
+    if (Array.isArray(res?.data?.items)) return res.data.items;
+    if (Array.isArray(res?.data?.data)) return res.data.data;
+    return [];
+}
+
+function extractPagedTotal(res: any, itemsFallbackLen: number): number {
+    const candidates = [
+        res?.pagination?.total,
+        res?.data?.pagination?.total,
+        res?.total,
+        res?.data?.total,
+        res?.pagination?.total_pages && res?.pagination?.page_size && res?.pagination?.total_pages * res?.pagination?.page_size,
+    ];
+    for (const v of candidates) {
+        if (typeof v === 'number' && Number.isFinite(v)) return v;
+    }
+    return itemsFallbackLen;
+}
+
+async function fetchActivePlatformAdminCount(opts: {
+    platformAdminRoleId?: string | null;
+}): Promise<{ roleId: string | null; activeCount: number | null }> {
+    try {
+        let roleId = opts.platformAdminRoleId || null;
+        if (!roleId) {
+            const rolesRes: any = await getPlatformRoles();
+            const roles = rolesRes?.data || [];
+            roleId = roles.find((r: any) => r?.name === 'platform_admin')?.id || null;
+        }
+        if (!roleId) return { roleId: null, activeCount: null };
+
+        let page = 1;
+        const pageSize = 200;
+        let fetched = 0;
+        let total = 0;
+        let activeCount = 0;
+
+        // 仅用于 platform_admin，规模通常很小；做一个硬上限避免异常时死循环。
+        for (let guard = 0; guard < 50; guard += 1) {
+            const res: any = await getPlatformRoleUsers(roleId, { page, page_size: pageSize });
+            const items = res?.data || [];
+            total = typeof res?.total === 'number' ? res.total : total;
+            activeCount += items.filter((u: any) => u?.status === 'active').length;
+            fetched += items.length;
+            if (items.length === 0) break;
+            if (total > 0 && fetched >= total) break;
+            page += 1;
+        }
+        return { roleId, activeCount };
+    } catch {
+        return { roleId: opts.platformAdminRoleId || null, activeCount: null };
+    }
+}
 
 const searchFields: SearchField[] = [
     { key: 'username', label: '用户名' },
@@ -66,6 +126,12 @@ const PlatformUsersPage: React.FC = () => {
     const [pageSize, setPageSize] = useState(16);
     const [total, setTotal] = useState(0);
     const [searchValue, setSearchValue] = useState('');
+    const [searchField, setSearchField] = useState('username');
+    const [advancedSearch, setAdvancedSearch] = useState<Record<string, any> | undefined>(undefined);
+
+    // 全局 last-admin 判断需要的全量数据（不要用分页数据做启发式）
+    const [platformAdminRoleId, setPlatformAdminRoleId] = useState<string | null>(null);
+    const [platformAdminActiveCount, setPlatformAdminActiveCount] = useState<number | null>(null);
 
     // Drawer
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -81,28 +147,26 @@ const PlatformUsersPage: React.FC = () => {
         setLoading(true);
         try {
             const params: Record<string, any> = { page: p, page_size: ps };
+            const quickField = field || 'username';
             if (value?.trim()) {
-                const key = field || 'username';
-                params[key] = value.trim();
+                params[quickField] = value.trim();
             }
             if (advanced) {
+                if (advanced.username && quickField !== 'username') params.username = advanced.username;
+                if (advanced.display_name && quickField !== 'display_name') params.display_name = advanced.display_name;
                 if (advanced.status) params.status = advanced.status;
                 if (advanced.email) params.email = advanced.email;
                 if (advanced.created_at) {
                     const [from, to] = advanced.created_at;
-                    if (from) params.created_from = dayjs(from).format('YYYY-MM-DD');
-                    if (to) params.created_to = dayjs(to).format('YYYY-MM-DD');
+                    if (from) params.created_from = toDayRangeStartISO(from);
+                    if (to) params.created_to = toDayRangeEndISO(to);
                 }
             }
             const res = await getPlatformUsers(params);
-            const list = (res as any)?.data || [];
-            const tot = (res as any)?.total || list.length;
+            const list = extractPagedItems(res as any);
+            const tot = extractPagedTotal(res as any, list.length);
             setData(list);
             setTotal(tot);
-            if (p === 1 && !value?.trim() && !advanced) {
-                const activeCount = list.filter((u: any) => u.status === 'active').length;
-                setStats({ total: tot, active: activeCount, inactive: tot - activeCount });
-            }
         } catch {
             /* global error handler */
         } finally {
@@ -110,17 +174,53 @@ const PlatformUsersPage: React.FC = () => {
         }
     }, []);
 
-    useEffect(() => {
-        loadData(1, pageSize);
+    const loadStats = useCallback(async () => {
+        try {
+            // 用 page_size=1 获取 total，避免基于分页数据计算统计
+            const [allRes, activeRes, inactiveRes, lockedRes] = await Promise.all([
+                getPlatformUsers({ page: 1, page_size: 1 }),
+                getPlatformUsers({ page: 1, page_size: 1, status: 'active' }),
+                getPlatformUsers({ page: 1, page_size: 1, status: 'inactive' }),
+                getPlatformUsers({ page: 1, page_size: 1, status: 'locked' }),
+            ]);
+            const allTotal = extractPagedTotal(allRes as any, extractPagedItems(allRes as any).length);
+            const activeTotal = extractPagedTotal(activeRes as any, extractPagedItems(activeRes as any).length);
+            const inactiveTotal = extractPagedTotal(inactiveRes as any, extractPagedItems(inactiveRes as any).length);
+            const lockedTotal = extractPagedTotal(lockedRes as any, extractPagedItems(lockedRes as any).length);
+            setStats({
+                total: allTotal,
+                active: activeTotal,
+                inactive: inactiveTotal + lockedTotal,
+            });
+        } catch {
+            /* ignore */
+        }
     }, []);
 
-    const [searchField, setSearchField] = useState('username');
+    const loadPlatformAdminActiveCount = useCallback(async () => {
+        const res = await fetchActivePlatformAdminCount({ platformAdminRoleId });
+        if (res.roleId) setPlatformAdminRoleId(res.roleId);
+        if (typeof res.activeCount === 'number') setPlatformAdminActiveCount(res.activeCount);
+    }, [platformAdminRoleId]);
 
-    const handleSearch = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any> }) => {
-        const value = params.searchValue || '';
-        const field = params.searchField || 'username';
+    useEffect(() => {
+        loadData(1, pageSize);
+        loadStats();
+        loadPlatformAdminActiveCount();
+    }, []);
+
+    const handleSearch = useCallback((params: {
+        searchField?: string;
+        searchValue?: string;
+        advancedSearch?: Record<string, any>;
+        filters?: { field: string; value: string }[];
+    }) => {
+        const quickFilter = params.filters?.[0];
+        const value = quickFilter?.value || params.searchValue || '';
+        const field = quickFilter?.field || params.searchField || 'username';
         setSearchValue(value);
         setSearchField(field);
+        setAdvancedSearch(params.advancedSearch);
         setPage(1);
         loadData(1, pageSize, value, field, params.advancedSearch);
     }, [pageSize, loadData]);
@@ -146,16 +246,22 @@ const PlatformUsersPage: React.FC = () => {
             await deletePlatformUser(user.id);
             message.success('已删除平台用户');
             setDrawerOpen(false);
+            const nextTotal = Math.max(0, total - 1);
+            const nextPage = Math.min(page, Math.max(1, Math.ceil(nextTotal / pageSize)));
             // 乐观更新：直接从列表移除，不重新加载
             setData(prev => prev.filter(u => u.id !== user.id));
-            setTotal(prev => prev - 1);
+            setTotal(nextTotal);
+            setPage(nextPage);
             setStats(prev => ({
                 ...prev,
-                total: prev.total - 1,
+                total: nextTotal,
                 ...(user.status === 'active'
                     ? { active: prev.active - 1 }
                     : { inactive: prev.inactive - 1 }),
             }));
+            loadData(nextPage, pageSize, searchValue, searchField, advancedSearch);
+            loadStats();
+            loadPlatformAdminActiveCount();
         } catch (err: any) {
             message.error(err?.response?.data?.message || '删除失败');
         }
@@ -180,6 +286,10 @@ const PlatformUsersPage: React.FC = () => {
         e?.stopPropagation?.();
         const originalStatus = user.status;
         const newStatus = (originalStatus === 'active') ? 'inactive' : 'active';
+        if (originalStatus === 'active' && newStatus !== 'active' && isLastPlatformAdmin(user)) {
+            message.error('最后一个平台管理员，无法禁用');
+            return;
+        }
         // 乐观更新：立即刷新 UI
         setData(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
         if (drawerUser?.id === user.id) {
@@ -193,6 +303,8 @@ const PlatformUsersPage: React.FC = () => {
                 active: newStatus === 'active' ? prev.active + 1 : prev.active - 1,
                 inactive: newStatus === 'active' ? prev.inactive - 1 : prev.inactive + 1,
             }));
+            loadStats();
+            loadPlatformAdminActiveCount();
         } catch {
             // 回滚
             setData(prev => prev.map(u => u.id === user.id ? { ...u, status: originalStatus } : u));
@@ -206,13 +318,15 @@ const PlatformUsersPage: React.FC = () => {
     // ==================== User Card ====================
     // 判断某用户是否是最后一个可用的平台管理员
     const isLastPlatformAdmin = useCallback((user: any) => {
-        const activePlatformAdmins = data.filter(
+        const isAdmin = user.status === 'active' && user.roles?.some((r: any) => r.name === 'platform_admin');
+        if (!isAdmin) return false;
+        if (typeof platformAdminActiveCount === 'number') return platformAdminActiveCount <= 1;
+        // fallback: 若无法拿到全量计数，退化为当前页启发式（避免完全失效，但可能不准）
+        const activePlatformAdminsOnPage = data.filter(
             (u: any) => u.status === 'active' && u.roles?.some((r: any) => r.name === 'platform_admin')
         );
-        return activePlatformAdmins.length <= 1
-            && user.status === 'active'
-            && user.roles?.some((r: any) => r.name === 'platform_admin');
-    }, [data]);
+        return activePlatformAdminsOnPage.length <= 1;
+    }, [data, platformAdminActiveCount]);
 
     const renderUserCard = (user: any) => {
         const isActive = user.status === 'active';
@@ -301,7 +415,7 @@ const PlatformUsersPage: React.FC = () => {
                                     <Switch
                                         size="small"
                                         checked={isActive}
-                                        disabled={isLastAdmin}
+                                        disabled={isLastAdmin || !access.canUpdatePlatformUser}
                                         onChange={(_, e) => handleToggleStatus(e, user)}
                                     />
                                 </Tooltip>
@@ -393,7 +507,7 @@ const PlatformUsersPage: React.FC = () => {
                 ) : data.length === 0 ? (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
                         description={<Text type="secondary">暂无平台用户</Text>}>
-                        <Button type="dashed" onClick={() => history.push('/platform/users/create')}>
+                        <Button type="dashed" disabled={!access.canCreatePlatformUser} onClick={() => history.push('/platform/users/create')}>
                             新建第一个用户
                         </Button>
                     </Empty>
@@ -405,7 +519,11 @@ const PlatformUsersPage: React.FC = () => {
                         <div className="users-pagination">
                             <Pagination
                                 current={page} total={total} pageSize={pageSize}
-                                onChange={(p, size) => { setPage(p); setPageSize(size); loadData(p, size, searchValue, searchField); }}
+                                onChange={(p, size) => {
+                                    setPage(p);
+                                    setPageSize(size);
+                                    loadData(p, size, searchValue, searchField, advancedSearch);
+                                }}
                                 showSizeChanger pageSizeOptions={['16', '24', '48']}
                                 showQuickJumper showTotal={t => `共 ${t} 条`}
                             />

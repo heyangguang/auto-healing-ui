@@ -28,6 +28,8 @@ import {
     PLAYBOOK_STATUS_OPTIONS, SCAN_MODE_OPTIONS,
     HAS_VARIABLES_OPTIONS, HAS_REQUIRED_VARS_OPTIONS,
 } from '@/constants/playbookDicts';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import './index.css';
 
 const { Text, Paragraph } = Typography;
@@ -189,7 +191,6 @@ const PlaybookList: React.FC = () => {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [relatedTaskCount, setRelatedTaskCount] = useState(0);
     const [scanModeModalOpen, setScanModeModalOpen] = useState(false);
-    const [scanMode, setScanMode] = useState<'auto' | 'enhanced'>('auto');
 
     // 扫描日志
     const [scanLogs, setScanLogs] = useState<AutoHealing.PlaybookScanLog[]>([]);
@@ -220,7 +221,7 @@ const PlaybookList: React.FC = () => {
     const loadPlaybooks = useCallback(async (params?: Record<string, any>) => {
         setLoading(true);
         try {
-            const queryParams: any = { page: 1, page_size: 100 };
+            const queryParams: any = {};
             const p = params || searchParams;
             // 支持精确匹配：name__exact / file_path__exact 直接传给后端
             if (p.name__exact) queryParams.name__exact = p.name__exact;
@@ -236,16 +237,16 @@ const PlaybookList: React.FC = () => {
             if (p.created_to) queryParams.created_to = p.created_to;
 
             // 搜索时只请求 playbooks 列表，stats 和 repos 在首次加载时已获取
-            const playbooksRes = await getPlaybooks(queryParams);
-            setPlaybooks(playbooksRes.data || playbooksRes.items || []);
+            const playbookItems = await fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ ...queryParams, page, page_size: pageSize }));
+            setPlaybooks(playbookItems);
         } catch { /* ignore */ }
         finally { setLoading(false); }
     }, [searchParams]);
 
     const loadRepos = useCallback(async () => {
         try {
-            const res = await getGitRepos({ status: 'ready' });
-            setRepos(res.data || []);
+            const repoItems = await fetchAllPages<AutoHealing.GitRepository>((page, pageSize) => getGitRepos({ status: 'ready', page, page_size: pageSize }));
+            setRepos(repoItems);
         } catch { /* ignore */ }
     }, []);
 
@@ -254,13 +255,13 @@ const PlaybookList: React.FC = () => {
             setLoading(true);
             try {
                 // 并行加载所有数据
-                const [playbooksRes, reposRes, statsRes] = await Promise.all([
-                    getPlaybooks({ page: 1, page_size: 100 }),
-                    getGitRepos({ status: 'ready' }),
+                const [playbookItems, repoItems, statsRes] = await Promise.all([
+                    fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ page, page_size: pageSize })),
+                    fetchAllPages<AutoHealing.GitRepository>((page, pageSize) => getGitRepos({ status: 'ready', page, page_size: pageSize })),
                     getPlaybookStats()
                 ]);
-                setPlaybooks(playbooksRes.data || playbooksRes.items || []);
-                setRepos(reposRes.data || []);
+                setPlaybooks(playbookItems);
+                setRepos(repoItems);
                 if (statsRes?.data) {
                     const byStatus = statsRes.data.by_status || [];
                     const getCount = (s: string) => byStatus.find((x: any) => x.status === s)?.count || 0;
@@ -366,7 +367,7 @@ const PlaybookList: React.FC = () => {
         setScanning(selectedPlaybook.id);
         setScanModeModalOpen(false);
         try {
-            const res = await scanPlaybook(selectedPlaybook.id, { mode: scanMode });
+            const res = await scanPlaybook(selectedPlaybook.id);
             message.success(`扫描完成：发现 ${res.data.variables_found} 个变量`);
             loadPlaybooks();
             // 刷新详情
@@ -381,7 +382,7 @@ const PlaybookList: React.FC = () => {
             setScanLogs(logsRes.data || logsRes.items || []);
         } catch { /* ignore */ }
         finally { setScanning(undefined); }
-    }, [selectedPlaybook, scanMode, loadPlaybooks]);
+    }, [selectedPlaybook, loadPlaybooks]);
 
     const handleSetReady = useCallback(async () => {
         if (!selectedPlaybook) return;
@@ -1632,11 +1633,6 @@ const PlaybookList: React.FC = () => {
                                                                         <Tag color={log.trigger_type === 'manual' ? 'blue' : 'green'}>
                                                                             {log.trigger_type === 'manual' ? '手动触发' : log.trigger_type === 'auto' ? '自动触发' : '同步触发'}
                                                                         </Tag>
-                                                                        {log.scan_mode && (
-                                                                            <Tag color={log.scan_mode === 'enhanced' ? 'purple' : 'default'}>
-                                                                                {log.scan_mode === 'auto' ? '自动模式' : '增强模式'}
-                                                                            </Tag>
-                                                                        )}
                                                                         {index === 0 && <Tag color="gold">最新</Tag>}
                                                                     </Space>
                                                                     <div>
@@ -1707,10 +1703,9 @@ const PlaybookList: React.FC = () => {
                 Object.entries(raw).forEach(([key, value]) => {
                     if (!value && value !== false && value !== 0) return;
                     const cleanKey = key.replace(/^__enum__/, '');
-                    if (cleanKey === 'created_at_from') {
-                        params.created_from = value;
-                    } else if (cleanKey === 'created_at_to') {
-                        params.created_to = value;
+                    if (cleanKey === 'created_at' && Array.isArray(value) && value.length === 2) {
+                        if (value[0]) params.created_from = toDayRangeStartISO(value[0]);
+                        if (value[1]) params.created_to = toDayRangeEndISO(value[1]);
                     } else {
                         // 保留 __exact 后缀，如 name__exact, file_path__exact
                         params[cleanKey] = value;
@@ -1721,7 +1716,7 @@ const PlaybookList: React.FC = () => {
             }}
             primaryActionLabel="导入 Playbook"
             primaryActionIcon={<PlusOutlined />}
-            primaryActionDisabled={!access.canManagePlaybook}
+            primaryActionDisabled={!access.canImportPlaybook}
             onPrimaryAction={() => history.push('/execution/playbooks/import')}
         >
 
@@ -1860,4 +1855,3 @@ const PlaybookList: React.FC = () => {
 };
 
 export default PlaybookList;
-

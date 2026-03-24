@@ -157,20 +157,41 @@ const PluginList: React.FC = () => {
     }, [triggerRefresh]);
 
     const handleDelete = useCallback(async (id: string) => {
-        try { await deletePlugin(id); message.success('已删除'); triggerRefresh(); } catch { /* global */ }
+        try {
+            await deletePlugin(id);
+            message.success('已删除');
+            if (currentPlugin?.id === id) {
+                setDrawerOpen(false);
+                setCurrentPlugin(null);
+                setSyncLogs([]);
+            }
+            triggerRefresh();
+        } catch { /* global */ }
     }, [triggerRefresh]);
 
     const handleActivate = useCallback(async (id: string) => {
         setActivatingId(id);
-        try { await activatePlugin(id); message.success('激活成功'); }
+        try {
+            await activatePlugin(id);
+            message.success('激活成功');
+            if (currentPlugin?.id === id) {
+                setCurrentPlugin(prev => prev ? { ...prev, status: 'active' } : prev);
+            }
+        }
         catch { /* global */ } finally { setActivatingId(undefined); triggerRefresh(); }
-    }, [triggerRefresh]);
+    }, [triggerRefresh, currentPlugin]);
 
     const handleDeactivate = useCallback(async (id: string) => {
         setActivatingId(id);
-        try { await deactivatePlugin(id); message.success('已停用'); }
+        try {
+            await deactivatePlugin(id);
+            message.success('已停用');
+            if (currentPlugin?.id === id) {
+                setCurrentPlugin(prev => prev ? { ...prev, status: 'inactive' } : prev);
+            }
+        }
         catch { /* global */ } finally { setActivatingId(undefined); triggerRefresh(); }
-    }, [triggerRefresh]);
+    }, [triggerRefresh, currentPlugin]);
 
 
     useEffect(() => {
@@ -242,7 +263,7 @@ const PluginList: React.FC = () => {
                         <Tooltip title="测试连接">
                             <Button type="link" size="small"
                                 icon={testingId === r.id ? <Spin size="small" /> : <ApiOutlined />}
-                                onClick={() => handleTest(r.id)} disabled={!!testingId || !access.canUpdatePlugin} />
+                                onClick={() => handleTest(r.id)} disabled={!!testingId || !access.canTestPlugin} />
                         </Tooltip>
                         {isActive ? (
                             <Tooltip title="停用">
@@ -260,7 +281,7 @@ const PluginList: React.FC = () => {
                         <Tooltip title={isActive ? '手动同步' : '需先激活'}>
                             <Button type="link" size="small"
                                 icon={syncingId === r.id ? <Spin size="small" /> : <SyncOutlined />}
-                                onClick={() => handleSync(r.id)} disabled={!!syncingId || !isActive || !access.canUpdatePlugin} />
+                                onClick={() => handleSync(r.id)} disabled={!!syncingId || !isActive || !access.canSyncPlugin} />
                         </Tooltip>
                         <Tooltip title="编辑"><Button type="link" size="small" icon={<SettingOutlined />}
                             onClick={() => openEdit(r)} disabled={!access.canUpdatePlugin} /></Tooltip>
@@ -349,7 +370,6 @@ const PluginList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/tenant/plugins/search-schema"
                 primaryActionLabel="新建插件"
                 primaryActionIcon={<PlusOutlined />}
                 primaryActionDisabled={!access.canCreatePlugin}
@@ -384,9 +404,9 @@ const PluginList: React.FC = () => {
                                     text={PLUGIN_STATUS_LABELS[currentPlugin.status] || currentPlugin.status} />
                             </div>
                             <Space size="small">
-                                <Button size="small" icon={<ApiOutlined />} onClick={() => handleTest(currentPlugin.id)} disabled={!access.canUpdatePlugin}>测试</Button>
+                                <Button size="small" icon={<ApiOutlined />} onClick={() => handleTest(currentPlugin.id)} disabled={!access.canTestPlugin}>测试</Button>
                                 <Button size="small" icon={<SyncOutlined />} onClick={() => handleSync(currentPlugin.id)}
-                                    disabled={currentPlugin.status !== 'active' || !access.canUpdatePlugin}>同步</Button>
+                                    disabled={currentPlugin.status !== 'active' || !access.canSyncPlugin}>同步</Button>
                                 <Button size="small" icon={<SettingOutlined />}
                                     onClick={() => { setDrawerOpen(false); history.push(`/resources/plugins/${currentPlugin.id}/edit`); }} disabled={!access.canUpdatePlugin}>编辑</Button>
                             </Space>

@@ -334,6 +334,14 @@ const DashboardBuilder: React.FC = () => {
     [state],
   );
 
+  const notifyWorkspaceMutation = useCallback((label: string, isSystem?: boolean) => {
+    if (isSystem) {
+      message.info(`${label}，系统工作区正在同步保存`);
+      return;
+    }
+    message.success(label);
+  }, []);
+
   // 缓存多断点响应式布局
   const responsiveLayouts = useMemo(
     () => generateAllBreakpointLayouts(activeWorkspace.layouts as LayoutItem[]),
@@ -360,8 +368,8 @@ const DashboardBuilder: React.FC = () => {
       activeWorkspaceId: id,
     });
     setIsEditing(true);
-    message.success('已创建新工作区');
-  }, [state, saveState]);
+    notifyWorkspaceMutation('已创建新工作区');
+  }, [state, saveState, notifyWorkspaceMutation]);
 
   const handleDuplicateWorkspace = useCallback((ws: DashboardWorkspace) => {
     const id = generateWorkspaceId();
@@ -379,8 +387,8 @@ const DashboardBuilder: React.FC = () => {
       workspaces: [...state.workspaces, dupWs],
       activeWorkspaceId: id,
     });
-    message.success('已复制工作区');
-  }, [state, saveState]);
+    notifyWorkspaceMutation('已复制工作区');
+  }, [state, saveState, notifyWorkspaceMutation]);
 
   const handleSaveAsSystem = useCallback(async () => {
     if (!systemWsName.trim()) {
@@ -476,6 +484,7 @@ const DashboardBuilder: React.FC = () => {
 
   const handleRename = useCallback(() => {
     if (!renameModal.name.trim()) return;
+    const targetWs = state.workspaces.find((ws) => ws.id === renameModal.id);
     saveState({
       ...state,
       workspaces: state.workspaces.map((ws) =>
@@ -483,8 +492,8 @@ const DashboardBuilder: React.FC = () => {
       ),
     });
     setRenameModal({ open: false, id: '', name: '' });
-    message.success('已重命名');
-  }, [state, renameModal, saveState]);
+    notifyWorkspaceMutation('已重命名', targetWs?.isSystem);
+  }, [state, renameModal, saveState, notifyWorkspaceMutation]);
 
   const handleLayoutChange = useCallback((layout: readonly LayoutItem[], allLayouts: { lg?: readonly LayoutItem[]; md?: readonly LayoutItem[]; sm?: readonly LayoutItem[]; xs?: readonly LayoutItem[] }) => {
     if (!isEditing) return;
@@ -562,7 +571,7 @@ const DashboardBuilder: React.FC = () => {
               : w,
           ),
         };
-        message.success(`已添加「${def.name}」`);
+        notifyWorkspaceMutation(`已添加「${def.name}」`, ws.isSystem);
       }
 
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
@@ -578,7 +587,7 @@ const DashboardBuilder: React.FC = () => {
 
       return newState;
     });
-  }, [saveSystemWsToBackend]);
+  }, [saveSystemWsToBackend, notifyWorkspaceMutation]);
 
   const handleRemoveWidget = useCallback((instanceId: string) => {
     setState((prev) => {
@@ -618,8 +627,8 @@ const DashboardBuilder: React.FC = () => {
       ),
     };
     saveState(newState);
-    message.success('已自动整理布局');
-  }, [state, activeWorkspace, saveState]);
+    notifyWorkspaceMutation('已自动整理布局', activeWorkspace.isSystem);
+  }, [state, activeWorkspace, saveState, notifyWorkspaceMutation]);
 
   const handleToggleEdit = useCallback(() => {
     setIsEditing((prev) => !prev);

@@ -3,7 +3,7 @@ import {
     SettingOutlined, DesktopOutlined, KeyOutlined, FileTextOutlined,
     BranchesOutlined, BellOutlined, ReloadOutlined, PlayCircleOutlined,
     InfoCircleOutlined, GlobalOutlined, RocketOutlined, CheckCircleOutlined,
-    StopOutlined, SendOutlined, ExclamationCircleOutlined, CheckOutlined,
+    ExclamationCircleOutlined, CheckOutlined,
     ThunderboltOutlined,
 } from '@ant-design/icons';
 import { history, useParams, useAccess } from '@umijs/max';
@@ -12,10 +12,12 @@ import {
 } from 'antd';
 import { getExecutionTask, confirmExecutionTaskReview } from '@/services/auto-healing/execution';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
-import { getChannels } from '@/services/auto-healing/notification';
+import { getChannels, getTemplates } from '@/services/auto-healing/notification';
+import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
 import SubPageHeader from '@/components/SubPageHeader';
 import { ExecutorIcon, DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import dayjs from 'dayjs';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import './detail.css';
 
 const { Text } = Typography;
@@ -34,20 +36,23 @@ const TaskTemplateDetail: React.FC = () => {
     const [task, setTask] = useState<AutoHealing.ExecutionTask>();
     const [secretsSources, setSecretsSources] = useState<AutoHealing.SecretsSource[]>([]);
     const [channels, setChannels] = useState<any[]>([]);
+    const [templates, setTemplates] = useState<any[]>([]);
     const [confirming, setConfirming] = useState(false);
 
     const fetchData = useCallback(async () => {
         if (!id) return;
         setLoading(true);
         try {
-            const [taskRes, secretsRes, channelsRes] = await Promise.all([
+            const [taskRes, secretsRes, channelsRes, templatesRes] = await Promise.all([
                 getExecutionTask(id),
                 getSecretsSources().catch(() => ({ data: [] })),
-                getChannels().catch(() => ({ data: [] })),
+                fetchAllPages<any>((page, pageSize) => getChannels({ page, page_size: pageSize })).catch(() => []),
+                fetchAllPages<any>((page, pageSize) => getTemplates({ page, page_size: pageSize })).catch(() => []),
             ]);
             setTask(taskRes.data);
             setSecretsSources((secretsRes as any).data || []);
-            setChannels((channelsRes as any).data || []);
+            setChannels(channelsRes as any);
+            setTemplates(templatesRes as any);
         } catch (e: any) {
             /* global error handler */
         } finally {
@@ -89,25 +94,11 @@ const TaskTemplateDetail: React.FC = () => {
         );
     }
 
-    // 通知配置
-    const notifConfig = task.notification_config;
-    const notifTriggers = [
-        { key: 'on_start', label: '开始时', icon: <RocketOutlined />, color: '#1890ff', cls: 'active-start', config: notifConfig?.on_start },
-        { key: 'on_success', label: '成功时', icon: <CheckCircleOutlined />, color: '#52c41a', cls: 'active-success', config: notifConfig?.on_success },
-        { key: 'on_failure', label: '失败时', icon: <StopOutlined />, color: '#ff4d4f', cls: 'active-failure', config: notifConfig?.on_failure },
-    ];
-
     // 变量
     const extraVars = task.extra_vars || {};
     const varsCount = Object.keys(extraVars).length;
     const playbookVars = task.playbook?.variables || [];
     const hosts = task.target_hosts ? task.target_hosts.split(',') : [];
-
-    // 获取渠道名
-    const getChannelName = (cid: string) => {
-        const ch = channels.find((c: any) => c.id === cid);
-        return ch?.name || cid.substring(0, 8);
-    };
 
     return (
         <div className="tpl-detail-page">
@@ -132,7 +123,7 @@ const TaskTemplateDetail: React.FC = () => {
                 onBack={handleGoBack}
                 actions={
                     <Space size={8}>
-                        <Button size="small" icon={<PlayCircleOutlined />}
+                        <Button size="small" icon={<PlayCircleOutlined />} disabled={!access.canExecuteTask}
                             onClick={() => startTransition(() => history.push(`/execution/execute?template=${task.id}`))}>
                             前往发射台
                         </Button>
@@ -353,53 +344,11 @@ const TaskTemplateDetail: React.FC = () => {
                     <h4 className="tpl-detail-section-title">
                         <BellOutlined />通知配置
                     </h4>
-
-                    <div className="tpl-detail-notif-grid">
-                        {notifTriggers.map(trigger => {
-                            const isEnabled = trigger.config?.enabled ?? false;
-                            const configList = trigger.config?.channel_ids?.length && trigger.config?.template_id
-                                ? trigger.config.channel_ids.map((cid: string) => ({ channel_id: cid, template_id: trigger.config!.template_id! }))
-                                : [];
-
-                            return (
-                                <div
-                                    key={trigger.key}
-                                    className={`tpl-detail-notif-trigger ${isEnabled ? trigger.cls : ''}`}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isEnabled && configList.length > 0 ? 8 : 0 }}>
-                                        <Space size={4}>
-                                            <span style={{ color: trigger.color, fontSize: 13 }}>{trigger.icon}</span>
-                                            <Text strong style={{ fontSize: 13 }}>{trigger.label}</Text>
-                                        </Space>
-                                        <Tag color={isEnabled ? 'green' : 'default'} style={{ margin: 0, fontSize: 10 }}>
-                                            {isEnabled ? '已启用' : '未启用'}
-                                        </Tag>
-                                    </div>
-
-                                    {isEnabled && configList.length > 0 && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                            {configList.map((cfg: any, idx: number) => (
-                                                <div key={idx} style={{
-                                                    display: 'flex', alignItems: 'center', gap: 4,
-                                                    padding: '4px 8px', background: '#fff', border: '1px dashed #e8e8e8',
-                                                    fontSize: 11
-                                                }}>
-                                                    <SendOutlined style={{ color: '#999', fontSize: 10 }} />
-                                                    <Text ellipsis={{ tooltip: getChannelName(cfg.channel_id) }} style={{ fontSize: 11, maxWidth: 90 }}>
-                                                        {getChannelName(cfg.channel_id)}
-                                                    </Text>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {isEnabled && configList.length === 0 && (
-                                        <Text type="secondary" style={{ fontSize: 11 }}>无策略</Text>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                    <NotificationConfigDisplay
+                        value={task.notification_config as any}
+                        channels={channels}
+                        templates={templates}
+                    />
                 </div>
 
             </div>

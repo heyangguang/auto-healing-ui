@@ -15,9 +15,10 @@ import {
     BulbFilled,
     InfoCircleOutlined,
 } from '@ant-design/icons';
-import { history } from '@umijs/max';
+import { history, useAccess } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import type { GuideArticle } from '@/pages/guide/guideData';
+import { canAccessPath } from '@/utils/pathAccess';
 
 const useStyles = createStyles(({ token }) => ({
     drawerBody: {
@@ -206,6 +207,7 @@ interface GuideDrawerProps {
 
 const GuideDrawer: React.FC<GuideDrawerProps> = ({ open, article, onClose }) => {
     const { styles } = useStyles();
+    const access = useAccess();
     const [currentStep, setCurrentStep] = useState(0);
 
     // 关闭时重置步骤
@@ -217,6 +219,7 @@ const GuideDrawer: React.FC<GuideDrawerProps> = ({ open, article, onClose }) => 
     if (!article) return null;
 
     const step = article.steps[currentStep];
+    const canVisitStep = canAccessPath(step.path, access);
     const isLast = currentStep === article.steps.length - 1;
     const nextStep = !isLast ? article.steps[currentStep + 1] : null;
     const progressPct = ((currentStep + 1) / article.steps.length) * 100;
@@ -275,7 +278,9 @@ const GuideDrawer: React.FC<GuideDrawerProps> = ({ open, article, onClose }) => 
                                 <Button
                                     type="primary"
                                     icon={<RightOutlined />}
+                                    disabled={!canVisitStep}
                                     onClick={() => {
+                                        if (!canVisitStep) return;
                                         history.push(step.path);
                                         handleClose();
                                     }}

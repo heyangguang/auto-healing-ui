@@ -145,7 +145,7 @@ const ExecutionLogTab: React.FC<{ runId?: string; fallbackLogs: LogEntry[] }> = 
     useEffect(() => {
         if (!runId || loaded) return;
         setLoading(true);
-        getExecutionLogs(runId, { page: 1, page_size: 500 })
+        getExecutionLogs(runId)
             .then((res: any) => {
                 const logs = res?.data || [];
                 if (logs.length > 0) {
@@ -306,7 +306,8 @@ const HealingInstanceDetail: React.FC = () => {
         {
             ready: !!id,
             refreshDeps: [id],
-            onSuccess: (data) => {
+            onSuccess: (response) => {
+                const data = response?.data || response;
                 if (data && data.flow_nodes && data.flow_edges) {
                     setInstanceStatus(data.status);
                     setContextData(data.context || {});
@@ -383,9 +384,15 @@ const HealingInstanceDetail: React.FC = () => {
                 }
             },
             onFlowComplete: (data) => {
-                setInstanceStatus(data.success ? 'completed' : 'failed');
-                if (data.success) {
+                const finalStatus = data.status || (data.success ? 'completed' : 'failed');
+                setInstanceStatus(finalStatus);
+                const completedWithIssues = finalStatus === 'completed' && data.success === false;
+                if (finalStatus === 'completed' && !completedWithIssues) {
                     message.success(data.message || '流程执行完成');
+                } else if (completedWithIssues) {
+                    message.warning(data.message || '流程已完成，但存在异常节点');
+                } else if (finalStatus === 'cancelled') {
+                    message.info(data.message || '流程已取消');
                 } else {
                     message.error(data.message || '流程执行失败');
                 }
@@ -469,7 +476,7 @@ const HealingInstanceDetail: React.FC = () => {
                         {instanceStatus === 'completed' && instance?.node_states && (() => {
                             const hasFailed = Object.values(instance.node_states).some((state: any) => {
                                 const ns = normalizeNodeState(state);
-                                return ns?.status === 'failed' || ns?.status === 'error';
+                                return ns?.status === 'failed' || ns?.status === 'error' || ns?.status === 'rejected';
                             });
                             return hasFailed ? <Tag color="warning" icon={<WarningOutlined />}>执行异常</Tag> : null;
                         })()}
@@ -492,10 +499,10 @@ const HealingInstanceDetail: React.FC = () => {
                     <Space>
                         <Button icon={<EyeOutlined />} onClick={() => setContextDrawerVisible(true)}>执行概况</Button>
                         {(instanceStatus === 'running' || instanceStatus === 'waiting_approval' || instanceStatus === 'pending') && (
-                            <Button danger onClick={handleCancel} disabled={!access.canTriggerHealing}>取消执行</Button>
+                            <Button danger onClick={handleCancel} disabled={!access.canUpdateFlow}>取消执行</Button>
                         )}
                         {instanceStatus === 'failed' && (
-                            <Button type="primary" onClick={handleRetry} disabled={!access.canTriggerHealing}>重试</Button>
+                            <Button type="primary" onClick={handleRetry} disabled={!access.canUpdateFlow}>重试</Button>
                         )}
                     </Space>
                 }

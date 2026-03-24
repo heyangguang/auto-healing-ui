@@ -243,7 +243,7 @@ const TenantForm: React.FC = () => {
                                                 已启用
                                             </Space>
                                         </Select.Option>
-                                        <Select.Option value="inactive">
+                                        <Select.Option value="disabled">
                                             <Space size={6}>
                                                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#bfbfbf', display: 'inline-block' }} />
                                                 已禁用

@@ -60,7 +60,7 @@ const advancedSearchFields: AdvancedSearchField[] = [
     { key: 'code', label: '租户代码', type: 'input', placeholder: '搜索代码' },
     {
         key: 'status', label: '状态', type: 'select',
-        options: [{ label: '启用', value: 'active' }, { label: '停用', value: 'inactive' }],
+        options: [{ label: '启用', value: 'active' }, { label: '停用', value: 'disabled' }],
     },
 ];
 
@@ -83,9 +83,27 @@ const TenantsPage: React.FC = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(16);
     const [total, setTotal] = useState(0);
-    const [searchField, setSearchField] = useState('name');
+    const [searchField, setSearchField] = useState('keyword');
     const [searchValue, setSearchValue] = useState('');
+    const [advancedSearch, setAdvancedSearch] = useState<Record<string, any> | undefined>(undefined);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    const loadStats = useCallback(async () => {
+        try {
+            const [allRes, activeRes, disabledRes] = await Promise.all([
+                getTenants({ page: 1, page_size: 1 }),
+                getTenants({ page: 1, page_size: 1, status: 'active' }),
+                getTenants({ page: 1, page_size: 1, status: 'disabled' }),
+            ]);
+            setStats({
+                total: Number((allRes as any)?.total ?? 0),
+                active: Number((activeRes as any)?.total ?? 0),
+                inactive: Number((disabledRes as any)?.total ?? 0),
+            });
+        } catch {
+            // ignore
+        }
+    }, []);
 
     // Drawer
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -98,10 +116,12 @@ const TenantsPage: React.FC = () => {
         setLoading(true);
         try {
             const apiParams: any = { page: p, page_size: ps };
+            const quickField = field || 'keyword';
             if (value?.trim()) {
                 apiParams.keyword = value.trim();
             }
             if (advanced) {
+                if (advanced.keyword && quickField !== 'keyword') apiParams.keyword = advanced.keyword;
                 if (advanced.name) apiParams.name = advanced.name;
                 if (advanced.code) apiParams.code = advanced.code;
                 if (advanced.status) apiParams.status = advanced.status;
@@ -111,10 +131,6 @@ const TenantsPage: React.FC = () => {
             const tot = (res as any)?.total || list.length;
             setData(list);
             setTotal(tot);
-            if (p === 1 && !value?.trim() && !advanced) {
-                const activeCount = list.filter((t: any) => t.status === 'active' || !t.status).length;
-                setStats({ total: tot, active: activeCount, inactive: tot - activeCount });
-            }
         } catch {
             /* global error handler */
         } finally {
@@ -124,13 +140,21 @@ const TenantsPage: React.FC = () => {
 
     useEffect(() => {
         loadData(1, pageSize);
+        loadStats();
     }, []);
 
-    const handleSearch = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any> }) => {
-        const field = params.searchField || 'name';
-        const value = params.searchValue || '';
+    const handleSearch = useCallback((params: {
+        searchField?: string;
+        searchValue?: string;
+        advancedSearch?: Record<string, any>;
+        filters?: { field: string; value: string }[];
+    }) => {
+        const quickFilter = params.filters?.[0];
+        const field = quickFilter?.field || params.searchField || 'keyword';
+        const value = quickFilter?.value || params.searchValue || '';
         setSearchField(field);
         setSearchValue(value);
+        setAdvancedSearch(params.advancedSearch);
         setPage(1);
         loadData(1, pageSize, field, value, params.advancedSearch);
     }, [pageSize, loadData]);
@@ -158,7 +182,7 @@ const TenantsPage: React.FC = () => {
     // ==================== Actions ====================
     const handleToggle = async (tenant: any, checked: boolean) => {
         const originalStatus = tenant.status;
-        const newStatus = checked ? 'active' : 'inactive';
+        const newStatus = checked ? 'active' : 'disabled';
         setData(prev => prev.map(t => t.id === tenant.id ? { ...t, status: newStatus } : t));
         setActionLoading(tenant.id);
         try {
@@ -169,6 +193,7 @@ const TenantsPage: React.FC = () => {
                 active: checked ? prev.active + 1 : prev.active - 1,
                 inactive: checked ? prev.inactive - 1 : prev.inactive + 1,
             }));
+            loadStats();
         } catch {
             setData(prev => prev.map(t => t.id === tenant.id ? { ...t, status: originalStatus } : t));
         } finally {
@@ -183,16 +208,21 @@ const TenantsPage: React.FC = () => {
             await deleteTenant(tenant.id);
             message.success('租户删除成功');
             setDrawerOpen(false);
+            const nextTotal = Math.max(0, total - 1);
+            const nextPage = Math.min(page, Math.max(1, Math.ceil(nextTotal / pageSize)));
             // 乐观更新：直接从列表移除，不重新加载
             setData(prev => prev.filter(t => t.id !== tenant.id));
-            setTotal(prev => prev - 1);
+            setTotal(nextTotal);
+            setPage(nextPage);
             setStats(prev => ({
                 ...prev,
-                total: prev.total - 1,
+                total: nextTotal,
                 ...(tenant.status === 'active'
                     ? { active: prev.active - 1 }
                     : { inactive: prev.inactive - 1 }),
             }));
+            loadData(nextPage, pageSize, searchField, searchValue, advancedSearch);
+            loadStats();
         } catch {
             /* global error handler */
         } finally {
@@ -403,7 +433,7 @@ const TenantsPage: React.FC = () => {
                 ) : data.length === 0 ? (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
                         description={<Text type="secondary">暂无租户数据</Text>}>
-                        <Button type="dashed" onClick={() => history.push('/platform/tenants/create')}>
+                        <Button type="dashed" disabled={!access.canManagePlatformTenants} onClick={() => history.push('/platform/tenants/create')}>
                             创建第一个租户
                         </Button>
                     </Empty>
@@ -415,7 +445,7 @@ const TenantsPage: React.FC = () => {
                         <div className="tenants-pagination">
                             <Pagination
                                 current={page} total={total} pageSize={pageSize}
-                                onChange={(p, size) => { setPage(p); setPageSize(size); loadData(p, size, searchField, searchValue); }}
+                                onChange={(p, size) => { setPage(p); setPageSize(size); loadData(p, size, searchField, searchValue, advancedSearch); }}
                                 showSizeChanger pageSizeOptions={['16', '24', '48']}
                                 showQuickJumper showTotal={t => `共 ${t} 条`}
                             />

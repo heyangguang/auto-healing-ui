@@ -68,7 +68,7 @@ interface TenantStatsItem {
 const searchFields: SearchField[] = [
     { key: 'name', label: '租户名称' },
     { key: 'code', label: '租户代码' },
-    { key: 'status', label: '租户状态', options: [{ label: '正常', value: 'active' }, { label: '停用', value: 'inactive' }] },
+    { key: 'status', label: '租户状态', options: [{ label: '正常', value: 'active' }, { label: '停用', value: 'disabled' }] },
 ];
 
 /* ── Header Icon ── */
@@ -269,14 +269,14 @@ const TenantOpsDetailPage: React.FC = () => {
 
     /* 统计数据 */
     const stats = useMemo(() => {
-        const total = tenants.length;
-        const active = tenants.filter(t => t.status === 'active').length;
+        const total = filteredTenants.length;
+        const active = filteredTenants.filter(t => t.status === 'active').length;
         const inactive = total - active;
-        const totalMembers = tenants.reduce((s, t) => s + t.member_count, 0);
-        const totalRules = tenants.reduce((s, t) => s + t.rule_count, 0);
-        const totalAudit = tenants.reduce((s, t) => s + t.audit_log_count, 0);
+        const totalMembers = filteredTenants.reduce((s, t) => s + t.member_count, 0);
+        const totalRules = filteredTenants.reduce((s, t) => s + t.rule_count, 0);
+        const totalAudit = filteredTenants.reduce((s, t) => s + t.audit_log_count, 0);
         return { total, active, inactive, totalMembers, totalRules, totalAudit };
-    }, [tenants]);
+    }, [filteredTenants]);
 
     /* 统计条 */
     const statsBar = useMemo(() => {
@@ -472,7 +472,16 @@ const TenantOpsDetailPage: React.FC = () => {
             searchFields={searchFields}
             onSearch={(params) => {
                 const p: Record<string, string> = {};
-                if (params.searchField && params.searchValue) p[params.searchField] = params.searchValue;
+                if (params.filters?.length) {
+                    params.filters.forEach((item) => {
+                        if (item.value) p[item.field] = item.value;
+                    });
+                }
+                if (params.advancedSearch) {
+                    Object.entries(params.advancedSearch).forEach(([key, value]) => {
+                        if (value !== undefined && value !== null && value !== '') p[key] = String(value);
+                    });
+                }
                 setSearchParams(p);
             }}
         >

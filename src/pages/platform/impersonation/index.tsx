@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Button, Space, message, Tag, Modal, Form, Select, Input,
     Typography, Tooltip, Popconfirm,
@@ -26,6 +26,7 @@ import {
 import { getTenants } from '@/services/auto-healing/platform/tenants';
 import { saveImpersonationState, clearImpersonationState } from '@/store/impersonation';
 import { extractErrorMsg } from '@/utils/errorMsg';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import '../../system/audit-logs/index.css';
 
 dayjs.extend(relativeTime);
@@ -90,11 +91,10 @@ const ImpersonationPage: React.FC = () => {
     const openModal = useCallback(async () => {
         setModalOpen(true);
         try {
-            const res = await getTenants({ page: 1, page_size: 100 });
-            const list = (res as any)?.data || [];
+            const list = await fetchAllPages<any>((page, pageSize) => getTenants({ page, page_size: pageSize }));
             setTenants(list.map((t: any) => ({ id: t.id, name: t.name })));
         } catch { /* 全局 errorHandler 已显示错误 */ }
-    }, []);
+    }, [refreshTrigger]);
 
     /* ── 提交申请 ── */
     const handleSubmit = useCallback(async () => {
@@ -231,14 +231,28 @@ const ImpersonationPage: React.FC = () => {
     /* ── 统计面板 ── */
     const [statsData, setStatsData] = useState({ total: 0, pending: 0, active: 0 });
 
+    useEffect(() => {
+        void (async () => {
+            try {
+                const [allRes, pendingRes, activeRes] = await Promise.all([
+                    listMyImpersonationRequests({ page: 1, page_size: 1 }),
+                    listMyImpersonationRequests({ page: 1, page_size: 1, status: 'pending' } as any),
+                    listMyImpersonationRequests({ page: 1, page_size: 1, status: 'active' } as any),
+                ]);
+                setStatsData({
+                    total: Number(allRes?.total ?? 0),
+                    pending: Number(pendingRes?.total ?? 0),
+                    active: Number(activeRes?.total ?? 0),
+                });
+            } catch {
+                // ignore
+            }
+        })();
+    }, []);
+
     // 在 request 完成后更新统计
     const wrappedRequest = useCallback(async (params: any) => {
-        const result = await handleRequest(params);
-        // 简单统计（基于当前页数据 - 如果后端有独立 stats API 可以替换）
-        const pending = result.data.filter((d: any) => d.status === 'pending').length;
-        const active = result.data.filter((d: any) => d.status === 'active').length;
-        setStatsData({ total: result.total, pending, active });
-        return result;
+        return handleRequest(params);
     }, [handleRequest]);
 
     /* ── 统计栏（复用审计日志样式 + inline 保底） ── */

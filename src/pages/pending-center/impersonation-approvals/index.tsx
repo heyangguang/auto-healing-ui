@@ -182,6 +182,10 @@ const ImpersonationApprovalsPage: React.FC = () => {
             page: params.page,
             page_size: params.pageSize,
         };
+        if (params.searchValue) {
+            const field = params.searchField || 'requester_name';
+            apiParams[field] = params.searchValue;
+        }
         if (params.advancedSearch) {
             Object.entries(params.advancedSearch).forEach(([key, value]) => {
                 if (value === undefined || value === null || value === '') return;

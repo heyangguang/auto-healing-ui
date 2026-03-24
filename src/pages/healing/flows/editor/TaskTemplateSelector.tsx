@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Modal, Input, Tree, Typography, Tag, Empty, Spin, Space, Row, Col, Tooltip, Select, Skeleton } from 'antd';
 import { SearchOutlined, CodeOutlined, FolderOutlined, CheckCircleOutlined, ExclamationCircleOutlined, BookOutlined, LoadingOutlined } from '@ant-design/icons';
-import { getExecutionTasks } from '@/services/auto-healing/execution';
+import { getExecutionTask, getExecutionTasks } from '@/services/auto-healing/execution';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
 import { getGitRepos } from '@/services/auto-healing/git-repos';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import type { DataNode } from 'antd/es/tree';
 
 const { Text } = Typography;
@@ -88,12 +89,10 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
     const loadBaseData = async () => {
         setInitLoading(true);
         try {
-            const [playbooksRes, reposRes] = await Promise.all([
-                getPlaybooks({ page_size: 100 }),
-                getGitRepos()
+            const [pbs, repos] = await Promise.all([
+                fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ page, page_size: pageSize })),
+                fetchAllPages<AutoHealing.GitRepository>((page, pageSize) => getGitRepos({ page, page_size: pageSize }))
             ]);
-            const pbs = playbooksRes.data || [];
-            const repos = reposRes.data || [];
 
             setPlaybooks(pbs);
             setRepositories(repos);
@@ -147,20 +146,50 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
         if (tasksLoading) return;
         setTasksLoading(true);
         try {
-            const params = { ...buildTaskParams(), page: pageNum };
-            const res = await getExecutionTasks(params);
-            const newTasks = res.data || [];
-            const total = res.total || 0;
+            let newTasks: TaskTemplate[] = [];
+            let total = 0;
+            const isRepoSelection = selectedTreeKey.startsWith('repo-');
+            const repoId = isRepoSelection ? selectedTreeKey.replace('repo-', '') : '';
+            const repoPlaybookIds = isRepoSelection
+                ? playbooks.filter(p => p.repository_id === repoId).map(p => p.id)
+                : [];
 
-            if (reset) {
+            if (isRepoSelection && repoPlaybookIds.length > 1) {
+                const baseParams = { ...buildTaskParams() };
+                delete baseParams.page;
+                delete baseParams.playbook_id;
+                const batches = await Promise.all(
+                    repoPlaybookIds.map((playbookId) =>
+                        fetchAllPages<TaskTemplate>((page, pageSize) =>
+                            getExecutionTasks({ ...baseParams, playbook_id: playbookId, page, page_size: pageSize }),
+                            PAGE_SIZE,
+                        ),
+                    ),
+                );
+                const merged = batches.flat();
+                const seen = new Set<string>();
+                newTasks = merged.filter((task) => {
+                    if (seen.has(task.id)) return false;
+                    seen.add(task.id);
+                    return true;
+                });
+                total = newTasks.length;
+            } else {
+                const params = { ...buildTaskParams(), page: pageNum };
+                const res = await getExecutionTasks(params);
+                newTasks = res.data || [];
+                total = res.total || 0;
+            }
+
+            if (reset || (isRepoSelection && repoPlaybookIds.length > 1)) {
                 setTasks(newTasks);
             } else {
                 setTasks(prev => [...prev, ...newTasks]);
             }
 
             setTasksTotal(total);
-            setPage(pageNum);
-            setHasMore(pageNum * PAGE_SIZE < total);
+            setPage(isRepoSelection && repoPlaybookIds.length > 1 ? 1 : pageNum);
+            setHasMore(!(isRepoSelection && repoPlaybookIds.length > 1) && pageNum * PAGE_SIZE < total);
 
             // 如果是初始加载且有预选值，定位到该任务
             if (reset && value) {
@@ -168,6 +197,18 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
                 if (found) {
                     setSelectedTask(found);
                     setSelectedTaskId(value);
+                } else {
+                    try {
+                        const detail = await getExecutionTask(value);
+                        const selected = (detail as any)?.data || detail;
+                        if (selected?.id) {
+                            setSelectedTask(selected);
+                            setSelectedTaskId(selected.id);
+                            setTasks(prev => reset ? [selected, ...prev.filter(t => t.id !== selected.id)] : prev);
+                        }
+                    } catch {
+                        // ignore invalid stale selection
+                    }
                 }
             }
         } catch (error) {
@@ -175,7 +216,7 @@ const TaskTemplateSelector: React.FC<TaskTemplateSelectorProps> = ({
         } finally {
             setTasksLoading(false);
         }
-    }, [buildTaskParams, value, tasksLoading]);
+    }, [buildTaskParams, value, tasksLoading, selectedTreeKey, playbooks]);
 
     // 筛选条件变化时重新加载
     useEffect(() => {

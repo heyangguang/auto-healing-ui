@@ -4,6 +4,7 @@ import { BellOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import { getSiteMessages, getUnreadCount, getSiteMessageCategories } from '@/services/auto-healing/siteMessage';
 import type { SiteMessageCategory } from '@/services/auto-healing/siteMessage';
+import { createAuthenticatedEventStream, type SSEConnection } from '@/services/auto-healing/sse';
 import { TokenManager } from '@/requestErrorConfig';
 import dayjs from 'dayjs';
 
@@ -108,7 +109,7 @@ const NotificationBell: React.FC = () => {
 
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const hoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const esRef = useRef<EventSource | null>(null);
+    const esRef = useRef<SSEConnection | null>(null);
 
     /* 监听 storage 变化（跨 tab 或同页面 reload 后租户变化） */
     useEffect(() => {
@@ -149,7 +150,7 @@ const NotificationBell: React.FC = () => {
     /** 获取消息列表（后台轮询用，不刷新 token） */
     const refreshMessages = useCallback(async () => {
         try {
-            const listRes = await getSiteMessages({ page: 1, page_size: 10 }, { skipTokenRefresh: true });
+            const listRes = await getSiteMessages({ page: 1, page_size: 10, is_read: false }, { skipTokenRefresh: true });
             const items = listRes?.data || [];
             setMsgs(items.slice(0, 10).map((m: any) => ({
                 title: m.title || '站内信',
@@ -171,42 +172,23 @@ const NotificationBell: React.FC = () => {
         if (!token) return;
 
         const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
-        let sseUrl = `${sseBase}/api/v1/tenant/site-messages/events?token=${token}`;
-        // 将当前租户 ID 传入 SSE，确保数据与租户匹配
-        if (tenantId) {
-            sseUrl += `&tenant_id=${encodeURIComponent(tenantId)}`;
-        }
-        const es = new EventSource(sseUrl);
-        esRef.current = es;
-
-        // SSE 事件仅作为触发器，所有数据都通过 API 获取
-        // （API 经过请求拦截器，会自动注入正确的 X-Tenant-ID）
-        es.addEventListener('init', () => {
-            refreshAll();
-        });
-
-        es.addEventListener('new_message', () => {
-            getUnreadCount({ skipTokenRefresh: true })
-                .then((res) => setUnreadCount(res?.data?.unread_count ?? 0))
-                .catch(() => { });
-            getSiteMessages({ page: 1, page_size: 10 }, { skipTokenRefresh: true })
-                .then((res) => {
-                    const items = res?.data || [];
-                    setMsgs(items.slice(0, 10).map((m: any) => ({
-                        title: m.title || '站内信',
-                        time: m.created_at || '',
-                        category: m.category || '',
-                        categoryLabel: '',
-                    })));
-                })
-                .catch(() => { });
-        });
+        const connection = createAuthenticatedEventStream(
+            `${sseBase}/api/v1/tenant/site-messages/events`,
+            {
+                onEvent: (event) => {
+                    if (event === 'init' || event === 'new_message') {
+                        refreshAll();
+                    }
+                },
+            },
+        );
+        esRef.current = connection;
 
         return () => {
-            es.close();
+            connection.close();
             esRef.current = null;
         };
-    }, [tenantId]);
+    }, [tenantId, refreshAll]);
 
     /* ======== 初始加载 + 兜底轮询 + 本地事件（租户变化时重新执行） ======== */
     useEffect(() => {

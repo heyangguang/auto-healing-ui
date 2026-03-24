@@ -14,9 +14,10 @@ export async function login(data: AutoHealing.LoginRequest) {
 /**
  * 用户登出
  */
-export async function logout() {
+export async function logout(data?: { refresh_token?: string }) {
     return request<AutoHealing.SuccessResponse>('/api/v1/auth/logout', {
         method: 'POST',
+        data,
     });
 }
 

@@ -23,6 +23,7 @@ import {
     exportAuditLogs,
 } from '@/services/auto-healing/auditLogs';
 import dayjs from 'dayjs';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 import './index.css';
 import {
     TENANT_RESOURCE_LABELS as RESOURCE_LABELS,
@@ -30,7 +31,7 @@ import {
     ACTION_COLORS,
     HTTP_METHOD_COLORS as METHOD_COLORS,
 } from '@/constants/auditDicts';
-import { AUDIT_RESULT_OPTIONS, RISK_LEVEL_OPTIONS } from '@/constants/commonDicts';
+import { AUDIT_RESULT_OPTIONS } from '@/constants/commonDicts';
 
 /* ========== 登录日志专用 action/resource 常量 ========== */
 const LOGIN_ACTIONS = ['login', 'logout', 'impersonation_enter', 'impersonation_exit'];
@@ -49,13 +50,17 @@ const formatChangeValue = (v: any): string => {
 
 /** 操作日志 - 搜索字段 */
 const operationSearchFields: SearchField[] = [
-    { key: 'username', label: '全局搜索' },
+    { key: 'search', label: '全局搜索' },
     { key: 'username', label: '用户名' },
     { key: 'request_path', label: '请求路径' },
 ];
+const AUDIT_RISK_LEVEL_OPTIONS = [
+    { label: '高危', value: 'high' },
+    { label: '普通', value: 'normal' },
+];
 const operationAdvancedSearchFields: AdvancedSearchField[] = [
-    { key: 'username', label: '关键字', type: 'input', placeholder: '搜索用户名 / 资源名 / 路径' },
-    { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
+    { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / 资源名 / 路径' },
+    { key: 'username__exact', label: '用户名', type: 'input', placeholder: '精确用户名' },
     {
         key: 'action', label: '操作类型', type: 'select', placeholder: '全部操作',
         options: Object.entries(ACTION_LABELS)
@@ -74,19 +79,19 @@ const operationAdvancedSearchFields: AdvancedSearchField[] = [
     },
     {
         key: 'risk_level', label: '风险等级', type: 'select', placeholder: '全部',
-        options: RISK_LEVEL_OPTIONS,
+        options: AUDIT_RISK_LEVEL_OPTIONS,
     },
     { key: 'created_at', label: '时间范围', type: 'dateRange' },
 ];
 
 /** 登录日志 - 搜索字段 */
 const loginSearchFields: SearchField[] = [
-    { key: 'username', label: '全局搜索' },
+    { key: 'search', label: '全局搜索' },
     { key: 'username', label: '用户名' },
 ];
 const loginAdvancedSearchFields: AdvancedSearchField[] = [
-    { key: 'username', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
-    { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
+    { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
+    { key: 'username__exact', label: '用户名', type: 'input', placeholder: '精确用户名' },
     {
         key: 'status', label: '操作结果', type: 'select', placeholder: '全部状态',
         options: AUDIT_RESULT_OPTIONS,
@@ -160,10 +165,10 @@ const AuditLogsPage: React.FC = () => {
         exportPreviewTimer.current = setTimeout(async () => {
             try {
                 const values = exportForm.getFieldsValue();
-                const params: Record<string, any> = { page: 1, page_size: 1 };
+                const params: Record<string, any> = { page: 1, page_size: 1, category: activeTab };
                 if (values.date_range?.[0] && values.date_range?.[1]) {
-                    params.created_after = values.date_range[0].toISOString();
-                    params.created_before = values.date_range[1].toISOString();
+                    params.created_after = toDayRangeStartISO(values.date_range[0]);
+                    params.created_before = toDayRangeEndISO(values.date_range[1]);
                 }
                 if (values.action) params.action = values.action;
                 if (values.resource_type) params.resource_type = values.resource_type;
@@ -179,14 +184,14 @@ const AuditLogsPage: React.FC = () => {
             }
         }, 500);
         return () => { if (exportPreviewTimer.current) clearTimeout(exportPreviewTimer.current); };
-    }, [exportFormValues, hasExportCondition, exportModalOpen]);
+    }, [exportFormValues, hasExportCondition, exportModalOpen, activeTab]);
 
     const handleExportSubmit = useCallback(async () => {
         const values = exportForm.getFieldsValue();
-        const params: Record<string, any> = {};
+        const params: Record<string, any> = { category: activeTab };
         if (values.date_range?.[0] && values.date_range?.[1]) {
-            params.created_after = values.date_range[0].toISOString();
-            params.created_before = values.date_range[1].toISOString();
+            params.created_after = toDayRangeStartISO(values.date_range[0]);
+            params.created_before = toDayRangeEndISO(values.date_range[1]);
         }
         if (values.action) params.action = values.action;
         if (values.resource_type) params.resource_type = values.resource_type;
@@ -212,7 +217,7 @@ const AuditLogsPage: React.FC = () => {
         } finally {
             setExporting(false);
         }
-    }, [exportForm]);
+    }, [exportForm, activeTab]);
 
 
     const trendSvg = useMemo(() => {
@@ -348,12 +353,13 @@ const AuditLogsPage: React.FC = () => {
                 columnTitle: '风险',
                 dataIndex: 'risk_level',
                 width: 80,
-                headerFilters: RISK_LEVEL_OPTIONS,
+                headerFilters: AUDIT_RISK_LEVEL_OPTIONS,
                 render: (_: any, record: any) => {
                     const riskMap: Record<string, { color: string; label: string }> = {
                         critical: { color: 'red', label: '极高' },
                         high: { color: 'orange', label: '高危' },
                         medium: { color: 'blue', label: '中' },
+                        normal: { color: 'default', label: '普通' },
                     };
                     const risk = riskMap[record.risk_level];
                     if (risk) {
@@ -458,8 +464,8 @@ const AuditLogsPage: React.FC = () => {
             const adv = params.advancedSearch;
             // 特殊字段处理
             if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
-                apiParams.created_after = adv.created_at[0].toISOString();
-                apiParams.created_before = adv.created_at[1].toISOString();
+                apiParams.created_after = toDayRangeStartISO(adv.created_at[0]);
+                apiParams.created_before = toDayRangeEndISO(adv.created_at[1]);
             }
             if (adv.exclude_action && Array.isArray(adv.exclude_action) && adv.exclude_action.length > 0) {
                 apiParams.exclude_action = adv.exclude_action.join(',');
@@ -855,7 +861,7 @@ const AuditLogsPage: React.FC = () => {
                             <Select
                                 allowClear
                                 placeholder="全部"
-                                options={RISK_LEVEL_OPTIONS}
+                                options={AUDIT_RISK_LEVEL_OPTIONS}
                             />
                         </Form.Item>
                     </div>

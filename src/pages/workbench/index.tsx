@@ -8,7 +8,7 @@ import {
     INCIDENT_SEVERITY_MAP as _SEVERITY_MAP,
 } from '@/constants/incidentDicts';
 import { LockOutlined } from '@ant-design/icons';
-import { history, useModel } from '@umijs/max';
+import { history, useAccess, useModel } from '@umijs/max';
 import {
     CheckCircleOutlined,
     WarningOutlined,
@@ -48,16 +48,19 @@ import type { Dayjs } from 'dayjs';
 import {
     getWorkbenchOverview,
     getScheduleCalendar,
+    getWorkbenchAnnouncements,
     getWorkbenchFavorites,
     type WorkbenchOverview,
     type ScheduleTask,
     type FavoriteItem,
+    type AnnouncementItem,
 } from '@/services/auto-healing/workbench';
-import { getSiteMessages, markAsRead, type SiteMessage } from '@/services/auto-healing/siteMessage';
 import { getAuditLogs } from '@/services/auto-healing/auditLogs';
 import { SERVICES } from '@/config/navData';
 import { getPendingApprovals, getPendingTriggers } from '@/services/auto-healing/healing';
 import { GUIDE_ARTICLES, type GuideArticle } from '@/pages/guide/guideData';
+import { canAccessPath } from '@/utils/pathAccess';
+import { getPendingHomePath } from '@/utils/pendingPath';
 import GuideDrawer from './GuideDrawer';
 
 /* ══════════════════════════════════════════════════
@@ -90,10 +93,10 @@ function resolveFavIcon(key: string): React.ReactNode {
 
 /** 默认收藏（用户未设置时使用） */
 const DEFAULT_FAVORITES: FavoriteItem[] = [
-    { key: 'cmdb', label: '资产管理', icon: 'DatabaseOutlined', path: '/cmdb' },
+    { key: 'cmdb', label: '资产管理', icon: 'DatabaseOutlined', path: '/resources/cmdb' },
     { key: 'rules', label: '自愈规则', icon: 'ToolOutlined', path: '/healing/rules' },
     { key: 'flows', label: '自愈流程', icon: 'ThunderboltOutlined', path: '/healing/flows' },
-    { key: 'exec', label: '执行管理', icon: 'RocketOutlined', path: '/execution' },
+    { key: 'exec', label: '执行管理', icon: 'RocketOutlined', path: '/execution/templates' },
     { key: 'playbook', label: 'Playbook', icon: 'ReadOutlined', path: '/execution/playbooks' },
     { key: 'notify', label: '通知模板', icon: 'BellOutlined', path: '/notification/templates' },
     { key: 'secrets', label: '密钥管理', icon: 'KeyOutlined', path: '/resources/secrets' },
@@ -216,18 +219,18 @@ function buildFrequencySummary(items: ScheduleTask[]): string {
    ██  平台资源概览映射
    ══════════════════════════════════════════════════ */
 
-function buildPlatformStats(overview?: WorkbenchOverview['resource_overview']) {
+function buildPlatformStats(overview: WorkbenchOverview['resource_overview'] | undefined, access: any) {
     if (!overview) return [];
     const r = overview;
     return [
-        { icon: <ThunderboltOutlined />, label: '自愈流程', value: r.flows.total, sub: `${r.flows.enabled ?? 0} 已启用`, color: '#1677ff', path: '/healing/flows', locked: r.flows.total === 0 && !r.flows.enabled },
-        { icon: <ToolOutlined />, label: '自愈规则', value: r.rules.total, sub: `${r.rules.enabled ?? 0} 已启用`, color: '#52c41a', path: '/healing/rules', locked: r.rules.total === 0 && !r.rules.enabled },
-        { icon: <DatabaseOutlined />, label: '纳管主机', value: r.hosts.total, sub: `${r.hosts.offline ?? 0} 离线`, color: '#722ed1', path: '/cmdb', locked: r.hosts.total === 0 && !r.hosts.offline },
-        { icon: <ReadOutlined />, label: 'Playbook', value: r.playbooks.total, sub: `${r.playbooks.needs_review ?? 0} 需审查`, color: '#eb2f96', path: '/execution/playbooks', locked: r.playbooks.total === 0 && !r.playbooks.needs_review },
-        { icon: <ScheduleOutlined />, label: '定时任务', value: r.schedules.total, sub: `${r.schedules.enabled ?? 0} 已启用`, color: '#fa8c16', path: '/execution/schedules', locked: r.schedules.total === 0 && !r.schedules.enabled },
-        { icon: <BellOutlined />, label: '通知模板', value: r.notification_templates.total, sub: `${r.notification_templates.channels ?? 0} 个渠道`, color: '#13c2c2', path: '/notification/templates', locked: r.notification_templates.total === 0 && !r.notification_templates.channels },
-        { icon: <KeyOutlined />, label: '密钥管理', value: r.secrets.total, sub: r.secrets.types || '', color: '#2f54eb', path: '/resources/secrets', locked: r.secrets.total === 0 && !r.secrets.types },
-        { icon: <UserOutlined />, label: '系统用户', value: r.users.total, sub: `${r.users.admins ?? 0} 管理员`, color: '#8c8c8c', path: '/system/users', locked: r.users.total === 0 && !r.users.admins },
+        { icon: <ThunderboltOutlined />, label: '自愈流程', value: r.flows.total, sub: `${r.flows.enabled ?? 0} 已启用`, color: '#1677ff', path: '/healing/flows', locked: !canAccessPath('/healing/flows', access) },
+        { icon: <ToolOutlined />, label: '自愈规则', value: r.rules.total, sub: `${r.rules.enabled ?? 0} 已启用`, color: '#52c41a', path: '/healing/rules', locked: !canAccessPath('/healing/rules', access) },
+        { icon: <DatabaseOutlined />, label: '纳管主机', value: r.hosts.total, sub: `${r.hosts.offline ?? 0} 离线`, color: '#722ed1', path: '/resources/cmdb', locked: !canAccessPath('/resources/cmdb', access) },
+        { icon: <ReadOutlined />, label: 'Playbook', value: r.playbooks.total, sub: `${r.playbooks.needs_review ?? 0} 需审查`, color: '#eb2f96', path: '/execution/playbooks', locked: !canAccessPath('/execution/playbooks', access) },
+        { icon: <ScheduleOutlined />, label: '定时任务', value: r.schedules.total, sub: `${r.schedules.enabled ?? 0} 已启用`, color: '#fa8c16', path: '/execution/schedules', locked: !canAccessPath('/execution/schedules', access) },
+        { icon: <BellOutlined />, label: '通知模板', value: r.notification_templates.total, sub: `${r.notification_templates.channels ?? 0} 个渠道`, color: '#13c2c2', path: '/notification/templates', locked: !canAccessPath('/notification/templates', access) },
+        { icon: <KeyOutlined />, label: '密钥管理', value: r.secrets.total, sub: r.secrets.types || '', color: '#2f54eb', path: '/resources/secrets', locked: !canAccessPath('/resources/secrets', access) },
+        { icon: <UserOutlined />, label: '系统用户', value: r.users.total, sub: `${r.users.admins ?? 0} 管理员`, color: '#8c8c8c', path: '/system/users', locked: !canAccessPath('/system/users', access) },
     ];
 }
 
@@ -673,6 +676,7 @@ const useStyles = createStyles(({ token }) => ({
 
 const WorkbenchPage: React.FC = () => {
     const { styles, cx } = useStyles();
+    const access = useAccess();
     const { initialState } = useModel('@@initialState');
     const user = initialState?.currentUser;
     const displayName = user?.name || (user as any)?.display_name || (user as any)?.username || '用户';
@@ -686,7 +690,7 @@ const WorkbenchPage: React.FC = () => {
 
     const [pendingApprovals, setPendingApprovals] = useState<{ total: number; items: any[] }>({ total: 0, items: [] });
     const [scheduleData, setScheduleData] = useState<Record<string, ScheduleTask[]>>({});
-    const [announcements, setAnnouncements] = useState<SiteMessage[]>([]);
+    const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
     const [favorites, setFavorites] = useState<FavoriteItem[]>(DEFAULT_FAVORITES);
 
     /* 引导 Drawer */
@@ -701,15 +705,21 @@ const WorkbenchPage: React.FC = () => {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
+            const approvalsRequest = access.canViewApprovals
+                ? getPendingApprovals({ page: 1, page_size: 5 })
+                : Promise.resolve({ data: [], total: 0 });
+            const triggersRequest = access.canViewPendingTrigger
+                ? getPendingTriggers({ page: 1, page_size: 5 })
+                : Promise.resolve({ data: [], total: 0 });
             const [overviewRes, calendarRes, announcementsRes, favoritesRes, auditRes, approvalsRes, triggersRes] =
                 await Promise.allSettled([
                     getWorkbenchOverview(),
                     getScheduleCalendar(dayjs().year(), dayjs().month() + 1),
-                    getSiteMessages({ category: 'announcement', page: 1, page_size: 5 }),
+                    getWorkbenchAnnouncements(5),
                     getWorkbenchFavorites(),
                     getAuditLogs({ page: 1, page_size: 10, exclude_action: 'login', sort_by: 'created_at', sort_order: 'desc' }),
-                    getPendingApprovals({ page: 1, page_size: 5 }),
-                    getPendingTriggers({ page: 1, page_size: 5 }),
+                    approvalsRequest,
+                    triggersRequest,
                 ]);
 
             if (overviewRes.status === 'fulfilled' && overviewRes.value?.data) {
@@ -718,8 +728,8 @@ const WorkbenchPage: React.FC = () => {
             if (calendarRes.status === 'fulfilled' && calendarRes.value?.data?.dates) {
                 setScheduleData(calendarRes.value.data.dates);
             }
-            if (announcementsRes.status === 'fulfilled' && announcementsRes.value?.data) {
-                const items = Array.isArray(announcementsRes.value.data) ? announcementsRes.value.data : [];
+            if (announcementsRes.status === 'fulfilled' && announcementsRes.value?.data?.items) {
+                const items = Array.isArray(announcementsRes.value.data.items) ? announcementsRes.value.data.items : [];
                 setAnnouncements(items);
             }
             if (favoritesRes.status === 'fulfilled' && favoritesRes.value?.data?.items) {
@@ -751,7 +761,7 @@ const WorkbenchPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [access.canViewApprovals, access.canViewPendingTrigger]);
 
     useEffect(() => {
         loadData();
@@ -778,7 +788,8 @@ const WorkbenchPage: React.FC = () => {
     const healthTagLabel = healthStatus === 'healthy' ? '运行中' : healthStatus === 'degraded' ? '降级运行' : '异常';
     const HealthIcon = healthStatus === 'healthy' ? CheckCircleOutlined : healthStatus === 'degraded' ? ExclamationCircleOutlined : CloseCircleOutlined;
 
-    const platformStats = buildPlatformStats(overview?.resource_overview);
+    const platformStats = buildPlatformStats(overview?.resource_overview, access);
+    const pendingCenterPath = getPendingHomePath(access);
 
     return (
         <div className={styles.page}>
@@ -852,12 +863,23 @@ const WorkbenchPage: React.FC = () => {
                                 <span className={styles.cardTitle}>
                                     <ScheduleOutlined className={styles.cardTitleIcon} /> 待办审批
                                 </span>
-                                <span className={styles.cardLink} onClick={() => history.push('/pending/triggers')}>
-                                    查看全部 <RightOutlined style={{ fontSize: 10 }} />
+                                <span
+                                    className={styles.cardLink}
+                                    onClick={() => access.canViewPendingCenter && history.push(pendingCenterPath)}
+                                    style={!access.canViewPendingCenter ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                                >
+                                    进入待办中心 <RightOutlined style={{ fontSize: 10 }} />
                                 </span>
                             </div>
                             {loading ? (
                                 <div className={styles.loadingWrap}><Spin /></div>
+                            ) : !access.canViewApprovals && !access.canViewPendingTrigger && access.canViewPendingCenter ? (
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                                    <Empty
+                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                        description="当前卡片仅聚合自愈与任务审批，其他待办请前往待办中心查看"
+                                    />
+                                </div>
                             ) : pendingApprovals.total === 0 ? (
                                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无待办任务" />
@@ -867,7 +889,12 @@ const WorkbenchPage: React.FC = () => {
                                     {pendingApprovals.items.slice(0, 5).map((item: any) => {
                                         const sev = _SEVERITY_MAP[item.severity] || _SEVERITY_MAP.medium;
                                         return (
-                                            <div key={item.id} className={styles.pendingItem} onClick={() => history.push(item._pendingType === 'trigger' ? '/pending/triggers' : '/pending/approvals')}>
+                                            <div
+                                                key={item.id}
+                                                className={styles.pendingItem}
+                                                onClick={() => access.canViewPendingCenter && history.push(item._pendingType === 'trigger' ? '/pending/triggers' : '/pending/approvals')}
+                                                style={!access.canViewPendingCenter ? { cursor: 'default' } : undefined}
+                                            >
                                                 <span className={styles.pendingDot} style={{ background: sev.color }} />
                                                 <div className={styles.pendingContent}>
                                                     <span className={styles.pendingTitle} style={{ flex: 1, minWidth: 0 }}>{item.title || item.node_name || '待办任务'}</span>
@@ -880,8 +907,8 @@ const WorkbenchPage: React.FC = () => {
                                     })}
                                     {pendingApprovals.total > 5 && (
                                         <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                                            <Button type="link" size="small" onClick={() => history.push('/pending/triggers')}>
-                                                还有 {pendingApprovals.total - 5} 条待审批
+                                            <Button type="link" size="small" disabled={!access.canViewPendingCenter} onClick={() => history.push(pendingCenterPath)}>
+                                                还有 {pendingApprovals.total - 5} 条待办
                                             </Button>
                                         </div>
                                     )}
@@ -902,7 +929,12 @@ const WorkbenchPage: React.FC = () => {
                         ) : (
                             <div className={styles.favGrid}>
                                 {favorites.map((item) => (
-                                    <div key={item.key} className={styles.favItem} onClick={() => history.push(item.path)}>
+                                    <div
+                                        key={item.key}
+                                        className={styles.favItem}
+                                        onClick={() => canAccessPath(item.path, access) && history.push(item.path)}
+                                        style={!canAccessPath(item.path, access) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                                    >
                                         <span className={styles.favIconWrap} style={{ color: '#1677ff' }}>{resolveFavIcon(item.key)}</span>
                                         <span className={styles.favName}>{item.label}</span>
                                     </div>
@@ -1039,7 +1071,11 @@ const WorkbenchPage: React.FC = () => {
                                 <span className={styles.cardTitle}>
                                     <HistoryOutlined className={styles.cardTitleIcon} /> 变更记录
                                 </span>
-                                <span className={styles.cardLink} onClick={() => history.push('/system/audit-logs')}>
+                                <span
+                                    className={styles.cardLink}
+                                    onClick={() => access.canViewAuditLogs && history.push('/system/audit-logs')}
+                                    style={!access.canViewAuditLogs ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                                >
                                     查看全部 <RightOutlined style={{ fontSize: 10 }} />
                                 </span>
                             </div>
@@ -1104,19 +1140,19 @@ const WorkbenchPage: React.FC = () => {
                             </span>
                         </div>
                         <div className={styles.cardBody} style={{ padding: '4px 12px' }}>
-                            <Button className={styles.actionBtn} icon={<ScheduleOutlined />} block onClick={() => history.push('/pending/triggers')}>
+                            <Button className={styles.actionBtn} icon={<ScheduleOutlined />} block disabled={!access.canViewPendingCenter} onClick={() => history.push(pendingCenterPath)}>
                                 待办中心
                             </Button>
-                            <Button className={styles.actionBtn} icon={<FolderAddOutlined />} block onClick={() => history.push('/resources/git-repos')}>
+                            <Button className={styles.actionBtn} icon={<FolderAddOutlined />} block disabled={!access.canCreateGitRepo} onClick={() => history.push('/execution/git-repos/create')}>
                                 添加仓库
                             </Button>
-                            <Button className={styles.actionBtn} icon={<ImportOutlined />} block onClick={() => history.push('/execution/playbooks')}>
+                            <Button className={styles.actionBtn} icon={<ImportOutlined />} block disabled={!access.canImportPlaybook} onClick={() => history.push('/execution/playbooks/import')}>
                                 导入剧本
                             </Button>
-                            <Button className={styles.actionBtn} icon={<PlayCircleOutlined />} block onClick={() => history.push('/execution/execute')}>
+                            <Button className={styles.actionBtn} icon={<PlayCircleOutlined />} block disabled={!access.canExecuteTask} onClick={() => history.push('/execution/execute')}>
                                 执行任务
                             </Button>
-                            <Button className={styles.actionBtn} icon={<BranchesOutlined />} block onClick={() => history.push('/healing/flows')}>
+                            <Button className={styles.actionBtn} icon={<BranchesOutlined />} block disabled={!access.canCreateFlow} onClick={() => history.push('/healing/flows/editor')}>
                                 新建流程
                             </Button>
                         </div>
@@ -1138,13 +1174,12 @@ const WorkbenchPage: React.FC = () => {
                         <div className={styles.cardHeader}>
                             <span className={styles.cardTitle}>
                                 <BellOutlined className={styles.cardTitleIcon} /> 系统公告
-                                {announcements.filter(a => !a.is_read).length > 0 && (
-                                    <span style={{ fontSize: 11, color: '#fff', background: '#ff4d4f', borderRadius: 8, padding: '0 6px', marginLeft: 6, lineHeight: '16px', display: 'inline-block' }}>
-                                        {announcements.filter(a => !a.is_read).length}
-                                    </span>
-                                )}
                             </span>
-                            <span className={styles.cardLink} onClick={() => history.push('/system/messages')}>
+                            <span
+                                className={styles.cardLink}
+                                onClick={() => access.canViewSiteMessages && history.push('/system/messages')}
+                                style={!access.canViewSiteMessages ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                            >
                                 查看全部 <RightOutlined style={{ fontSize: 10 }} />
                             </span>
                         </div>
@@ -1160,23 +1195,15 @@ const WorkbenchPage: React.FC = () => {
                                         <div
                                             key={item.id}
                                             className={styles.announcement}
-                                            onClick={async () => {
-                                                if (!item.is_read) {
-                                                    try {
-                                                        await markAsRead([item.id]);
-                                                        setAnnouncements(prev => prev.map(a => a.id === item.id ? { ...a, is_read: true } : a));
-                                                    } catch { /* ignore */ }
-                                                }
-                                                history.push('/system/messages');
+                                            onClick={() => {
+                                                if (access.canViewSiteMessages) history.push('/system/messages');
                                             }}
+                                            style={!access.canViewSiteMessages ? { cursor: 'default' } : undefined}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                {!item.is_read && (
-                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1677ff', flexShrink: 0, display: 'inline-block' }} />
-                                                )}
-                                                <span className={styles.announcementTitle} style={item.is_read ? { color: '#8c8c8c', fontWeight: 400 } : undefined}>{item.title}</span>
+                                                <span className={styles.announcementTitle}>{item.title}</span>
                                             </div>
-                                            {plainText && <div className={styles.announcementSummary} style={!item.is_read ? undefined : { marginLeft: 0 }}>{plainText}</div>}
+                                            {plainText && <div className={styles.announcementSummary}>{plainText}</div>}
                                             <div className={styles.announcementDate}>{dayjs(item.created_at).format('YYYY-MM-DD HH:mm')}</div>
                                         </div>
                                     );
@@ -1191,7 +1218,11 @@ const WorkbenchPage: React.FC = () => {
                             <span className={styles.cardTitle}>
                                 <ScheduleOutlined className={styles.cardTitleIcon} /> 定时任务
                             </span>
-                            <span className={styles.cardLink} onClick={() => history.push('/execution/schedules')}>
+                            <span
+                                className={styles.cardLink}
+                                onClick={() => access.canViewTasks && history.push('/execution/schedules')}
+                                style={!access.canViewTasks ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                            >
                                 查看全部 <RightOutlined style={{ fontSize: 10 }} />
                             </span>
                         </div>

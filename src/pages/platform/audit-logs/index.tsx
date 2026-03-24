@@ -23,6 +23,7 @@ import {
     getPlatformAuditTrend,
 } from '@/services/auto-healing/platform/auditLogs';
 import dayjs from 'dayjs';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 import '../../system/audit-logs/index.css';
 import {
     PLATFORM_RESOURCE_LABELS as RESOURCE_LABELS,
@@ -48,12 +49,12 @@ const formatChangeValue = (v: any): string => {
 
 /** 操作日志 - 搜索字段 */
 const operationSearchFields: SearchField[] = [
-    { key: 'username', label: '全局搜索' },
+    { key: 'search', label: '全局搜索' },
     { key: 'username', label: '用户名' },
 ];
 const operationAdvancedSearchFields: AdvancedSearchField[] = [
-    { key: 'username', label: '关键字', type: 'input', placeholder: '搜索用户名 / 资源名 / 路径' },
-    { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
+    { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / 资源名 / 路径' },
+    { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名', defaultMatchMode: 'exact' },
     {
         key: 'action', label: '操作类型', type: 'select', placeholder: '全部操作',
         options: Object.entries(ACTION_LABELS)
@@ -75,12 +76,12 @@ const operationAdvancedSearchFields: AdvancedSearchField[] = [
 
 /** 登录日志 - 搜索字段 */
 const loginSearchFields: SearchField[] = [
-    { key: 'username', label: '全局搜索' },
+    { key: 'search', label: '全局搜索' },
     { key: 'username', label: '用户名' },
 ];
 const loginAdvancedSearchFields: AdvancedSearchField[] = [
-    { key: 'username', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
-    { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名' },
+    { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
+    { key: 'username', label: '用户名', type: 'input', placeholder: '精确用户名', defaultMatchMode: 'exact' },
     {
         key: 'status', label: '操作结果', type: 'select', placeholder: '全部状态',
         options: [{ label: '成功', value: 'success' }, { label: '失败', value: 'failed' }],
@@ -349,8 +350,8 @@ const PlatformAuditLogsPage: React.FC = () => {
             const adv = params.advancedSearch;
             // 特殊字段处理
             if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
-                apiParams.created_after = adv.created_at[0].toISOString();
-                apiParams.created_before = adv.created_at[1].toISOString();
+                apiParams.created_after = toDayRangeStartISO(adv.created_at[0]);
+                apiParams.created_before = toDayRangeEndISO(adv.created_at[1]);
             }
             // 通用字段传递（支持 __exact 后缀）
             const specialKeys = ['created_at'];

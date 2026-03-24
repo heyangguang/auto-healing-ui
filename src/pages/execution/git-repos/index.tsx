@@ -24,6 +24,8 @@ import {
 } from '@/services/auto-healing/git-repos';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
 import { getDictionaries, DictItem } from '@/services/auto-healing/dictionary';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import './index.css';
 
 dayjs.extend(relativeTime);
@@ -172,9 +174,17 @@ const GitRepoList: React.FC = () => {
             await syncGitRepo(repo.id);
             message.success('同步已触发');
             triggerRefresh();
+            if (drawerOpen && currentRow?.id === repo.id) {
+                const [repoRes, logsRes] = await Promise.all([
+                    getGitRepo(repo.id),
+                    getSyncLogs(repo.id, { page: 1, page_size: 10 }).catch(() => ({ data: [] } as any)),
+                ]);
+                setCurrentRow(repoRes.data);
+                setSyncLogs(logsRes.data || logsRes.items || []);
+            }
         } catch { }
         finally { setSyncing(undefined); }
-    }, [triggerRefresh]);
+    }, [triggerRefresh, drawerOpen, currentRow]);
 
     const openDetail = useCallback(async (record: AutoHealing.GitRepository) => {
         setCurrentRow(record);
@@ -189,8 +199,8 @@ const GitRepoList: React.FC = () => {
             setCurrentRow(res.data);
 
             // 按 repository_id 加载关联 Playbook
-            getPlaybooks({ repository_id: record.id, page_size: 50 })
-                .then(pbRes => setDrawerPlaybooks(pbRes.data || []))
+            fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ repository_id: record.id, page, page_size: pageSize }))
+                .then(setDrawerPlaybooks)
                 .catch(() => { });
 
             if (res.data.status === 'ready') {
@@ -336,7 +346,7 @@ const GitRepoList: React.FC = () => {
                     <Tooltip title="手动同步">
                         <Button type="link" size="small"
                             icon={syncing === r.id ? <Spin size="small" /> : <SyncOutlined />}
-                            onClick={() => handleSync(r)} disabled={!!syncing || !access.canManageGitRepo} />
+                            onClick={() => handleSync(r)} disabled={!!syncing || !access.canSyncRepo} />
                     </Tooltip>
                     <Tooltip title="文件浏览">
                         <Button type="link" size="small" icon={<FolderOutlined />}
@@ -345,7 +355,7 @@ const GitRepoList: React.FC = () => {
                     </Tooltip>
                     <Tooltip title="编辑">
                         <Button type="link" size="small" icon={<SettingOutlined />}
-                            onClick={() => openEdit(r)} disabled={!access.canManageGitRepo} />
+                            onClick={() => openEdit(r)} disabled={!access.canUpdateGitRepo} />
                     </Tooltip>
                     <Popconfirm title="确定删除？" description="本地代码也会被清除，不可恢复" onConfirm={() => handleDelete(r.id)}>
                         <Button type="link" size="small" danger icon={<DeleteOutlined />} disabled={!access.canDeleteRepo} />
@@ -380,8 +390,8 @@ const GitRepoList: React.FC = () => {
                 const adv = params.advancedSearch;
                 // 特殊字段：日期范围
                 if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
-                    apiParams.created_from = adv.created_at[0].toISOString();
-                    apiParams.created_to = adv.created_at[1].toISOString();
+                    apiParams.created_from = toDayRangeStartISO(adv.created_at[0]);
+                    apiParams.created_to = toDayRangeEndISO(adv.created_at[1]);
                 }
                 // 通用字段传递
                 const specialKeys = ['created_at'];
@@ -393,7 +403,7 @@ const GitRepoList: React.FC = () => {
 
             // 排序
             if (params.sorter) {
-                apiParams.sort_field = params.sorter.field;
+                apiParams.sort_by = params.sorter.field;
                 apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
             }
 
@@ -459,12 +469,12 @@ const GitRepoList: React.FC = () => {
                     </div>
                     <Space size="small">
                         <Button size="small" icon={<SyncOutlined spin={syncing === currentRow.id} />}
-                            onClick={() => handleSync(currentRow)} disabled={!!syncing || !access.canManageGitRepo}>同步</Button>
+                            onClick={() => handleSync(currentRow)} disabled={!!syncing || !access.canSyncRepo}>同步</Button>
                         <Button size="small" icon={<FolderOutlined />}
                             onClick={() => { loadFileTree(currentRow.id); setFileBrowserOpen(true); }}
                             disabled={currentRow.status !== 'ready'}>文件</Button>
                         <Button size="small" icon={<SettingOutlined />}
-                            onClick={() => { setDrawerOpen(false); openEdit(currentRow); }} disabled={!access.canManageGitRepo}>编辑</Button>
+                            onClick={() => { setDrawerOpen(false); openEdit(currentRow); }} disabled={!access.canUpdateGitRepo}>编辑</Button>
                         <Popconfirm title="确定删除？" description="本地代码也会被清除" onConfirm={() => handleDelete(currentRow.id)}>
                             <Button size="small" danger icon={<DeleteOutlined />} disabled={!access.canDeleteRepo}>删除</Button>
                         </Popconfirm>
@@ -723,7 +733,7 @@ const GitRepoList: React.FC = () => {
                 searchSchemaUrl="/api/v1/tenant/git-repos/search-schema"
                 primaryActionLabel="添加仓库"
                 primaryActionIcon={<PlusOutlined />}
-                primaryActionDisabled={!access.canManageGitRepo}
+                primaryActionDisabled={!access.canCreateGitRepo}
                 onPrimaryAction={openCreate}
                 columns={columns}
                 rowKey="id"

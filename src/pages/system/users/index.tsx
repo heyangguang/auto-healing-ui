@@ -16,6 +16,7 @@ import { getRoles } from '@/services/auto-healing/roles';
 import { USER_STATUS_OPTIONS, USER_STATUS_MAP } from '@/constants/commonDicts';
 import dayjs from 'dayjs';
 import { extractErrorMsg } from '@/utils/errorMsg';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 
 const { Text } = Typography;
 
@@ -75,15 +76,15 @@ const UsersPage: React.FC = () => {
     const handleToggleStatus = useCallback(async (record: any) => {
         const oldStatus = record.status;
         const newStatus = oldStatus === 'active' ? 'inactive' : 'active';
-        // 乐观更新
         record.status = newStatus;
+        setDetailUser((prev: any) => prev?.id === record.id ? { ...prev, status: newStatus } : prev);
         forceUpdate(n => n + 1);
         try {
             await updateUser(record.id, { status: newStatus });
             message.success(newStatus === 'active' ? '已启用' : '已禁用');
         } catch {
-            // 回滚
             record.status = oldStatus;
+            setDetailUser((prev: any) => prev?.id === record.id ? { ...prev, status: oldStatus } : prev);
             forceUpdate(n => n + 1);
             /* global error handler */
         }
@@ -136,7 +137,11 @@ const UsersPage: React.FC = () => {
             width: 180,
             headerFilters: roleOptions,
             render: (_: any, record: any) => {
-                const roles = record.roles || [];
+                const roles = Array.isArray(record.roles) && record.roles.length > 0
+                    ? record.roles
+                    : (record.role_id || record.role_name
+                        ? [{ id: record.role_id || record.role_name, display_name: record.role_name }]
+                        : []);
                 if (roles.length === 0) return <Text type="secondary">无角色</Text>;
                 return (
                     <Space size={[4, 4]} wrap>
@@ -231,48 +236,105 @@ const UsersPage: React.FC = () => {
         advancedSearch?: Record<string, any>;
         sorter?: { field: string; order: 'ascend' | 'descend' };
     }) => {
-        const apiParams: Record<string, any> = {
-            page: params.page,
-            page_size: params.pageSize,
-        };
+        const apiBaseParams: Record<string, any> = {};
 
-        // 简单搜索
-        if (params.searchValue) {
-            if (params.searchField) {
-                apiParams[params.searchField] = params.searchValue;
-            } else {
-                apiParams.username = params.searchValue;
-            }
-        }
+        let searchField = params.searchField;
+        let searchValue = params.searchValue?.trim();
+        let createdAtRange: any[] | undefined;
+        let statusFilter: string | undefined;
+        let exactUserId: string | undefined;
+        let exactUsername: string | undefined;
+        let exactEmail: string | undefined;
+        let exactDisplayName: string | undefined;
 
-        // 高级搜索
         if (params.advancedSearch) {
             const adv = params.advancedSearch;
-            // 特殊字段映射
-            if (adv.user_id) apiParams.user_id = adv.user_id;
-            if (adv.roles) apiParams.role_id = adv.roles;
-            if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
-                apiParams.created_from = adv.created_at[0].toISOString();
-                apiParams.created_to = adv.created_at[1].toISOString();
+            if (!searchValue) {
+                if (adv.username) { searchField = 'username'; searchValue = String(adv.username).trim(); }
+                else if (adv.email) { searchField = 'email'; searchValue = String(adv.email).trim(); }
+                else if (adv.display_name) { searchField = 'display_name'; searchValue = String(adv.display_name).trim(); }
+                else if (adv.user_id) { searchField = 'user_id'; searchValue = String(adv.user_id).trim(); }
             }
-            // 通用字段传递（支持 __exact 后缀）
-            const specialKeys = ['user_id', 'roles', 'created_at'];
-            Object.entries(adv).forEach(([key, value]) => {
-                if (specialKeys.includes(key) || value === undefined || value === null || value === '') return;
-                apiParams[key] = value;
+            if (searchField === 'roles' || searchField === 'status') {
+                searchValue = undefined;
+            }
+            if (adv.username__exact) exactUsername = String(adv.username__exact).trim();
+            if (adv.email__exact) exactEmail = String(adv.email__exact).trim();
+            if (adv.display_name__exact) exactDisplayName = String(adv.display_name__exact).trim();
+            if (adv.user_id__exact) {
+                apiBaseParams.user_id = adv.user_id__exact;
+                exactUserId = String(adv.user_id__exact).trim();
+            }
+            if (adv.roles) apiBaseParams.role_id = adv.roles;
+            if (adv.created_at && adv.created_at[0] && adv.created_at[1]) {
+                createdAtRange = adv.created_at;
+            }
+            if (adv.status) statusFilter = String(adv.status);
+        }
+
+        let items: any[] = [];
+        let page = 1;
+        const pageSize = 200;
+        while (true) {
+            const res = await getUsers({
+                ...apiBaseParams,
+                page,
+                page_size: pageSize,
+            });
+            const batch = res?.data || (res as any)?.items || [];
+            items.push(...batch);
+            const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? batch.length;
+            if (items.length >= total || batch.length === 0) break;
+            page += 1;
+        }
+
+        if (searchValue) {
+            const key = searchField === 'user_id' ? 'id' : (searchField || 'username');
+            const keyword = searchValue.toLowerCase();
+            items = items.filter((item: any) => String(item[key] || '').toLowerCase().includes(keyword));
+        }
+
+        if (exactUsername) {
+            items = items.filter((item: any) => String(item.username || '').trim() === exactUsername);
+        }
+        if (exactEmail) {
+            items = items.filter((item: any) => String(item.email || '').trim() === exactEmail);
+        }
+        if (exactDisplayName) {
+            items = items.filter((item: any) => String(item.display_name || '').trim() === exactDisplayName);
+        }
+        if (exactUserId) {
+            items = items.filter((item: any) => String(item.id || '').trim() === exactUserId);
+        }
+        if (statusFilter) {
+            items = items.filter((item: any) => item.status === statusFilter);
+        }
+        if (createdAtRange?.[0] && createdAtRange?.[1]) {
+            const from = dayjs(toDayRangeStartISO(createdAtRange[0]));
+            const to = dayjs(toDayRangeEndISO(createdAtRange[1]));
+            items = items.filter((item: any) => {
+                const createdAt = dayjs(item.created_at);
+                return createdAt.isValid() && !createdAt.isBefore(from) && !createdAt.isAfter(to);
             });
         }
 
-        // 排序
-        if (params.sorter) {
-            apiParams.sort_field = params.sorter.field;
-            apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
+        if (params.sorter?.field) {
+            const field = params.sorter.field;
+            const multiplier = params.sorter.order === 'ascend' ? 1 : -1;
+            items = [...items].sort((a: any, b: any) => {
+                const av = a[field];
+                const bv = b[field];
+                if (field === 'created_at') {
+                    return (dayjs(av).valueOf() - dayjs(bv).valueOf()) * multiplier;
+                }
+                return String(av ?? '').localeCompare(String(bv ?? '')) * multiplier;
+            });
         }
 
-        const res = await getUsers(apiParams);
-        const items = res?.data || (res as any)?.items || [];
-        const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? 0;
-        return { data: items, total };
+        const total = items.length;
+        const start = (params.page - 1) * params.pageSize;
+        const pagedItems = items.slice(start, start + params.pageSize);
+        return { data: pagedItems, total };
     }, []);
 
     /* ========== 头部图标 ========== */
@@ -356,7 +418,6 @@ const UsersPage: React.FC = () => {
                                     disabled={!access.canUpdateUser}
                                     onClick={async () => {
                                         await handleToggleStatus(detailUser);
-                                        setDetailUser({ ...detailUser, status: detailUser.status === 'active' ? 'inactive' : 'active' });
                                     }}
                                 >
                                     {detailUser.status === 'active' ? '禁用' : '启用'}
@@ -415,9 +476,12 @@ const UsersPage: React.FC = () => {
                                 <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>角色分配</Text>
                             </div>
                             <div style={{ marginBottom: 16 }}>
-                                {detailUser.roles && detailUser.roles.length > 0 ? (
+                                {(detailUser.roles && detailUser.roles.length > 0) || detailUser.role_name ? (
                                     <Space size={[6, 6]} wrap>
-                                        {detailUser.roles.map((r: any) => (
+                                        {(detailUser.roles && detailUser.roles.length > 0
+                                            ? detailUser.roles
+                                            : [{ id: detailUser.role_id || detailUser.role_name, display_name: detailUser.role_name }]
+                                        ).map((r: any) => (
                                             <Tag
                                                 key={r.id}
                                                 color={r.is_system ? 'blue' : 'default'}

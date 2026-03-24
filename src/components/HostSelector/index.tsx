@@ -17,15 +17,15 @@ const { Text } = Typography;
 const envConfig: Record<string, { label: string; color: string }> = {
     production: { label: '生产', color: '#f5222d' },
     staging: { label: '预发', color: '#fa8c16' },
-    development: { label: '开发', color: '#1890ff' },
-    testing: { label: '测试', color: '#52c41a' },
+    dev: { label: '开发', color: '#1890ff' },
+    test: { label: '测试', color: '#52c41a' },
 };
 
 interface HostSelectorModalProps {
     open: boolean;
     value?: string[];
     excludeHosts?: string[];  // IP 列表，这些主机不能被选中(已在模板中)
-    onOk: (selected: string[]) => void;
+    onOk: (selected: string[], items: AutoHealing.CMDBItem[]) => void;
     onCancel: () => void;
 }
 
@@ -53,23 +53,27 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
     const [pagination, setPagination] = useState({ current: 1, pageSize: 15, total: 0 });
 
     // 选中状态
-    const [selectedIds, setSelectedIds] = useState<React.Key[]>([]);
-    const [selectedMap, setSelectedMap] = useState<Map<React.Key, string>>(new Map());
+    const [selectedIps, setSelectedIps] = useState<string[]>([]);
+    const [selectedMap, setSelectedMap] = useState<Map<string, AutoHealing.CMDBItem>>(new Map());
 
     // **修复: Modal 打开时重置状态，避免切换密钥后残留之前的选中**
     const prevOpenRef = useRef(open);
     useEffect(() => {
         // 检测 open 从 false 变为 true 时重置状态
         if (open && !prevOpenRef.current) {
-            setSelectedIds([]);
-            setSelectedMap(new Map());
+            setSelectedIps(value);
+            const nextMap = new Map<string, AutoHealing.CMDBItem>();
+            value.forEach((ip) => {
+                nextMap.set(ip, { id: ip as any, ip_address: ip, hostname: ip } as AutoHealing.CMDBItem);
+            });
+            setSelectedMap(nextMap);
             setSearchText('');
             setTreeSearchText('');
             setSelectedEnv('all');
             setPagination({ current: 1, pageSize: 15, total: 0 });
         }
         prevOpenRef.current = open;
-    }, [open]);
+    }, [open, value]);
 
     // 加载主机列表 (Server-Side)
     const loadHosts = useCallback(async (page = 1, env = selectedEnv, search = searchText) => {
@@ -115,34 +119,6 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
         loadHosts(newPagination.current, selectedEnv, searchText);
     };
 
-    // 选中状态同步 (仅初始化或加载新数据时保留选中)
-    // 注意：服务器端分页时，selectedIds 必须持久化。我们已经将其存储在 State 中。
-    // 但是这里需要处理：如果 value 有值，且首次打开，需要正确映射 ID?
-    // 问题：如果不加载所有 ID，无法将 value(IP) 转换为 ID。
-    // 解决方案：后端通常返回 ID。前端 value 是 IP。
-    // 这是一个棘手问题。Server-Side Pagination 下，我们不知道 "10.0.0.1" 对应的 ID 是多少，除非该页数据包含它。
-    // 权宜之计：我们依然保留 ID 选择逻辑，但要注意如果翻页了，不在当前页的 Item 如何回显？
-    // AntD Table preserveSelectedRowKeys: true 可以保留 Key。
-    // 但是我们只有 IP (props.value)。
-    // 如果用户传进来的 IP 不在当前页，我们无法得知其 ID，也就无法选中。
-    // FIX: 这是一个已知限制。除非并在 Init 时 Fetch All Selected Hosts By IPs?
-    // 为简化，我们假设用户主要是“添加”操作。或者我们仅在当前页匹配。
-    // 实际上，如果 value 包含 IPs，我们无法 verify 选中状态除非 iterate all。
-    // 但用户主要抱怨 Pagination。
-    // 我们保留原有逻辑：当前页匹配到的 IP 自动勾选。
-    useEffect(() => {
-        if (open && hosts.length > 0) {
-            const ipSet = new Set(value);
-            // 仅对当前页可见的主机进行 ID 映射检查
-            const currentPageIds = hosts
-                .filter(h => h.ip_address && ipSet.has(h.ip_address))
-                .map(h => h.id);
-
-            // 将新发现的 ID 加入 selectedIds (去重)
-            setSelectedIds(prev => Array.from(new Set([...prev, ...currentPageIds])));
-        }
-    }, [hosts, open]);
-
     // 统计数据
     const [envStats, setEnvStats] = useState<Record<string, number>>({ all: 0 });
     useEffect(() => {
@@ -181,18 +157,13 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
 
 
     // 确认回调
-    // 这里有问题：Server-Side 分页下，我们只知道 selectedIds。
-    // 我们需要将其转回 IPs。
-    // 如果 ID 不在当前 hosts 列表里，我们无法获取 IP。
-    // Critical: selectedIds 必须包含 ID -> IP 的 Map 信息。
-    // Update Map when hosts change
     useEffect(() => {
         const newMap = new Map(selectedMap);
         let changed = false;
         hosts.forEach(h => {
             if (h.ip_address) {
-                if (!newMap.has(h.id)) {
-                    newMap.set(h.id, h.ip_address);
+                if (!newMap.has(h.ip_address)) {
+                    newMap.set(h.ip_address, h);
                     changed = true;
                 }
             }
@@ -201,10 +172,24 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
     }, [hosts]);
 
     const handleOk = () => {
-        // Collect IPs from map
-        const ips = selectedIds.map(id => selectedMap.get(id)).filter(Boolean) as string[];
-        onOk(Array.from(new Set(ips)));
+        const uniqueIps = Array.from(new Set(selectedIps));
+        const items = uniqueIps.map((ip) => selectedMap.get(ip) || ({ id: ip as any, ip_address: ip, hostname: ip } as AutoHealing.CMDBItem));
+        onOk(uniqueIps, items);
     };
+
+    const selectedRowKeys = useMemo(
+        () => hosts.filter((host) => host.ip_address && selectedIps.includes(host.ip_address)).map((host) => host.id),
+        [hosts, selectedIps],
+    );
+
+    const updateSelectionFromCurrentPage = useCallback((selectedRows: AutoHealing.CMDBItem[]) => {
+        const currentPageIps = hosts.map((host) => host.ip_address).filter(Boolean) as string[];
+        const selectedOnPageIps = selectedRows.map((host) => host.ip_address).filter(Boolean) as string[];
+        setSelectedIps((prev) => {
+            const preserved = prev.filter((ip) => !currentPageIps.includes(ip));
+            return Array.from(new Set([...preserved, ...selectedOnPageIps]));
+        });
+    }, [hosts]);
 
     const columns = [
         {
@@ -257,7 +242,7 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
                     <div style={{ fontSize: 14 }}>
-                        已选择 <span style={{ color: '#3a84ff', fontWeight: 600, margin: '0 4px' }}>{selectedIds.length}</span> 台主机
+                        已选择 <span style={{ color: '#3a84ff', fontWeight: 600, margin: '0 4px' }}>{selectedIps.length}</span> 台主机
                         {excludeHosts.length > 0 && (
                             <span style={{ color: '#999', marginLeft: 8 }}>(已排除 {excludeHosts.length} 台模板预设主机)</span>
                         )}
@@ -337,8 +322,8 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
                                 rowKey="id"
                                 size="small"
                                 rowSelection={{
-                                    selectedRowKeys: selectedIds,
-                                    onChange: (keys) => setSelectedIds(keys),
+                                    selectedRowKeys,
+                                    onChange: (_keys, selectedRows) => updateSelectionFromCurrentPage(selectedRows),
                                     preserveSelectedRowKeys: true,
                                     columnWidth: 40,
                                     getCheckboxProps: (record: AutoHealing.CMDBItem) => ({
@@ -361,11 +346,14 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
                                 locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" /> }}
                                 onRow={(record) => ({
                                     onClick: () => {
-                                        const key = record.id;
-                                        const set = new Set(selectedIds);
-                                        if (set.has(key)) set.delete(key);
-                                        else set.add(key);
-                                        setSelectedIds(Array.from(set));
+                                        const ip = record.ip_address || '';
+                                        if (!ip || excludeHosts.includes(ip)) return;
+                                        setSelectedIps((prev) => {
+                                            const set = new Set(prev);
+                                            if (set.has(ip)) set.delete(ip);
+                                            else set.add(ip);
+                                            return Array.from(set);
+                                        });
                                     },
                                     style: { cursor: 'pointer' }
                                 })}
@@ -382,10 +370,11 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
 interface HostSelectorProps {
     value?: string[];
     onChange?: (value: string[]) => void;
+    onChangeItems?: (items: AutoHealing.CMDBItem[]) => void;
     excludeHosts?: string[];  // IP 列表，这些主机不能被选中(已在模板中)
 }
 
-const HostSelector: React.FC<HostSelectorProps> = ({ value = [], onChange, excludeHosts = [] }) => {
+const HostSelector: React.FC<HostSelectorProps> = ({ value = [], onChange, onChangeItems, excludeHosts = [] }) => {
     const [modalOpen, setModalOpen] = useState(false);
 
     // 数据标准化
@@ -453,8 +442,9 @@ const HostSelector: React.FC<HostSelectorProps> = ({ value = [], onChange, exclu
                 open={modalOpen}
                 value={selectedHosts}
                 excludeHosts={excludeHosts}
-                onOk={(keys) => {
+                onOk={(keys, items) => {
                     onChange?.(keys);
+                    onChangeItems?.(items);
                     setModalOpen(false);
                 }}
                 onCancel={() => setModalOpen(false)}

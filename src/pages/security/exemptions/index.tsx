@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { history, useAccess } from '@umijs/max';
 import { Tag, Drawer, Typography, Space } from 'antd';
 import {
     PlusOutlined, SafetyCertificateOutlined, ClockCircleOutlined,
     CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import StandardTable, { type StandardColumnDef } from '@/components/StandardTable';
+import StandardTable, { type StandardColumnDef, type SearchField, type AdvancedSearchField } from '@/components/StandardTable';
 import { getBlacklistExemptions } from '@/services/auto-healing/blacklistExemption';
 import dayjs from 'dayjs';
 
@@ -23,6 +23,17 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 const formatTime = (t?: string | null) => t ? dayjs(t).format('YYYY-MM-DD HH:mm') : '-';
+
+const searchFields: SearchField[] = [
+    { key: 'search', label: '关键字', placeholder: '搜索任务或规则' },
+];
+
+const advancedSearchFields: AdvancedSearchField[] = [
+    {
+        key: 'status', label: '状态', type: 'select', placeholder: '全部状态',
+        options: Object.entries(STATUS_MAP).map(([value, item]) => ({ label: item.label, value })),
+    },
+];
 
 /* ============================== SVG Header ============================== */
 const headerIcon = (
@@ -71,6 +82,25 @@ const ExemptionListPage: React.FC = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [detail, setDetail] = useState<any>(null);
     const [statsData, setStatsData] = useState({ total: 0, pending: 0, approved: 0 });
+
+    useEffect(() => {
+        void (async () => {
+            try {
+                const [allRes, pendingRes, approvedRes] = await Promise.all([
+                    getBlacklistExemptions({ page: 1, page_size: 1 }),
+                    getBlacklistExemptions({ page: 1, page_size: 1, status: 'pending' }),
+                    getBlacklistExemptions({ page: 1, page_size: 1, status: 'approved' }),
+                ]);
+                setStatsData({
+                    total: Number(allRes?.total ?? 0),
+                    pending: Number(pendingRes?.total ?? 0),
+                    approved: Number(approvedRes?.total ?? 0),
+                });
+            } catch {
+                // ignore
+            }
+        })();
+    }, [refreshKey]);
 
     /* ---------- Stats bar ---------- */
     const statsBar = useMemo(() => buildStatsBar(statsData.total, statsData.pending, statsData.approved), [statsData]);
@@ -127,7 +157,25 @@ const ExemptionListPage: React.FC = () => {
             page_size: params.pageSize,
         };
         if (params.advancedSearch) {
-            Object.assign(apiParams, params.advancedSearch);
+            const adv = params.advancedSearch as Record<string, any>;
+            const normalized: Record<string, any> = {};
+            Object.entries(adv).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') return;
+                // StandardTable dateRange passes [dayjs, dayjs]; serialize to plain date strings for query params.
+                if (Array.isArray(value) && value.length === 2) {
+                    const [from, to] = value;
+                    if (!from && !to) return;
+                    const fmt = (v: any) => (dayjs.isDayjs(v) ? v.format('YYYY-MM-DD') : v);
+                    normalized[key] = [from ? fmt(from) : undefined, to ? fmt(to) : undefined];
+                    return;
+                }
+                if (dayjs.isDayjs(value)) {
+                    normalized[key] = value.format('YYYY-MM-DD');
+                    return;
+                }
+                normalized[key] = value;
+            });
+            Object.assign(apiParams, normalized);
         }
         if (params.sorter) {
             apiParams.sort_by = params.sorter.field;
@@ -136,10 +184,6 @@ const ExemptionListPage: React.FC = () => {
         const res = await getBlacklistExemptions(apiParams);
         const items = res?.data || [];
         const total = Number(res?.total ?? 0);
-        // 计算统计
-        const pending = items.filter((i: any) => i.status === 'pending').length;
-        const approved = items.filter((i: any) => i.status === 'approved').length;
-        setStatsData({ total, pending, approved });
         return { data: items, total };
     }, []);
 
@@ -158,7 +202,8 @@ const ExemptionListPage: React.FC = () => {
                 description="管理针对高危指令黑名单规则的豁免申请。提交后需管理员审批方可生效。"
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
-                searchSchemaUrl="/api/v1/tenant/blacklist-exemptions/search-schema"
+                searchFields={searchFields}
+                advancedSearchFields={advancedSearchFields}
                 columns={columns}
                 rowKey="id"
                 onRowClick={openDetail}

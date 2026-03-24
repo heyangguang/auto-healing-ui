@@ -8,6 +8,7 @@ import { getTemplates as getNotificationTemplates } from '@/services/auto-healin
 import { getChannels } from '@/services/auto-healing/notification';
 import { getUsers } from '@/services/auto-healing/users';
 import { getRoles } from '@/services/auto-healing/roles';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import TaskTemplateSelector from './TaskTemplateSelector';
 import ExtraVarsEditor from './ExtraVarsEditor';
 import ComputeOperationsEditor from './ComputeOperationsEditor';
@@ -492,8 +493,8 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
                             label="审批人 (用户)"
                             mode="multiple"
                             request={async () => {
-                                const res = await getUsers({ page_size: 100 });
-                                return (res.data || []).map(u => ({ label: u.display_name, value: u.username }));
+                                const users = await fetchAllPages<any>((page, pageSize) => getUsers({ page, page_size: pageSize }));
+                                return users.map(u => ({ label: u.display_name, value: u.username }));
                             }}
                         />
                         <ProFormSelect

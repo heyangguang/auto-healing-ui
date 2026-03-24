@@ -8,9 +8,9 @@ import {
 import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
-    getPlatformUser, getPlatformUsers, createPlatformUser, updatePlatformUser,
+    getPlatformUser, createPlatformUser, updatePlatformUser,
 } from '@/services/auto-healing/platform/users';
-import { getPlatformRoles } from '@/services/auto-healing/roles';
+import { getPlatformRoles, getPlatformRoleUsers } from '@/services/auto-healing/roles';
 import './UserForm.css';
 
 /* ===================================================
@@ -52,27 +52,51 @@ const UserForm: React.FC = () => {
     useEffect(() => {
         if (!isEdit) return;
         setLoading(true);
-        Promise.all([
-            getPlatformUser(id!),
-            getPlatformUsers({ page: 1, page_size: 100 }),
-        ]).then(([userRes, listRes]: any[]) => {
-            const user = userRes?.data || userRes;
-            form.setFieldsValue({
-                username: user.username,
-                display_name: user.display_name,
-                email: user.email,
-                role_id: user.roles?.[0]?.id,
-            });
-            // 检测是否为最后一个活跃的 platform_admin
-            const allUsers = listRes?.data || [];
-            const activeAdmins = allUsers.filter(
-                (u: any) => u.status === 'active' && u.roles?.some((r: any) => r.name === 'platform_admin')
-            );
-            const isCurrentAdmin = user.roles?.some((r: any) => r.name === 'platform_admin');
-            setIsLastAdmin(activeAdmins.length <= 1 && isCurrentAdmin);
-        }).catch(() => {
-            /* global error handler */
-        }).finally(() => setLoading(false));
+        (async () => {
+            try {
+                const userRes: any = await getPlatformUser(id!);
+                const user = userRes?.data || userRes;
+                form.setFieldsValue({
+                    username: user.username,
+                    display_name: user.display_name,
+                    email: user.email,
+                    role_id: user.roles?.[0]?.id,
+                });
+
+                // 检测是否为最后一个活跃的 platform_admin（不要用分页用户列表做启发式）
+                const rolesRes: any = await getPlatformRoles();
+                const roles = rolesRes?.data || [];
+                const adminRoleId = roles.find((r: any) => r?.name === 'platform_admin')?.id;
+                if (!adminRoleId) {
+                    setIsLastAdmin(false);
+                    return;
+                }
+
+                let page = 1;
+                const pageSize = 200;
+                let fetched = 0;
+                let total = 0;
+                let activeAdminCount = 0;
+                for (let guard = 0; guard < 50; guard += 1) {
+                    const res: any = await getPlatformRoleUsers(adminRoleId, { page, page_size: pageSize });
+                    const items = res?.data || [];
+                    total = typeof res?.total === 'number' ? res.total : total;
+                    activeAdminCount += items.filter((u: any) => u?.status === 'active').length;
+                    fetched += items.length;
+                    if (items.length === 0) break;
+                    if (total > 0 && fetched >= total) break;
+                    page += 1;
+                }
+
+                const isCurrentAdmin =
+                    user.status === 'active' && user.roles?.some((r: any) => r.name === 'platform_admin');
+                setIsLastAdmin(activeAdminCount <= 1 && isCurrentAdmin);
+            } catch {
+                /* global error handler */
+            } finally {
+                setLoading(false);
+            }
+        })();
     }, [id, isEdit, form]);
 
     const handleSubmit = async (values: any) => {
@@ -81,7 +105,6 @@ const UserForm: React.FC = () => {
             if (isEdit) {
                 await updatePlatformUser(id!, {
                     display_name: values.display_name,
-                    email: values.email,
                     role_id: values.role_id,
                 });
                 message.success('用户信息更新成功');
@@ -115,7 +138,7 @@ const UserForm: React.FC = () => {
                         <Button
                             type="primary"
                             loading={submitting}
-                            disabled={!access.canManagePlatformTenants}
+                            disabled={isEdit ? !access.canUpdatePlatformUser : !access.canCreatePlatformUser}
                             onClick={() => form.submit()}
                         >
                             {isEdit ? '保存' : '创建'}
@@ -163,14 +186,23 @@ const UserForm: React.FC = () => {
                             <Form.Item
                                 name="email"
                                 label="邮箱"
-                                rules={[{ type: 'email', message: '邮箱格式不正确' }]}
+                                rules={[
+                                    { required: true, message: '请输入邮箱' },
+                                    { type: 'email', message: '邮箱格式不正确' },
+                                ]}
                             >
                                 <Input
                                     prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
-                                    placeholder="邮箱（可选）"
+                                    placeholder="请输入邮箱"
+                                    disabled={isEdit}
                                     maxLength={100}
                                 />
                             </Form.Item>
+                            {isEdit && (
+                                <div style={{ marginTop: -8, marginBottom: 12, fontSize: 12, color: '#8c8c8c' }}>
+                                    邮箱当前由后端视为只读字段，如需变更请走后端调整流程。
+                                </div>
+                            )}
                         </div>
 
                         {/* 密码（仅创建时） */}
@@ -184,10 +216,10 @@ const UserForm: React.FC = () => {
                                     label="密码"
                                     rules={[
                                         { required: true, message: '请输入密码' },
-                                        { min: 6, message: '密码至少6位' },
+                                        { min: 8, message: '密码至少8位' },
                                     ]}
                                 >
-                                    <Input.Password placeholder="至少6位" maxLength={64} />
+                                    <Input.Password placeholder="至少8位" maxLength={64} />
                                 </Form.Item>
                                 <Form.Item
                                     name="confirm_password"
@@ -229,7 +261,7 @@ const UserForm: React.FC = () => {
                                         value: r.id,
                                     }))}
                                     style={{ maxWidth: 400 }}
-                                    allowClear
+                                    allowClear={!isEdit}
                                 />
                             </Form.Item>
                             {!isEdit && (

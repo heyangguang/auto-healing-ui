@@ -423,7 +423,6 @@ const IncidentList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/tenant/incidents/search-schema"
                 extraToolbarActions={batchToolbar}
                 columns={columns}
                 rowKey="id"

@@ -22,6 +22,7 @@ import {
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
 import { getChannels, getTemplates } from '@/services/auto-healing/notification';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
 import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, AdvancedSearchField } from '@/components/StandardTable';
@@ -29,6 +30,8 @@ import { ExecutorIcon, DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import dayjs from 'dayjs';
 import './index.css';
 import { EXECUTOR_TYPE_CONFIG, getRunStatusOptions } from '@/constants/executionDicts';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
+import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 
 const { Text } = Typography;
 
@@ -447,16 +450,16 @@ const ExecutionTemplateList: React.FC = () => {
     // 加载引用数据
     useEffect(() => {
         Promise.all([
-            getPlaybooks({ status: 'ready', page_size: 100 }),
+            fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ page, page_size: pageSize, status: 'ready' })),
             getSecretsSources(),
-            getChannels({ page_size: 100 }),
-            getTemplates({ page_size: 100 }),
+            fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize })),
+            fetchAllPages<AutoHealing.NotificationTemplate>((page, pageSize) => getTemplates({ page, page_size: pageSize })),
             getExecutionTaskStats(),
         ]).then(([pbRes, secRes, chRes, tplRes, statsRes]) => {
-            setPlaybooks(pbRes.data || pbRes.items || []);
+            setPlaybooks(pbRes as any);
             setSecretsSources(secRes.data || []);
-            setNotifyChannels(chRes.data || []);
-            setNotifyTemplates(tplRes.data || []);
+            setNotifyChannels(chRes as any);
+            setNotifyTemplates(tplRes as any);
             const s = (statsRes as any)?.data || statsRes;
             if (s) {
                 setStats({
@@ -485,8 +488,7 @@ const ExecutionTemplateList: React.FC = () => {
     // 打开批量审核 Modal
     const openBatchReview = async () => {
         try {
-            const res = await getExecutionTasks({ needs_review: true as any, page_size: 100 });
-            const tasks = res.data || [];
+            const tasks = await fetchAllPages<AutoHealing.ExecutionTask>((page, pageSize) => getExecutionTasks({ needs_review: true as any, page, page_size: pageSize }));
             // 按 playbook 分组
             const groups = new Map<string, { playbook_id: string; playbook_name: string; count: number; tasks: AutoHealing.ExecutionTask[] }>();
             tasks.forEach(t => {
@@ -510,15 +512,46 @@ const ExecutionTemplateList: React.FC = () => {
         if (selectedPlaybooks.length === 0) { message.warning('请选择至少一个 Playbook'); return; }
         setBatchReviewLoading(true);
         try {
+            const results = await Promise.allSettled(
+                selectedPlaybooks.map(async (pbId) => {
+                    const res = await batchConfirmReview({ playbook_id: pbId });
+                    const r = (res as any)?.data || res;
+                    return { playbookId: pbId, confirmedCount: r.confirmed_count || 0 };
+                }),
+            );
+
             let totalConfirmed = 0;
-            for (const pbId of selectedPlaybooks) {
-                const res = await batchConfirmReview({ playbook_id: pbId });
-                const r = (res as any)?.data || res;
-                totalConfirmed += r.confirmed_count || 0;
+            const successfulIds: string[] = [];
+            const failedIds: string[] = [];
+
+            results.forEach((result) => {
+                if (result.status === 'fulfilled') {
+                    totalConfirmed += result.value.confirmedCount;
+                    successfulIds.push(result.value.playbookId);
+                } else {
+                    const idx = results.indexOf(result);
+                    failedIds.push(selectedPlaybooks[idx]);
+                }
+            });
+
+            if (successfulIds.length > 0) {
+                setRefreshTrigger(v => v + 1);
             }
-            message.success(`已批量确认 ${totalConfirmed} 个任务模板`);
-            setBatchReviewOpen(false);
-            setRefreshTrigger(v => v + 1);
+
+            if (failedIds.length === 0) {
+                message.success(`已批量确认 ${totalConfirmed} 个任务模板`);
+                setBatchReviewOpen(false);
+                return;
+            }
+
+            setReviewGroups(prev => prev.filter((group) => failedIds.includes(group.playbook_id)));
+            setSelectedPlaybooks(failedIds);
+
+            if (successfulIds.length > 0) {
+                message.warning(`已确认 ${totalConfirmed} 个模板，仍有 ${failedIds.length} 个 Playbook 处理失败`);
+            } else {
+                message.error(`批量确认失败，${failedIds.length} 个 Playbook 未处理`);
+            }
         } catch { /* global error handler */ }
         setBatchReviewLoading(false);
     };
@@ -600,7 +633,7 @@ const ExecutionTemplateList: React.FC = () => {
                 const hosts = Array.isArray(record.target_hosts)
                     ? record.target_hosts
                     : (record.target_hosts ? (record.target_hosts as string).split(',') : []);
-                const hasNotify = !!record.notification_config?.enabled;
+                const hasNotify = hasEffectiveNotificationConfig(record.notification_config as any);
                 const hasSecrets = (record.secrets_source_ids?.length ?? 0) > 0;
 
                 return (
@@ -811,8 +844,8 @@ const ExecutionTemplateList: React.FC = () => {
             }
             // 创建时间范围 (dateRange → created_from / created_to)
             if (adv.created_at && Array.isArray(adv.created_at) && adv.created_at.length === 2) {
-                apiParams.created_from = adv.created_at[0].toISOString();
-                apiParams.created_to = adv.created_at[1].toISOString();
+                apiParams.created_from = toDayRangeStartISO(adv.created_at[0]);
+                apiParams.created_to = toDayRangeEndISO(adv.created_at[1]);
             }
         }
 
@@ -863,7 +896,6 @@ const ExecutionTemplateList: React.FC = () => {
                 }
                 searchFields={templateSearchFields}
                 advancedSearchFields={templateAdvancedSearchFields}
-                searchSchemaUrl="/api/v1/tenant/execution-tasks/search-schema"
                 columns={columns}
                 rowKey="id"
                 request={handleRequest}

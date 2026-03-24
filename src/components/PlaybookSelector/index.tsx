@@ -7,6 +7,7 @@ import {
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { getGitRepos } from '@/services/auto-healing/git-repos';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 
 dayjs.extend(relativeTime);
 
@@ -33,9 +34,9 @@ const PlaybookSelector: React.FC<PlaybookSelectorProps> = ({ value, onChange, pl
     useEffect(() => {
         if (open) {
             setLoadingRepos(true);
-            getGitRepos().then(res => {
+            fetchAllPages<any>((page, pageSize) => getGitRepos({ page, page_size: pageSize })).then(items => {
                 const map: Record<string, string> = {};
-                (res.data || []).forEach((r: any) => {
+                items.forEach((r: any) => {
                     map[r.id] = r.name;
                 });
                 setReposMap(map);

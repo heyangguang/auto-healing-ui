@@ -16,7 +16,7 @@ const UserFormPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [allRoles, setAllRoles] = useState<AutoHealing.RoleWithStats[]>([]);
-    const [originalRoleIds, setOriginalRoleIds] = useState<string[]>([]);
+    const [originalRoleId, setOriginalRoleId] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         (async () => {
@@ -34,14 +34,14 @@ const UserFormPage: React.FC = () => {
             try {
                 const res = await getUser(params.id!);
                 const user = (res as any)?.data || res;
-                const roleIds = (user.roles || []).map((r: any) => r.id);
-                setOriginalRoleIds(roleIds);
+                const roleId = (user.roles || [])?.[0]?.id || user.role_id;
+                setOriginalRoleId(roleId);
                 form.setFieldsValue({
                     username: user.username,
                     email: user.email,
                     display_name: user.display_name || '',
                     status: user.status,
-                    role_ids: roleIds,
+                    role_id: roleId,
                 });
             } catch {
                 /* global error handler */
@@ -56,15 +56,33 @@ const UserFormPage: React.FC = () => {
             const values = await form.validateFields();
             setSubmitting(true);
             if (isEdit && params.id) {
-                const { role_ids, ...userData } = values;
-                await updateUser(params.id, { email: userData.email, display_name: userData.display_name, status: userData.status });
-                const newRoleIds: string[] = role_ids || [];
-                const rolesChanged = newRoleIds.length !== originalRoleIds.length || newRoleIds.some((id: string) => !originalRoleIds.includes(id));
-                if (rolesChanged) await assignUserRoles(params.id, { role_ids: newRoleIds });
+                const { role_id, ...userData } = values;
+                await updateUser(params.id, { display_name: userData.display_name, status: userData.status });
+                const newRoleId: string | undefined = role_id || undefined;
+                const rolesChanged = newRoleId !== originalRoleId;
+                if (rolesChanged) {
+                    try {
+                        await assignUserRoles(params.id, { role_ids: newRoleId ? [newRoleId] : [] });
+                    } catch {
+                        message.warning('用户资料已更新，但角色分配失败，请重试');
+                        history.push('/system/users');
+                        return;
+                    }
+                }
                 message.success('更新成功');
             } else {
-                const { confirm_password, ...createData } = values;
-                await createUser(createData);
+                const { confirm_password, role_id, ...createData } = values;
+                const created = await createUser(createData as any);
+                const createdUser = (created as any)?.data || created;
+                if (role_id && createdUser?.id) {
+                    try {
+                        await assignUserRoles(createdUser.id, { role_ids: [role_id] });
+                    } catch {
+                        message.warning('用户已创建，但角色分配失败，请进入编辑页重新分配角色');
+                        history.push('/system/users');
+                        return;
+                    }
+                }
                 message.success('创建成功');
             }
             history.push('/system/users');
@@ -94,8 +112,13 @@ const UserFormPage: React.FC = () => {
                         </Form.Item>
                         <Form.Item name="email" label="邮箱"
                             rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效的邮箱地址' }]}>
-                            <Input placeholder="请输入邮箱" />
+                            <Input placeholder="请输入邮箱" disabled={isEdit} />
                         </Form.Item>
+                        {isEdit && (
+                            <div style={{ marginTop: -8, marginBottom: 12, fontSize: 12, color: '#8c8c8c' }}>
+                                邮箱当前由后端视为只读字段，如需变更请联系管理员处理。
+                            </div>
+                        )}
                         {!isEdit && (
                             <>
                                 <Form.Item name="password" label="密码"
@@ -121,9 +144,14 @@ const UserFormPage: React.FC = () => {
                                 <Select options={USER_STATUS_OPTIONS} />
                             </Form.Item>
                         )}
-                        <Form.Item name="role_ids" label="角色">
-                            <Select mode="multiple" placeholder="搜索并选择角色" showSearch optionFilterProp="label"
-                                options={allRoles.map(r => ({ label: r.display_name || r.name, value: r.id }))} />
+                        <Form.Item name="role_id" label="角色" extra="租户用户当前为单角色模型，选择一个角色即可">
+                            <Select
+                                placeholder="搜索并选择角色"
+                                showSearch
+                                optionFilterProp="label"
+                                allowClear={!isEdit}
+                                options={allRoles.map(r => ({ label: r.display_name || r.name, value: r.id }))}
+                            />
                         </Form.Item>
                         <div className="user-form-divider" />
                         <div className="user-form-actions">

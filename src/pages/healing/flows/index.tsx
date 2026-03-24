@@ -18,6 +18,7 @@ import StandardTable from '@/components/StandardTable';
 import type { SearchField, AdvancedSearchField } from '@/components/StandardTable';
 import SortToolbar from '@/components/SortToolbar';
 import { getFlows, deleteFlow, updateFlow, getFlowStats } from '@/services/auto-healing/healing';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 import './flows.css';
 import '../../../pages/execution/git-repos/index.css';
 
@@ -171,13 +172,13 @@ const HealingFlowsPage: React.FC = () => {
         }
         if (sp.created_at) {
             const [from, to] = sp.created_at;
-            if (from) params.created_from = from;
-            if (to) params.created_to = to;
+            if (from) params.created_from = toDayRangeStartISO(from);
+            if (to) params.created_to = toDayRangeEndISO(to);
         }
         if (sp.updated_at) {
             const [from, to] = sp.updated_at;
-            if (from) params.updated_from = from;
-            if (to) params.updated_to = to;
+            if (from) params.updated_from = toDayRangeStartISO(from);
+            if (to) params.updated_to = toDayRangeEndISO(to);
         }
         return params;
     }, [sortBy, sortOrder]);
@@ -841,7 +842,7 @@ const HealingFlowsPage: React.FC = () => {
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                         description={<Text type="secondary">暂无自愈流程</Text>}
                     >
-                        <Button type="dashed" onClick={() => history.push('/healing/flows/editor')}>
+                        <Button type="dashed" disabled={!access.canCreateFlow} onClick={() => history.push('/healing/flows/editor')}>
                             创建第一个流程
                         </Button>
                     </Empty>

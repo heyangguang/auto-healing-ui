@@ -226,7 +226,8 @@ const RolesPage: React.FC = () => {
         let items: any[] = res?.data || [];
 
         // 搜索过滤
-        const searchVal = params.searchValue?.trim().toLowerCase();
+        const skipQuickSearch = params.searchField === 'is_system';
+        const searchVal = skipQuickSearch ? '' : params.searchValue?.trim().toLowerCase();
         if (searchVal) {
             items = items.filter((item) => {
                 if (params.searchField === 'display_name') {

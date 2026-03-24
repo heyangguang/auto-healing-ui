@@ -1,8 +1,9 @@
-import React, { useMemo, startTransition } from 'react';
+import React, { useMemo, useCallback, startTransition } from 'react';
 import { history, useLocation, useAccess } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { Drawer } from 'antd';
 import { CATEGORIES, SERVICES } from '@/config/navData';
+import { canAccessPath } from '@/utils/pathAccess';
 
 const NAV_HEIGHT = 58;
 const SIDE_WIDTH = 200;
@@ -92,13 +93,21 @@ const SideNav: React.FC<SideNavProps> = ({ isMobile, drawerOpen, onDrawerClose }
         return null;
     }, [location.pathname]);
 
-    const access = useAccess() as unknown as Record<string, boolean>;
+    const access = useAccess();
+
+    const hasServiceAccess = useCallback((svc: any) => {
+        if (svc.accesses?.length) {
+            return svc.accesses.every((key: string) => !key || Boolean((access as any)[key]));
+        }
+        if (svc.access) return Boolean((access as any)[svc.access]);
+        return canAccessPath(svc.path, access);
+    }, [access]);
 
     const menuItems = useMemo(() => {
         if (!activeCategory) return [];
         const items = SERVICES[activeCategory.id] || [];
-        return items.filter(svc => !svc.access || access[svc.access]);
-    }, [activeCategory, access]);
+        return items.filter(hasServiceAccess);
+    }, [activeCategory, hasServiceAccess]);
 
     if (!activeCategory || menuItems.length === 0) {
         return null;

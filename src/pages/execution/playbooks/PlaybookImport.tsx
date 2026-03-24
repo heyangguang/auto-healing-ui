@@ -15,6 +15,7 @@ import { history, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import { getGitRepos, getFiles } from '@/services/auto-healing/git-repos';
 import { createPlaybook } from '@/services/auto-healing/playbooks';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import './index.css';
 import '@/pages/plugins/PluginForm.css';
 
@@ -77,8 +78,8 @@ const PlaybookImport: React.FC = () => {
         (async () => {
             setLoadingRepos(true);
             try {
-                const res = await getGitRepos();
-                setRepos(res.data || []);
+                const items = await fetchAllPages<AutoHealing.GitRepository>((page, pageSize) => getGitRepos({ page, page_size: pageSize }));
+                setRepos(items);
             } catch { /* silent */ }
             finally { setLoadingRepos(false); }
         })();
@@ -158,17 +159,42 @@ const PlaybookImport: React.FC = () => {
         if (!selectedRepoId || playbooks.length === 0) return;
         setCreating(true);
         try {
-            for (const pb of playbooks) {
-                await createPlaybook({
-                    repository_id: selectedRepoId,
-                    name: pb.name,
-                    file_path: pb.file,
-                    config_mode: pb.config_mode,
-                });
+            const results = await Promise.allSettled(
+                playbooks.map(async (pb) => {
+                    await createPlaybook({
+                        repository_id: selectedRepoId,
+                        name: pb.name,
+                        file_path: pb.file,
+                        config_mode: pb.config_mode,
+                    });
+                    return pb;
+                }),
+            );
+
+            const succeeded: typeof playbooks = [];
+            const failed: typeof playbooks = [];
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled') succeeded.push(result.value);
+                else failed.push(playbooks[index]);
+            });
+
+            if (failed.length === 0) {
+                message.success(`成功导入 ${succeeded.length} 个 Playbook`);
+                history.push('/execution/playbooks');
+                return;
             }
-            message.success(`成功导入 ${playbooks.length} 个 Playbook`);
-            history.push('/execution/playbooks');
-        } catch { /* ignore */ }
+
+            if (succeeded.length > 0) {
+                message.warning(`已导入 ${succeeded.length} 个，失败 ${failed.length} 个，请修正后重试`);
+                setPlaybooks(failed);
+                setSelectedFiles(failed.map((item) => item.file));
+                return;
+            }
+
+            message.error(`导入失败，${failed.length} 个 Playbook 未创建`);
+        } catch {
+            /* ignore */
+        }
         finally { setCreating(false); }
     }, [selectedRepoId, playbooks]);
 
@@ -193,7 +219,7 @@ const PlaybookImport: React.FC = () => {
                         </div>
                     ) : repos.length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 Git 仓库">
-                            <Button type="primary" onClick={() => history.push('/execution/git-repos/create')}>
+                            <Button type="primary" disabled={!access.canCreateGitRepo} onClick={() => history.push('/execution/git-repos/create')}>
                                 前往添加仓库
                             </Button>
                         </Empty>
@@ -392,7 +418,7 @@ const PlaybookImport: React.FC = () => {
                                     type="primary"
                                     onClick={handleCreate}
                                     loading={creating}
-                                    disabled={playbooks.length === 0 || playbooks.some(p => !p.name) || !access.canManagePlaybook}
+                                    disabled={playbooks.length === 0 || playbooks.some(p => !p.name) || !access.canImportPlaybook}
                                     icon={<CloudDownloadOutlined />}
                                 >
                                     导入 {playbooks.length} 个 Playbook

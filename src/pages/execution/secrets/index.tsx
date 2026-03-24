@@ -79,7 +79,10 @@ const headerIcon = (
 /* ========== 主组件 ========== */
 const SecretsSourceList: React.FC = () => {
     const access = useAccess();
-    const canManage = !!access.canManageSecrets;
+    const canCreateSource = !!access.canCreateSecretsSource;
+    const canUpdateSource = !!access.canUpdateSecretsSource;
+    const canDeleteSource = !!access.canDeletePlugin;
+    const canTestSource = !!access.canTestPlugin;
 
     /* ---- 数据加载 (API 返回全量，前端分页) ---- */
     const [allSources, setAllSources] = useState<AutoHealing.SecretsSource[]>([]);
@@ -123,6 +126,7 @@ const SecretsSourceList: React.FC = () => {
     const [testQueryModalOpen, setTestQueryModalOpen] = useState(false);
     const [testQuerySource, setTestQuerySource] = useState<AutoHealing.SecretsSource | null>(null);
     const [selectedTestHostIps, setSelectedTestHostIps] = useState<string[]>([]);
+    const [selectedTestHosts, setSelectedTestHosts] = useState<AutoHealing.CMDBItem[]>([]);
     const [testResultModalOpen, setTestResultModalOpen] = useState(false);
     const [testResults, setTestResults] = useState<{
         success_count: number;
@@ -148,25 +152,25 @@ const SecretsSourceList: React.FC = () => {
         try {
             await deleteSecretsSource(id);
             message.success('已删除');
-            loadSources();
+            triggerRefresh();
         } catch { /* global */ }
-    }, [loadSources]);
+    }, [triggerRefresh]);
 
     const handleSetDefault = useCallback(async (source: AutoHealing.SecretsSource) => {
         try {
             await updateSecretsSource(source.id, { is_default: true });
             message.success('已设为默认');
-            loadSources();
+            triggerRefresh();
         } catch { /* global */ }
-    }, [loadSources]);
+    }, [triggerRefresh]);
 
     const handleCancelDefault = useCallback(async (source: AutoHealing.SecretsSource) => {
         try {
             await updateSecretsSource(source.id, { is_default: false });
             message.success('已取消默认');
-            loadSources();
+            triggerRefresh();
         } catch { /* global */ }
-    }, [loadSources]);
+    }, [triggerRefresh]);
 
     const handleToggleStatus = useCallback(async (source: AutoHealing.SecretsSource) => {
         try {
@@ -177,13 +181,14 @@ const SecretsSourceList: React.FC = () => {
                 await enableSecretsSource(source.id);
                 message.success('已启用');
             }
-            loadSources();
+            triggerRefresh();
         } catch { /* global */ }
-    }, [loadSources]);
+    }, [triggerRefresh]);
 
     const handleOpenTestQuery = useCallback((source: AutoHealing.SecretsSource) => {
         setTestQuerySource(source);
         setSelectedTestHostIps([]);
+        setSelectedTestHosts([]);
         setTestQueryModalOpen(true);
     }, []);
 
@@ -195,16 +200,22 @@ const SecretsSourceList: React.FC = () => {
         }
         setTestingId(testQuerySource.id);
         try {
-            const hosts = selectedTestHostIps.map(ip => ({ hostname: ip, ip_address: ip }));
+            const hosts = selectedTestHostIps.map(ip => {
+                const item = selectedTestHosts.find(host => host.ip_address === ip);
+                return {
+                    hostname: item?.hostname || ip,
+                    ip_address: ip,
+                };
+            });
             const res = await testSecretsQuery(testQuerySource.id, { hosts });
             const data = res.data as { success_count: number; fail_count: number; results: AutoHealing.TestQueryBatchResult[] };
             setTestQueryModalOpen(false);
             setTestResults(data);
             setTestResultModalOpen(true);
-            loadSources();
+            triggerRefresh();
         } catch { /* global error handler */ }
         finally { setTestingId(undefined); }
-    }, [testQuerySource, selectedTestHostIps, loadSources]);
+    }, [testQuerySource, selectedTestHostIps, selectedTestHosts, triggerRefresh]);
 
 
 
@@ -322,7 +333,7 @@ const SecretsSourceList: React.FC = () => {
                                 type="link" size="small"
                                 icon={testingId === record.id ? <Spin size="small" /> : <ApiOutlined />}
                                 onClick={() => handleOpenTestQuery(record)}
-                                disabled={!!testingId || !isActive || !canManage}
+                                disabled={!!testingId || !isActive || !canTestSource}
                             />
                         </Tooltip>
                         <Tooltip title="查看">
@@ -331,38 +342,39 @@ const SecretsSourceList: React.FC = () => {
                         </Tooltip>
                         <Tooltip title="编辑">
                             <Button type="link" size="small" icon={<EditOutlined />}
-                                onClick={() => openEdit(record)} disabled={!canManage} />
+                                onClick={() => openEdit(record)} disabled={!canUpdateSource} />
                         </Tooltip>
                         {record.is_default ? (
                             <Tooltip title="取消默认">
                                 <Button type="link" size="small"
                                     icon={<StarFilled style={{ color: '#faad14' }} />}
-                                    onClick={() => handleCancelDefault(record)} />
+                                    onClick={() => handleCancelDefault(record)}
+                                    disabled={!canUpdateSource} />
                             </Tooltip>
                         ) : (
                             <Tooltip title={isActive ? '设为默认' : '需先启用'}>
                                 <Button type="link" size="small"
                                     icon={<StarOutlined />}
                                     onClick={() => handleSetDefault(record)}
-                                    disabled={!isActive || !canManage} />
+                                    disabled={!isActive || !canUpdateSource} />
                             </Tooltip>
                         )}
                         <Switch
                             size="small"
                             checked={isActive}
                             onChange={() => handleToggleStatus(record)}
-                            disabled={!canManage}
+                            disabled={!canUpdateSource}
                         />
                         <Popconfirm title="确定删除？" description="删除后不可恢复"
                             onConfirm={() => handleDelete(record.id)}>
                             <Button type="link" size="small" danger
-                                icon={<DeleteOutlined />} disabled={!canManage} />
+                                icon={<DeleteOutlined />} disabled={!canDeleteSource} />
                         </Popconfirm>
                     </Space>
                 );
             },
         },
-    ], [openDetail, openEdit, handleDelete, handleSetDefault, handleCancelDefault, handleToggleStatus, handleOpenTestQuery, testingId, canManage]);
+    ], [openDetail, openEdit, handleDelete, handleSetDefault, handleCancelDefault, handleToggleStatus, handleOpenTestQuery, testingId, canDeleteSource, canTestSource, canUpdateSource]);
 
     /* ========== 数据请求 (前端分页：API 返回全量) ========== */
     const handleRequest = useCallback(async (params: {
@@ -486,7 +498,7 @@ const SecretsSourceList: React.FC = () => {
                 advancedSearchFields={advancedSearchFields}
                 primaryActionLabel="添加密钥源"
                 primaryActionIcon={<PlusOutlined />}
-                primaryActionDisabled={!canManage}
+                primaryActionDisabled={!canCreateSource}
                 onPrimaryAction={openCreate}
                 columns={columns}
                 rowKey="id"
@@ -528,12 +540,12 @@ const SecretsSourceList: React.FC = () => {
                                 <Space size="small">
                                     <Button size="small" icon={<ApiOutlined />}
                                         onClick={() => handleOpenTestQuery(currentSource)}
-                                        disabled={currentSource.status !== 'active' || !canManage}>
+                                        disabled={currentSource.status !== 'active' || !canTestSource}>
                                         测试凭据
                                     </Button>
                                     <Button size="small" icon={<EditOutlined />}
                                         onClick={() => { setDrawerOpen(false); history.push(`/resources/secrets/${currentSource.id}/edit`); }}
-                                        disabled={!canManage}>
+                                        disabled={!canUpdateSource}>
                                         编辑配置
                                     </Button>
                                 </Space>
@@ -710,7 +722,7 @@ const SecretsSourceList: React.FC = () => {
                             请选择一到多台主机进行凭据有效性测试。测试过程将尝试使用该密钥源的配置连接到目标主机。
                         </div>
                     </div>
-                    <HostSelector value={selectedTestHostIps} onChange={setSelectedTestHostIps} />
+                    <HostSelector value={selectedTestHostIps} onChange={setSelectedTestHostIps} onChangeItems={setSelectedTestHosts} />
                 </div>
             </Modal>
 

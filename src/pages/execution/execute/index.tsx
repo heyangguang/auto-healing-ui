@@ -17,7 +17,7 @@ import { history, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import StandardTable from '@/components/StandardTable';
 import type { SearchField, AdvancedSearchField } from '@/components/StandardTable';
-import { getExecutionTasks, getExecutionTaskStats, executeTask, confirmExecutionTaskReview } from '@/services/auto-healing/execution';
+import { getExecutionTask, getExecutionTasks, getExecutionTaskStats, executeTask, confirmExecutionTaskReview } from '@/services/auto-healing/execution';
 import { getPlaybook } from '@/services/auto-healing/playbooks';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
 import { getChannels, getTemplates } from '@/services/auto-healing/notification';
@@ -29,6 +29,9 @@ import NotificationConfigDisplay from '@/components/NotificationSelector/Notific
 import './style.css';
 import '../templates/index.css';
 import { getRunStatusOptions } from '@/constants/executionDicts';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
+import { fetchAllPages } from '@/utils/fetchAllPages';
+import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 
 const { Text, Title } = Typography;
 
@@ -128,14 +131,14 @@ const ExecuteTaskPage: React.FC = () => {
         try {
             const [secretsRes, channelsRes, templatesRes, playbooksRes] = await Promise.all([
                 getSecretsSources(),
-                getChannels({ page_size: 100 }),
-                getTemplates({ page_size: 100 }),
-                import('@/services/auto-healing/playbooks').then(m => m.getPlaybooks({ page_size: 100 }))
+                fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize })),
+                fetchAllPages<AutoHealing.NotificationTemplate>((page, pageSize) => getTemplates({ page, page_size: pageSize })),
+                import('@/services/auto-healing/playbooks').then(m => fetchAllPages<AutoHealing.Playbook>((page, pageSize) => m.getPlaybooks({ page, page_size: pageSize })))
             ]);
             setSecretsSources(secretsRes.data || []);
-            setChannels(channelsRes.data || []);
-            setNotifyTemplates(templatesRes.data || []);
-            setPlaybooksList(playbooksRes.data || playbooksRes.items || []);
+            setChannels(channelsRes);
+            setNotifyTemplates(templatesRes);
+            setPlaybooksList(playbooksRes);
         } catch { /* ignore */ }
     }, []);
 
@@ -155,9 +158,19 @@ const ExecuteTaskPage: React.FC = () => {
             // Check URL for pre-selection
             const urlParams = new URLSearchParams(window.location.search);
             const templateId = urlParams.get('template');
-            if (templateId && loadedTemplates.length > 0) {
+            if (templateId) {
                 const found = loadedTemplates.find((t: AutoHealing.ExecutionTask) => t.id === templateId);
-                if (found) handleSelectTemplate(found);
+                if (found) {
+                    handleSelectTemplate(found);
+                } else {
+                    try {
+                        const templateRes = await getExecutionTask(templateId);
+                        const template = (templateRes as any)?.data || templateRes;
+                        if (template?.id) handleSelectTemplate(template);
+                    } catch {
+                        // ignore invalid template id in URL
+                    }
+                }
             }
         };
         init();
@@ -354,7 +367,7 @@ const ExecuteTaskPage: React.FC = () => {
     // ==================== Logic: Notifications ====================
     // 新格式下每个触发器有自己的渠道，这里只判断是否有通知配置
     const hasNotificationConfig = useMemo(() => {
-        return selectedTemplate?.notification_config?.enabled === true;
+        return hasEffectiveNotificationConfig(selectedTemplate?.notification_config as any);
     }, [selectedTemplate]);
 
 
@@ -455,8 +468,8 @@ const ExecuteTaskPage: React.FC = () => {
             }
             // 日期范围
             if (adv.created_at && Array.isArray(adv.created_at) && adv.created_at.length === 2) {
-                extra.created_from = adv.created_at[0].toISOString();
-                extra.created_to = adv.created_at[1].toISOString();
+                extra.created_from = toDayRangeStartISO(adv.created_at[0]);
+                extra.created_to = toDayRangeEndISO(adv.created_at[1]);
             }
             // 通用字段传递
             const specialKeys = ['needs_review', 'has_runs', 'created_at'];
@@ -542,7 +555,7 @@ const ExecuteTaskPage: React.FC = () => {
                             const secretCount = template.secrets_source_ids?.length || 0;
                             const disabled = isDisabled(template);
                             const isDocker = template.executor_type === 'docker';
-                            const hasNotify = !!template.notification_config?.enabled;
+                            const hasNotify = hasEffectiveNotificationConfig(template.notification_config as any);
 
                             // Card state class
                             const cardClass = [

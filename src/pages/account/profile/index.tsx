@@ -331,12 +331,12 @@ const ProfilePage: React.FC = () => {
                                     labelStyle={{ color: '#8c8c8c', width: 90 }}>
                                     <Descriptions.Item label="身份类型">
                                         {profile.is_platform_admin
-                                            ? <Tag color="purple" icon={<CrownOutlined />}>平台管理员</Tag>
+                                            ? <Tag color="purple" icon={<CrownOutlined />}>平台用户</Tag>
                                             : <Tag color="blue" icon={<AppstoreOutlined />}>租户用户</Tag>}
                                     </Descriptions.Item>
                                     <Descriptions.Item label={profile.is_platform_admin ? '管理范围' : '所属租户'}>
                                         {profile.is_platform_admin
-                                            ? <Text type="secondary">全局平台</Text>
+                                            ? <Text type="secondary">平台侧</Text>
                                             : tenantName
                                                 ? <Tag>{tenantName}</Tag>
                                                 : <Text type="secondary">-</Text>}

@@ -8,6 +8,7 @@ import { getTemplates as getNotificationTemplates } from '@/services/auto-healin
 import { getChannels } from '@/services/auto-healing/notification';
 import { getUsers } from '@/services/auto-healing/users';
 import { getRoles } from '@/services/auto-healing/roles';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import TaskTemplateSelector from './TaskTemplateSelector';
 import ExtraVarsEditor from './ExtraVarsEditor';
 import ComputeOperationsEditor from './ComputeOperationsEditor';
@@ -227,8 +228,8 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, open, onClose, 
                             label="审批人 (用户)"
                             mode="multiple"
                             request={async () => {
-                                const res = await getUsers({ page_size: 100 });
-                                return (res.data || []).map(u => ({ label: u.display_name, value: u.username }));
+                                const users = await fetchAllPages<any>((page, pageSize) => getUsers({ page, page_size: pageSize }));
+                                return users.map(u => ({ label: u.display_name, value: u.username }));
                             }}
                         />
                         <ProFormSelect
@@ -348,8 +349,8 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, open, onClose, 
                             mode="multiple"
                             rules={[{ required: true, message: '请选择通知渠道' }]}
                             request={async () => {
-                                const res = await getChannels({ page_size: 100 });
-                                const channels = (res.data || []).map(c => ({
+                                const fetchedChannels = await fetchAllPages<any>((page, pageSize) => getChannels({ page, page_size: pageSize }));
+                                const channels = fetchedChannels.map(c => ({
                                     id: c.id,
                                     name: c.name,
                                     type: c.type
@@ -381,8 +382,8 @@ const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({ node, open, onClose, 
                             rules={[{ required: true, message: '请选择通知模板' }]}
                             dependencies={['channel_ids']}
                             request={async () => {
-                                const res = await getNotificationTemplates({ page_size: 100 });
-                                return (res.data || []).map(t => ({
+                                const templates = await fetchAllPages<any>((page, pageSize) => getNotificationTemplates({ page, page_size: pageSize }));
+                                return templates.map(t => ({
                                     label: `${t.name}${t.supported_channels?.length ? ` (${t.supported_channels.join('/')})` : ''}`,
                                     value: t.id,
                                     supported_channels: t.supported_channels || []

@@ -78,10 +78,10 @@ const NotificationChannelsPage: React.FC = () => {
     const handleSearchChange = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => {
         const filters = params.filters || [];
         const nameFilter = filters.find(f => f.field === 'name');
-        const typeFilter = filters.find(f => f.field === '__enum__type');
+        const typeFilter = filters.find(f => f.field === '__enum__type') || filters.find(f => f.field === 'type');
         const advType = params.advancedSearch?.type;
-        const advSearch = params.advancedSearch?.search;
-        setSearchText(nameFilter?.value || advSearch || '');
+        const advName = params.advancedSearch?.name;
+        setSearchText(nameFilter?.value || advName || '');
         setFilterType(typeFilter?.value || advType || '');
     }, []);
 
@@ -105,8 +105,15 @@ const NotificationChannelsPage: React.FC = () => {
         try {
             await deleteChannel(channel.id);
             message.success('渠道已删除');
+            const nextTotal = Math.max(0, total - 1);
+            const nextPage = Math.min(currentPage, Math.max(1, Math.ceil(nextTotal / pageSize)));
             setChannels(prev => prev.filter(c => c.id !== channel.id));
-            setTotal(prev => Math.max(0, prev - 1));
+            setTotal(nextTotal);
+            if (nextPage !== currentPage) {
+                setCurrentPage(nextPage);
+            } else {
+                loadChannels();
+            }
         } catch {
             // 错误消息由全局错误处理器显示
         } finally {
@@ -118,7 +125,7 @@ const NotificationChannelsPage: React.FC = () => {
         setActionLoading(channel.id);
         try {
             await testChannel(channel.id);
-            message.success('测试消息已发送');
+            message.success('连接测试成功');
         } catch {
             // 错误消息由全局错误处理器显示
         } finally {
@@ -297,7 +304,7 @@ const NotificationChannelsPage: React.FC = () => {
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description={<Text type="secondary">暂无通知渠道配置</Text>}
                 >
-                    <Button type="dashed" onClick={() => history.push('/notification/channels/create')}>创建第一个渠道</Button>
+                    <Button type="dashed" disabled={!access.canCreateChannel} onClick={() => history.push('/notification/channels/create')}>创建第一个渠道</Button>
                 </Empty>
             ) : (
                 <Row gutter={[20, 20]} className="channels-grid">

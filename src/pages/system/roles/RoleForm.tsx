@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { history, useParams, useAccess } from '@umijs/max';
-import { Form, Input, Button, message, Spin, Checkbox, Tag, Transfer } from 'antd';
+import { Form, Input, Button, message, Spin, Checkbox, Tag, Transfer, Modal } from 'antd';
 import { SaveOutlined, UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
 import { createRole, getRole, updateRole, assignRolePermissions } from '@/services/auto-healing/roles';
 import { getPermissionTree } from '@/services/auto-healing/permissions';
-import { getUsers, getSimpleUsers, getUser, assignUserRoles } from '@/services/auto-healing/users';
+import { getUsers, getSimpleUsers, assignUserRoles } from '@/services/auto-healing/users';
 import { listSystemWorkspaces, getRoleWorkspaces, assignRoleWorkspaces } from '@/services/auto-healing/dashboard';
 import './RoleForm.css';
 
@@ -37,7 +37,6 @@ const RoleFormPage: React.FC = () => {
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
     const [originalUserIds, setOriginalUserIds] = useState<string[]>([]);
-    const [roleName, setRoleName] = useState('');
 
     /* 工作区列表 & 分配 */
     const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
@@ -97,7 +96,6 @@ const RoleFormPage: React.FC = () => {
                     display_name: role.display_name,
                     description: role.description || '',
                 });
-                setRoleName(role.name);
                 setIsSystemRole(!!role.is_system);
                 const permIds = (role.permissions || []).map((p: any) => p.id);
                 setCheckedKeys(permIds);
@@ -115,8 +113,17 @@ const RoleFormPage: React.FC = () => {
         // 通过后端 role_id 筛选获取已分配该角色的用户
         (async () => {
             try {
-                const res = await getUsers({ role_id: params.id, page_size: 100 });
-                const users = (res as any)?.data || [];
+                const users: any[] = [];
+                let page = 1;
+                const pageSize = 200;
+                while (true) {
+                    const res = await getUsers({ role_id: params.id, page, page_size: pageSize });
+                    const batch = (res as any)?.data || [];
+                    users.push(...batch);
+                    const total = (res as any)?.pagination?.total ?? (res as any)?.total ?? batch.length;
+                    if (users.length >= total || batch.length === 0) break;
+                    page += 1;
+                }
                 const assigned = users.map((u: any) => u.id);
                 setSelectedUserIds(assigned);
                 setOriginalUserIds(assigned);
@@ -178,29 +185,20 @@ const RoleFormPage: React.FC = () => {
     };
 
     /* 更新用户角色分配（按需获取每个变更用户的当前角色） */
-    const updateUserAssignments = async (roleId: string, rName: string) => {
+    const updateUserAssignments = async (roleId: string) => {
         const added = selectedUserIds.filter(id => !originalUserIds.includes(id));
-        const removed = originalUserIds.filter(id => !selectedUserIds.includes(id));
+        const failures: Array<{ userId: string; op: 'assign' | 'remove' }> = [];
 
         for (const userId of added) {
             try {
-                const userRes = await getUser(userId);
-                const user = (userRes as any)?.data || userRes;
-                const existingRoleIds = (user?.roles || []).map((r: any) => r.id);
-                await assignUserRoles(userId, { role_ids: [...new Set([...existingRoleIds, roleId])] });
-            } catch { /* skip failed users */ }
+                // 租户用户为单角色模型：赋予该角色会替换用户原有角色
+                await assignUserRoles(userId, { role_ids: [roleId] });
+            } catch {
+                failures.push({ userId, op: 'assign' });
+            }
         }
 
-        for (const userId of removed) {
-            try {
-                const userRes = await getUser(userId);
-                const user = (userRes as any)?.data || userRes;
-                const newRoleIds = (user?.roles || [])
-                    .filter((r: any) => r.name !== rName && r.id !== roleId)
-                    .map((r: any) => r.id);
-                await assignUserRoles(userId, { role_ids: newRoleIds });
-            } catch { /* skip failed users */ }
-        }
+        return { added, removed: [], failures };
     };
 
     /* 工作区勾选 */
@@ -225,12 +223,38 @@ const RoleFormPage: React.FC = () => {
                     });
                     await assignRolePermissions(params.id, { permission_ids: checkedKeys });
                 }
-                await updateUserAssignments(params.id, roleName);
+                const { failures } = await updateUserAssignments(params.id);
                 // 保存工作区分配（排除默认工作区，默认工作区自动包含）
                 const nonDefaultIds = selectedWsIds.filter(
                     id => !allWorkspaces.find((w: any) => w.id === id && w.is_default)
                 );
                 await assignRoleWorkspaces(params.id, nonDefaultIds);
+                if (failures.length > 0) {
+                    const byId = new Map(allUsers.map(u => [u.id, u]));
+                    const preview = failures.slice(0, 10).map(f => {
+                        const u = byId.get(f.userId);
+                        const name = u?.display_name || u?.username || f.userId;
+                        const op = f.op === 'assign' ? '赋予角色失败' : '取消分配失败';
+                        return `${name}（${op}）`;
+                    });
+                    Modal.warning({
+                        title: '角色已保存，但部分用户分配失败',
+                        content: (
+                            <div>
+                                <div style={{ marginBottom: 8 }}>
+                                    共 {failures.length} 人分配操作失败，请重试或稍后刷新页面确认。
+                                </div>
+                                {preview.length > 0 && (
+                                    <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                                        {preview.join('\n')}
+                                        {failures.length > preview.length ? '\n…' : ''}
+                                    </div>
+                                )}
+                            </div>
+                        ),
+                    });
+                    return;
+                }
                 message.success('更新成功');
             } else {
                 const res = await createRole(values);
@@ -241,7 +265,34 @@ const RoleFormPage: React.FC = () => {
                         await assignRolePermissions(newRoleId, { permission_ids: checkedKeys });
                     }
                     if (selectedUserIds.length > 0) {
-                        await updateUserAssignments(newRoleId, values.name);
+                        const { failures } = await updateUserAssignments(newRoleId);
+                        if (failures.length > 0) {
+                            const byId = new Map(allUsers.map(u => [u.id, u]));
+                            const preview = failures.slice(0, 10).map(f => {
+                                const u = byId.get(f.userId);
+                                const name = u?.display_name || u?.username || f.userId;
+                                const op = f.op === 'assign' ? '赋予角色失败' : '取消分配失败';
+                                return `${name}（${op}）`;
+                            });
+                            Modal.warning({
+                                title: '角色已创建，但部分用户分配失败',
+                                content: (
+                                    <div>
+                                        <div style={{ marginBottom: 8 }}>
+                                            共 {failures.length} 人分配操作失败。可进入编辑页重试分配。
+                                        </div>
+                                        {preview.length > 0 && (
+                                            <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                                                {preview.join('\n')}
+                                                {failures.length > preview.length ? '\n…' : ''}
+                                            </div>
+                                        )}
+                                    </div>
+                                ),
+                                onOk: () => history.push(`/system/roles/${newRoleId}/edit`),
+                            });
+                            return;
+                        }
                     }
                     // 保存工作区分配
                     const nonDefaultIds = selectedWsIds.filter(
@@ -303,11 +354,15 @@ const RoleFormPage: React.FC = () => {
                                     已选择 {selectedUserIds.length} / {allUsers.length} 个用户
                                 </span>
                             </div>
+                            <div style={{ marginBottom: 12, color: '#8c8c8c', fontSize: 12 }}>
+                                当前租户用户为单角色模型。这里仅支持把用户赋予到当前角色；如需移出，请到用户编辑页改成其他角色。
+                            </div>
                             <div className="role-form-transfer-wrap">
                                 <Transfer
                                     dataSource={transferDataSource}
                                     targetKeys={selectedUserIds}
                                     onChange={(targetKeys) => setSelectedUserIds(targetKeys as string[])}
+                                    oneWay
                                     showSearch
                                     showSelectAll
                                     filterOption={(input, item) => {
@@ -317,7 +372,7 @@ const RoleFormPage: React.FC = () => {
                                             (item.description || '').toLowerCase().includes(q)
                                         );
                                     }}
-                                    titles={['可选用户', '已分配']}
+                                    titles={['可选用户', '将赋予当前角色']}
                                     locale={{
                                         itemUnit: '人',
                                         itemsUnit: '人',

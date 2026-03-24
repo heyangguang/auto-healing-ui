@@ -15,7 +15,8 @@ import HostSelector from '@/components/HostSelector';
 import VariableInput, { extractDefaultValue } from '@/components/VariableInput';
 import PlaybookSelector from '@/components/PlaybookSelector';
 import SecretsSourceSelector from '@/components/SecretsSourceSelector';
-import NotificationSelector from '@/components/NotificationSelector';
+import NotificationSelector, { type NotificationConfig } from '@/components/NotificationSelector';
+import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import {
     getExecutionTask, createExecutionTask, updateExecutionTask,
     confirmExecutionTaskReview,
@@ -23,10 +24,18 @@ import {
 import { getPlaybooks, getPlaybook } from '@/services/auto-healing/playbooks';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
 import { getChannels, getTemplates } from '@/services/auto-healing/notification';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 import { DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import './TemplateForm.css';
 
 const { Text } = Typography;
+
+const createEmptyNotificationConfig = (): NotificationConfig => ({
+    enabled: false,
+    on_start: { enabled: false, configs: [], channel_ids: [] },
+    on_success: { enabled: false, configs: [], channel_ids: [] },
+    on_failure: { enabled: false, configs: [], channel_ids: [] },
+});
 
 const TemplateFormPage: React.FC = () => {
     const access = useAccess();
@@ -76,15 +85,15 @@ const TemplateFormPage: React.FC = () => {
     // 数据加载
     useEffect(() => {
         Promise.all([
-            getPlaybooks().catch(() => ({ data: [] })),
+            fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ page, page_size: pageSize })).catch(() => []),
             getSecretsSources().catch(() => ({ data: [] })),
-            getChannels({ page: 1, page_size: 100 }).catch(() => ({ data: [] })),
-            getTemplates({ page: 1, page_size: 100 }).catch(() => ({ data: [] })),
+            fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize })).catch(() => []),
+            fetchAllPages<AutoHealing.NotificationTemplate>((page, pageSize) => getTemplates({ page, page_size: pageSize })).catch(() => []),
         ]).then(([pbRes, secRes, chRes, tplRes]) => {
-            setPlaybooks((pbRes as any).data || []);
+            setPlaybooks(pbRes as any);
             setSecretsSources((secRes as any).data || []);
-            setNotifyChannels((chRes as any).data || []);
-            setNotifyTemplates((tplRes as any).data || []);
+            setNotifyChannels(chRes as any);
+            setNotifyTemplates(tplRes as any);
         });
     }, []);
 
@@ -179,13 +188,16 @@ const TemplateFormPage: React.FC = () => {
 
             setSubmitting(true);
 
-            let cleanedNotificationConfig = values.notification_config;
-            if (cleanedNotificationConfig?.enabled) {
+            let cleanedNotificationConfig: NotificationConfig = values.notification_config
+                ? { ...values.notification_config }
+                : createEmptyNotificationConfig();
+            if (hasEffectiveNotificationConfig(cleanedNotificationConfig as any)) {
                 const triggers = ['on_start', 'on_success', 'on_failure'] as const;
                 let hasAnyConfig = false;
                 for (const trigger of triggers) {
                     const triggerConfig = cleanedNotificationConfig[trigger];
-                    if (triggerConfig?.enabled) {
+                    const triggerEnabled = triggerConfig && (triggerConfig.enabled ?? ((triggerConfig.configs?.length || 0) > 0 || (((triggerConfig.channel_ids?.length || 0) > 0) && !!triggerConfig.template_id)));
+                    if (triggerEnabled) {
                         const hasConfigs = (triggerConfig.configs?.length || 0) > 0 ||
                             ((triggerConfig.channel_ids?.length || 0) > 0 && triggerConfig.template_id);
                         if (!hasConfigs) {
@@ -199,8 +211,10 @@ const TemplateFormPage: React.FC = () => {
                     }
                 }
                 if (!hasAnyConfig) {
-                    cleanedNotificationConfig = undefined;
+                    cleanedNotificationConfig = createEmptyNotificationConfig();
                 }
+            } else {
+                cleanedNotificationConfig = createEmptyNotificationConfig();
             }
 
             const payload = {

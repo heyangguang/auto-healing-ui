@@ -2,7 +2,7 @@ import { request } from '@umijs/max';
 
 /**
  * 站内信 API
- * 对应 /api/v1/site-messages
+ * 平台侧：对应 /api/v1/platform/site-messages
  */
 
 // ==================== 类型定义 ====================
@@ -44,18 +44,5 @@ export async function createSiteMessage(data: CreateSiteMessageParams) {
     return request<{ code: number; message: string; data: any }>(
         '/api/v1/platform/site-messages',
         { method: 'POST', data },
-    );
-}
-
-/** 获取站内信列表 */
-export async function getSiteMessages(params?: {
-    page?: number;
-    page_size?: number;
-    keyword?: string;
-    category?: string;
-}) {
-    return request<{ code: number; message: string; data: SiteMessage[]; total: number; page: number; page_size: number }>(
-        '/api/v1/tenant/site-messages',
-        { method: 'GET', params },
     );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { history, useParams, useAccess } from '@umijs/max';
 import {
     Form, Input, Select, Button, message, Spin, Row, Col, Checkbox, Alert, InputNumber, Divider, Typography,
@@ -41,6 +41,9 @@ const SecretFormPage: React.FC = () => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const originalConfigRef = useRef<Record<string, any>>({});
+    const [loadedVaultAuthType, setLoadedVaultAuthType] = useState<string | undefined>(undefined);
+    const [loadedWebhookAuthType, setLoadedWebhookAuthType] = useState<string | undefined>(undefined);
 
     const authType = Form.useWatch('auth_type', form) || 'ssh_key';
     const sourceType = Form.useWatch('type', form) || 'file';
@@ -52,6 +55,9 @@ const SecretFormPage: React.FC = () => {
     // ==================== Load Data ====================
     useEffect(() => {
         if (!isEdit || !params.id) {
+            originalConfigRef.current = {};
+            setLoadedVaultAuthType(undefined);
+            setLoadedWebhookAuthType(undefined);
             form.setFieldsValue({
                 auth_type: 'ssh_key', type: 'file', priority: 100, is_default: false,
                 vault_auth_type: 'token', webhook_auth_type: 'none', webhook_method: 'GET',
@@ -64,6 +70,9 @@ const SecretFormPage: React.FC = () => {
                 const res = await getSecretsSource(params.id!);
                 const source = (res as any)?.data || res;
                 const config = source.config || {};
+                originalConfigRef.current = config;
+                setLoadedVaultAuthType(config.auth?.type || 'token');
+                setLoadedWebhookAuthType(config.auth?.type || 'none');
                 form.setFieldsValue({
                     name: source.name,
                     auth_type: source.auth_type,
@@ -76,9 +85,9 @@ const SecretFormPage: React.FC = () => {
                     vault_secret_path: config.secret_path,
                     vault_query_key: config.query_key,
                     vault_auth_type: config.auth?.type || 'token',
-                    vault_token: config.auth?.token,
+                    vault_token: undefined,
                     vault_role_id: config.auth?.role_id,
-                    vault_secret_id: config.auth?.secret_id,
+                    vault_secret_id: undefined,
                     vault_field_username: config.field_mapping?.username,
                     vault_field_password: config.field_mapping?.password,
                     vault_field_private_key: config.field_mapping?.private_key,
@@ -87,10 +96,10 @@ const SecretFormPage: React.FC = () => {
                     webhook_query_key: config.query_key,
                     webhook_auth_type: config.auth?.type || 'none',
                     webhook_basic_username: config.auth?.username,
-                    webhook_basic_password: config.auth?.password,
-                    webhook_bearer_token: config.auth?.token,
+                    webhook_basic_password: undefined,
+                    webhook_bearer_token: undefined,
                     webhook_api_key_header: config.auth?.header_name,
-                    webhook_api_key: config.auth?.api_key,
+                    webhook_api_key: undefined,
                     webhook_response_path: config.response_data_path,
                     webhook_field_username: config.field_mapping?.username,
                     webhook_field_password: config.field_mapping?.password,
@@ -110,19 +119,19 @@ const SecretFormPage: React.FC = () => {
             const values = await form.validateFields();
             setSubmitting(true);
 
+            const originalConfig = originalConfigRef.current || {};
             let config: any = {};
             if (values.type === 'file') {
                 config = { key_path: values.file_key_path, username: values.file_username };
             } else if (values.type === 'vault') {
+                const originalAuth = originalConfig.auth || {};
                 config = {
                     address: values.vault_address,
                     secret_path: values.vault_secret_path,
                     query_key: values.vault_query_key || undefined,
                     auth: {
                         type: values.vault_auth_type,
-                        token: values.vault_token,
                         role_id: values.vault_role_id,
-                        secret_id: values.vault_secret_id,
                     },
                     field_mapping: {
                         username: values.vault_field_username,
@@ -130,7 +139,22 @@ const SecretFormPage: React.FC = () => {
                         private_key: values.vault_field_private_key,
                     },
                 };
+                if (values.vault_auth_type === 'token') {
+                    if (values.vault_token) {
+                        config.auth.token = values.vault_token;
+                    } else if (isEdit && originalAuth.type === 'token' && originalAuth.token) {
+                        config.auth.token = originalAuth.token;
+                    }
+                }
+                if (values.vault_auth_type === 'approle') {
+                    if (values.vault_secret_id) {
+                        config.auth.secret_id = values.vault_secret_id;
+                    } else if (isEdit && originalAuth.type === 'approle' && originalAuth.secret_id) {
+                        config.auth.secret_id = originalAuth.secret_id;
+                    }
+                }
             } else if (values.type === 'webhook') {
+                const originalAuth = originalConfig.auth || {};
                 config = {
                     url: values.webhook_url,
                     method: values.webhook_method,
@@ -138,10 +162,7 @@ const SecretFormPage: React.FC = () => {
                     auth: {
                         type: values.webhook_auth_type,
                         username: values.webhook_basic_username,
-                        password: values.webhook_basic_password,
-                        token: values.webhook_bearer_token,
                         header_name: values.webhook_api_key_header,
-                        api_key: values.webhook_api_key,
                     },
                     response_data_path: values.webhook_response_path,
                     field_mapping: {
@@ -150,6 +171,27 @@ const SecretFormPage: React.FC = () => {
                         private_key: values.webhook_field_private_key,
                     },
                 };
+                if (values.webhook_auth_type === 'basic') {
+                    if (values.webhook_basic_password) {
+                        config.auth.password = values.webhook_basic_password;
+                    } else if (isEdit && originalAuth.type === 'basic' && originalAuth.password) {
+                        config.auth.password = originalAuth.password;
+                    }
+                }
+                if (values.webhook_auth_type === 'bearer') {
+                    if (values.webhook_bearer_token) {
+                        config.auth.token = values.webhook_bearer_token;
+                    } else if (isEdit && originalAuth.type === 'bearer' && originalAuth.token) {
+                        config.auth.token = originalAuth.token;
+                    }
+                }
+                if (values.webhook_auth_type === 'api_key') {
+                    if (values.webhook_api_key) {
+                        config.auth.api_key = values.webhook_api_key;
+                    } else if (isEdit && originalAuth.type === 'api_key' && originalAuth.api_key) {
+                        config.auth.api_key = originalAuth.api_key;
+                    }
+                }
             }
 
             const payload: any = {
@@ -307,7 +349,7 @@ const SecretFormPage: React.FC = () => {
                                             <Form.Item
                                                 name="vault_token" label="Vault Token"
                                                 tooltip="用于访问 Vault API 的认证令牌。建议使用有限权限的策略绑定 Token"
-                                                rules={[{ required: !isEdit }]}
+                                                rules={[{ required: !isEdit || loadedVaultAuthType !== 'token' }]}
                                                 extra="可在 Vault UI 或通过 vault token create 命令生成"
                                             >
                                                 <Input.Password placeholder={isEdit ? '留空保持不变' : 'hvs.xxxxxxxxxxxxxxxxxxxxx'} />
@@ -331,7 +373,7 @@ const SecretFormPage: React.FC = () => {
                                             <Form.Item
                                                 name="vault_secret_id" label="Secret ID"
                                                 tooltip="AppRole 认证的秘密标识符，与 Role ID 配对使用"
-                                                rules={[{ required: !isEdit }]}
+                                                rules={[{ required: !isEdit || loadedVaultAuthType !== 'approle', message: '请输入 Secret ID' }]}
                                                 extra="通过 vault write -f auth/approle/role/my-role/secret-id 生成"
                                             >
                                                 <Input.Password placeholder={isEdit ? '留空保持不变' : ''} />
@@ -391,6 +433,7 @@ const SecretFormPage: React.FC = () => {
                                                 tooltip="Vault Secret 中存储 SSH 私钥内容的 JSON Key"
                                                 extra="默认：private_key"
                                                 style={{ marginBottom: 0 }}
+                                                rules={[{ required: true, message: '请输入 Header 名称' }]}
                                             >
                                                 <Input placeholder="private_key" />
                                             </Form.Item>
@@ -450,6 +493,7 @@ const SecretFormPage: React.FC = () => {
                                             <Form.Item
                                                 name="webhook_basic_username" label="Basic Auth 用户名"
                                                 tooltip="HTTP Basic 认证的用户名"
+                                                rules={[{ required: true, message: '请输入 Basic Auth 用户名' }]}
                                             >
                                                 <Input placeholder="api_user" />
                                             </Form.Item>
@@ -458,6 +502,7 @@ const SecretFormPage: React.FC = () => {
                                             <Form.Item
                                                 name="webhook_basic_password" label="Basic Auth 密码"
                                                 tooltip="HTTP Basic 认证的密码"
+                                                rules={[{ required: !isEdit || loadedWebhookAuthType !== 'basic', message: '请输入 Basic Auth 密码' }]}
                                             >
                                                 <Input.Password placeholder={isEdit ? '留空保持不变' : ''} />
                                             </Form.Item>
@@ -471,6 +516,7 @@ const SecretFormPage: React.FC = () => {
                                                 name="webhook_bearer_token" label="Bearer Token"
                                                 tooltip="放在 Authorization: Bearer <token> 请求头中的令牌"
                                                 extra="不需要加 'Bearer' 前缀，系统会自动添加"
+                                                rules={[{ required: !isEdit || loadedWebhookAuthType !== 'bearer', message: '请输入 Bearer Token' }]}
                                             >
                                                 <Input.Password placeholder={isEdit ? '留空保持不变' : 'eyJhbGciOiJIUzI1NiIs...'} />
                                             </Form.Item>
@@ -484,6 +530,7 @@ const SecretFormPage: React.FC = () => {
                                                 name="webhook_api_key_header" label="Header 名称"
                                                 tooltip="API Key 放置在请求头中的 Header 名称"
                                                 extra="常见：X-API-Key, Authorization"
+                                                rules={[{ required: true, message: '请输入 Header 名称' }]}
                                             >
                                                 <Input placeholder="X-API-Key" />
                                             </Form.Item>
@@ -492,6 +539,7 @@ const SecretFormPage: React.FC = () => {
                                             <Form.Item
                                                 name="webhook_api_key" label="API Key 值"
                                                 tooltip="API Key 的实际值"
+                                                rules={[{ required: !isEdit || loadedWebhookAuthType !== 'api_key', message: '请输入 API Key' }]}
                                             >
                                                 <Input.Password placeholder={isEdit ? '留空保持不变' : ''} />
                                             </Form.Item>
@@ -552,7 +600,13 @@ const SecretFormPage: React.FC = () => {
 
                         <Divider style={{ margin: '16px 0 24px' }} />
                         <div className="secret-form-actions">
-                            <Button type="primary" icon={<SaveOutlined />} loading={submitting} disabled={!access.canManageSecrets} onClick={handleSubmit}>
+                            <Button
+                                type="primary"
+                                icon={<SaveOutlined />}
+                                loading={submitting}
+                                disabled={isEdit ? !access.canUpdateSecretsSource : !access.canCreateSecretsSource}
+                                onClick={handleSubmit}
+                            >
                                 {isEdit ? '保存修改' : '创建密钥源'}
                             </Button>
                             <Button onClick={() => history.push('/resources/secrets')}>取消</Button>

@@ -139,7 +139,7 @@ export async function getInitialState(): Promise<{
       if (!isPlatformPage && !isImpersonating) {
         // 🆕 使用 window.location.href 而非 history.push
         // getInitialState 阶段 history 可能未完全就绪，history.push 不一定生效
-        window.location.href = '/platform/tenant-overview';
+        window.location.href = '/platform';
         return {
           fetchUserInfo,
           currentUser,
@@ -207,7 +207,7 @@ export const layout: RunTimeLayoutConfig = ({
 
         if (!isPlatformPage && !isImpersonating) {
           console.log('[App] 平台管理员访问租户页面，重定向到平台管理');
-          history.push('/platform/tenant-overview');
+          history.push('/platform');
         }
       }
     },

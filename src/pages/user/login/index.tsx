@@ -193,7 +193,7 @@ const Login: React.FC = () => {
       if (isPlatformAdmin) localStorage.removeItem('tenant-storage');
       else if (response.tenants?.length > 0) localStorage.setItem('tenant-storage', JSON.stringify({ currentTenantId: response.current_tenant_id, tenants: response.tenants }));
       await fetchUserInfo();
-      if (isPlatformAdmin) history.push('/platform/tenants');
+      if (isPlatformAdmin) history.push('/platform');
       else if (response.tenants?.length > 0) history.push(new URL(window.location.href).searchParams.get('redirect') || '/');
       else { message.warning('无可用租户权限'); history.push('/no-tenant'); }
     } catch (error: any) {

@@ -9,8 +9,7 @@ import { useDashboardSection } from '../useDashboardSection';
 const ENV_LABELS: Record<string, string> = {
     production: '生产',
     staging: '预发布',
-    development: '开发',
-    testing: '测试',
+    dev: '开发',
     test: '测试',
 };
 

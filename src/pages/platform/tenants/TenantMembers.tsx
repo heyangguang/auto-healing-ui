@@ -136,8 +136,12 @@ const TenantMembersPage: React.FC = () => {
 
     // 已是成员的 ID Set
     const memberUserIds = new Set(members.map((m: any) => m.user_id));
+    const adminMemberIds = members
+        .filter((m: any) => m.role?.name === 'admin')
+        .map((m: any) => m.user_id);
+    const isLastAdminMember = (record: any) => record.role?.name === 'admin' && adminMemberIds.length <= 1;
 
-    // 选人池：排除已在租户 + 排除 platform_admin
+    // 选人池：排除已在租户 + 排除已具备平台角色的用户（平台用户不在这里直接纳入租户成员）
     const availableForAdd = simpleUsers.filter(
         u => !memberUserIds.has(u.id) && !u.is_platform_admin
     );
@@ -322,36 +326,45 @@ const TenantMembersPage: React.FC = () => {
             title: '操作',
             key: 'action',
             width: 140,
-            render: (_: any, record: any) => (
-                <Space size={4}>
-                    <Button
-                        type="link" size="small"
-                        icon={<SettingOutlined />}
-                        disabled={!access.canManagePlatformTenants}
-                        onClick={() => openChangeRole(record)}
-                        style={{ padding: 0, fontSize: 12 }}
-                    >
-                        变更角色
-                    </Button>
-                    <Popconfirm
-                        title="确认移除该成员？"
-                        description="移除后该用户将无法访问此租户的资源"
-                        onConfirm={() => handleRemoveMember(record.user_id)}
-                        okText="确认移除"
-                        cancelText="取消"
-                        okButtonProps={{ danger: true }}
-                    >
-                        <Button
-                            type="link" size="small" danger
-                            icon={<DeleteOutlined />}
-                            disabled={!access.canManagePlatformTenants}
-                            style={{ padding: 0, fontSize: 12 }}
+            render: (_: any, record: any) => {
+                const protectLastAdmin = isLastAdminMember(record);
+                const disabledReason = protectLastAdmin ? '最后一个租户管理员不能被降级或移除' : '';
+                return (
+                    <Space size={4}>
+                        <Tooltip title={disabledReason || '变更角色'}>
+                            <Button
+                                type="link" size="small"
+                                icon={<SettingOutlined />}
+                                disabled={!access.canManagePlatformTenants || protectLastAdmin}
+                                onClick={() => openChangeRole(record)}
+                                style={{ padding: 0, fontSize: 12 }}
+                            >
+                                变更角色
+                            </Button>
+                        </Tooltip>
+                        <Popconfirm
+                            title="确认移除该成员？"
+                            description="移除后该用户将无法访问此租户的资源"
+                            onConfirm={() => handleRemoveMember(record.user_id)}
+                            okText="确认移除"
+                            cancelText="取消"
+                            okButtonProps={{ danger: true }}
+                            disabled={protectLastAdmin}
                         >
-                            移除
-                        </Button>
-                    </Popconfirm>
-                </Space>
-            ),
+                            <Tooltip title={disabledReason || '移除'}>
+                                <Button
+                                    type="link" size="small" danger
+                                    icon={<DeleteOutlined />}
+                                    disabled={!access.canManagePlatformTenants || protectLastAdmin}
+                                    style={{ padding: 0, fontSize: 12 }}
+                                >
+                                    移除
+                                </Button>
+                            </Tooltip>
+                        </Popconfirm>
+                    </Space>
+                );
+            },
         },
     ];
 
@@ -422,10 +435,8 @@ const TenantMembersPage: React.FC = () => {
                                     type="link" size="small"
                                     icon={<CopyOutlined />}
                                     style={{ padding: '0 4px', fontSize: 12 }}
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(record.invitation_url);
-                                        message.success('邀请链接已复制');
-                                    }}
+                                    disabled={!access.canManagePlatformTenants}
+                                    onClick={() => copyInvitationLink(record.invitation_url)}
                                 >
                                     复制
                                 </Button>
@@ -605,7 +616,7 @@ const TenantMembersPage: React.FC = () => {
                 okText="添加" confirmLoading={submitting} destroyOnHidden width={440}
             >
                 <div style={{ marginBottom: 12, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 2, fontSize: 12, color: '#0050b3' }}>
-                    从平台用户池中选择已有用户添加到该租户，并分配角色。
+                    从可加入租户的活跃用户中选择成员添加到该租户，并分配角色。已具备平台角色的用户不会出现在这里。
                 </div>
                 <Form form={addMemberForm} layout="vertical" onFinish={handleAddMember} style={{ marginTop: 8 }}>
                     <Form.Item name="user_id" label="选择用户" rules={[{ required: true, message: '请选择用户' }]}>
@@ -665,7 +676,7 @@ const TenantMembersPage: React.FC = () => {
                         </div>
 
                         <div style={{ marginBottom: 8, fontSize: 12, color: '#595959', fontWeight: 500 }}>
-                            <LinkOutlined /> 邀请链接（有效期 7 天）：
+                            <LinkOutlined /> 邀请链接（{inviteResult.expires_at ? `有效至 ${dayjs(inviteResult.expires_at).format('YYYY-MM-DD HH:mm')}` : '有效期以系统设置为准'}）：
                         </div>
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: 8,
@@ -680,6 +691,7 @@ const TenantMembersPage: React.FC = () => {
                             <Button
                                 type="primary" size="small"
                                 icon={<CopyOutlined />}
+                                disabled={!access.canManagePlatformTenants}
                                 onClick={() => copyInvitationLink(inviteResult.invitation_url)}
                             >
                                 复制

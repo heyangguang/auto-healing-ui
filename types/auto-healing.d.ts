@@ -15,7 +15,7 @@ declare namespace AutoHealing {
     /** 租户详细信息 */
     interface Tenant extends TenantBrief {
         description?: string;
-        status?: 'active' | 'inactive';
+        status?: 'active' | 'disabled';
         created_at: string;
         updated_at: string;
     }
@@ -31,7 +31,7 @@ declare namespace AutoHealing {
     interface UpdateTenantRequest {
         name?: string;
         description?: string;
-        status?: 'active' | 'inactive';
+        status?: 'active' | 'disabled';
     }
 
     // ==================== 认证相关 ====================
@@ -370,10 +370,10 @@ declare namespace AutoHealing {
     type CMDBType = 'server' | 'application' | 'network' | 'database';
 
     /** CMDB状态 */
-    type CMDBStatus = 'active' | 'inactive' | 'maintenance';
+    type CMDBStatus = 'active' | 'offline' | 'maintenance';
 
     /** CMDB环境 */
-    type CMDBEnvironment = 'production' | 'staging' | 'development';
+    type CMDBEnvironment = 'production' | 'staging' | 'test' | 'dev';
 
     /** CMDB配置项 */
     interface CMDBItem {

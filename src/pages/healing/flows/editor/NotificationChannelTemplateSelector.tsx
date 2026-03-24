@@ -5,6 +5,7 @@ import {
     MailOutlined, DingdingOutlined, ApiOutlined, ReloadOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import { getChannels, getTemplates as getNotificationTemplates } from '@/services/auto-healing/notification';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 
 const { Text, Paragraph } = Typography;
 
@@ -79,12 +80,12 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
     const loadChannels = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await getChannels({ page_size: 200 });
-            setChannels((res.data || []).map(c => ({
+            const channelItems = await fetchAllPages<any>((page, pageSize) => getChannels({ page, page_size: pageSize }));
+            setChannels(channelItems.map(c => ({
                 id: c.id,
                 name: c.name,
                 type: c.type,
-                enabled: c.enabled
+                enabled: c.enabled ?? c.is_active
             })));
         } catch (e) {
             /* global error handler */
@@ -97,8 +98,8 @@ const NotificationChannelTemplateSelector: React.FC<NotificationChannelTemplateS
     const loadTemplates = useCallback(async () => {
         setLoadingTemplates(true);
         try {
-            const res = await getNotificationTemplates({ page_size: 200 });
-            setTemplates((res.data || []).map(t => ({
+            const templateItems = await fetchAllPages<any>((page, pageSize) => getNotificationTemplates({ page, page_size: pageSize }));
+            setTemplates(templateItems.map(t => ({
                 id: t.id,
                 name: t.name,
                 supported_channels: t.supported_channels,

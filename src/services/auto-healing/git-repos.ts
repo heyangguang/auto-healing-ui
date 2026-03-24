@@ -48,7 +48,7 @@ export async function getGitRepos(params?: {
     status?: string;
     auth_type?: string;
     sync_enabled?: boolean;
-    sort_field?: string;
+    sort_by?: string;
     sort_order?: string;
     created_from?: string;
     created_to?: string;

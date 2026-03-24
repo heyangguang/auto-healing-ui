@@ -1,6 +1,6 @@
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { Badge, Empty, Typography, Tooltip, Tag } from 'antd';
-import { useRequest, history } from '@umijs/max';
+import { useAccess, useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getPendingApprovals } from '@/services/auto-healing/healing';
@@ -8,7 +8,11 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(() => getPendingApprovals({ page_size: 15 }), { formatResult: (r: any) => r });
+    const access = useAccess();
+    const { data: rawData, loading, refresh } = useRequest(() => getPendingApprovals({ page_size: 15 }), {
+        formatResult: (r: any) => r,
+        ready: !!access.canViewApprovals,
+    });
     const data = rawData as any;
     const items = data?.data?.items ?? data?.data ?? data?.items ?? [];
 
@@ -51,13 +55,14 @@ const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRem
                                         gridTemplateColumns: '1.2fr 1fr 100px',
                                         gap: 8,
                                         padding: '8px 12px',
-                                        cursor: 'pointer',
+                                        cursor: access.canViewApprovals ? 'pointer' : 'default',
                                         background: index % 2 === 1 ? '#fafafa' : '#fff',
                                         borderBottom: '1px solid #f0f0f0',
                                         transition: 'background 0.3s',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        ...(access.canViewApprovals ? {} : { opacity: 0.65 }),
                                     }}
-                                    onClick={() => history.push('/pending/approvals')}
+                                    onClick={() => access.canViewApprovals && history.push('/pending/approvals')}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                                         <Badge status="warning" />

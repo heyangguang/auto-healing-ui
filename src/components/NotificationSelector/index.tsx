@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Button, Select, Modal, Tag, Switch, Typography, Space, Empty, Input, Divider, Tabs } from 'antd';
+import { Button, Select, Modal, Tag, Switch, Typography, Space, Empty, Input, Divider, Tabs, message } from 'antd';
 import {
     PlusOutlined, BellOutlined, CloseOutlined,
     CheckCircleOutlined, RocketOutlined, StopOutlined,
     SendOutlined, SearchOutlined, CheckOutlined
 } from '@ant-design/icons';
+import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 
 const { Text } = Typography;
 
@@ -36,7 +37,7 @@ export interface NotificationConfig {
 interface NotificationSelectorProps {
     value?: NotificationConfig;
     onChange?: (value: NotificationConfig) => void;
-    channels: { id: string; name: string; type: string }[];
+    channels: { id: string; name: string; type: string; is_active?: boolean; enabled?: boolean }[];
     templates: { id: string; name: string; supported_channels?: string[] }[];
 }
 
@@ -53,6 +54,26 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
     channels,
     templates
 }) => {
+    const triggerHasConfigs = (triggerConfig?: TriggerNotificationConfig) => {
+        if (!triggerConfig) return false;
+        return (triggerConfig.configs?.length || 0) > 0
+            || (((triggerConfig.channel_ids?.length || 0) > 0) && !!triggerConfig.template_id);
+    };
+
+    const isTriggerEnabled = (triggerConfig?: TriggerNotificationConfig) => {
+        if (!triggerConfig) return false;
+        return triggerConfig.enabled ?? triggerHasConfigs(triggerConfig);
+    };
+
+    const syncRootEnabled = (next: NotificationConfig): NotificationConfig => {
+        const hasAnyActiveTrigger = TRIGGERS.some(({ key }) => {
+            const triggerConfig = next[key];
+            if (!isTriggerEnabled(triggerConfig)) return false;
+            return triggerHasConfigs(triggerConfig);
+        });
+        return { ...next, enabled: hasAnyActiveTrigger };
+    };
+
     // 选择器状态
     const [selectorOpen, setSelectorOpen] = useState(false);
     const [currentTrigger, setCurrentTrigger] = useState<TriggerType | null>(null);
@@ -83,7 +104,7 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
 
     // 过滤渠道
     const filteredChannels = useMemo(() => {
-        let list = channels;
+        let list = channels.filter((c) => (c.enabled ?? c.is_active) !== false);
         // 按类型过滤
         if (activeTab !== 'all') {
             list = list.filter(c => c.type === activeTab);
@@ -101,10 +122,10 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
     // 根据选中渠道过滤模板
     const filteredTemplates = useMemo(() => {
         if (!selectedChannel) return templates;
-        const channelType = getChannelType(selectedChannel);
+        const channelType = getChannelType(selectedChannel).toLowerCase();
         let filtered = templates.filter(t => {
             if (!t.supported_channels || t.supported_channels.length === 0) return true;
-            return t.supported_channels.includes(channelType);
+            return t.supported_channels.some((supported) => supported.toLowerCase() === channelType);
         });
         if (searchText) {
             filtered = filtered.filter(t => t.name.toLowerCase().includes(searchText.toLowerCase()));
@@ -126,11 +147,10 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
     // 更新触发器启用状态
     const handleTriggerEnableChange = (trigger: TriggerType, enabled: boolean) => {
         const current = getTriggerConfig(trigger);
-        onChange?.({
+        onChange?.(syncRootEnabled({
             ...value,
-            enabled: true,
             [trigger]: { ...current, enabled }
-        });
+        }));
     };
 
     // 打开选择器
@@ -154,23 +174,28 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
     const handleSelectTemplate = (templateId: string) => {
         if (!currentTrigger || !selectedChannel) return;
 
-        const current = getTriggerConfig(currentTrigger);
         const existingConfigs = getConfigList(currentTrigger);
+        const exists = existingConfigs.some(
+            (config) => config.channel_id === selectedChannel && config.template_id === templateId,
+        );
+        if (exists) {
+            message.warning('该通知配置已存在');
+            return;
+        }
         const newConfig: ChannelTemplateConfig = {
             channel_id: selectedChannel,
             template_id: templateId
         };
 
-        onChange?.({
+        onChange?.(syncRootEnabled({
             ...value,
-            enabled: true,
             [currentTrigger]: {
                 enabled: true,
                 configs: [...existingConfigs, newConfig],
                 channel_ids: [...existingConfigs.map(c => c.channel_id), selectedChannel],
                 template_id: templateId
             }
-        });
+        }));
 
         setSelectorOpen(false);
     };
@@ -179,15 +204,17 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
     const handleRemoveConfig = (trigger: TriggerType, index: number) => {
         const configs = getConfigList(trigger);
         const newConfigs = configs.filter((_, i) => i !== index);
+        const nextTemplateID = newConfigs.length === 1 ? newConfigs[0].template_id : undefined;
 
-        onChange?.({
+        onChange?.(syncRootEnabled({
             ...value,
             [trigger]: {
                 enabled: newConfigs.length > 0,
                 configs: newConfigs,
-                channel_ids: newConfigs.map(c => c.channel_id)
+                channel_ids: newConfigs.length > 0 ? newConfigs.map(c => c.channel_id) : undefined,
+                template_id: nextTemplateID,
             }
-        });
+        }));
     };
 
     // 渲染选择器Modal内容
@@ -319,7 +346,7 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 {TRIGGERS.map(trigger => {
                     const config = getTriggerConfig(trigger.key);
-                    const isEnabled = config.enabled ?? false;
+                    const isEnabled = isTriggerEnabled(config);
                     const configList = getConfigList(trigger.key);
 
                     return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { history, useParams, useAccess } from '@umijs/max';
 import {
     Form, Input, Select, Button, message, Spin, Row, Col, Alert, Switch, Typography, InputNumber, Divider,
@@ -58,6 +58,8 @@ const PluginFormPage: React.FC = () => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const originalConfigRef = useRef<Record<string, any>>({});
+    const [loadedAuthType, setLoadedAuthType] = useState<string | undefined>(undefined);
 
     // Dynamic arrays
     const [mappings, setMappings] = useState<{ standard: string; external: string }[]>([]);
@@ -72,6 +74,8 @@ const PluginFormPage: React.FC = () => {
     // ==================== Load Data ====================
     useEffect(() => {
         if (!isEdit || !params.id) {
+            originalConfigRef.current = {};
+            setLoadedAuthType(undefined);
             form.setFieldsValue({
                 type: 'itsm', auth_type: 'basic', sync_enabled: true, sync_interval_minutes: 5, max_failures: 5,
             });
@@ -82,6 +86,8 @@ const PluginFormPage: React.FC = () => {
             try {
                 const res = await getPlugin(params.id!);
                 const plugin = (res as any)?.data || res;
+                originalConfigRef.current = plugin.config || {};
+                setLoadedAuthType(plugin.config?.auth_type || 'basic');
                 form.setFieldsValue({
                     name: plugin.name,
                     type: plugin.type,
@@ -90,9 +96,9 @@ const PluginFormPage: React.FC = () => {
                     url: plugin.config?.url,
                     auth_type: plugin.config?.auth_type || 'basic',
                     username: plugin.config?.username,
-                    password: plugin.config?.password,
-                    token: plugin.config?.token,
-                    api_key: plugin.config?.api_key,
+                    password: undefined,
+                    token: undefined,
+                    api_key: undefined,
                     api_key_header: plugin.config?.api_key_header,
                     since_param: plugin.config?.since_param,
                     response_data_path: plugin.config?.response_data_path,
@@ -100,7 +106,6 @@ const PluginFormPage: React.FC = () => {
                     close_incident_method: plugin.config?.close_incident_method,
                     sync_enabled: plugin.sync_enabled,
                     sync_interval_minutes: plugin.sync_interval_minutes || 5,
-                    max_failures: plugin.max_failures ?? 5,
                 });
 
                 // Mappings
@@ -157,18 +162,31 @@ const PluginFormPage: React.FC = () => {
             const values = await form.validateFields();
             setSubmitting(true);
 
+            const originalConfig = originalConfigRef.current || {};
             const config: any = {
                 url: values.url,
                 auth_type: values.auth_type,
             };
             if (values.auth_type === 'basic') {
                 config.username = values.username;
-                config.password = values.password;
+                if (values.password) {
+                    config.password = values.password;
+                } else if (isEdit && originalConfig.auth_type === 'basic' && originalConfig.password) {
+                    config.password = originalConfig.password;
+                }
             } else if (values.auth_type === 'bearer') {
-                config.token = values.token;
+                if (values.token) {
+                    config.token = values.token;
+                } else if (isEdit && originalConfig.auth_type === 'bearer' && originalConfig.token) {
+                    config.token = originalConfig.token;
+                }
             } else if (values.auth_type === 'api_key') {
-                config.api_key = values.api_key;
                 config.api_key_header = values.api_key_header;
+                if (values.api_key) {
+                    config.api_key = values.api_key;
+                } else if (isEdit && originalConfig.auth_type === 'api_key' && originalConfig.api_key) {
+                    config.api_key = originalConfig.api_key;
+                }
             }
             if (values.since_param) config.since_param = values.since_param;
             if (values.response_data_path) config.response_data_path = values.response_data_path;
@@ -212,7 +230,7 @@ const PluginFormPage: React.FC = () => {
                 sync_filter,
                 sync_enabled: Boolean(values.sync_enabled),
                 sync_interval_minutes: Number(values.sync_interval_minutes) || 5,
-                max_failures: Number(values.max_failures) ?? 5,
+                max_failures: Number(values.max_failures) || 0,
             };
 
             if (isEdit && params.id) {
@@ -330,7 +348,7 @@ const PluginFormPage: React.FC = () => {
                                     <Form.Item
                                         name="username" label="用户名"
                                         tooltip="用于调用外部系统 API 的账号用户名"
-                                        rules={[{ required: !isEdit }]}
+                                        rules={[{ required: !isEdit || loadedAuthType !== 'basic' }]}
                                     >
                                         <Input placeholder="api_user" />
                                     </Form.Item>
@@ -339,7 +357,7 @@ const PluginFormPage: React.FC = () => {
                                     <Form.Item
                                         name="password" label="密码"
                                         tooltip="该账号对应的密码"
-                                        rules={[{ required: !isEdit }]}
+                                        rules={[{ required: !isEdit || loadedAuthType !== 'basic' }]}
                                     >
                                         <Input.Password placeholder={isEdit ? '留空保持不变' : ''} />
                                     </Form.Item>
@@ -352,7 +370,7 @@ const PluginFormPage: React.FC = () => {
                                     <Form.Item
                                         name="token" label="Bearer Token"
                                         tooltip="OAuth2 Access Token 或 JWT Token。不需要加 'Bearer' 前缀"
-                                        rules={[{ required: !isEdit }]}
+                                        rules={[{ required: !isEdit || loadedAuthType !== 'bearer' }]}
                                         extra="系统会自动添加 'Bearer' 前缀到请求头中"
                                     >
                                         <Input.Password placeholder={isEdit ? '留空保持不变' : 'eyJhbGciOiJIUzI1NiIs...'} />
@@ -366,7 +384,7 @@ const PluginFormPage: React.FC = () => {
                                     <Form.Item
                                         name="api_key" label="API Key"
                                         tooltip="外部系统颁发的 API 密钥"
-                                        rules={[{ required: !isEdit }]}
+                                        rules={[{ required: !isEdit || loadedAuthType !== 'api_key' }]}
                                     >
                                         <Input.Password placeholder={isEdit ? '留空保持不变' : ''} />
                                     </Form.Item>

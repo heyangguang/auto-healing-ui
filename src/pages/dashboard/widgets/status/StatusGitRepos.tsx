@@ -1,21 +1,25 @@
 import { ForkOutlined } from '@ant-design/icons';
 import { Badge, Typography, Empty, Button } from 'antd';
-import { useRequest } from '@umijs/max';
+import { useAccess, useRequest } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { request, history } from '@umijs/max';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 
 async function getGitRepos() {
-    return request('/api/v1/tenant/git-repos', {
+    return fetchAllPages<any>((page, pageSize) => request('/api/v1/tenant/git-repos', {
         method: 'GET',
-        params: { page_size: 20 },
-    });
+        params: { page, page_size: pageSize },
+    }));
 }
 
 const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(getGitRepos);
+    const access = useAccess();
+    const { data: rawData, loading, refresh } = useRequest(getGitRepos, {
+        ready: !!access.canViewRepositories,
+    });
     const data = rawData as any;
     let items: any[] = [];
     if (Array.isArray(data)) {
@@ -36,7 +40,7 @@ const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                         description="暂无数据"
                     >
-                        <Button type="primary" size="small" onClick={() => history.push('/execution/git-repos')}>去配置</Button>
+                        <Button type="primary" size="small" disabled={!access.canViewRepositories} onClick={() => history.push('/execution/git-repos')}>去配置</Button>
                     </Empty>
                 </div>
             ) : (
@@ -51,7 +55,7 @@ const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                                             {item.name}
                                         </Typography.Text>
                                         <Typography.Text type="secondary" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
-                                            {item.last_synced_at ? dayjs(item.last_synced_at).fromNow() : '未同步'}
+                                            {item.last_sync_at ? dayjs(item.last_sync_at).fromNow() : '未同步'}
                                         </Typography.Text>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

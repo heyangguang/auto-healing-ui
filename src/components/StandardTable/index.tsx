@@ -547,6 +547,7 @@ function StandardTable<T extends Record<string, any>>({
             // children 模式：通过 onSearch 回调通知外部
             if (onSearch) {
                 const activeFilters = filters ?? searchFilters;
+                const primaryFilter = activeFilters[0];
                 const filtersAsSearch: Record<string, any> = {};
                 activeFilters.forEach(f => {
                     filtersAsSearch[f.field] = f.value;
@@ -565,8 +566,8 @@ function StandardTable<T extends Record<string, any>>({
                     ? processedAdvanced
                     : activeFilters.length > 0 ? filtersAsSearch : undefined;
                 onSearch({
-                    searchField: undefined,
-                    searchValue: undefined,
+                    searchField: primaryFilter?.field,
+                    searchValue: primaryFilter?.value,
                     advancedSearch: mergedAdvanced,
                     filters: activeFilters.map(f => ({ field: f.field, value: f.value })),
                 });
@@ -576,6 +577,7 @@ function StandardTable<T extends Record<string, any>>({
         setLoading(true);
         try {
             const activeFilters = filters ?? searchFilters;
+            const primaryFilter = activeFilters[0];
             // 将筛选标签转为 advancedSearch 格式
             const filtersAsSearch: Record<string, any> = {};
             activeFilters.forEach(f => {
@@ -600,8 +602,8 @@ function StandardTable<T extends Record<string, any>>({
             const result = await request({
                 page: p,
                 pageSize: ps,
-                searchField: undefined,
-                searchValue: undefined,
+                searchField: primaryFilter?.field,
+                searchValue: primaryFilter?.value,
                 advancedSearch: mergedAdvanced,
                 sorter: s,
             });

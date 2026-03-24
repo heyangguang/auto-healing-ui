@@ -104,7 +104,7 @@ export async function retryInstance(id: string, data?: AutoHealing.RetryInstance
 export async function getPendingTriggers(params?: {
     page?: number;
     page_size?: number;
-    search?: string;
+    title?: string;
     severity?: string;
     date_from?: string;
     date_to?: string;
@@ -139,7 +139,7 @@ export async function dismissIncident(id: string) {
 export async function getDismissedTriggers(params?: {
     page?: number;
     page_size?: number;
-    search?: string;
+    title?: string;
     severity?: string;
     date_from?: string;
     date_to?: string;
@@ -308,7 +308,7 @@ export async function getApprovals(params?: {
 export async function getPendingApprovals(params?: {
     page?: number;
     page_size?: number;
-    search?: string;
+    node_name?: string;
     date_from?: string;
     date_to?: string;
 }) {

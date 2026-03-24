@@ -4,6 +4,7 @@ import {
     RocketOutlined, CheckCircleOutlined, StopOutlined,
     SendOutlined, BellOutlined
 } from '@ant-design/icons';
+import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 
 const { Text } = Typography;
 
@@ -91,12 +92,9 @@ const NotificationConfigDisplay: React.FC<NotificationConfigDisplayProps> = ({
     };
 
     // 检查是否有任何配置
-    const hasAnyConfig = TRIGGERS.some(t => {
-        const config = getTriggerConfig(t.key);
-        return config.enabled && getConfigList(t.key).length > 0;
-    });
+    const hasAnyConfig = hasEffectiveNotificationConfig(value as any);
 
-    if (!value?.enabled || !hasAnyConfig) {
+    if (!hasAnyConfig) {
         return (
             <div style={{
                 padding: compact ? '8px 12px' : '12px 16px',
@@ -115,7 +113,7 @@ const NotificationConfigDisplay: React.FC<NotificationConfigDisplayProps> = ({
     // 获取启用的触发器
     const enabledTriggers = TRIGGERS.filter(t => {
         const config = getTriggerConfig(t.key);
-        return config.enabled && getConfigList(t.key).length > 0;
+        return config.enabled !== false && getConfigList(t.key).length > 0;
     });
 
     return (

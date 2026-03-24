@@ -7,6 +7,8 @@ export async function getIncidents(params?: {
     page?: number;
     page_size?: number;
     search?: string;
+    title?: string;
+    external_id?: string;
     plugin_id?: string;
     source_plugin_name?: string;
     status?: AutoHealing.IncidentStatus;

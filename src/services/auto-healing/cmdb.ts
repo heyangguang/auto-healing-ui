@@ -6,13 +6,22 @@ import { request } from '@umijs/max';
 export async function getCMDBItems(params?: {
     page?: number;
     page_size?: number;
+    name?: string;
+    name__exact?: string;
+    hostname?: string;
+    hostname__exact?: string;
+    ip_address?: string;
+    ip_address__exact?: string;
     type?: AutoHealing.CMDBItemType;
     status?: AutoHealing.CMDBItemStatus;
     environment?: AutoHealing.CMDBEnvironment;
     source_plugin_name?: string;
+    source_plugin_name__exact?: string;
     plugin_id?: string;
     has_plugin?: boolean | string;
-    keyword?: string; // Support fuzzy search
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+    keyword?: string;
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.CMDBItem>>('/api/v1/tenant/cmdb', {
         method: 'GET',
@@ -35,7 +44,19 @@ export async function getCMDBStats() {
  * 获取 CMDB 配置项 ID 列表（轻量接口，用于全选）
  */
 export async function getCMDBItemIds(params?: {
+    name?: string;
+    name__exact?: string;
+    hostname?: string;
+    hostname__exact?: string;
+    ip_address?: string;
+    ip_address__exact?: string;
+    type?: AutoHealing.CMDBItemType;
     status?: AutoHealing.CMDBItemStatus;
+    environment?: AutoHealing.CMDBEnvironment;
+    source_plugin_name?: string;
+    source_plugin_name__exact?: string;
+    plugin_id?: string;
+    has_plugin?: boolean | string;
     keyword?: string;
 }) {
     return request<{ code: number; message: string; data: { items: { id: string; name: string; hostname: string; ip_address: string; status: string }[] } }>(

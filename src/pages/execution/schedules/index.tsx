@@ -16,7 +16,7 @@ import 'dayjs/locale/zh-cn';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { history, useAccess } from '@umijs/max';
 import {
-    getExecutionSchedules, deleteExecutionSchedule,
+    getExecutionSchedule, getExecutionSchedules, deleteExecutionSchedule,
     enableExecutionSchedule, disableExecutionSchedule, updateExecutionSchedule,
     getExecutionTasks, getExecutionScheduleStats, getScheduleTimeline
 } from '@/services/auto-healing/execution';
@@ -26,6 +26,8 @@ import NotificationConfigDisplay from '@/components/NotificationSelector/Notific
 import StandardTable from '@/components/StandardTable';
 import type { StandardColumnDef, AdvancedSearchField } from '@/components/StandardTable';
 import ScheduleTimeline from './components/ScheduleTimeline';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
+import { fetchAllPages } from '@/utils/fetchAllPages';
 
 import './schedule.css';
 
@@ -76,9 +78,9 @@ const ExecutionSchedulePage: React.FC = () => {
         try {
             const [timelineRes, taskRes, chRes, tplRes, secRes] = await Promise.all([
                 getScheduleTimeline({ date: dayjs().format('YYYY-MM-DD') }),
-                getExecutionTasks({ page: 1, page_size: 100 }),
-                getChannels({ page_size: 100 }).catch(() => ({ data: [] })),
-                getTemplates({ page: 1, page_size: 100 }).catch(() => ({ data: [] })),
+                fetchAllPages<AutoHealing.ExecutionTask>((page, pageSize) => getExecutionTasks({ page, page_size: pageSize })),
+                fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize })).catch(() => []),
+                fetchAllPages<AutoHealing.NotificationTemplate>((page, pageSize) => getTemplates({ page, page_size: pageSize })).catch(() => []),
                 getSecretsSources().catch(() => ({ data: [] })),
             ]);
             // 时间轴轻量数据映射为 ExecutionSchedule 形状（仅含时间轴需要的字段）
@@ -87,9 +89,9 @@ const ExecutionSchedulePage: React.FC = () => {
                 // 确保 ScheduleTimeline 组件能读取 task_id
             })) as AutoHealing.ExecutionSchedule[];
             setAllSchedules(allItems);
-            setTemplates(taskRes.data || []);
-            setChannels((chRes as any).data || []);
-            setNotifyTemplates((tplRes as any).data || []);
+            setTemplates(taskRes);
+            setChannels(chRes as any);
+            setNotifyTemplates(tplRes as any);
             setSecretsSources((secRes as any).data || []);
             // 统计从后端 stats API 获取
             getExecutionScheduleStats().then(statsRes => {
@@ -99,7 +101,8 @@ const ExecutionSchedulePage: React.FC = () => {
                     setStats({
                         total: statsRes.data.total || 0,
                         active: statsRes.data.enabled_count || 0,
-                        paused: statsRes.data.disabled_count || 0,
+                        paused: (statsRes.data.disabled_count || 0)
+                            + (((statsRes.data.by_status || []).find((x: any) => x.status === 'auto_paused')?.count) || 0),
                         cron: getCronCount,
                     });
                 }
@@ -133,6 +136,18 @@ const ExecutionSchedulePage: React.FC = () => {
         newScheduledAt: any;
     }>({ visible: false, schedule: null, newScheduledAt: null });
 
+    const openScheduleDetail = useCallback(async (schedule: AutoHealing.ExecutionSchedule) => {
+        setSelectedSchedule(schedule);
+        setDrawerVisible(true);
+        try {
+            const res = await getExecutionSchedule(schedule.id);
+            const detail = res?.data || schedule;
+            setSelectedSchedule(detail);
+        } catch {
+            // keep lightweight payload as fallback
+        }
+    }, []);
+
     // ==================== Actions ====================
     const handleToggle = async (schedule: AutoHealing.ExecutionSchedule, enabled: boolean) => {
         if (enabled && schedule.schedule_type === 'once') {
@@ -162,10 +177,21 @@ const ExecutionSchedulePage: React.FC = () => {
         }
         setActionLoading(enableOnceModal.schedule.id);
         try {
+            const detailRes = await getExecutionSchedule(enableOnceModal.schedule.id);
+            const detail = detailRes?.data || enableOnceModal.schedule;
             await updateExecutionSchedule(enableOnceModal.schedule.id, {
+                name: detail.name,
+                schedule_type: detail.schedule_type,
+                schedule_expr: detail.schedule_expr || undefined,
                 scheduled_at: dayjs.isDayjs(enableOnceModal.newScheduledAt)
                     ? enableOnceModal.newScheduledAt.format()
                     : enableOnceModal.newScheduledAt,
+                description: detail.description,
+                max_failures: detail.max_failures,
+                target_hosts_override: detail.target_hosts_override,
+                extra_vars_override: detail.extra_vars_override,
+                secrets_source_ids: detail.secrets_source_ids,
+                skip_notification: detail.skip_notification,
             } as any);
             await enableExecutionSchedule(enableOnceModal.schedule.id);
             message.success('调度已启用');
@@ -276,7 +302,7 @@ const ExecutionSchedulePage: React.FC = () => {
                     checked={enabled}
                     loading={actionLoading === record.id}
                     onChange={checked => handleToggle(record, checked)}
-                    disabled={!access.canManageSchedule}
+                    disabled={!access.canUpdateTask}
                 />
             ),
         },
@@ -306,15 +332,15 @@ const ExecutionSchedulePage: React.FC = () => {
             fixedColumn: true,
             render: (_: any, record: AutoHealing.ExecutionSchedule) => (
                 <Space separator={<Divider orientation="vertical" />}>
-                    <a onClick={() => { setSelectedSchedule(record); setDrawerVisible(true); }}>
+                    <a onClick={() => { openScheduleDetail(record); }}>
                         <Tooltip title="查看详情"><EyeOutlined style={{ fontSize: 16 }} /></Tooltip>
                     </a>
-                    {access.canManageSchedule && (
+                    {access.canUpdateTask && (
                         <a onClick={() => history.push(`/execution/schedules/${record.id}/edit`)}>
                             <Tooltip title="编辑"><EditOutlined style={{ fontSize: 16 }} /></Tooltip>
                         </a>
                     )}
-                    {access.canManageSchedule && (
+                    {access.canDeleteTask && (
                         <Popconfirm
                             title="确认删除此调度？"
                             onConfirm={() => handleDelete(record)}
@@ -410,6 +436,7 @@ const ExecutionSchedulePage: React.FC = () => {
                 { label: '待执行', value: 'pending' },
                 { label: '已完成', value: 'completed' },
                 { label: '已禁用', value: 'disabled' },
+                { label: '自动暂停', value: 'auto_paused' },
             ]
         },
         { key: 'created_at', label: '创建时间', type: 'dateRange' },
@@ -435,8 +462,8 @@ const ExecutionSchedulePage: React.FC = () => {
                 });
                 // 日期范围
                 if (adv.created_at && Array.isArray(adv.created_at) && adv.created_at.length === 2) {
-                    apiParams.created_from = adv.created_at[0].toISOString();
-                    apiParams.created_to = adv.created_at[1].toISOString();
+                    apiParams.created_from = toDayRangeStartISO(adv.created_at[0]);
+                    apiParams.created_to = toDayRangeEndISO(adv.created_at[1]);
                 }
                 // 通用字段传递
                 const specialKeys = [...boolKeys, 'created_at'];
@@ -496,7 +523,7 @@ const ExecutionSchedulePage: React.FC = () => {
                     <Button
                         icon={<EditOutlined />}
                         onClick={() => history.push(`/execution/schedules/${selectedSchedule.id}/edit`)}
-                        disabled={!access.canManageSchedule}
+                        disabled={!access.canUpdateTask}
                     >
                         编辑
                     </Button>
@@ -524,8 +551,11 @@ const ExecutionSchedulePage: React.FC = () => {
                                 <Tag color={selectedSchedule.schedule_type === 'cron' ? 'blue' : 'purple'} style={{ margin: 0, fontSize: 11 }}>
                                     {selectedSchedule.schedule_type === 'cron' ? '循环执行' : '单次执行'}
                                 </Tag>
-                                <Tag color={selectedSchedule.enabled ? 'green' : 'default'} style={{ margin: 0, fontSize: 11 }}>
-                                    {selectedSchedule.enabled ? '已启用' : '已暂停'}
+                                <Tag
+                                    color={selectedSchedule.status === 'auto_paused' ? 'orange' : selectedSchedule.enabled ? 'green' : 'default'}
+                                    style={{ margin: 0, fontSize: 11 }}
+                                >
+                                    {selectedSchedule.status === 'auto_paused' ? '自动暂停' : selectedSchedule.enabled ? '已启用' : '已暂停'}
                                 </Tag>
                             </div>
                         </div>
@@ -534,7 +564,7 @@ const ExecutionSchedulePage: React.FC = () => {
                             checked={selectedSchedule.enabled}
                             loading={actionLoading === selectedSchedule.id}
                             onChange={checked => handleToggle(selectedSchedule, checked)}
-                            disabled={!access.canManageSchedule}
+                            disabled={!access.canUpdateTask}
                         />
                     </div>
 
@@ -759,7 +789,7 @@ const ExecutionSchedulePage: React.FC = () => {
                     <ScheduleTimeline
                         schedules={allSchedules}
                         templateMap={templateMap}
-                        onScheduleClick={s => { setSelectedSchedule(s); setDrawerVisible(true); }}
+                        onScheduleClick={openScheduleDetail}
                     />
                 )}
             </Card>
@@ -786,12 +816,9 @@ const ExecutionSchedulePage: React.FC = () => {
                 refreshTrigger={refreshTrigger}
                 primaryActionLabel="创建调度"
                 primaryActionIcon={<PlusOutlined />}
-                primaryActionDisabled={!access.canManageSchedule}
+                primaryActionDisabled={!access.canCreateTask}
                 onPrimaryAction={() => history.push('/execution/schedules/create')}
-                onRowClick={(record) => {
-                    setSelectedSchedule(record);
-                    setDrawerVisible(true);
-                }}
+                onRowClick={openScheduleDetail}
             />
 
             {/* Detail Drawer */}

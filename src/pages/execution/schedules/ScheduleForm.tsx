@@ -26,6 +26,8 @@ import HostList from '../execute/components/HostList';
 import SecretsSelector from '@/components/SecretsSelector';
 import CronEditor from '@/components/CronEditor';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
+import { fetchAllPages } from '@/utils/fetchAllPages';
+import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import '../templates/TemplateForm.css';
 import '@/components/StandardTable/index.css';
 import './schedule.css';
@@ -78,18 +80,17 @@ const ScheduleForm: React.FC = () => {
             setLoading(true);
             try {
                 const [taskRes, pbRes, secretsRes, channelsRes, tplRes] = await Promise.all([
-                    getExecutionTasks({ page: 1, page_size: 100 }),
-                    getPlaybooks({ page_size: 100 }),
+                    fetchAllPages<AutoHealing.ExecutionTask>((page, pageSize) => getExecutionTasks({ page, page_size: pageSize })),
+                    fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ page, page_size: pageSize })),
                     getSecretsSources(),
-                    getChannels({ page_size: 100 }),
-                    getTemplates({ page: 1, page_size: 100 }).catch(() => ({ data: [] })),
+                    fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize })),
+                    fetchAllPages<AutoHealing.NotificationTemplate>((page, pageSize) => getTemplates({ page, page_size: pageSize })).catch(() => []),
                 ]);
-                const templatesData = taskRes.data || [];
-                setTemplates(templatesData);
-                setPlaybooks(pbRes.data || pbRes.items || []);
+                setTemplates(taskRes);
+                setPlaybooks(pbRes);
                 setSecretsSources(secretsRes.data || []);
-                setChannels(channelsRes.data || []);
-                setNotifyTemplates((tplRes as any).data || []);
+                setChannels(channelsRes);
+                setNotifyTemplates(tplRes as any);
 
                 // If editing, load the schedule data
                 if (isEdit && params.id) {
@@ -97,7 +98,7 @@ const ScheduleForm: React.FC = () => {
                     const schedule = scheduleRes?.data || (scheduleRes as any);
                     if (schedule) {
                         setEditingSchedule(schedule);
-                        const template = templatesData.find((t: any) => t.id === schedule.task_id);
+                        const template = taskRes.find((t: any) => t.id === schedule.task_id);
                         if (template) {
                             setSelectedTemplate(template);
                             // Load playbook
@@ -116,6 +117,7 @@ const ScheduleForm: React.FC = () => {
                             schedule_expr: schedule.schedule_expr,
                             scheduled_at: schedule.scheduled_at ? dayjs(schedule.scheduled_at) : undefined,
                             description: schedule.description,
+                            max_failures: schedule.max_failures,
                         });
                         // Populate overrides
                         if (schedule.target_hosts_override) {
@@ -153,8 +155,8 @@ const ScheduleForm: React.FC = () => {
             );
         }
         if (filterExecutor) result = result.filter(t => t.executor_type === filterExecutor);
-        if (filterNotification === 'yes') result = result.filter(t => t.notification_config?.enabled);
-        if (filterNotification === 'no') result = result.filter(t => !t.notification_config?.enabled);
+        if (filterNotification === 'yes') result = result.filter(t => hasEffectiveNotificationConfig(t.notification_config as any));
+        if (filterNotification === 'no') result = result.filter(t => !hasEffectiveNotificationConfig(t.notification_config as any));
         if (onlyReady) result = result.filter(t => !t.needs_review && t.playbook?.status === 'ready');
         return result;
     }, [templates, searchText, filterExecutor, filterNotification, onlyReady]);
@@ -211,6 +213,7 @@ const ScheduleForm: React.FC = () => {
                 extra_vars_override: Object.keys(variableValues).length > 0 ? variableValues : undefined,
                 secrets_source_ids: secretsSourceIds.length > 0 ? secretsSourceIds : undefined,
                 skip_notification: skipNotification || undefined,
+                max_failures: editingSchedule?.max_failures,
             };
 
             if (isEdit && editingSchedule) {
@@ -232,7 +235,7 @@ const ScheduleForm: React.FC = () => {
 
     // ==================== Notification ====================
     const hasNotificationConfig = useMemo(() => {
-        return selectedTemplate?.notification_config?.enabled === true;
+        return hasEffectiveNotificationConfig(selectedTemplate?.notification_config as any);
     }, [selectedTemplate]);
 
     // ==================== Render ====================
@@ -386,7 +389,7 @@ const ScheduleForm: React.FC = () => {
                 actions={
                     <div className="template-form-actions">
                         <Button onClick={() => isEdit ? history.push('/execution/schedules') : setStep('select')}>取消</Button>
-                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={!access.canManageSchedule}>
+                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={isEdit ? !access.canUpdateTask : !access.canCreateTask}>
                             {isEdit ? '保存配置' : '创建调度'}
                         </Button>
                     </div>

@@ -9,7 +9,7 @@ import {
     EyeOutlined, ApiOutlined, NodeIndexOutlined, ClockCircleOutlined,
     LoadingOutlined,
 } from '@ant-design/icons';
-import { getFlows } from '@/services/auto-healing/healing';
+import { getFlow, getFlows } from '@/services/auto-healing/healing';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -126,6 +126,21 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
             }
         }
     }, [value, flows]);
+
+    useEffect(() => {
+        if (!open || !value || selectedFlow?.id === value) return;
+        getFlow(value)
+            .then((res) => {
+                const flow = res?.data;
+                if (flow?.id) {
+                    setSelectedFlow(flow);
+                    setSelectedId(flow.id);
+                }
+            })
+            .catch(() => {
+                // ignore stale selection
+            });
+    }, [open, value, selectedFlow?.id]);
 
     // ==================== Handlers ====================
     const handleSelect = (flow: AutoHealing.HealingFlow) => {

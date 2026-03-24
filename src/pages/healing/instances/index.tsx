@@ -23,6 +23,7 @@ import AutoLayoutButton from './components/AutoLayoutButton';
 import { getHealingInstances, getHealingInstanceDetail, getHealingInstanceStats } from '@/services/auto-healing/instances';
 import { getInstanceStatusOptions } from '@/constants/instanceDicts';
 import dayjs from 'dayjs';
+import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 
 import '../../../pages/execution/git-repos/index.css';
 import './instances.css';
@@ -105,6 +106,7 @@ const searchFields: SearchField[] = [
 const advancedSearchFields: AdvancedSearchField[] = [
     { key: 'flow_name', label: '流程名称', type: 'input', placeholder: '输入流程名称搜索' },
     { key: 'rule_name', label: '规则名称', type: 'input', placeholder: '输入规则名称搜索' },
+    { key: 'incident_title', label: '工单标题', type: 'input', placeholder: '输入工单标题搜索' },
     { key: 'error_message', label: '错误信息', type: 'input', placeholder: '输入错误信息关键字' },
     { key: 'created_at', label: '创建时间', type: 'dateRange' },
     { key: 'started_at', label: '开始时间', type: 'dateRange' },
@@ -208,21 +210,22 @@ const InstanceList: React.FC = () => {
         if (sp.approval_status) params.approval_status = sp.approval_status;
         if (sp.flow_name) params.flow_name = sp.flow_name;
         if (sp.rule_name) params.rule_name = sp.rule_name;
+        if (sp.incident_title) params.incident_title = sp.incident_title;
         if (sp.error_message) params.error_message = sp.error_message;
         if (sp.created_at) {
             const [from, to] = sp.created_at;
-            if (from) params.created_from = from;
-            if (to) params.created_to = to;
+            if (from) params.created_from = toDayRangeStartISO(from);
+            if (to) params.created_to = toDayRangeEndISO(to);
         }
         if (sp.started_at) {
             const [from, to] = sp.started_at;
-            if (from) params.started_from = from;
-            if (to) params.started_to = to;
+            if (from) params.started_from = toDayRangeStartISO(from);
+            if (to) params.started_to = toDayRangeEndISO(to);
         }
         if (sp.completed_at) {
             const [from, to] = sp.completed_at;
-            if (from) params.completed_from = from;
-            if (to) params.completed_to = to;
+            if (from) params.completed_from = toDayRangeStartISO(from);
+            if (to) params.completed_to = toDayRangeEndISO(to);
         }
         return params;
     }, [sortBy, sortOrder]);
@@ -412,7 +415,6 @@ const InstanceList: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/tenant/healing/instances/search-schema"
                 onSearch={handleSearch}
                 extraToolbarActions={sortToolbar}
             >
@@ -609,4 +611,3 @@ const InstanceList: React.FC = () => {
 };
 
 export default InstanceList;
-

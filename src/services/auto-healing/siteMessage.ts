@@ -29,6 +29,7 @@ export async function getSiteMessages(params?: {
     page_size?: number;
     keyword?: string;
     category?: string;
+    is_read?: boolean;
 }, options?: Record<string, any>) {
     return request<{
         code: number;

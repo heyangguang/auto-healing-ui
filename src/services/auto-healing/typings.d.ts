@@ -75,6 +75,8 @@ declare namespace AutoHealing {
         token_type: string;
         expires_in: number;
         user: UserInfo;
+        tenants: TenantBrief[];
+        current_tenant_id: UUID | '';
     }
 
     interface RefreshTokenRequest {
@@ -83,7 +85,10 @@ declare namespace AutoHealing {
 
     interface RefreshTokenResponse {
         access_token: string;
+        refresh_token: string;
         expires_in: number;
+        tenants: TenantBrief[];
+        current_tenant_id: UUID | '';
     }
 
     interface ChangePasswordRequest {
@@ -98,6 +103,13 @@ declare namespace AutoHealing {
         display_name: string;
         roles: string[];
         permissions: string[];
+        is_platform_admin: boolean;
+    }
+
+    interface TenantBrief {
+        id: UUID;
+        name: string;
+        code: string;
     }
 
     // ==================== 用户管理 ====================
@@ -109,6 +121,8 @@ declare namespace AutoHealing {
         status: 'active' | 'inactive';
         created_at: string;
         updated_at: string;
+        roles?: RoleDetail[];
+        is_platform_admin?: boolean;
     }
 
     interface CreateUserRequest {
@@ -116,6 +130,8 @@ declare namespace AutoHealing {
         email: string;
         password: string;
         display_name?: string;
+        /** 单角色模型：推荐传 role_id；兼容旧接口仍接受 role_ids（长度应 <= 1） */
+        role_id?: UUID;
         role_ids?: UUID[];
     }
 
@@ -386,7 +402,7 @@ declare namespace AutoHealing {
     // ==================== CMDB ====================
     type CMDBItemType = 'server' | 'application' | 'network' | 'database';
     type CMDBItemStatus = 'active' | 'offline' | 'maintenance';
-    type CMDBEnvironment = 'production' | 'staging' | 'development';
+    type CMDBEnvironment = 'production' | 'staging' | 'test' | 'dev';
 
     interface CMDBItem {
         id: UUID;
@@ -521,6 +537,7 @@ declare namespace AutoHealing {
         error_message?: string;
         sync_enabled: boolean;
         sync_interval: string;
+        max_failures?: number;
         next_sync_at: string | null;
         created_at: string;
         updated_at: string;
@@ -534,6 +551,7 @@ declare namespace AutoHealing {
         auth_config?: Record<string, any>;
         sync_enabled?: boolean;
         sync_interval?: string;
+        max_failures?: number;
     }
 
     interface UpdateGitRepoRequest {
@@ -542,6 +560,7 @@ declare namespace AutoHealing {
         auth_config?: Record<string, any>;
         sync_enabled?: boolean;
         sync_interval?: string;
+        max_failures?: number;
     }
 
     // ==================== Playbook 模板 ====================
@@ -736,7 +755,7 @@ declare namespace AutoHealing {
 
     // ==================== 定时调度 ====================
     type ScheduleType = 'cron' | 'once';
-    type ScheduleStatus = 'running' | 'pending' | 'completed' | 'disabled';
+    type ScheduleStatus = 'running' | 'pending' | 'completed' | 'disabled' | 'auto_paused';
 
     interface ExecutionSchedule {
         id: UUID;
@@ -750,6 +769,7 @@ declare namespace AutoHealing {
         last_run_at: string | null;
         enabled: boolean;
         description?: string;
+        max_failures?: number;
         // Execution parameter overrides
         target_hosts_override?: string;
         extra_vars_override?: Record<string, any>;
@@ -780,6 +800,7 @@ declare namespace AutoHealing {
         schedule_expr?: string;
         scheduled_at?: string;
         description?: string;
+        max_failures?: number;
         // Execution parameter overrides
         target_hosts_override?: string;
         extra_vars_override?: Record<string, any>;
@@ -822,8 +843,9 @@ declare namespace AutoHealing {
             max_retries: number;
             retry_intervals: number[];
         };
-        default_recipients?: string[];
+        recipients?: string[];
         is_default?: boolean;
+        rate_limit_per_minute?: number;
     }
 
     interface UpdateChannelRequest {
@@ -836,7 +858,8 @@ declare namespace AutoHealing {
             max_retries: number;
             retry_intervals: number[];
         };
-        default_recipients?: string[];
+        recipients?: string[];
+        rate_limit_per_minute?: number;
     }
 
     interface NotificationTemplate {
@@ -862,7 +885,6 @@ declare namespace AutoHealing {
         subject_template: string;
         body_template: string;
         format?: TemplateFormat;
-        is_active?: boolean;
     }
 
     interface UpdateTemplateRequest {
@@ -877,7 +899,7 @@ declare namespace AutoHealing {
     }
 
     interface PreviewTemplateRequest {
-        sample_data?: Record<string, any>;
+        variables?: Record<string, any>;
     }
 
     interface PreviewTemplateResponse {
@@ -1387,7 +1409,7 @@ declare namespace AutoHealing {
         trigger_mode?: TriggerMode;
         conditions?: HealingRuleCondition[];
         match_mode?: MatchMode;
-        flow_id?: UUID;
+        flow_id?: UUID | null;
         is_active?: boolean;
     }
 
@@ -1398,10 +1420,9 @@ declare namespace AutoHealing {
         trigger_mode?: TriggerMode;
         conditions?: HealingRuleCondition[];
         match_mode?: MatchMode;
-        flow_id?: UUID;
+        flow_id?: UUID | null;
         is_active?: boolean;
     }
 
 
 }
-

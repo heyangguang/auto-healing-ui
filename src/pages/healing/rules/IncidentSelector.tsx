@@ -7,7 +7,7 @@ import {
     SearchOutlined, AlertOutlined, CheckCircleOutlined, ClockCircleOutlined,
     LoadingOutlined, DatabaseOutlined, DesktopOutlined, UserOutlined,
 } from '@ant-design/icons';
-import { getIncidents } from '@/services/auto-healing/incidents';
+import { getIncident, getIncidents } from '@/services/auto-healing/incidents';
 import { INCIDENT_SEVERITY_MAP, INCIDENT_STATUS_MAP, INCIDENT_HEALING_MAP, getSeverityOptions, getIncidentStatusOptions } from '@/constants/incidentDicts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -112,6 +112,20 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
             }
         }
     }, [value, incidents]);
+
+    useEffect(() => {
+        if (!open || !value || selectedIncident?.id === value) return;
+        getIncident(value)
+            .then((incident) => {
+                if (incident?.id) {
+                    setSelectedIncident(incident);
+                    setSelectedId(incident.id);
+                }
+            })
+            .catch(() => {
+                // ignore stale selection
+            });
+    }, [open, value, selectedIncident?.id]);
 
     // ==================== Handlers ====================
     const handleSelect = (incident: AutoHealing.Incident) => {

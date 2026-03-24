@@ -16,6 +16,11 @@ const MODULE_LABELS: Record<string, string> = {
     email: '邮件服务',
 };
 
+const isSensitiveSettingKey = (key?: string) => {
+    const lower = (key || '').toLowerCase();
+    return lower.includes('password') || lower.includes('secret') || lower.includes('token') || lower.includes('api_key');
+};
+
 const PlatformSettingsPage: React.FC = () => {
     const access = useAccess();
     const [loading, setLoading] = useState(true);
@@ -46,7 +51,8 @@ const PlatformSettingsPage: React.FC = () => {
     const enterEdit = (mod: PlatformSettingModule) => {
         const values: Record<string, any> = {};
         mod.settings.forEach(s => {
-            if (s.type === 'bool') values[s.key] = s.value === 'true';
+            if (isSensitiveSettingKey(s.key)) values[s.key] = '';
+            else if (s.type === 'bool') values[s.key] = s.value === 'true';
             else if (s.type === 'int') values[s.key] = Number(s.value) || 0;
             else values[s.key] = s.value || '';
         });
@@ -67,6 +73,7 @@ const PlatformSettingsPage: React.FC = () => {
             const changes: { key: string; value: string }[] = [];
             mod.settings.forEach(s => {
                 const newVal = String(editValues[s.key] ?? '');
+                if (isSensitiveSettingKey(s.key) && newVal === '') return;
                 if (newVal !== s.value) {
                     changes.push({ key: s.key, value: newVal });
                 }
@@ -78,13 +85,25 @@ const PlatformSettingsPage: React.FC = () => {
                 return;
             }
 
-            for (const c of changes) {
-                await updatePlatformSetting(c.key, c.value);
-            }
+            const results = await Promise.allSettled(
+                changes.map((c) => updatePlatformSetting(c.key, c.value)),
+            );
+            const failedKeys: string[] = [];
+            let okCount = 0;
+            results.forEach((r, idx) => {
+                if (r.status === 'fulfilled') okCount += 1;
+                else failedKeys.push(changes[idx].key);
+            });
 
-            message.success(`已保存 ${changes.length} 项设置`);
-            cancelEdit();
-            loadSettings();
+            // 无论是否部分成功，都刷新一次，以避免“部分保存成功但页面仍显示旧值”的错觉。
+            await loadSettings();
+
+            if (failedKeys.length === 0) {
+                message.success(`已保存 ${okCount} 项设置`);
+                cancelEdit();
+                return;
+            }
+            message.error(`已保存 ${okCount} 项，失败 ${failedKeys.length} 项：${failedKeys.slice(0, 6).join(', ')}${failedKeys.length > 6 ? '…' : ''}`);
         } catch {
             /* global error handler */
         } finally {
@@ -120,7 +139,7 @@ const PlatformSettingsPage: React.FC = () => {
         if (!setting.value) {
             return <Text type="secondary" style={{ fontSize: 12, fontStyle: 'italic' }}>未设置</Text>;
         }
-        if (setting.key?.includes('password')) {
+        if (isSensitiveSettingKey(setting.key)) {
             return <span style={{ fontSize: 13, color: '#262626' }}>{'••••••••'}</span>;
         }
         return <span style={{ fontSize: 13, color: '#262626' }}>{setting.value}</span>;
@@ -164,11 +183,11 @@ const PlatformSettingsPage: React.FC = () => {
         }
 
         // string — 密码用 Password
-        if (setting.key?.includes('password')) {
+        if (isSensitiveSettingKey(setting.key)) {
             return (
                 <Input.Password
                     value={val}
-                    placeholder={setting.description || '请输入'}
+                    placeholder="留空保持原值"
                     style={{ width: 320 }}
                     onChange={(e) => onChange(e.target.value)}
                 />

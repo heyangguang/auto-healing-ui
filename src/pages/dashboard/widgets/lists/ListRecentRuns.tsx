@@ -1,6 +1,6 @@
 import { FileTextOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
-import { useRequest, history } from '@umijs/max';
+import { useAccess, useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getExecutionRuns } from '@/services/auto-healing/execution';
@@ -9,7 +9,10 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(() => getExecutionRuns({ page_size: 15 }));
+    const access = useAccess();
+    const { data: rawData, loading, refresh } = useRequest(() => getExecutionRuns({ page_size: 15 }), {
+        ready: !!access.canViewTaskDetail,
+    });
     const data = rawData as any;
     const items = data?.data ?? data?.items ?? [];
 
@@ -51,13 +54,14 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                                         gridTemplateColumns: '1.5fr 1fr 60px 100px',
                                         gap: 8,
                                         padding: '8px 12px',
-                                        cursor: 'pointer',
+                                        cursor: access.canViewTaskDetail ? 'pointer' : 'default',
                                         background: index % 2 === 1 ? '#fafafa' : '#fff',
                                         borderBottom: '1px solid #f0f0f0',
                                         transition: 'background 0.3s',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        ...(access.canViewTaskDetail ? {} : { opacity: 0.65 }),
                                     }}
-                                    onClick={() => history.push(`/execution/runs/${item.id}`)}
+                                    onClick={() => access.canViewTaskDetail && history.push(`/execution/runs/${item.id}`)}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                                         <Badge status={st.color as any} />

@@ -60,7 +60,7 @@ const triggerSearchFields: SearchField[] = [
 ];
 
 const approvalSearchFields: SearchField[] = [
-    { key: 'node_name', label: '关键字', placeholder: '搜索节点名/流程ID' },
+    { key: 'node_name', label: '关键字', placeholder: '搜索节点ID/流程ID' },
 ];
 
 /* ============================== 组件 ============================== */
@@ -69,6 +69,7 @@ const PendingCenter: React.FC = () => {
     const access = useAccess();
     const [activeTab, setActiveTab] = useState('triggers');
     const refreshCountRef = useRef(0);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     /* ------------ 用户名映射 ------------ */
     const [userMap, setUserMap] = useState<Record<string, string>>({});
@@ -77,6 +78,7 @@ const PendingCenter: React.FC = () => {
             const map: Record<string, string> = {};
             (res?.data || []).forEach((u: any) => {
                 map[u.id] = u.display_name || u.username || u.id;
+                map[u.username] = u.display_name || u.username || u.id;
             });
             setUserMap(map);
         }).catch(() => { });
@@ -87,8 +89,10 @@ const PendingCenter: React.FC = () => {
         const ids: string[] = record.approvers || [];
         if (ids.length === 0) return '-';
         const localMap = { ...userMap };
-        if (record.initiator?.id) {
-            localMap[record.initiator.id] = record.initiator.display_name || record.initiator.username || record.initiator.id;
+        if (record.initiator?.id || record.initiator?.username) {
+            const name = record.initiator.display_name || record.initiator.username || record.initiator.id;
+            if (record.initiator.id) localMap[record.initiator.id] = name;
+            if (record.initiator.username) localMap[record.initiator.username] = name;
         }
         return ids.map((id: string) => localMap[id] || id.substring(0, 8) + '...').join(', ');
     }, [userMap]);
@@ -119,7 +123,7 @@ const PendingCenter: React.FC = () => {
                     await triggerHealing(id);
                     message.success('已启动自愈流程');
                     refreshCountRef.current += 1;
-                    setActiveTab(prev => prev);
+                    setRefreshKey(prev => prev + 1);
                 } catch {
                     /* global error handler */
                 }
@@ -139,7 +143,7 @@ const PendingCenter: React.FC = () => {
                     await dismissIncident(id);
                     message.success('工单已忽略');
                     refreshCountRef.current += 1;
-                    setActiveTab(prev => prev);
+                    setRefreshKey(prev => prev + 1);
                 } catch {
                     /* global error handler */
                 }
@@ -167,7 +171,7 @@ const PendingCenter: React.FC = () => {
                     await approveTask(id, { comment });
                     message.success('已批准');
                     refreshCountRef.current += 1;
-                    setActiveTab(prev => prev);
+                    setRefreshKey(prev => prev + 1);
                 } catch {
                     /* global error handler */
                 }
@@ -199,7 +203,7 @@ const PendingCenter: React.FC = () => {
                     await rejectTask(id, { comment });
                     message.success('已拒绝');
                     refreshCountRef.current += 1;
-                    setActiveTab(prev => prev);
+                    setRefreshKey(prev => prev + 1);
                 } catch {
                     /* global error handler */
                 }
@@ -296,7 +300,7 @@ const PendingCenter: React.FC = () => {
             dataIndex: 'node_name',
             ellipsis: true,
             fixedColumn: true,
-            render: (_: any, record: any) => record.node_name || '审批节点',
+            render: (_: any, record: any) => record.node_name || record.node_id || '审批节点',
         },
         {
             columnKey: 'flow_instance_id',
@@ -341,7 +345,7 @@ const PendingCenter: React.FC = () => {
                         type="primary"
                         size="small"
                         disabled={!access.canApprove}
-                        onClick={() => handleApprove(record.id, record.node_name || '节点')}
+                        onClick={() => handleApprove(record.id, record.node_name || record.node_id || '节点')}
                     >
                         批准
                     </Button>
@@ -349,7 +353,7 @@ const PendingCenter: React.FC = () => {
                         danger
                         size="small"
                         disabled={!access.canApprove}
-                        onClick={() => handleReject(record.id, record.node_name || '节点')}
+                        onClick={() => handleReject(record.id, record.node_name || record.node_id || '节点')}
                     >
                         拒绝
                     </Button>
@@ -372,6 +376,14 @@ const PendingCenter: React.FC = () => {
             page: params.page,
             page_size: params.pageSize,
         };
+
+        if (params.searchValue) {
+            if (activeTab === 'triggers') {
+                apiParams.title = params.searchValue;
+            } else {
+                apiParams.node_name = params.searchValue;
+            }
+        }
 
         if (params.advancedSearch) {
             if (params.advancedSearch.title) {
@@ -614,7 +626,7 @@ const PendingCenter: React.FC = () => {
     return (
         <>
             <StandardTable<any>
-                key={`${activeTab}-${refreshCountRef.current}`}
+                key={`${activeTab}-${refreshCountRef.current}-${refreshKey}`}
                 tabs={TABS}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}

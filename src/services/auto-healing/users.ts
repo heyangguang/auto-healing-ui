@@ -7,7 +7,6 @@ export async function getUsers(params?: {
     page?: number;
     page_size?: number;
     status?: 'active' | 'inactive';
-    search?: string;
     username?: string;
     email?: string;
     display_name?: string;
@@ -15,8 +14,8 @@ export async function getUsers(params?: {
     role_id?: string;
     sort_by?: string;
     sort_order?: 'asc' | 'desc';
-    created_at_start?: string;
-    created_at_end?: string;
+    created_from?: string;
+    created_to?: string;
 }) {
     return request<AutoHealing.PaginatedResponse<AutoHealing.User>>('/api/v1/tenant/users', {
         method: 'GET',

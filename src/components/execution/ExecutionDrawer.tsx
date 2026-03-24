@@ -22,7 +22,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
     const [cancelling, setCancelling] = useState(false);
-    const [streamController, setStreamController] = useState<AbortController | null>(null);
+    const streamCloserRef = React.useRef<(() => void) | null>(null);
 
     const loadRun = async (id: string) => {
         if (!id) return;
@@ -36,7 +36,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
         if (!id) return;
         setLoadingLogs(true);
         try {
-            const res = await getExecutionLogs(id, { page: 1, page_size: 200 });
+            const res = await getExecutionLogs(id);
             setLogs(res.data || []);
         } catch { /* ignore */ }
         finally { setLoadingLogs(false); }
@@ -49,9 +49,9 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
         } else {
             setRun(undefined);
             setLogs([]);
-            if (streamController) {
-                streamController.abort();
-                setStreamController(null);
+            if (streamCloserRef.current) {
+                streamCloserRef.current();
+                streamCloserRef.current = null;
             }
         }
     }, [open, runId]);
@@ -59,26 +59,28 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
     useEffect(() => {
         if (!open || !runId || !run) return;
         if (run.status === 'running' || run.status === 'pending') {
-            if (streamController) return;
-            const controller = new AbortController();
-            setStreamController(controller);
+            if (streamCloserRef.current) return;
 
-            createLogStream(runId, (log) => {
+            const closeStream = createLogStream(runId, (log) => {
                 setLogs(prev => {
                     if (prev.some(l => l.id === log.id)) return prev;
                     return [...prev, log];
                 });
             }, (res) => { /* Done */ });
+            streamCloserRef.current = closeStream;
 
             const statusInterval = setInterval(() => loadRun(runId), 3000);
             return () => {
-                controller.abort();
+                closeStream();
+                if (streamCloserRef.current === closeStream) {
+                    streamCloserRef.current = null;
+                }
                 clearInterval(statusInterval);
             };
         } else {
-            if (streamController) {
-                streamController.abort();
-                setStreamController(null);
+            if (streamCloserRef.current) {
+                streamCloserRef.current();
+                streamCloserRef.current = null;
             }
         }
         return undefined;

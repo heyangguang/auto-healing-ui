@@ -5,7 +5,7 @@
  * 左右两栏布局：左侧文章列表 + 右侧 Markdown 渲染
  */
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams } from '@umijs/max';
+import { useAccess, useParams } from '@umijs/max';
 import { Input, Empty, Spin } from 'antd';
 import {
     SearchOutlined,
@@ -19,6 +19,7 @@ import { createStyles } from 'antd-style';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { GUIDE_ARTICLES, GUIDE_CATEGORY_LABELS, type GuideArticle, type GuideCategory } from './guideData';
+import { canAccessPath } from '@/utils/pathAccess';
 
 const useStyles = createStyles(({ token }) => ({
     page: {
@@ -334,6 +335,7 @@ const useStyles = createStyles(({ token }) => ({
    ══════════════════════════════════════════════════ */
 const GuidePage: React.FC = () => {
     const { styles, cx } = useStyles();
+    const access = useAccess();
     const params = useParams<{ id?: string }>();
     const [search, setSearch] = useState('');
     const [markdownContent, setMarkdownContent] = useState<string>('');
@@ -463,19 +465,23 @@ const GuidePage: React.FC = () => {
                                     快速步骤
                                 </div>
                                 <div className={styles.stepsList}>
-                                    {selectedArticle.steps.map((step, i) => (
-                                        <div
-                                            key={i}
-                                            className={styles.stepItem}
-                                            onClick={() => history.push(step.path)}
-                                        >
-                                            <span className={styles.stepNumber}>{i + 1}</span>
-                                            <span className={styles.stepText}>{step.title}</span>
-                                            <span className={styles.stepGo}>
-                                                前往 <RightOutlined />
-                                            </span>
-                                        </div>
-                                    ))}
+                                    {selectedArticle.steps.map((step, i) => {
+                                        const allowed = canAccessPath(step.path, access);
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={styles.stepItem}
+                                                onClick={() => allowed && history.push(step.path)}
+                                                style={!allowed ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                                            >
+                                                <span className={styles.stepNumber}>{i + 1}</span>
+                                                <span className={styles.stepText}>{step.title}</span>
+                                                <span className={styles.stepGo}>
+                                                    前往 <RightOutlined />
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

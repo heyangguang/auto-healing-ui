@@ -131,7 +131,7 @@ export async function assignPlatformRolePermissions(id: string, data: AutoHealin
 export async function getPlatformRoleUsers(roleId: string, params?: {
     page?: number;
     page_size?: number;
-    search?: string;
+    name?: string;
 }) {
     return request<{
         data: { id: string; username: string; display_name: string; email: string; status: string }[];

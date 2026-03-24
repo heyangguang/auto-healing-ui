@@ -4,8 +4,11 @@ import { request } from '@umijs/max';
  * 获取密钥源列表
  */
 export async function getSecretsSources(params?: {
+    page?: number;
+    page_size?: number;
     type?: AutoHealing.SecretsSourceType;
     status?: string;
+    is_default?: boolean;
 }) {
     return request<{ data: AutoHealing.SecretsSource[] }>('/api/v1/tenant/secrets-sources', {
         method: 'GET',

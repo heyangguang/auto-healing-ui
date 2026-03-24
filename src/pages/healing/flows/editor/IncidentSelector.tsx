@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Table, Input, Select, Space, Button, Tag, Typography, Row, Col, Empty, DatePicker } from 'antd';
 import { SearchOutlined, ReloadOutlined, AlertOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { getIncidents } from '@/services/auto-healing/incidents';
+import { getIncident, getIncidents } from '@/services/auto-healing/incidents';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -68,6 +68,20 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
         }
     }, [value]);
 
+    useEffect(() => {
+        if (!open || !value || selectedIncident?.id === value) return;
+        getIncident(value)
+            .then((incident) => {
+                if (incident?.id) {
+                    setSelectedIncident(incident);
+                    setSelectedRowKey(incident.id);
+                }
+            })
+            .catch(() => {
+                // ignore stale selection
+            });
+    }, [open, value, selectedIncident?.id]);
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -75,25 +89,14 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                 page,
                 page_size: pageSize,
             };
-            // Search by title - API might need a 'search' param or we filter client-side
-            // For now, we'll use source_plugin_name for filtering
+            if (search.trim()) params.title = search.trim();
             if (sourcePlugin) params.source_plugin_name = sourcePlugin;
             if (severity) params.severity = severity;
             if (status) params.status = status;
             if (healingStatus) params.healing_status = healingStatus;
 
             const res = await getIncidents(params);
-            let items = res.data || [];
-
-            // Client-side search filter for title (if API doesn't support it)
-            if (search) {
-                const lowerSearch = search.toLowerCase();
-                items = items.filter(item =>
-                    item.title?.toLowerCase().includes(lowerSearch) ||
-                    item.external_id?.toLowerCase().includes(lowerSearch) ||
-                    item.affected_ci?.toLowerCase().includes(lowerSearch)
-                );
-            }
+            const items = res.data || [];
 
             setData(items);
             setTotal(res.total || items.length);

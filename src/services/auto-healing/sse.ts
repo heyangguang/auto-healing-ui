@@ -5,7 +5,156 @@
 
 // 获取认证 Token
 const getAuthToken = (): string => {
-    return localStorage.getItem('auto_healing_token') || '';
+    return localStorage.getItem('auto_healing_token')
+        || sessionStorage.getItem('auto_healing_token')
+        || '';
+};
+
+const getTenantContext = () => {
+    try {
+        const raw = localStorage.getItem('impersonation-storage');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.isImpersonating && parsed?.session?.tenantId && parsed?.session?.requestId) {
+                return {
+                    tenantId: parsed.session.tenantId as string,
+                    isImpersonating: true,
+                    requestId: parsed.session.requestId as string,
+                };
+            }
+        }
+    } catch {
+        // ignore
+    }
+
+    try {
+        const raw = localStorage.getItem('tenant-storage');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.currentTenantId) {
+                return {
+                    tenantId: parsed.currentTenantId as string,
+                    isImpersonating: false,
+                    requestId: undefined,
+                };
+            }
+        }
+    } catch {
+        // ignore
+    }
+
+    return {
+        tenantId: undefined,
+        isImpersonating: false,
+        requestId: undefined,
+    };
+};
+
+export interface SSEConnection {
+    close: () => void;
+}
+
+type AuthenticatedSSECallbacks = {
+    onOpen?: () => void;
+    onEvent?: (event: string, payload: any) => void;
+    onError?: (error: Error) => void;
+};
+
+export const createAuthenticatedEventStream = (
+    url: string,
+    callbacks: AuthenticatedSSECallbacks,
+): SSEConnection => {
+    const controller = new AbortController();
+    const token = getAuthToken();
+    const tenant = getTenantContext();
+
+    const headers: Record<string, string> = {
+        Accept: 'text/event-stream',
+    };
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+    if (tenant.tenantId) {
+        headers['X-Tenant-ID'] = tenant.tenantId;
+    }
+    if (tenant.isImpersonating && tenant.requestId) {
+        headers['X-Impersonation'] = 'true';
+        headers['X-Impersonation-Request-ID'] = tenant.requestId;
+    }
+
+    void (async () => {
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers,
+                signal: controller.signal,
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            callbacks.onOpen?.();
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let currentEvent = '';
+            let currentData = '';
+
+            const flushEvent = () => {
+                if (!currentEvent) {
+                    currentData = '';
+                    return;
+                }
+
+                let payload: any = currentData;
+                if (currentData) {
+                    try {
+                        payload = JSON.parse(currentData);
+                    } catch {
+                        payload = currentData;
+                    }
+                }
+
+                callbacks.onEvent?.(currentEvent, payload);
+                currentEvent = '';
+                currentData = '';
+            };
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    flushEvent();
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const rawLine of lines) {
+                    const line = rawLine.replace(/\r$/, '');
+                    if (line.startsWith('event:')) {
+                        currentEvent = line.slice(6).trim();
+                    } else if (line.startsWith('data:')) {
+                        const next = line.slice(5).trimStart();
+                        currentData = currentData ? `${currentData}\n${next}` : next;
+                    } else if (line === '') {
+                        flushEvent();
+                    }
+                }
+            }
+        } catch (error: any) {
+            if (error?.name !== 'AbortError') {
+                callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
+            }
+        }
+    })();
+
+    return {
+        close: () => controller.abort(),
+    };
 };
 
 // 节点状态类型 - 与 healing-flows.md 文档一致
@@ -45,6 +194,7 @@ export interface SSENodeCompleteData {
 export interface SSEFlowCompleteData {
     success: boolean;
     message: string;
+    status?: string;
 }
 
 export interface DryRunSSECallbacks {
@@ -170,43 +320,39 @@ export const createDryRunStream = async (
 export const createInstanceEventStream = (
     instanceId: string,
     callbacks: DryRunSSECallbacks
-): EventSource => {
-    const token = getAuthToken();
+): SSEConnection => {
     const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
-    const eventSource = new EventSource(
-        `${sseBase}/api/v1/tenant/healing/instances/${instanceId}/events?token=${token}`
+    const connection = createAuthenticatedEventStream(
+        `${sseBase}/api/v1/tenant/healing/instances/${instanceId}/events`,
+        {
+            onEvent: (event, payload) => {
+                const data = payload?.data ?? payload;
+                switch (event) {
+                    case 'connected':
+                        console.log('[SSE] Instance stream connected:', instanceId);
+                        break;
+                    case 'node_start':
+                        callbacks.onNodeStart?.(data);
+                        break;
+                    case 'node_log':
+                        callbacks.onNodeLog?.(data);
+                        break;
+                    case 'node_complete':
+                        callbacks.onNodeComplete?.(data);
+                        break;
+                    case 'flow_complete':
+                        callbacks.onFlowComplete?.(data);
+                        connection.close();
+                        break;
+                    default:
+                        break;
+                }
+            },
+            onError: () => {
+                callbacks.onError?.(new Error('SSE connection error'));
+            },
+        },
     );
 
-    eventSource.addEventListener('connected', (event: MessageEvent) => {
-        // SSE 连接已建立 — 仅用于确认连接成功，不触发 onFlowStart
-        console.log('[SSE] Instance stream connected:', instanceId);
-    });
-
-    eventSource.addEventListener('node_start', (event: MessageEvent) => {
-        const data = JSON.parse(event.data);
-        callbacks.onNodeStart?.(data.data);
-    });
-
-    eventSource.addEventListener('node_log', (event: MessageEvent) => {
-        const data = JSON.parse(event.data);
-        callbacks.onNodeLog?.(data.data);
-    });
-
-    eventSource.addEventListener('node_complete', (event: MessageEvent) => {
-        const data = JSON.parse(event.data);
-        callbacks.onNodeComplete?.(data.data);
-    });
-
-    eventSource.addEventListener('flow_complete', (event: MessageEvent) => {
-        const data = JSON.parse(event.data);
-        callbacks.onFlowComplete?.(data.data);
-        eventSource.close();
-    });
-
-    eventSource.onerror = (error) => {
-        callbacks.onError?.(new Error('SSE connection error'));
-        eventSource.close();
-    };
-
-    return eventSource;
+    return connection;
 };

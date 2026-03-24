@@ -115,8 +115,14 @@ const TenantSwitcher: React.FC = () => {
                     try {
                         const raw = localStorage.getItem('tenant-storage');
                         const stored = raw ? JSON.parse(raw) : {};
-                        stored.tenants = res.data;
-                        localStorage.setItem('tenant-storage', JSON.stringify(stored));
+                        const currentTenantId = stored.currentTenantId && res.data.some((item: TenantBrief) => item.id === stored.currentTenantId)
+                            ? stored.currentTenantId
+                            : (res.data[0]?.id || null);
+                        setCurrentTenantId(currentTenantId);
+                        localStorage.setItem('tenant-storage', JSON.stringify({
+                            currentTenantId,
+                            tenants: res.data,
+                        }));
                     } catch { /* ignore */ }
                 }
             })
@@ -150,7 +156,7 @@ const TenantSwitcher: React.FC = () => {
             return;
         }
         setSearching(true);
-        request('/api/v1/common/user/tenants', { params: { search: value.trim() } })
+        request('/api/v1/common/user/tenants', { params: { name: value.trim() } })
             .then((res: any) => {
                 if (res?.data && Array.isArray(res.data)) setSearchResults(res.data);
             })

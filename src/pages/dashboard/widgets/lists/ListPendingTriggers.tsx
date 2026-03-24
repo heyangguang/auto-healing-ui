@@ -1,6 +1,6 @@
 import { RocketOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
-import { useRequest, history } from '@umijs/max';
+import { useAccess, useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getPendingTriggers } from '@/services/auto-healing/healing';
@@ -16,7 +16,10 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data, loading, refresh } = useRequest(() => getPendingTriggers({ page_size: 15 }));
+    const access = useAccess();
+    const { data, loading, refresh } = useRequest(() => getPendingTriggers({ page_size: 15 }), {
+        ready: !!access.canViewPendingTrigger,
+    });
     const rawData = data as any;
     const items = Array.isArray(rawData?.data) ? rawData.data : (rawData?.data?.items ?? []);
 
@@ -58,13 +61,14 @@ const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                                         gridTemplateColumns: '1.5fr 1fr 60px 100px',
                                         gap: 8,
                                         padding: '8px 12px',
-                                        cursor: 'pointer',
+                                        cursor: access.canViewPendingTrigger ? 'pointer' : 'default',
                                         background: index % 2 === 1 ? '#fafafa' : '#fff',
                                         borderBottom: '1px solid #f0f0f0',
                                         transition: 'background 0.3s',
-                                        alignItems: 'center'
+                                        alignItems: 'center',
+                                        ...(access.canViewPendingTrigger ? {} : { opacity: 0.65 }),
                                     }}
-                                    onClick={() => history.push('/pending/triggers')}
+                                    onClick={() => access.canViewPendingTrigger && history.push('/pending/triggers')}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                                         <Badge status="processing" />

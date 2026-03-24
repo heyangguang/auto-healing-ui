@@ -62,7 +62,7 @@ export interface WorkbenchOverview {
 
 export interface ActivityItem {
     id: string;
-    type: 'execution' | 'flow' | 'rule' | 'system';
+    type: 'execution' | 'flow' | 'rule' | 'system' | 'access' | 'ops';
     text: string;
     created_at: string;
 }
@@ -79,9 +79,12 @@ export interface ScheduleCalendar {
 
 export interface AnnouncementItem {
     id: string;
+    category?: string;
     title: string;
     content: string;
     created_at: string;
+    is_read?: boolean;
+    expires_at?: string;
 }
 
 export interface FavoriteItem {

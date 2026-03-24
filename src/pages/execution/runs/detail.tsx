@@ -28,6 +28,8 @@ import {
 import React, { useEffect, useState, useRef, useCallback, startTransition } from 'react';
 import { getExecutionRun, getExecutionLogs, cancelExecutionRun, createLogStream, executeTask } from '@/services/auto-healing/execution';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
+import { fetchAllPages } from '@/utils/fetchAllPages';
+import { getEnabledNotificationTriggers, hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import StatusBadge from '@/components/execution/StatusBadge';
 import LogConsole, { LogEntry } from '@/components/execution/LogConsole';
 import dayjs from 'dayjs';
@@ -93,7 +95,7 @@ const ExecutionRunDetail: React.FC = () => {
             (log) => { setLogs(prev => prev.some(p => p.sequence === log.sequence) ? prev : [...prev, log as LogEntry]); },
             (result) => {
                 setStreaming(false);
-                setRun(prev => prev ? { ...prev, status: result.status as AutoHealing.ExecutionStatus, stats: result.stats || prev.stats, completed_at: new Date().toISOString() } : prev);
+                setRun(prev => prev ? { ...prev, status: result.status as AutoHealing.ExecutionStatus, stats: result.stats || prev.stats } : prev);
             }
         );
         closeStreamRef.current = closeStream;
@@ -103,7 +105,7 @@ const ExecutionRunDetail: React.FC = () => {
         const init = async () => {
             setLoading(true);
             const runData = await loadRun();
-            getSecretsSources({ page_size: 100 } as any).then(res => { if (res.data) setSecretsSources(res.data); });
+            fetchAllPages<any>((page, pageSize) => getSecretsSources({ page, page_size: pageSize } as any)).then(setSecretsSources);
             const finalStatuses = ['success', 'failed', 'partial', 'cancelled', 'timeout'];
             const isFinal = runData?.status && finalStatuses.includes(runData.status);
             const isRunning = runData?.status === 'running' || runData?.status === 'pending';
@@ -189,7 +191,7 @@ const ExecutionRunDetail: React.FC = () => {
                     {run?.status && run.status !== 'running' && run.status !== 'pending' && (
                         <Button size="small" icon={<RedoOutlined />} onClick={handleRetry} loading={retrying} disabled={!access.canExecuteTask}>重试</Button>
                     )}
-                    {run?.status === 'running' && (
+                    {(run?.status === 'running' || run?.status === 'pending') && (
                         <Button size="small" danger onClick={handleCancel} loading={cancelling} disabled={!access.canCancelRun} icon={<CloseCircleOutlined />}>终止</Button>
                     )}
                     <Button size="small" icon={<ReloadOutlined spin={loading || streaming} />} onClick={handleRefresh}>刷新</Button>
@@ -211,7 +213,12 @@ const ExecutionRunDetail: React.FC = () => {
                             </a>
                             <Tooltip title="跳转到发射台">
                                 <RocketOutlined style={{ marginLeft: 6, color: '#1890ff', cursor: 'pointer', fontSize: 11 }}
-                                    onClick={() => startTransition(() => history.push(`/execution/execute?template=${run?.task_id}`))} />
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!access.canExecuteTask) return;
+                                        startTransition(() => history.push(`/execution/execute?template=${run?.task_id}`));
+                                    }}
+                                />
                             </Tooltip>
                         </Field>
                         <Field label="触发方式">
@@ -253,7 +260,7 @@ const ExecutionRunDetail: React.FC = () => {
                             </Tag>
                         </Field>
                         <Field label="通知">
-                            {run?.task?.notification_config?.enabled !== false ? (
+                            {hasEffectiveNotificationConfig(run?.task?.notification_config as any) ? (
                                 <Tag icon={<BellOutlined />} color="green" style={{ margin: 0, fontSize: 11 }}>已启用</Tag>
                             ) : (
                                 <Tag style={{ margin: 0, fontSize: 11 }} color="default">未启用</Tag>
@@ -371,6 +378,7 @@ const ExecutionRunDetail: React.FC = () => {
                 extra={
                     drawerType === 'task' && run?.task_id ? (
                         <Button size="small" icon={<PlayCircleOutlined />}
+                            disabled={!access.canExecuteTask}
                             onClick={() => { setDrawerType(null); startTransition(() => history.push(`/execution/execute?template=${run.task_id}`)); }}>
                             发射台
                         </Button>
@@ -430,19 +438,20 @@ const ExecutionRunDetail: React.FC = () => {
                         <div className="industrial-dashed-box">
                             <SectionTitle icon={<BellOutlined />} title="通知配置 / NOTIFICATION" />
                             <Field label="通知状态">
-                                {run.task.notification_config?.enabled !== false ? (
+                                {hasEffectiveNotificationConfig(run.task.notification_config as any) ? (
                                     <Tag icon={<BellOutlined />} color="green" style={{ margin: 0, fontSize: 11 }}>已启用</Tag>
                                 ) : (
                                     <Tag style={{ margin: 0, fontSize: 11 }} color="default">未启用</Tag>
                                 )}
                             </Field>
                             {(() => {
-                                const nc = run.task.notification_config;
-                                const triggers: string[] = [];
-                                if (nc?.on_start?.enabled) triggers.push('开始时');
-                                if (nc?.on_success?.enabled) triggers.push('成功时');
-                                if (nc?.on_failure?.enabled) triggers.push('失败时');
-                                if (nc?.on_timeout?.enabled) triggers.push('超时时');
+                                const triggers = getEnabledNotificationTriggers(run.task.notification_config as any).map((key) => {
+                                    if (key === 'on_start') return '开始时';
+                                    if (key === 'on_success') return '成功时';
+                                    if (key === 'on_failure') return '失败时';
+                                    if (key === 'on_timeout') return '超时时';
+                                    return key;
+                                });
                                 return triggers.length > 0 ? (
                                     <Field label="触发条件">
                                         <Space size={4} wrap>
