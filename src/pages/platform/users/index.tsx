@@ -51,6 +51,7 @@ const advancedSearchFields: AdvancedSearchField[] = [
 
 const headerIcon = (
   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <title>平台用户图标</title>
     <circle cx="20" cy="18" r="7" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M34 10l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

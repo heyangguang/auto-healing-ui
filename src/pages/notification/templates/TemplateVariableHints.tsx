@@ -9,11 +9,13 @@ type TemplateVariableHintsProps = {
 const buildVariableGroups = (variables: AutoHealing.TemplateVariable[]) =>
     variables.reduce<Record<string, AutoHealing.TemplateVariable[]>>((groups, variable) => {
         const category = variable.category || 'other';
-        const current = groups[category] || [];
-        return {
-            ...groups,
-            [category]: [...current, variable],
-        };
+        const current = groups[category];
+        if (current) {
+            current.push(variable);
+            return groups;
+        }
+        groups[category] = [variable];
+        return groups;
     }, {});
 
 const copyVariableToken = async (variableName: string) => {

@@ -11,6 +11,7 @@ import {
 } from '@/services/auto-healing/execution';
 import { getPlaybook } from '@/services/auto-healing/playbooks';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
+import { toJsonValue } from '@/utils/jsonValue';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import {
     getCachedNotificationChannelInventory,
@@ -29,11 +30,14 @@ import {
     hasFormErrorFields,
     isEmptyOverrideValue,
 } from './scheduleFormHelpers';
-export function useScheduleFormController(options: {
+
+type UseScheduleFormControllerOptions = {
     form: FormInstance;
     isEdit: boolean;
     scheduleId?: string;
-}) {
+};
+
+export function useScheduleFormController(options: UseScheduleFormControllerOptions) {
     const { form, isEdit, scheduleId } = options;
     const [step, setStep] = useState<'select' | 'configure'>(isEdit ? 'configure' : 'select');
     const [templates, setTemplates] = useState<AutoHealing.ExecutionTask[]>([]);
@@ -53,6 +57,10 @@ export function useScheduleFormController(options: {
     const scheduleRequestSequenceRef = useRef(createRequestSequence());
     const playbookRequestSequenceRef = useRef(createRequestSequence());
     const picker = useScheduleTemplatePicker(templates);
+    const isRequestCurrent = useCallback((requestToken: number | undefined, playbookToken: number) => (
+        (requestToken === undefined || scheduleRequestSequenceRef.current.isCurrent(requestToken))
+        && playbookRequestSequenceRef.current.isCurrent(playbookToken)
+    ), []);
     const resetCreateScheduleState = useCallback(() => {
         playbookRequestSequenceRef.current.invalidate();
         setLoadingPlaybook(false);
@@ -73,10 +81,7 @@ export function useScheduleFormController(options: {
         setLoadingPlaybook(true);
         try {
             const response = await getPlaybook(playbookId);
-            if (
-                (requestToken !== undefined && !scheduleRequestSequenceRef.current.isCurrent(requestToken))
-                || !playbookRequestSequenceRef.current.isCurrent(token)
-            ) {
+            if (!isRequestCurrent(requestToken, token)) {
                 return;
             }
             if (response.data?.status && response.data.status !== 'ready') {
@@ -86,24 +91,18 @@ export function useScheduleFormController(options: {
             }
             setTemplatePlaybook(response.data || null);
         } catch {
-            if (
-                (requestToken !== undefined && !scheduleRequestSequenceRef.current.isCurrent(requestToken))
-                || !playbookRequestSequenceRef.current.isCurrent(token)
-            ) {
+            if (!isRequestCurrent(requestToken, token)) {
                 return;
             }
             setTemplatePlaybook(null);
             setVariableValues({});
             message.error('Playbook 元数据加载失败');
         } finally {
-            if (
-                (requestToken === undefined || scheduleRequestSequenceRef.current.isCurrent(requestToken))
-                && playbookRequestSequenceRef.current.isCurrent(token)
-            ) {
+            if (isRequestCurrent(requestToken, token)) {
                 setLoadingPlaybook(false);
             }
         }
-    }, []);
+    }, [isRequestCurrent]);
     useEffect(() => {
         resetCreateScheduleState();
         setStep(isEdit ? 'configure' : 'select');
@@ -203,11 +202,12 @@ export function useScheduleFormController(options: {
     const handleVariableChange = useCallback((name: string, value: unknown) => {
         setVariableValues((prev) => {
             if (isEmptyOverrideValue(value)) {
-                const nextValues = { ...prev };
+                const nextValues: VariableValueMap = { ...prev };
                 delete nextValues[name];
                 return nextValues;
             }
-            return { ...prev, [name]: value };
+            const nextValues: VariableValueMap = { ...prev, [name]: toJsonValue(value) };
+            return nextValues;
         });
     }, []);
 
@@ -270,31 +270,11 @@ export function useScheduleFormController(options: {
         }
     }, [editingSchedule, form, isEdit, loadingPlaybook, secretsSourceIds, selectedTemplate?.playbook_id, skipNotification, targetHostsOverride, templatePlaybook, variableValues]);
     return {
-        channels,
-        editingSchedule,
-        effectiveVariableValues,
+        channels, editingSchedule, effectiveVariableValues,
         hasNotificationConfig: hasEffectiveNotificationConfig(selectedTemplate?.notification_config),
-        loading,
-        loadingPlaybook,
-        notifyTemplates,
-        secretsSourceIds,
-        secretsSources,
-        selectedTemplate,
-        skipNotification,
-        step,
-        submitting,
-        targetHostsOverride,
-        templatePlaybook,
-        variableValues,
-        ...picker,
-        handleSelectTemplate,
-        handleSubmit,
-        handleVariableChange,
-        handleVariableClear,
-        resetCreateScheduleState,
-        setSecretsSourceIds,
-        setSkipNotification,
-        setStep,
-        setTargetHostsOverride,
+        loading, loadingPlaybook, notifyTemplates, secretsSourceIds, secretsSources, selectedTemplate, skipNotification,
+        step, submitting, targetHostsOverride, templatePlaybook, variableValues, ...picker, handleSelectTemplate,
+        handleSubmit, handleVariableChange, handleVariableClear, resetCreateScheduleState, setSecretsSourceIds,
+        setSkipNotification, setStep, setTargetHostsOverride,
     };
 }

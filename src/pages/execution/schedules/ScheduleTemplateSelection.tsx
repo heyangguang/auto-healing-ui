@@ -93,7 +93,7 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
                         <Text type="secondary">仅就绪</Text>
                     </Checkbox>
                 </Space>
-                <Text type="secondary">{filteredTemplates.length} 个模板</Text>
+                <output>{filteredTemplates.length} 个模板</output>
             </div>
         </div>
 
@@ -116,10 +116,9 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
                         const playbookKnownOffline = !!template.playbook && template.playbook.status !== 'ready';
                         return (
                             <Col key={template.id} xs={24} sm={12} md={8} lg={6}>
-                                <div
+                                <button
+                                    type="button"
                                     className="schedule-tpl-pick-card"
-                                    role="button"
-                                    tabIndex={0}
                                     onClick={() => onSelectTemplate(template)}
                                     onKeyDown={(event) => {
                                         if (event.key !== 'Enter' && event.key !== ' ') {
@@ -128,45 +127,46 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
                                         event.preventDefault();
                                         onSelectTemplate(template);
                                     }}
+                                    style={{ width: '100%', textAlign: 'left', background: 'transparent' }}
                                 >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                    <Avatar
-                                        size={28}
-                                        style={{
-                                            background: template.executor_type === 'docker' ? '#e6f7ff' : '#f6ffed',
-                                            color: template.executor_type === 'docker' ? '#1890ff' : '#52c41a',
-                                            flexShrink: 0,
-                                        }}
-                                        icon={template.executor_type === 'docker' ? <ThunderboltOutlined /> : <CodeOutlined />}
-                                    />
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <Text strong ellipsis style={{ fontSize: 13 }}>
-                                            {template.name}
-                                        </Text>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                        <Avatar
+                                            size={28}
+                                            style={{
+                                                background: template.executor_type === 'docker' ? '#e6f7ff' : '#f6ffed',
+                                                color: template.executor_type === 'docker' ? '#1890ff' : '#52c41a',
+                                                flexShrink: 0,
+                                            }}
+                                            icon={template.executor_type === 'docker' ? <ThunderboltOutlined /> : <CodeOutlined />}
+                                        />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <Text strong ellipsis style={{ fontSize: 13 }}>
+                                                {template.name}
+                                            </Text>
+                                        </div>
                                     </div>
-                                </div>
-                                <Text type="secondary" ellipsis style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>
-                                    {template.playbook?.name || template.playbook_id?.slice(0, 8) || 'N/A'}
-                                </Text>
-                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                    <Tag style={{ fontSize: 10, margin: 0 }}>
-                                        {template.executor_type === 'docker' ? 'Docker' : 'SSH/Local'}
-                                    </Tag>
-                                    {template.needs_review ? (
-                                        <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>
-                                            待审核
+                                    <Text type="secondary" ellipsis style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>
+                                        {template.playbook?.name || template.playbook_id?.slice(0, 8) || 'N/A'}
+                                    </Text>
+                                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                        <Tag style={{ fontSize: 10, margin: 0 }}>
+                                            {template.executor_type === 'docker' ? 'Docker' : 'SSH/Local'}
                                         </Tag>
-                                    ) : playbookKnownOffline ? (
-                                        <Tag color="default" style={{ fontSize: 10, margin: 0 }}>
-                                            离线
-                                        </Tag>
-                                    ) : (
-                                        <Tag color="success" style={{ fontSize: 10, margin: 0 }}>
-                                            就绪
-                                        </Tag>
-                                    )}
-                                </div>
-                                </div>
+                                        {template.needs_review ? (
+                                            <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>
+                                                待审核
+                                            </Tag>
+                                        ) : playbookKnownOffline ? (
+                                            <Tag color="default" style={{ fontSize: 10, margin: 0 }}>
+                                                离线
+                                            </Tag>
+                                        ) : (
+                                            <Tag color="success" style={{ fontSize: 10, margin: 0 }}>
+                                                就绪
+                                            </Tag>
+                                        )}
+                                    </div>
+                                </button>
                             </Col>
                         );
                     })}

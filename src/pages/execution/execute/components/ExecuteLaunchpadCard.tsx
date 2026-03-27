@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircleOutlined, ClockCircleOutlined, KeyOutlined, WarningOutlined, BellOutlined, ProjectOutlined, DesktopOutlined, SettingOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, ClockCircleOutlined, KeyOutlined, BellOutlined, ProjectOutlined, DesktopOutlined, SettingOutlined } from '@ant-design/icons';
 import { Col } from 'antd';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import { splitTargetHosts } from './HostList';
@@ -43,11 +43,13 @@ const ExecuteLaunchpadCard: React.FC<ExecuteLaunchpadCardProps> = ({
                 <div className={`launchpad-card-stub ${isDocker ? 'launchpad-stub-docker' : 'launchpad-stub-ssh'}`}>
                     <div className="launchpad-card-stub-icon">
                         {isDocker ? (
-                            <svg viewBox="0 0 640 512" fill="currentColor">
+                            <svg role="img" viewBox="0 0 640 512" fill="currentColor">
+                                <title>Docker 任务类型</title>
                                 <path d="M349.9 236.3h-66.1v-59.4h66.1v59.4zm0-204.3h-66.1v60.7h66.1V32zm78.2 144.8H362v59.4h66.1v-59.4zm-156.3-72.1h-66.1v60.1h66.1v-60.1zm78.1 0h-66.1v60.1h66.1v-60.1zm276.8 100c-14.4-9.7-47.6-13.2-73.1-8.4-3.3-24-16.7-44.9-41.1-63.7l-14-9.3-9.3 14c-18.4 27.8-23.4 73.6-3.7 103.8-8.7 4.7-25.8 11.1-48.4 10.7H2.4c-7.6 42.6-3.4 97.6 28.6 144.4 30 44 75.4 66.4 134.2 66.4 127.6 0 221.9-58.7 266.4-165.1 17.3.3 54.7.3 73.8-36.4.5-1 11.1-22.9 11.1-22.9l-14.5-9.5zM349.9 32h-66.1v60.7h66.1V32zm-78.2 72.1h-66.1v60.1h66.1v-60.1zm0-72.1h-66.1v60.7h66.1V32zm-78.1 72.1h-66.1v60.1h66.1v-60.1z" />
                             </svg>
                         ) : (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg role="img" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <title>SSH 任务类型</title>
                                 <polyline points="4 17 10 11 4 5" />
                                 <line x1="12" y1="19" x2="20" y2="19" />
                             </svg>

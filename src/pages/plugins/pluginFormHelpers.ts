@@ -1,8 +1,9 @@
 import type { PluginRecord } from '@/services/auto-healing/plugins';
+import type { Rule } from 'antd/es/form';
 
 export const DEFAULT_PLUGIN_MAX_FAILURES = 5;
 export const DEFAULT_PLUGIN_SYNC_INTERVAL_MINUTES = 5;
-export const BASIC_AUTH_USERNAME_RULES = [{ required: true, whitespace: true, message: '请输入用户名' }] as const;
+export const BASIC_AUTH_USERNAME_RULES: Rule[] = [{ required: true, whitespace: true, message: '请输入用户名' }];
 
 export type PluginFilterOperator = Extract<AutoHealing.SyncFilterRule['operator'], string>;
 
@@ -89,10 +90,11 @@ export function buildPluginExtraParams(extraParams: EditablePluginExtraParam[]):
     const validParams = extraParams.filter((param) => param.key && param.value);
     if (validParams.length === 0) return undefined;
 
-    return validParams.reduce<Record<string, string>>((result, param) => ({
-        ...result,
-        [param.key]: param.value,
-    }), {});
+    const result: Record<string, string> = {};
+    validParams.forEach((param) => {
+        result[param.key] = param.value;
+    });
+    return result;
 }
 
 export function buildPluginFieldMapping(
@@ -102,10 +104,10 @@ export function buildPluginFieldMapping(
     const validMappings = mappings.filter((mapping) => mapping.standard && mapping.external);
     if (validMappings.length === 0) return {};
 
-    const mappingRecord = validMappings.reduce<Record<string, string>>((result, mapping) => ({
-        ...result,
-        [mapping.standard]: mapping.external,
-    }), {});
+    const mappingRecord: Record<string, string> = {};
+    validMappings.forEach((mapping) => {
+        mappingRecord[mapping.standard] = mapping.external;
+    });
     return type === 'cmdb' ? { cmdb_mapping: mappingRecord } : { incident_mapping: mappingRecord };
 }
 

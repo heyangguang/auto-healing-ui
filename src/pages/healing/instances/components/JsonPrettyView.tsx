@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { Button, Empty, message } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
+import { renderSanitizedHtml } from '@/utils/safeHtml';
+
+type JsonData = unknown;
 
 /**
  * JSON 代码查看器 — GitHub Dark 深色主题 + 自动换行 + 内联语法着色
@@ -96,7 +99,7 @@ const syntaxHighlight = (json: string): string => {
             if (ch === '-' || (ch >= '0' && ch <= '9')) {
                 let num = ch;
                 i++;
-                while (i < chars.length && /[\d.eE+\-]/.test(chars[i])) {
+                while (i < chars.length && /[\d.eE+-]/.test(chars[i])) {
                     num += chars[i];
                     i++;
                 }
@@ -128,14 +131,16 @@ const syntaxHighlight = (json: string): string => {
     return result.join('\n');
 };
 
-const JsonPrettyView: React.FC<{ data: any }> = ({ data }) => {
-    if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
+const JsonPrettyView: React.FC<{ data?: JsonData }> = ({ data }) => {
+    const isEmptyData = !data || (typeof data === 'object' && Object.keys(data).length === 0);
+
+    const jsonStr = useMemo(() => JSON.stringify(data ?? {}, null, 2), [data]);
+    const highlighted = useMemo(() => syntaxHighlight(jsonStr), [jsonStr]);
+    const fieldCount = data && typeof data === 'object' ? Object.keys(data).length : 0;
+
+    if (isEmptyData) {
         return <Empty description="暂无数据" style={{ padding: '30px 0' }} />;
     }
-
-    const jsonStr = useMemo(() => JSON.stringify(data, null, 2), [data]);
-    const highlighted = useMemo(() => syntaxHighlight(jsonStr), [jsonStr]);
-    const fieldCount = typeof data === 'object' ? Object.keys(data).length : 0;
 
     return (
         <div style={{ borderRadius: 6, overflow: 'hidden', border: '1px solid #30363d' }}>
@@ -176,8 +181,9 @@ const JsonPrettyView: React.FC<{ data: any }> = ({ data }) => {
                     overflow: 'auto',
                     color: '#c9d1d9',
                 }}
-                dangerouslySetInnerHTML={{ __html: highlighted }}
-            />
+            >
+                {renderSanitizedHtml(highlighted)}
+            </pre>
         </div>
     );
 };

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const root = process.cwd();
-const defaultBackendSpec = '/root/auto-healing/docs/openapi.yaml';
+const defaultBackendSpec = '/root/auto-healing/api/openapi.yaml';
 const backendSpec = process.env.AUTO_HEALING_BACKEND_OPENAPI || defaultBackendSpec;
 const targetYamlSpec = path.join(root, 'config', 'openapi.yaml');
 const targetJsonSpec = path.join(root, 'config', 'openapi.json');

@@ -8,10 +8,10 @@ import type {
   SearchField,
   StandardColumnDef,
 } from '@/components/StandardTable';
-import {
-  type SiteMessage,
-  type SiteMessageCategory,
-  type SiteMessageQueryParams,
+import type {
+  SiteMessage,
+  SiteMessageCategory,
+  SiteMessageQueryParams,
 } from '@/services/auto-healing/siteMessage';
 import { extractPlainText } from '@/utils/safeHtml';
 import dayjs from 'dayjs';
@@ -50,6 +50,7 @@ export const systemMessageSearchFields: SearchField[] = [
 
 export const systemMessageHeaderIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>站内信图标</title>
     <path d="M24 4C17.4 4 12 9.4 12 16v8l-4 4v2h32v-2l-4-4v-8c0-6.6-5.4-12-12-12z" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M20 34c0 2.2 1.8 4 4 4s4-1.8 4-4" stroke="currentColor" strokeWidth="2" fill="none" />
     <circle cx="36" cy="10" r="4" fill="currentColor" opacity="0.3" />

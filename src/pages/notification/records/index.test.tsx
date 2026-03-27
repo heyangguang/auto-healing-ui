@@ -81,9 +81,9 @@ jest.mock('@/components/StandardTable', () => {
     return (
       <div>
         <div>{props.title}</div>
-        <button onClick={() => setMode('filtered')}>切换记录筛选</button>
+        <button type="button" onClick={() => setMode('filtered')}>切换记录筛选</button>
         {rows.map((row: { id: string; subject: string }) => (
-          <button key={row.id} onClick={() => props.onRowClick?.(row)}>
+          <button type="button" key={row.id} onClick={() => props.onRowClick?.(row)}>
             {row.subject}
           </button>
         ))}

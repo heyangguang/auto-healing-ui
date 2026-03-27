@@ -2,7 +2,7 @@ import type { MutableRefObject } from 'react';
 import type { ProFormInstance } from '@ant-design/pro-form';
 import type { FlowEditorNode } from './flowEditorTypes';
 
-export type NodeConfigFormValues = Record<string, any>;
+export type NodeConfigFormValues = Record<string, unknown>;
 export type NodeConfigFormRef = MutableRefObject<ProFormInstance<NodeConfigFormValues> | undefined>;
 export type NodeConfigPanelChangeHandler = (nodeId: string, values: NodeConfigFormValues) => void;
 

@@ -1,3 +1,6 @@
+import type React from 'react';
+import type { PlaybookSearchParams } from './playbookSearchParams';
+
 export type PlaybookRefreshSelectedOptions = {
     requestId?: number;
     syncEditedVariables?: boolean;
@@ -12,7 +15,7 @@ type PlaybookRefreshSelected = (
 
 export type PlaybookMutationBaseOptions = {
     detailRequestIdRef: React.MutableRefObject<number>;
-    loadPlaybooks: (params?: Record<string, any>) => Promise<void>;
+    loadPlaybooks: (params?: PlaybookSearchParams) => Promise<void>;
     mergePlaybookInInventory?: PlaybookInventoryMutation;
     removePlaybookFromInventory?: PlaybookInventoryMutation;
     refreshSelectedPlaybook: PlaybookRefreshSelected;

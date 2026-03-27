@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Table, Typography } from 'antd';
+import { Button, Table, } from 'antd';
 import { ReadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -75,12 +75,12 @@ const TEXT_STYLE: React.CSSProperties = {
 };
 
 // === 列定义 ===
-const columns: ColumnsType<GuideData> = [
+const _columns: ColumnsType<GuideData> = [
     {
         title: '分类',
         dataIndex: 'cat',
         width: 80,
-        onCell: (record, index) => {
+        onCell: (_record, index) => {
             // 简单的行合并逻辑
             if (index === undefined) return {};
             // 注意：这里仅作简单的展示，如果不需要合并行可以去掉 onCell
@@ -120,7 +120,7 @@ const compactColumns: ColumnsType<GuideData> = [
     {
         title: '说明',
         dataIndex: 'desc',
-        render: (text, record) => (
+        render: (text, _record) => (
             <div>
                 {/* 如果是新分类的每一项，或者可以把分类加在说明前 */}
                 {/* 为了极度紧凑，我们直接显示说明 */}

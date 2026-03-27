@@ -1,91 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-
-import { request } from '@umijs/max';
 import { createRequestSequence } from '@/utils/requestSequence';
+import { getCurrentUserTenants, type CurrentUserTenant } from '@/services/auto-healing/commonTenants';
 import {
-    BankOutlined, CheckOutlined, SearchOutlined, CaretDownFilled,
-    ShopOutlined, TeamOutlined, CloudOutlined, ApartmentOutlined,
-    ToolOutlined, GlobalOutlined, RocketOutlined, HomeOutlined,
-    BulbOutlined, SafetyOutlined, ThunderboltOutlined, DatabaseOutlined,
-    ApiOutlined, DeploymentUnitOutlined, ClusterOutlined, DashboardOutlined,
-    ExperimentOutlined, MonitorOutlined, CodeOutlined, BuildOutlined,
-    FundOutlined, TrophyOutlined, StarOutlined, ProductOutlined,
-    AlertOutlined, AuditOutlined, FireOutlined, CustomerServiceOutlined,
-    ControlOutlined, SendOutlined, FolderOpenOutlined, LoadingOutlined,
+    CaretDownFilled,
+    CheckOutlined,
+    LoadingOutlined,
+    SearchOutlined,
 } from '@ant-design/icons';
-
-interface TenantBrief {
-    id: string;
-    name: string;
-    code: string;
-    icon?: string;
-}
-
-const ICON_MAP: Record<string, React.ReactNode> = {
-    bank: <BankOutlined />, shop: <ShopOutlined />, team: <TeamOutlined />,
-    cloud: <CloudOutlined />, apartment: <ApartmentOutlined />, tool: <ToolOutlined />,
-    global: <GlobalOutlined />, rocket: <RocketOutlined />, home: <HomeOutlined />,
-    bulb: <BulbOutlined />, safety: <SafetyOutlined />, thunder: <ThunderboltOutlined />,
-    database: <DatabaseOutlined />, api: <ApiOutlined />, deployment: <DeploymentUnitOutlined />,
-    cluster: <ClusterOutlined />, dashboard: <DashboardOutlined />, experiment: <ExperimentOutlined />,
-    monitor: <MonitorOutlined />, code: <CodeOutlined />, build: <BuildOutlined />,
-    fund: <FundOutlined />, trophy: <TrophyOutlined />, star: <StarOutlined />,
-    product: <ProductOutlined />, alert: <AlertOutlined />, audit: <AuditOutlined />,
-    fire: <FireOutlined />, service: <CustomerServiceOutlined />, control: <ControlOutlined />,
-    send: <SendOutlined />, folder: <FolderOpenOutlined />,
-};
-
-/* ── 内联样式常量 ── */
-const S = {
-    container: { position: 'relative' as const },
-    trigger: {
-        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-        padding: '0 14px', height: 58,
-        borderLeft: '1px solid rgba(255,255,255,0.12)',
-        borderTop: 'none',
-        borderRight: 'none',
-        borderBottom: 'none',
-        transition: 'background 0.2s',
-        background: 'transparent',
-        color: 'rgba(255,255,255,0.85)', userSelect: 'none' as const,
-        font: 'inherit',
-    },
-    triggerName: {
-        fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)',
-        transform: 'translateY(1px)',
-    },
-    triggerCaret: { fontSize: 8, color: 'rgba(255,255,255,0.4)', transform: 'translateY(1px)' },
-    panel: {
-        position: 'fixed' as const,
-        width: 180, background: '#fff',
-        borderRadius: '0 0 6px 6px',
-        boxShadow: '0 6px 16px rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12)',
-        zIndex: 2000, overflow: 'hidden' as const,
-    },
-    list: { maxHeight: 220, overflowY: 'auto' as const, padding: '2px 0' },
-    item: (active: boolean) => ({
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '5px 10px', cursor: 'pointer',
-        transition: 'background 0.12s',
-        color: active ? '#0f62fe' : '#262626',
-        fontWeight: active ? 500 : 400 as number,
-        fontSize: 13, lineHeight: '20px',
-    }),
-    itemIcon: (active: boolean) => ({
-        color: active ? '#0f62fe' : '#8c8c8c', fontSize: 13, flexShrink: 0,
-    }),
-    check: { color: '#0f62fe', fontSize: 10, marginLeft: 'auto', flexShrink: 0 },
-    empty: { padding: '12px 10px', color: '#bfbfbf', textAlign: 'center' as const, fontSize: 12 },
-};
+import { resolveTenantIcon } from './tenantSwitcherIcons';
+import {
+    loadTenantStorageState,
+    resolveCurrentTenantId,
+    saveTenantStorageState,
+    updateStoredCurrentTenantId,
+} from './tenantSwitcherStorage';
+import { tenantSwitcherStyles as S } from './tenantSwitcherStyles';
 
 const TenantSwitcher: React.FC = () => {
     const panelId = 'tenant-switcher-panel';
 
     const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
-    const [tenants, setTenants] = useState<TenantBrief[]>([]);
+    const [tenants, setTenants] = useState<CurrentUserTenant[]>([]);
     const [searchValue, setSearchValue] = useState('');
-    const [searchResults, setSearchResults] = useState<TenantBrief[] | null>(null);
+    const [searchResults, setSearchResults] = useState<CurrentUserTenant[] | null>(null);
     const [searching, setSearching] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [searchError, setSearchError] = useState<string | null>(null);
@@ -113,29 +51,19 @@ const TenantSwitcher: React.FC = () => {
 
     /* 启动时加载租户列表 */
     useEffect(() => {
-        try {
-            const raw = localStorage.getItem('tenant-storage');
-            if (raw) setCurrentTenantId(JSON.parse(raw).currentTenantId || null);
-        } catch { /* ignore */ }
+        const storedState = loadTenantStorageState();
+        setCurrentTenantId(storedState.currentTenantId);
 
-        request('/api/v1/common/user/tenants')
-            .then((res: any) => {
-                if (res?.data && Array.isArray(res.data)) {
-                    setLoadError(null);
-                    setTenants(res.data);
-                    try {
-                        const raw = localStorage.getItem('tenant-storage');
-                        const stored = raw ? JSON.parse(raw) : {};
-                        const currentTenantId = stored.currentTenantId && res.data.some((item: TenantBrief) => item.id === stored.currentTenantId)
-                            ? stored.currentTenantId
-                            : (res.data[0]?.id || null);
-                        setCurrentTenantId(currentTenantId);
-                        localStorage.setItem('tenant-storage', JSON.stringify({
-                            currentTenantId,
-                            tenants: res.data,
-                        }));
-                    } catch { /* ignore */ }
-                }
+        getCurrentUserTenants()
+            .then((tenantList) => {
+                setLoadError(null);
+                setTenants(tenantList);
+                const nextTenantId = resolveCurrentTenantId(tenantList, storedState.currentTenantId);
+                setCurrentTenantId(nextTenantId);
+                saveTenantStorageState({
+                    currentTenantId: nextTenantId,
+                    tenants: tenantList,
+                });
             })
             .catch(() => {
                 setTenants([]);
@@ -170,13 +98,11 @@ const TenantSwitcher: React.FC = () => {
         const token = searchSequenceRef.current.next();
         setSearching(true);
         setSearchError(null);
-        request('/api/v1/common/user/tenants', { params: { name: value.trim() } })
-            .then((res: any) => {
+        getCurrentUserTenants({ name: value.trim() })
+            .then((tenantList) => {
                 if (!searchSequenceRef.current.isCurrent(token)) return;
-                if (res?.data && Array.isArray(res.data)) {
-                    setSearchResults(res.data);
-                    setSearchError(null);
-                }
+                setSearchResults(tenantList);
+                setSearchError(null);
             })
             .catch(() => {
                 if (!searchSequenceRef.current.isCurrent(token)) return;
@@ -193,14 +119,7 @@ const TenantSwitcher: React.FC = () => {
     /* 切换租户：更新 localStorage → 整页刷新 */
     const handleChange = useCallback((tid: string) => {
         if (tid === currentTenantId) { setOpen(false); return; }
-        try {
-            const raw = localStorage.getItem('tenant-storage');
-            if (raw) {
-                const s = JSON.parse(raw);
-                s.currentTenantId = tid;
-                localStorage.setItem('tenant-storage', JSON.stringify(s));
-            }
-        } catch { /* ignore */ }
+        updateStoredCurrentTenantId(tid);
 
         setCurrentTenantId(tid);
         setOpen(false);
@@ -210,7 +129,7 @@ const TenantSwitcher: React.FC = () => {
     }, [currentTenantId]);
 
     const cur = tenants.find(t => t.id === currentTenantId);
-    const curIcon = (cur?.icon && ICON_MAP[cur.icon]) ?? <BankOutlined />;
+    const curIcon = resolveTenantIcon(cur?.icon);
     const showSearch = tenants.length >= 5;
     const displayList = searchResults !== null ? searchResults : tenants;
     const emptyMessage = searchError || loadError || (searching ? '搜索中...' : '无匹配租户');
@@ -265,7 +184,7 @@ const TenantSwitcher: React.FC = () => {
                     <div id={panelId} role="listbox" aria-label="租户列表" style={S.list}>
                         {displayList.map(tenant => {
                             const active = tenant.id === currentTenantId;
-                            const icon = (tenant.icon && ICON_MAP[tenant.icon]) ?? <BankOutlined />;
+                            const icon = resolveTenantIcon(tenant.icon);
                             return (
                                 <button
                                     type="button"
@@ -292,7 +211,7 @@ const TenantSwitcher: React.FC = () => {
                             );
                         })}
                         {displayList.length === 0 && (
-                            <div role="status" aria-live="polite" style={S.empty}>{emptyMessage}</div>
+                            <output aria-live="polite" style={S.empty}>{emptyMessage}</output>
                         )}
                     </div>
                 </div>,

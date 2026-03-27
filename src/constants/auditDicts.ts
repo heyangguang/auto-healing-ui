@@ -149,7 +149,7 @@ function refresh() {
             // 中文动词：label + "了"
             const existingVerb = FB_ACTION_VERBS[i.dict_key];
             verbs[i.dict_key] = {
-                verb: existingVerb?.verb || (i.label + '了'),
+                verb: existingVerb?.verb || (`${i.label}了`),
                 color: i.color || existingVerb?.color || '#8c8c8c',
             };
         });

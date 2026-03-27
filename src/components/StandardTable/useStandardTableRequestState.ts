@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { SorterResult } from 'antd/es/table/interface';
 import { createRequestSequence } from '@/utils/requestSequence';
+import type {
+  StandardTableAdvancedSearchPayload,
+  StandardTableSearchValues,
+  StandardTableSort,
+} from './types';
 
 interface SearchFilterItem {
   field: string;
@@ -7,27 +13,27 @@ interface SearchFilterItem {
   value: string;
 }
 
-interface RequestStateParams<T extends Record<string, any>> {
-  request?: (params: {
-    page: number;
-    pageSize: number;
-    searchField?: string;
-    searchValue?: string;
-    advancedSearch?: Record<string, any>;
-    sorter?: { field: string; order: 'ascend' | 'descend' };
-  }) => Promise<{ data: T[]; total: number }>;
-  onSearch?: (params: {
-    searchField?: string;
-    searchValue?: string;
-    advancedSearch?: Record<string, any>;
-    filters?: { field: string; value: string }[];
-  }) => void;
+interface RequestStateParams<T extends object> {
+    request?: (params: {
+      page: number;
+      pageSize: number;
+      searchField?: string;
+      searchValue?: string;
+      advancedSearch?: StandardTableAdvancedSearchPayload;
+      sorter?: StandardTableSort;
+    }) => Promise<{ data: T[]; total: number }>;
+    onSearch?: (params: {
+      searchField?: string;
+      searchValue?: string;
+      advancedSearch?: StandardTableAdvancedSearchPayload;
+      filters?: { field: string; value: string }[];
+    }) => void;
   defaultPageSize: number;
   prefsLoaded: boolean;
   refreshTrigger?: number;
   searchFilters: SearchFilterItem[];
   showAdvanced: boolean;
-  advancedValues: Record<string, any>;
+  advancedValues: StandardTableSearchValues;
   advancedMatchModes: Record<string, 'fuzzy' | 'exact'>;
 }
 
@@ -39,27 +45,28 @@ const buildSearchPayload = ({
 }: {
   activeFilters: SearchFilterItem[];
   showAdvanced: boolean;
-  advancedValues: Record<string, any>;
+  advancedValues: StandardTableSearchValues;
   advancedMatchModes: Record<string, 'fuzzy' | 'exact'>;
 }) => {
   const primaryFilter = activeFilters[0];
-  const filtersAsSearch: Record<string, any> = {};
+  const filtersAsSearch: StandardTableSearchValues = {};
 
   activeFilters.forEach((filter) => {
     filtersAsSearch[filter.field] = filter.value;
   });
 
-  let processedAdvanced: Record<string, any> | undefined;
+  let processedAdvanced: StandardTableSearchValues | undefined;
   if (showAdvanced) {
-    processedAdvanced = { ...filtersAsSearch };
+    const nextAdvanced: StandardTableSearchValues = { ...filtersAsSearch };
     Object.entries(advancedValues).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '') {
         return;
       }
       const mode = advancedMatchModes[key] || 'fuzzy';
       const finalKey = mode === 'exact' ? `${key}__exact` : key;
-      processedAdvanced![finalKey] = value;
+      nextAdvanced[finalKey] = value;
     });
+    processedAdvanced = nextAdvanced;
   }
 
   return {
@@ -72,7 +79,7 @@ const buildSearchPayload = ({
   };
 };
 
-export function useStandardTableRequestState<T extends Record<string, any>>({
+export function useStandardTableRequestState<T extends object>({
   request,
   onSearch,
   defaultPageSize,
@@ -88,7 +95,7 @@ export function useStandardTableRequestState<T extends Record<string, any>>({
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
-  const [sorter, setSorter] = useState<{ field: string; order: 'ascend' | 'descend' } | undefined>();
+  const [sorter, setSorter] = useState<StandardTableSort | undefined>();
   const requestSequenceRef = useRef(createRequestSequence());
 
   const fetchData = useCallback(async (
@@ -175,17 +182,27 @@ export function useStandardTableRequestState<T extends Record<string, any>>({
     fetchData(page, pageSize, sorter);
   }, [fetchData, page, pageSize, sorter]);
 
-  const handleTableChange = useCallback((_pagination: unknown, _filters: unknown, tableSorter: any) => {
-    const sortField = tableSorter?.columnKey || tableSorter?.field || tableSorter?.column?.key;
-    if (sortField && tableSorter?.order) {
-      const nextSorter = { field: sortField as string, order: tableSorter.order as 'ascend' | 'descend' };
-      setSorter(nextSorter);
-      fetchData(page, pageSize, nextSorter, searchFilters);
-      return;
-    }
-    setSorter(undefined);
-    fetchData(page, pageSize, undefined, searchFilters);
-  }, [fetchData, page, pageSize, searchFilters]);
+  const handleTableChange = useCallback(
+    (_pagination: unknown, _filters: unknown, tableSorter: SorterResult<T> | SorterResult<T>[]) => {
+      const activeSorter = Array.isArray(tableSorter) ? tableSorter[0] : tableSorter;
+      const sortField = activeSorter?.columnKey || activeSorter?.field || activeSorter?.column?.key;
+
+      if (typeof sortField === 'string' && activeSorter?.order) {
+        const nextSorter = {
+          field: sortField,
+          order: activeSorter.order,
+        } satisfies StandardTableSort;
+
+        setSorter(nextSorter);
+        fetchData(page, pageSize, nextSorter, searchFilters);
+        return;
+      }
+
+      setSorter(undefined);
+      fetchData(page, pageSize, undefined, searchFilters);
+    },
+    [fetchData, page, pageSize, searchFilters],
+  );
 
   const handlePageChange = useCallback((nextPage: number, nextPageSize: number) => {
     setPage(nextPage);

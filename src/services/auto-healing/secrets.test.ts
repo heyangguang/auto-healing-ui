@@ -39,7 +39,10 @@ describe('auto-healing secrets service', () => {
     });
 
     expect(getTenantSecretsSources).toHaveBeenCalledWith({
-      params: { page: 1, page_size: 20, status: 'active', is_default: true },
+      page: 1,
+      page_size: 20,
+      status: 'active',
+      is_default: true,
     });
   });
 
@@ -74,7 +77,7 @@ describe('auto-healing secrets service', () => {
       by_type: [{ type: 'vault', count: 2 }],
     });
 
-    expect(postTenantSecretsSources).toHaveBeenCalledWith({ data: {} });
+    expect(postTenantSecretsSources).toHaveBeenCalledWith({});
   });
 
   it('unwraps test-query responses to batch results directly', async () => {

@@ -49,11 +49,13 @@ export interface RoleWorkspaceBinding {
 
 /** GET /api/v1/tenant/dashboard/overview?sections=... */
 export async function getDashboardOverview(sections: string[], options: DashboardRequestOptions = {}) {
-    return getTenantDashboardOverview({
-        params: { sections: sections.join(',') },
-        skipErrorHandler: true,
-        ...options,
-    }) as Promise<DashboardOverviewResponse>;
+    return getTenantDashboardOverview(
+        { sections: sections.join(',') },
+        {
+            skipErrorHandler: true,
+            ...options,
+        },
+    ) as Promise<DashboardOverviewResponse>;
 }
 
 /** GET /api/v1/tenant/dashboard/config */

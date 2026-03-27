@@ -1,15 +1,18 @@
 import React from 'react';
 import { Button, DatePicker, Input, Select, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import type { AdvancedSearchField } from './index';
+import type {
+  AdvancedSearchField,
+  StandardTableSearchValues,
+} from './types';
 
 const { RangePicker } = DatePicker;
 
 interface AdvancedSearchPanelProps {
   fields: AdvancedSearchField[];
-  values: Record<string, any>;
+  values: StandardTableSearchValues;
   matchModes: Record<string, 'fuzzy' | 'exact'>;
-  onFieldChange: (key: string, value: any) => void;
+  onFieldChange: (key: string, value: unknown) => void;
   onToggleMatchMode: (key: string, defaultMatchMode?: 'fuzzy' | 'exact') => void;
   onSearch: () => void;
   onReset: () => void;
@@ -34,7 +37,7 @@ function AdvancedSearchPanel({
 
           return (
             <div key={field.key} className="standard-table-advanced-field">
-              <label>
+              <div>
                 {field.label}
                 {field.description && (
                   <Tooltip title={field.description}>
@@ -43,11 +46,11 @@ function AdvancedSearchPanel({
                     />
                   </Tooltip>
                 )}
-              </label>
+              </div>
               {field.type === 'input' && (
                 <div style={{ display: 'flex', gap: 4 }}>
                   <Input
-                    value={values[field.key] || ''}
+                    value={(values[field.key] as string | undefined) || ''}
                     onChange={(event) => onFieldChange(field.key, event.target.value)}
                     placeholder={field.placeholder || `输入${field.label}`}
                     allowClear
@@ -73,7 +76,7 @@ function AdvancedSearchPanel({
               )}
               {field.type === 'select' && (
                 <Select
-                  value={values[field.key]}
+                  value={values[field.key] as string | undefined}
                   onChange={(value) => onFieldChange(field.key, value)}
                   placeholder={field.placeholder || `选择${field.label}`}
                   options={field.options}
@@ -84,7 +87,7 @@ function AdvancedSearchPanel({
               {field.type === 'multiSelect' && (
                 <Select
                   mode="multiple"
-                  value={values[field.key] || []}
+                  value={(values[field.key] as string[] | undefined) || []}
                   onChange={(value) => onFieldChange(field.key, value)}
                   placeholder={field.placeholder || `选择${field.label}`}
                   options={field.options}
@@ -95,7 +98,7 @@ function AdvancedSearchPanel({
               )}
               {field.type === 'dateRange' && (
                 <RangePicker
-                  value={values[field.key]}
+                  value={values[field.key] as Parameters<typeof RangePicker>[0]['value']}
                   onChange={(value) => onFieldChange(field.key, value)}
                   placeholder={['开始时间', '结束时间']}
                   style={{ width: '100%' }}

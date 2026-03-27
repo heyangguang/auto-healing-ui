@@ -12,7 +12,7 @@ const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
     const { data, loading, refresh } = useDashboardSection('healing');
     const { ref, width, height } = useContainerSize();
 
-    const chartData = React.useMemo(() => buildInstanceStatusChartData(data), [data]);
+    const chartData = React.useMemo(() => buildInstanceStatusChartData(data ?? undefined), [data]);
 
     const total = React.useMemo(() => {
         return Number(data?.instances_total ?? chartData.reduce((sum, item) => sum + item.value, 0));

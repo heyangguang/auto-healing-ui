@@ -54,7 +54,7 @@ export async function getPlaybooks(params?: {
     page_size?: number;
 }) {
     return normalizePaginatedResponse(
-        await getTenantPlaybooks({ params }) as AutoHealing.PaginatedResponse<AutoHealing.Playbook>,
+        await getTenantPlaybooks((params || {}) as GeneratedAutoHealing.getTenantPlaybooksParams) as AutoHealing.PaginatedResponse<AutoHealing.Playbook>,
     );
 }
 
@@ -104,9 +104,9 @@ export async function deletePlaybook(id: string) {
  * 扫描 Playbook 变量
  * POST /api/v1/tenant/playbooks/{id}/scan
  */
-export async function scanPlaybook(id: string, data?: AutoHealing.ScanPlaybookRequest) {
+export async function scanPlaybook(id: string, _data?: AutoHealing.ScanPlaybookRequest) {
     return wrapGeneratedData(
-        postTenantPlaybooksIdScan({ id }, { data }) as Promise<{ data?: AutoHealing.PlaybookScanLog } | AutoHealing.PlaybookScanLog>,
+        postTenantPlaybooksIdScan({ id }) as Promise<{ data?: AutoHealing.PlaybookScanLog } | AutoHealing.PlaybookScanLog>,
     );
 }
 

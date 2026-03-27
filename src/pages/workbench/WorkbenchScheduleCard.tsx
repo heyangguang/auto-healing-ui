@@ -113,8 +113,8 @@ const WorkbenchScheduleCard: React.FC<WorkbenchScheduleCardProps> = ({
             {accessDisabled ? (
                 <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 12, color: '#bfbfbf' }}>无权限查看定时任务</div>
             ) : scheduleData[selectedDate] && scheduleData[selectedDate].length > 0 ? (
-                mergeScheduleTasks(scheduleData[selectedDate]).map((task, index) => (
-                    <div key={index} className={styles.scheduleTaskItem} style={task.isMerged ? { borderLeftColor: '#722ed1', background: '#f9f0ff' } : undefined}>
+                mergeScheduleTasks(scheduleData[selectedDate]).map((task) => (
+                    <div key={`${task.name}-${task.displayTime}-${task.count ?? 1}`} className={styles.scheduleTaskItem} style={task.isMerged ? { borderLeftColor: '#722ed1', background: '#f9f0ff' } : undefined}>
                         <span className={styles.scheduleTaskTime} style={task.isMerged ? { color: '#722ed1' } : undefined}>{task.displayTime}</span>
                         <span className={styles.scheduleTaskName}>{task.name}</span>
                         {task.isMerged && <span style={{ fontSize: 10, color: '#722ed1', background: '#f0e6ff', padding: '1px 6px', borderRadius: 2, flexShrink: 0 }}>{task.count}次/天</span>}

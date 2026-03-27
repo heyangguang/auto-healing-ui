@@ -109,7 +109,7 @@
 }
 
 .task-nav-card .ant-card-body {
-    padding: 10px 12px !important;
+    padding: 10px 12px;
 }
 
 .task-nav-card:hover .task-nav-name {

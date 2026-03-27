@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, ReactNode } from 'react';
+import React, { useState, useMemo, useCallback, type ReactNode } from 'react';
 import { Input, Tag, Spin } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import './index.css';
@@ -41,7 +41,7 @@ export interface GroupedCardListProps<T> {
 
 /* ========== 组件 ========== */
 
-function GroupedCardList<T extends Record<string, any>>({
+function GroupedCardList<T>({
     data,
     loading = false,
     groupBy,
@@ -60,13 +60,15 @@ function GroupedCardList<T extends Record<string, any>>({
     /* ---- 获取分组 key ---- */
     const getGroupKey = useCallback((item: T): string => {
         if (typeof groupBy === 'function') return groupBy(item);
-        return String(item[groupBy] || 'other');
+        const record = item as Record<PropertyKey, unknown>;
+        return String(record[groupBy] || 'other');
     }, [groupBy]);
 
     /* ---- 获取 item key ---- */
     const getItemKey = useCallback((item: T): string => {
         if (typeof itemKey === 'function') return itemKey(item);
-        return String(item[itemKey]);
+        const record = item as Record<PropertyKey, unknown>;
+        return String(record[itemKey]);
     }, [itemKey]);
 
     /* ---- 按分组 + 搜索过滤 ---- */

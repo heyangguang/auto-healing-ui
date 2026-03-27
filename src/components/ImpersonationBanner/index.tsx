@@ -99,7 +99,7 @@ const loadSession = (): ImpersonationSession | null => {
 };
 
 const ImpersonationBanner: React.FC = () => {
-    const [session, setSession] = useState<ImpersonationSession | null>(() => loadSession());
+    const [session, _setSession] = useState<ImpersonationSession | null>(() => loadSession());
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

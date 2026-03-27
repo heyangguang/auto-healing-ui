@@ -1,5 +1,6 @@
 import { NodeIndexOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import type { BadgeProps } from 'antd';
 import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -7,6 +8,23 @@ import { INSTANCE_STATUS_MAP } from '@/constants/instanceDicts';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
+
+type RecentInstanceItem = {
+    id?: string;
+    status?: string;
+    title?: string;
+    name?: string;
+    flow_name?: string;
+    current_node_id?: string;
+    created_at?: string;
+};
+
+function resolveBadgeStatus(color?: string): BadgeProps['status'] {
+    if (color === 'success' || color === 'processing' || color === 'error' || color === 'warning') {
+        return color;
+    }
+    return 'default';
+}
 
 const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
@@ -41,8 +59,9 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                         </div>
                     ) : (
-                        items.map((item: any, index: number) => {
-                            const st = INSTANCE_STATUS_MAP[item.status] || { color: 'default', text: item.status };
+                        items.map((item: RecentInstanceItem, index: number) => {
+                            const status = item.status ?? '';
+                            const st = INSTANCE_STATUS_MAP[status] || { color: 'default', text: status };
                             const displayName = item.title || item.name || (item.id ? `${item.id.slice(0, 8)}...` : '-');
                             const flowName = item.flow_name || '-';
                             const currentNode = item.current_node_id || '-';
@@ -67,7 +86,7 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                                 >
                                     {/* Column 1: ID / Name */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                                        <Badge status={st.color as any} />
+                                        <Badge status={resolveBadgeStatus(st.color)} />
                                         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                                             <Tooltip title={item.id}>
                                                 <Typography.Text ellipsis style={{ fontSize: 13, color: '#333', fontWeight: 500 }}>

@@ -18,7 +18,8 @@ export function useNodeConfigPanelState({ node, open, onChange }: UseNodeConfigP
             prevNodeIdRef.current = node.id;
             setSelectedChannelTypes([]);
             formRef.current?.resetFields();
-            formRef.current?.setFieldsValue(node.data);
+            type FormValuesArg = Parameters<NonNullable<ProFormInstance<NodeConfigFormValues>>['setFieldsValue']>[0];
+            formRef.current?.setFieldsValue(node.data as FormValuesArg);
         }
 
         if (node && open) {

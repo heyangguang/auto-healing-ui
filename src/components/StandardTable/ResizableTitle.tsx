@@ -25,7 +25,10 @@ function ResizableTitle({ onResizeEnd, width, ...restProps }: ResizableTitleProp
     const startWidth = th.offsetWidth;
 
     const table = th.closest('table');
-    const tr = th.parentElement!;
+    const tr = th.parentElement;
+    if (!tr) {
+      return;
+    }
     const allThs = Array.from(tr.children) as HTMLElement[];
     const myIndex = allThs.indexOf(th);
     const allCols = Array.from(
@@ -44,7 +47,7 @@ function ResizableTitle({ onResizeEnd, width, ...restProps }: ResizableTitleProp
       nativeEvent.stopPropagation();
       nativeEvent.preventDefault();
     };
-    th.addEventListener('click', blockClick, { capture: true, once: true });
+    th.addEventListener('click', blockClick, true);
 
     const activate = () => {
       origColWidths = allCols.map((col) => col.style.width);
@@ -105,7 +108,7 @@ function ResizableTitle({ onResizeEnd, width, ...restProps }: ResizableTitleProp
           }
         });
       }
-      setTimeout(() => th.removeEventListener('click', blockClick, { capture: true } as any), 50);
+      setTimeout(() => th.removeEventListener('click', blockClick, true), 50);
     };
 
     document.body.style.cursor = 'col-resize';

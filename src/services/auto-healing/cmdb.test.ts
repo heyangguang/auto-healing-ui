@@ -10,8 +10,8 @@ import {
 import { request } from '@umijs/max';
 import {
   getTenantCmdb,
-  postTenantCmdbIdMaintenance,
-  postTenantCmdbIdResume,
+  postTenantCmdbByIdMaintenance,
+  postTenantCmdbByIdResume,
 } from '@/services/generated/auto-healing/cmdb';
 
 jest.mock('@umijs/max', () => ({
@@ -20,8 +20,8 @@ jest.mock('@umijs/max', () => ({
 
 jest.mock('@/services/generated/auto-healing/cmdb', () => ({
   getTenantCmdb: jest.fn(),
-  postTenantCmdbIdMaintenance: jest.fn(),
-  postTenantCmdbIdResume: jest.fn(),
+  postTenantCmdbByIdMaintenance: jest.fn(),
+  postTenantCmdbByIdResume: jest.fn(),
 }));
 
 describe('auto-healing cmdb service', () => {
@@ -62,11 +62,11 @@ describe('auto-healing cmdb service', () => {
       status: 'active',
       ip_address: '10.0.0.1',
     });
-    expect(postTenantCmdbIdMaintenance).toHaveBeenCalledWith(
+    expect(postTenantCmdbByIdMaintenance).toHaveBeenCalledWith(
       { id: 'cmdb-1' },
-      { data: { reason: 'ops window', end_at: '2026-03-26T00:00:00Z' } },
+      { reason: 'ops window', end_at: '2026-03-26T00:00:00Z' },
     );
-    expect(postTenantCmdbIdResume).toHaveBeenCalledWith({ id: 'cmdb-1' });
+    expect(postTenantCmdbByIdResume).toHaveBeenCalledWith({ id: 'cmdb-1' });
     expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tenant/cmdb/ids', {
       method: 'GET',
       params: undefined,

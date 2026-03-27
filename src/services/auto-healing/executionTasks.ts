@@ -55,7 +55,7 @@ export async function getExecutionTask(id: string) {
 }
 
 export async function createExecutionTask(data: AutoHealing.CreateExecutionTaskRequest) {
-    const response = await postTenantExecutionTasks({ data }) as DataEnvelope<AutoHealing.ExecutionTask>;
+    const response = await postTenantExecutionTasks(data) as DataEnvelope<AutoHealing.ExecutionTask>;
     return {
         ...response,
         data: normalizeExecutionTask(response.data),
@@ -82,7 +82,7 @@ export async function deleteExecutionTask(id: string) {
 export async function executeTask(id: string, data?: AutoHealing.ExecuteTaskRequest) {
     const response = await postTenantExecutionTasksIdExecute(
         { id },
-        data ? { data } : undefined,
+        data || {},
     ) as DataEnvelope<AutoHealing.ExecutionRun>;
     return {
         ...response,

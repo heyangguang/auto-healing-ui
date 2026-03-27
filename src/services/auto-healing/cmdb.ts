@@ -1,8 +1,8 @@
 import { request } from '@umijs/max';
 import {
     getTenantCmdb,
-    postTenantCmdbIdMaintenance,
-    postTenantCmdbIdResume,
+    postTenantCmdbByIdMaintenance,
+    postTenantCmdbByIdResume,
 } from '@/services/generated/auto-healing/cmdb';
 import { normalizePaginatedResponse, unwrapData, unwrapItems } from './responseAdapters';
 
@@ -110,9 +110,9 @@ export async function batchTestCMDBConnection(cmdbIds: string[], secretsSourceId
  * 进入维护模式
  */
 export async function enterMaintenance(id: string, reason: string, endAt?: string) {
-    return postTenantCmdbIdMaintenance(
+    return postTenantCmdbByIdMaintenance(
         { id },
-        { data: { reason, end_at: endAt || null } },
+        { reason, end_at: endAt || undefined },
     ) as Promise<{ code: number; message: string }>;
 }
 
@@ -120,7 +120,7 @@ export async function enterMaintenance(id: string, reason: string, endAt?: strin
  * 退出维护模式
  */
 export async function resumeFromMaintenance(id: string) {
-    return postTenantCmdbIdResume({ id }) as Promise<{ code: number; message: string }>;
+    return postTenantCmdbByIdResume({ id }) as Promise<{ code: number; message: string }>;
 }
 
 /**

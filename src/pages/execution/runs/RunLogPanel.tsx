@@ -1,7 +1,7 @@
 import React from 'react';
 import { ClockCircleOutlined, ConsoleSqlOutlined, SyncOutlined } from '@ant-design/icons';
 import { Alert, Space, Tag, Typography } from 'antd';
-import LogConsole, { LogEntry } from '@/components/execution/LogConsole';
+import LogConsole, { type LogEntry } from '@/components/execution/LogConsole';
 
 const { Text } = Typography;
 

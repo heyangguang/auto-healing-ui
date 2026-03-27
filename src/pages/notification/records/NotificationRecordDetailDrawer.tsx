@@ -101,7 +101,7 @@ const NotificationRecordDetailDrawer: React.FC<NotificationRecordDetailDrawerPro
 
                     <div>
                         <Text strong style={{ display: 'block', marginBottom: 8 }}>通知内容</Text>
-                        <div style={{ padding: 16, background: '#1e1e1e', color: '#d4d4d4', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'Consolas, Monaco, \"Courier New\", monospace', fontSize: 13, lineHeight: 1.6, borderRadius: 4, maxHeight: 300, overflowY: 'auto' }}>
+                        <div style={{ padding: 16, background: '#1e1e1e', color: '#d4d4d4', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'Consolas, Monaco, "Courier New", monospace', fontSize: 13, lineHeight: 1.6, borderRadius: 4, maxHeight: 300, overflowY: 'auto' }}>
                             {(() => {
                                 const body = record.body || '';
                                 try { return JSON.stringify(JSON.parse(body), null, 2); }
@@ -114,7 +114,7 @@ const NotificationRecordDetailDrawer: React.FC<NotificationRecordDetailDrawerPro
                         <div>
                             <Text strong style={{ display: 'block', marginBottom: 8 }}>渠道响应数据</Text>
                             <div style={{ padding: 16, background: '#1e1e1e', borderRadius: 4, maxHeight: 400, overflowY: 'auto' }}>
-                                <pre style={{ margin: 0, fontSize: 12, lineHeight: 1.5, fontFamily: 'Consolas, Monaco, \"Courier New\", monospace', color: '#9cdcfe', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                <pre style={{ margin: 0, fontSize: 12, lineHeight: 1.5, fontFamily: 'Consolas, Monaco, "Courier New", monospace', color: '#9cdcfe', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                     {(() => {
                                         const data = record.response_data;
                                         try {

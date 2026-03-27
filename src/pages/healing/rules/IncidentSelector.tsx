@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
 import {
     Modal, Input, Typography, Tag, Empty, Spin, Space, Row, Col,
-    Select, Badge, Tooltip, Pagination,
+    Select, Pagination,
 } from 'antd';
 import {
-    SearchOutlined, AlertOutlined, CheckCircleOutlined, ClockCircleOutlined,
-    LoadingOutlined, DatabaseOutlined, DesktopOutlined, UserOutlined,
+    SearchOutlined, AlertOutlined, CheckCircleOutlined, ClockCircleOutlined,DatabaseOutlined, DesktopOutlined, 
 } from '@ant-design/icons';
 import { getIncident, getIncidents, type IncidentQueryParams } from '@/services/auto-healing/incidents';
 import { useAsyncModalSelector } from '@/hooks/useAsyncModalSelector';

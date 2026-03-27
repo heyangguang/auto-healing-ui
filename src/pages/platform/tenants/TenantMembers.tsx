@@ -64,7 +64,7 @@ const TenantMembersPage: React.FC = () => {
           membersLoading={state.membersLoading}
           pendingInvCount={state.pendingInvCount}
           tenantRoles={state.tenantRoles}
-          onActiveTabChange={state.setActiveTab}
+          onActiveTabChange={(key) => state.setActiveTab(key as typeof state.activeTab)}
           onCancelInvitation={state.handleCancelInvitation}
           onCopyInvitationLink={state.copyInvitationLink}
           onLoadInvitations={state.loadInvitations}

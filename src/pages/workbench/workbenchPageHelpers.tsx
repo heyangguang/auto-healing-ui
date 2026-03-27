@@ -6,7 +6,6 @@ import {
     DatabaseOutlined,
     KeyOutlined,
     ReadOutlined,
-    RocketOutlined,
     ScheduleOutlined,
     ThunderboltOutlined,
     ToolOutlined,

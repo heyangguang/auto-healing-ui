@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Modal, Input, Button, Alert, Space, Typography, Badge, Row, Col, Segmented, Tag } from 'antd';
 import {
@@ -9,6 +8,13 @@ import IncidentSelector from './IncidentSelector';
 import { INCIDENT_SEVERITY_MAP } from '@/constants/incidentDicts';
 
 const { Text } = Typography;
+const KNOWN_FIELDS = ['title', 'description', 'severity', 'priority', 'status',
+    'category', 'affected_ci', 'affected_service', 'assignee', 'reporter', 'source_plugin_name'];
+type MatchMode = 'all' | 'any';
+type InputMode = 'json' | 'incident';
+type DataRecord = Record<string, unknown>;
+interface ConditionCheckDetail { condition: string; pass: boolean; }
+interface RuleTestResult { matches: boolean; details: ConditionCheckDetail[]; }
 
 // 本地适配器：将集中化字典的 { text, color } 转为本文件需要的 { label, color }
 const SEVERITY_META: Record<string, { label: string; color: string }> = Object.fromEntries(
@@ -19,80 +25,75 @@ interface RuleTesterProps {
     open: boolean;
     onCancel: () => void;
     conditions: AutoHealing.HealingRuleCondition[];
-    matchMode: 'all' | 'any';
+    matchMode: MatchMode;
 }
 
 export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditions, matchMode }) => {
-    const [mode, setMode] = useState<'json' | 'incident'>('json');
+    const [mode, setMode] = useState<InputMode>('json');
     const [jsonInput, setJsonInput] = useState<string>('{\n  "alertname": "TestAlert",\n  "severity": "critical",\n  "instance": "192.168.1.10"\n}');
-    const [result, setResult] = useState<{ matches: boolean; details: { condition: string; pass: boolean }[] } | null>(null);
+    const [result, setResult] = useState<RuleTestResult | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // ===== Incident Selector =====
     const [incidentSelectorOpen, setIncidentSelectorOpen] = useState(false);
     const [selectedIncident, setSelectedIncident] = useState<AutoHealing.Incident | null>(null);
+    const keyedDetails = React.useMemo(() => {
+        const counts = new Map<string, number>();
+        return (result?.details || []).map((detail) => {
+            const count = (counts.get(detail.condition) || 0) + 1;
+            counts.set(detail.condition, count);
+            return { detail, key: `${detail.condition}-${count}` };
+        });
+    }, [result]);
 
     const handleSelectIncident = (incident: AutoHealing.Incident) => {
         setSelectedIncident(incident);
         setIncidentSelectorOpen(false);
-        // Populate JSON with incident data
-        const testData = {
-            ...incident,
-            ...(incident.raw_data || {}),
-        };
+        const testData = { ...incident, ...(incident.raw_data || {}) };
         setJsonInput(JSON.stringify(testData, null, 2));
     };
 
-    // ===== Condition Evaluation (aligned with backend matcher.go) =====
-    // Backend field lookup: known fields first, then raw_data fallback
-    const KNOWN_FIELDS = ['title', 'description', 'severity', 'priority', 'status',
-        'category', 'affected_ci', 'affected_service', 'assignee', 'reporter', 'source_plugin_name'];
-
-    const getFieldValue = (data: any, field: string): any => {
-        // If data has the field directly (known incident fields), return it
+    const getFieldValue = (data: DataRecord, field: string): unknown => {
         if (KNOWN_FIELDS.includes(field) && data[field] !== undefined) {
             return data[field];
         }
-        // Otherwise check top-level (covers both known fields and flat JSON)
         if (data[field] !== undefined) {
             return data[field];
         }
-        // Then check raw_data (mirrors backend getFieldValue fallback)
-        if (data.raw_data && data.raw_data[field] !== undefined) {
+        if (isRecord(data.raw_data) && data.raw_data[field] !== undefined) {
             return data.raw_data[field];
         }
         return undefined;
     };
 
-    const checkCondition = (condition: AutoHealing.HealingRuleCondition, data: any): boolean => {
+    const checkCondition = (condition: AutoHealing.HealingRuleCondition, data: DataRecord): boolean => {
         if (condition.type === 'group') {
             const subConds = condition.conditions || [];
-            // Backend: evaluateConditions with empty list returns true (for recursive calls)
             if (subConds.length === 0) return true;
             if (condition.logic === 'OR') return subConds.some(c => checkCondition(c, data));
             return subConds.every(c => checkCondition(c, data));
         }
 
-        const value = getFieldValue(data, condition.field!);
+        if (!condition.field) {
+            return false;
+        }
+
+        const value = getFieldValue(data, condition.field);
         const targetValue = condition.value;
         const operator = condition.operator;
 
         if (value === undefined || value === null) {
-            // Backend: equals(nil, nil) => true, equals(nil, x) => false
             if (operator === 'equals') return targetValue === null || targetValue === undefined;
             return false;
         }
 
         switch (operator) {
             case 'equals': return String(value) === String(targetValue);
-            // Backend: contains is case-insensitive (strings.ToLower)
             case 'contains': return String(value).toLowerCase().includes(String(targetValue).toLowerCase());
             case 'regex': try { return new RegExp(String(targetValue)).test(String(value)); } catch { return false; }
             case 'gt': return Number(value) > Number(targetValue);
             case 'lt': return Number(value) < Number(targetValue);
             case 'gte': return Number(value) >= Number(targetValue);
             case 'lte': return Number(value) <= Number(targetValue);
-            // Backend: in is case-insensitive
             case 'in':
                 if (Array.isArray(targetValue)) return targetValue.map(v => String(v).toLowerCase()).includes(String(value).toLowerCase());
                 if (typeof targetValue === 'string') return targetValue.split(',').map(s => s.trim().toLowerCase()).includes(String(value).toLowerCase());
@@ -104,9 +105,14 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
     const runTest = () => {
         setError(null);
         try {
-            const data = JSON.parse(jsonInput);
+            const parsed = JSON.parse(jsonInput);
+            if (!isRecord(parsed)) {
+                setError('Invalid JSON: 顶层必须是对象');
+                setResult(null);
+                return;
+            }
+            const data = parsed;
 
-            // Backend: Match() returns false if conditions are empty (line 24)
             if (!conditions || conditions.length === 0) {
                 setResult({
                     matches: false,
@@ -115,27 +121,25 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
                 return;
             }
 
-            const evaluate = (conds: AutoHealing.HealingRuleCondition[], mode: 'all' | 'any'): { matches: boolean; details: any[] } => {
+            const evaluate = (conds: AutoHealing.HealingRuleCondition[], evalMode: MatchMode): RuleTestResult => {
                 const details = conds.map(c => {
                     const pass = checkCondition(c, data);
-                    let label = '';
-                    if (c.type === 'group') {
-                        label = `(Group Logic: ${c.logic})`;
-                    } else {
-                        label = `${c.field} ${c.operator} ${typeof c.value === 'object' ? JSON.stringify(c.value) : c.value}`;
-                    }
+                    const label = c.type === 'group'
+                        ? `(Group Logic: ${c.logic})`
+                        : `${c.field} ${c.operator} ${formatConditionValue(c.value)}`;
                     return { condition: label, pass };
                 });
 
                 const hasPass = details.some(d => d.pass);
                 const allPass = details.every(d => d.pass);
-                const matches = mode === 'all' ? allPass : hasPass;
+                const matches = evalMode === 'all' ? allPass : hasPass;
                 return { matches, details };
             };
 
             setResult(evaluate(conditions, matchMode));
-        } catch (e: any) {
-            setError('Invalid JSON: ' + e.message);
+        } catch (error_) {
+            const message = error_ instanceof Error ? error_.message : String(error_);
+            setError(`Invalid JSON: ${message}`);
             setResult(null);
         }
     };
@@ -155,16 +159,18 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
                         { label: '选择现有工单', value: 'incident', icon: <DatabaseOutlined /> }
                     ]}
                     value={mode}
-                    onChange={v => setMode(v as any)}
+                    onChange={value => {
+                        if (value === 'json' || value === 'incident') {
+                            setMode(value);
+                        }
+                    }}
                 />
             </div>
 
             <Row gutter={16}>
-                {/* ===== Left: Input ===== */}
                 <Col span={12}>
                     {mode === 'incident' && (
                         <div style={{ marginBottom: 12 }}>
-                            {/* Open selector button */}
                             <Button
                                 type="dashed"
                                 block
@@ -175,7 +181,6 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
                                 {selectedIncident ? '重新选择工单' : '点击选择工单'}
                             </Button>
 
-                            {/* Selected incident card */}
                             {selectedIncident && (
                                 <div style={{
                                     padding: '8px 12px',
@@ -223,7 +228,6 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
                     </Button>
                 </Col>
 
-                {/* ===== Right: Results ===== */}
                 <Col span={12}>
                     <div style={{ marginBottom: 8 }}><Text strong>测试结果</Text></div>
                     <div style={{
@@ -245,8 +249,8 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
                                     )}
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    {result.details.map((d, idx) => (
-                                        <div key={idx} style={{
+                                    {keyedDetails.map(({ detail: d, key }) => (
+                                        <div key={key} style={{
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             alignItems: 'center',
@@ -269,7 +273,6 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
                 </Col>
             </Row>
 
-            {/* ===== Incident Selector Modal ===== */}
             <IncidentSelector
                 open={incidentSelectorOpen}
                 onSelect={handleSelectIncident}
@@ -277,4 +280,14 @@ export const RuleTester: React.FC<RuleTesterProps> = ({ open, onCancel, conditio
             />
         </Modal>
     );
+};
+
+const isRecord = (value: unknown): value is DataRecord =>
+    typeof value === 'object' && value !== null;
+
+const formatConditionValue = (value: unknown): string => {
+    if (typeof value === 'object') {
+        return JSON.stringify(value) ?? 'undefined';
+    }
+    return String(value);
 };

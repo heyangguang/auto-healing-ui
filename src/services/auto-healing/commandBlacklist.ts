@@ -1,5 +1,6 @@
 import { request } from '@umijs/max';
 import { normalizePaginatedResponse, unwrapData } from './responseAdapters';
+import { getSearchSchema, type SearchSchemaEnvelope } from './searchSchema';
 
 /** 黑名单规则类型 */
 export interface CommandBlacklistRule {
@@ -15,15 +16,6 @@ export interface CommandBlacklistRule {
     created_at: string;
     updated_at: string;
 }
-
-type SearchSchemaField = {
-    key?: string;
-    label?: string;
-    type?: string;
-    placeholder?: string;
-    options?: Array<{ label: string; value: string }>;
-    [key: string]: unknown;
-};
 
 export type CommandBlacklistListParams = {
     page?: number;
@@ -116,9 +108,7 @@ export async function batchToggleCommandBlacklistRules(ids: string[], isActive: 
 
 /** 搜索 Schema */
 export async function getCommandBlacklistSearchSchema() {
-    return request<{ fields: SearchSchemaField[] }>('/api/v1/tenant/command-blacklist/search-schema', {
-        method: 'GET',
-    });
+    return getSearchSchema('/api/v1/tenant/command-blacklist/search-schema') as Promise<SearchSchemaEnvelope>;
 }
 
 /** 仿真测试 — 使用后端生产匹配引擎 */

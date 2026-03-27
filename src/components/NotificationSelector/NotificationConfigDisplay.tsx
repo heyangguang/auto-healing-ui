@@ -1,37 +1,19 @@
 import React from 'react';
-import { Typography, Space, Tag, Empty } from 'antd';
+import { Typography, Tag } from 'antd';
 import {
-    RocketOutlined, CheckCircleOutlined, StopOutlined,
     SendOutlined, BellOutlined
 } from '@ant-design/icons';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
+import { TRIGGERS } from './constants';
+import type {
+    ChannelTemplateConfig,
+    NotificationConfig,
+    TriggerNotificationConfig,
+    TriggerType,
+} from './types';
 
 const { Text } = Typography;
 
-// 触发器类型
-type TriggerType = 'on_start' | 'on_success' | 'on_failure';
-
-// 单个渠道+模板配置
-interface ChannelTemplateConfig {
-    channel_id: string;
-    template_id: string;
-}
-
-// 单个触发器配置
-interface TriggerNotificationConfig {
-    enabled?: boolean;
-    channel_ids?: string[];
-    template_id?: string;
-    configs?: ChannelTemplateConfig[];
-}
-
-// 完整通知配置
-interface NotificationConfig {
-    enabled?: boolean;
-    on_start?: TriggerNotificationConfig;
-    on_success?: TriggerNotificationConfig;
-    on_failure?: TriggerNotificationConfig;
-}
 
 interface NotificationConfigDisplayProps {
     value?: NotificationConfig;
@@ -40,12 +22,11 @@ interface NotificationConfigDisplayProps {
     compact?: boolean; // 紧凑模式
 }
 
-// 触发器配置
-const TRIGGERS: { key: TriggerType; label: string; icon: React.ReactNode; color: string; borderColor: string }[] = [
-    { key: 'on_start', label: '开始时', icon: <RocketOutlined />, color: '#1890ff', borderColor: '#91d5ff' },
-    { key: 'on_success', label: '成功时', icon: <CheckCircleOutlined />, color: '#52c41a', borderColor: '#b7eb8f' },
-    { key: 'on_failure', label: '失败时', icon: <StopOutlined />, color: '#ff4d4f', borderColor: '#ffa39e' },
-];
+const TRIGGER_BORDER_COLORS: Record<TriggerType, string> = {
+    on_start: '#91d5ff',
+    on_success: '#b7eb8f',
+    on_failure: '#ffa39e',
+};
 
 /**
  * 通知配置只读展示组件
@@ -86,13 +67,14 @@ const NotificationConfigDisplay: React.FC<NotificationConfigDisplayProps> = ({
         if (config.configs?.length) return config.configs;
         // 兼容旧格式
         if (config.channel_ids?.length && config.template_id) {
-            return config.channel_ids.map(cid => ({ channel_id: cid, template_id: config.template_id! }));
+            const templateId = config.template_id;
+            return config.channel_ids.map((cid) => ({ channel_id: cid, template_id: templateId }));
         }
         return [];
     };
 
     // 检查是否有任何配置
-    const hasAnyConfig = hasEffectiveNotificationConfig(value as any);
+    const hasAnyConfig = hasEffectiveNotificationConfig(value);
 
     if (!hasAnyConfig) {
         return (
@@ -125,7 +107,7 @@ const NotificationConfigDisplay: React.FC<NotificationConfigDisplayProps> = ({
                     <div
                         key={trigger.key}
                         style={{
-                            border: `1px dashed ${trigger.borderColor}`,
+                            border: `1px dashed ${TRIGGER_BORDER_COLORS[trigger.key]}`,
                             borderRadius: 0,
                             padding: compact ? '6px 10px' : '10px 12px',
                             background: `${trigger.color}08`
@@ -159,9 +141,9 @@ const NotificationConfigDisplay: React.FC<NotificationConfigDisplayProps> = ({
 
                         {/* 渠道+模板列表 */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 4 : 6 }}>
-                            {configList.map((cfg, idx) => (
+                            {configList.map((cfg) => (
                                 <div
-                                    key={idx}
+                                    key={`${cfg.channel_id}-${cfg.template_id}`}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',

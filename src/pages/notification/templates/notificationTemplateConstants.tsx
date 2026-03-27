@@ -37,6 +37,7 @@ export const FORMAT_COLORS: Record<string, string> = {
 
 export const NOTIFICATION_TEMPLATE_HEADER_ICON = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>通知模板图标</title>
         <rect x="8" y="6" width="32" height="36" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M16 14h16M16 22h16M16 30h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <path d="M30 32l4 4 8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

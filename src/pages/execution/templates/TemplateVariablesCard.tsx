@@ -18,7 +18,7 @@ interface TemplateVariablesCardProps {
     variables: TemplateVariableRecord[];
     onShowOnlyRequiredChange: (checked: boolean) => void;
     onVarSearchChange: (value: string) => void;
-    onVariableChange: (name: string, value: unknown) => void;
+    onVariableChange: (name: string, value: AutoHealing.JsonValue | undefined) => void;
 }
 
 const TemplateVariablesCard: React.FC<TemplateVariablesCardProps> = ({

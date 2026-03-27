@@ -15,7 +15,7 @@ interface ExecutionMissionControlVariablesSectionProps {
     playbookLoadFailed: boolean;
     requiredVariables: TemplateVariableRecord[];
     variableValues: VariableValueMap;
-    onVariableChange: (name: string, value: unknown) => void;
+    onVariableChange: (name: string, value: AutoHealing.JsonValue | undefined) => void;
 }
 
 const VariableLabel: React.FC<{
@@ -35,9 +35,9 @@ const VariableLabel: React.FC<{
 );
 
 const VariableField: React.FC<{
-    value: unknown;
+    value: AutoHealing.JsonValue | undefined;
     variable: TemplateVariableRecord;
-    onVariableChange: (name: string, value: unknown) => void;
+    onVariableChange: (name: string, value: AutoHealing.JsonValue | undefined) => void;
 }> = ({ value, variable, onVariableChange }) => (
     <Col key={variable.name} span={12}>
         <div className="variable-form-item">
@@ -60,7 +60,7 @@ const VariableGroup: React.FC<{
     titleType: 'danger' | 'secondary';
     variables: TemplateVariableRecord[];
     variableValues: VariableValueMap;
-    onVariableChange: (name: string, value: unknown) => void;
+    onVariableChange: (name: string, value: AutoHealing.JsonValue | undefined) => void;
 }> = ({ title, titleType, variables, variableValues, onVariableChange }) => {
     if (variables.length === 0) {
         return null;

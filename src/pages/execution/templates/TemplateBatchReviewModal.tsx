@@ -1,7 +1,7 @@
 import { Button, Checkbox, Modal, Tag } from 'antd';
 import { CheckOutlined, ProjectOutlined } from '@ant-design/icons';
 import React from 'react';
-import { ReviewGroup } from './templateListHelpers';
+import type { ReviewGroup } from './templateListHelpers';
 
 type TemplateBatchReviewModalProps = {
     confirmLoading: boolean;

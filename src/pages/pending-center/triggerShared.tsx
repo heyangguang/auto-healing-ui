@@ -2,14 +2,13 @@ import React from 'react';
 import {
   AlertOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   InfoCircleOutlined,
   StopOutlined,
   ThunderboltOutlined,
   UndoOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { Button, Space, Tag, Typography } from 'antd';
+import { Button, Space, Tag } from 'antd';
 import type {
   AdvancedSearchField,
   SearchField,
@@ -18,8 +17,6 @@ import type {
 import { INCIDENT_SEVERITY_MAP, SEVERITY_TAG_COLORS } from '@/constants/incidentDicts';
 import type { PendingTriggerRecord } from './types';
 import dayjs from 'dayjs';
-
-const { Text } = Typography;
 
 const severityIconMap: Record<string, React.ReactNode> = {
   critical: <AlertOutlined />,
@@ -91,6 +88,7 @@ export type TriggerApiParams = {
 
 export const triggerHeaderIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>待触发工单图标</title>
     <rect x="10" y="8" width="28" height="34" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M18 8V6a6 6 0 0 1 12 0v2" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M16 18l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

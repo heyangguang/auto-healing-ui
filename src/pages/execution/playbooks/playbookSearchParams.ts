@@ -1,5 +1,8 @@
-export function buildPlaybookQueryParams(params: Record<string, any>) {
-    const queryParams: Record<string, any> = {};
+export type PlaybookSearchValue = string | number | boolean | null | undefined;
+export type PlaybookSearchParams = Record<string, PlaybookSearchValue>;
+
+export function buildPlaybookQueryParams(params: PlaybookSearchParams) {
+    const queryParams: PlaybookSearchParams = {};
     if (params.name__exact) queryParams.name__exact = params.name__exact;
     else if (params.name) queryParams.name = params.name;
     if (params.file_path__exact) queryParams.file_path__exact = params.file_path__exact;
@@ -14,10 +17,19 @@ export function buildPlaybookQueryParams(params: Record<string, any>) {
     return queryParams;
 }
 
-export function buildPlaybookSearchParams(advancedSearch?: Record<string, any>) {
+export function buildPlaybookSearchParams(advancedSearch?: Record<string, unknown>) {
     const raw = advancedSearch || {};
-    const params: Record<string, any> = {};
+    const params: PlaybookSearchParams = {};
     Object.entries(raw).forEach(([key, value]) => {
+        if (
+            value !== null
+            && value !== undefined
+            && typeof value !== 'string'
+            && typeof value !== 'number'
+            && typeof value !== 'boolean'
+        ) {
+            return;
+        }
         if (!value && value !== false && value !== 0) return;
         const cleanKey = key.replace(/^__enum__/, '');
         params[cleanKey] = value;

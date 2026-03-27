@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Badge } from 'antd';
+import { Tag, } from 'antd';
 import {
     CheckCircleOutlined,
     CloseCircleOutlined,

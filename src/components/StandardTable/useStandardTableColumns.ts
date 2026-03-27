@@ -1,17 +1,16 @@
 import { useCallback, useMemo } from 'react';
 import type { RefObject } from 'react';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, ColumnType } from 'antd/es/table';
 import type { ColumnSettingItem } from './ColumnSettingsModal';
+import type { StandardColumnDef } from './types';
 
-interface ColumnDef<T> {
-  columnKey: string;
-  columnTitle: string;
+type HeaderCellProps = {
   width?: number | string;
-  [key: string]: any;
-}
+  onResizeEnd: (finalWidth: number, allThWidths?: number[]) => void;
+};
 
-interface UseStandardTableColumnsParams<T extends Record<string, any>> {
-  columnDefs?: ColumnDef<T>[];
+interface UseStandardTableColumnsParams<T extends object> {
+  columnDefs?: StandardColumnDef<T>[];
   columnSettings: ColumnSettingItem[];
   columnWidths: Record<string, number>;
   updateColumnWidths: (
@@ -20,7 +19,7 @@ interface UseStandardTableColumnsParams<T extends Record<string, any>> {
   tableBodyRef: RefObject<HTMLDivElement | null>;
 }
 
-export function useStandardTableColumns<T extends Record<string, any>>({
+export function useStandardTableColumns<T extends object>({
   columnDefs,
   columnSettings,
   columnWidths,
@@ -73,11 +72,11 @@ export function useStandardTableColumns<T extends Record<string, any>>({
         title: columnTitle,
         key: columnKey,
         width,
-        onHeaderCell: () => ({
+        onHeaderCell: (): HeaderCellProps => ({
           width,
           onResizeEnd: handleResizeEnd(columnKey),
         }),
-      } as any);
+      } as ColumnType<T>);
     }
 
     return orderedColumns;

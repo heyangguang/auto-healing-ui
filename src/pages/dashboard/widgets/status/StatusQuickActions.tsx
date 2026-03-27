@@ -15,7 +15,18 @@ import React from 'react';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
-const QUICK_ACTIONS = [
+type AccessKey =
+    | 'canViewPlugins'
+    | 'canViewInstances'
+    | 'canViewFlows'
+    | 'canViewTasks'
+    | 'canViewPendingCenter'
+    | 'canViewPlaybooks'
+    | 'canViewNotifications';
+
+type AccessState = Partial<Record<AccessKey, boolean>>;
+
+const QUICK_ACTIONS: Array<{ icon: React.ReactNode; label: string; path: string; color: string; access: AccessKey }> = [
     { icon: <AlertOutlined />, label: '工单管理', path: '/resources/incidents', color: '#1677ff', access: 'canViewPlugins' },
     { icon: <DeploymentUnitOutlined />, label: '自愈实例', path: '/healing/instances', color: '#722ed1', access: 'canViewInstances' },
     { icon: <ForkOutlined />, label: '自愈流程', path: '/healing/flows', color: '#2f54eb', access: 'canViewFlows' },
@@ -28,9 +39,10 @@ const QUICK_ACTIONS = [
 
 const StatusQuickActions: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
+    const typedAccess = access as AccessState;
     const availableActions = QUICK_ACTIONS.filter((action) => {
         if (!action.access) return true;
-        return Boolean((access as any)[action.access]);
+        return Boolean(typedAccess[action.access]);
     });
 
     return (

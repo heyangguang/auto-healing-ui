@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Input, Button, Space, Tag, Typography, Tabs, Row, Col, Select, Switch, Tooltip, InputNumber } from 'antd';
+import { Input, Space, Tag, Typography, Tabs, Tooltip } from 'antd';
 import { ClockCircleOutlined, QuestionCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -32,8 +32,13 @@ interface CronEditorProps {
     size?: 'small' | 'middle' | 'large';
 }
 
+type CronMode = 'preset' | 'custom' | 'visual';
+
+const isCronMode = (value: string): value is CronMode =>
+    value === 'preset' || value === 'custom' || value === 'visual';
+
 const CronEditor: React.FC<CronEditorProps> = ({ value = '', onChange, size = 'large' }) => {
-    const [mode, setMode] = useState<'preset' | 'custom' | 'visual'>('preset');
+    const [mode, setMode] = useState<CronMode>('preset');
     const [parts, setParts] = useState<string[]>(['0', '*', '*', '*', '*']);
 
     // 解析当前值
@@ -141,7 +146,7 @@ const CronEditor: React.FC<CronEditorProps> = ({ value = '', onChange, size = 'l
             <div>
                 <Input
                     value={value}
-                    onChange={e => onChange?.(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange?.(e.target.value)}
                     placeholder="0 2 * * *"
                     prefix={<ClockCircleOutlined style={{ color: '#1890ff' }} />}
                     suffix={
@@ -165,7 +170,11 @@ const CronEditor: React.FC<CronEditorProps> = ({ value = '', onChange, size = 'l
             {/* 模式切换 */}
             <Tabs
                 activeKey={mode}
-                onChange={key => setMode(key as any)}
+                onChange={(key) => {
+                    if (isCronMode(key)) {
+                        setMode(key);
+                    }
+                }}
                 size="small"
                 items={[
                     {
@@ -206,7 +215,7 @@ const CronEditor: React.FC<CronEditorProps> = ({ value = '', onChange, size = 'l
                                             </Text>
                                             <Input
                                                 value={parts[idx]}
-                                                onChange={e => updatePart(idx, e.target.value)}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updatePart(idx, e.target.value)}
                                                 style={{
                                                     textAlign: 'center',
                                                     fontFamily: 'monospace',
@@ -276,8 +285,8 @@ const CronEditor: React.FC<CronEditorProps> = ({ value = '', onChange, size = 'l
                 }}>
                     <Text type="secondary" style={{ fontSize: 12, marginRight: 8, display: 'block', marginBottom: 6 }}>预计执行:</Text>
                     <Space size={[6, 6]} wrap style={{ width: '100%' }}>
-                        {getNextRuns.map((run, i) => (
-                            <Tag key={i} color="green" style={{ margin: 0, fontSize: 11 }}>{run}</Tag>
+                        {getNextRuns.map((run) => (
+                            <Tag key={run} color="green" style={{ margin: 0, fontSize: 11 }}>{run}</Tag>
                         ))}
                     </Space>
                 </div>

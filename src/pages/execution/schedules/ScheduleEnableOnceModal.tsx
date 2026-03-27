@@ -1,5 +1,5 @@
 import { Alert, DatePicker, Form, Modal } from 'antd';
-import dayjs from 'dayjs';
+import type dayjs from 'dayjs';
 
 interface ScheduleEnableOnceModalProps {
     confirmLoading: boolean;

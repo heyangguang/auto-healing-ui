@@ -15,7 +15,7 @@ export interface DictItem {
     badge?: string;
     icon?: string;
     bg?: string;
-    extra?: Record<string, any>;
+    extra?: Record<string, unknown>;
     sort_order: number;
     is_system: boolean;
     is_active: boolean;

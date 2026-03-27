@@ -1,5 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { Button, Input, Select, Space, Tooltip } from 'antd';
+import type { FlattenOptionData } from 'rc-select/lib/interface';
 import {
   ColumnWidthOutlined,
   PlusOutlined,
@@ -7,7 +8,10 @@ import {
   SearchOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import type { AdvancedSearchField } from './index';
+import type {
+  AdvancedSearchField,
+  StandardTableSearchValues,
+} from './types';
 import AdvancedSearchPanel from './AdvancedSearchPanel';
 import FilterTags from './FilterTags';
 
@@ -23,14 +27,27 @@ interface SearchFilter {
   displayValue?: string;
 }
 
+interface SearchFieldOptionItem {
+  label: string;
+  value: string;
+  desc?: string;
+}
+
+interface SearchFieldOption {
+  label: string;
+  value?: string;
+  desc?: string;
+  options?: SearchFieldOptionItem[];
+}
+
 interface StandardTableSearchShellProps {
   searchField: string;
   searchValue: string;
   onSearchFieldChange: (value: string) => void;
   onSearchValueChange: (value: string) => void;
   onSearch: () => void;
-  searchFieldOptions: any[];
-  searchFieldOptionRender: (option: any) => ReactNode;
+  searchFieldOptions: SearchFieldOption[];
+  searchFieldOptionRender: (option: FlattenOptionData<SearchFieldOption>) => ReactNode;
   isEnumField: boolean;
   currentEnumLabel?: string;
   currentEnumOptions?: EnumOption[];
@@ -52,9 +69,9 @@ interface StandardTableSearchShellProps {
   onRemoveFilter: (field: string) => void;
   onClearFilters: () => void;
   advancedFields?: AdvancedSearchField[];
-  advancedValues: Record<string, any>;
+  advancedValues: StandardTableSearchValues;
   advancedMatchModes: Record<string, 'fuzzy' | 'exact'>;
-  onAdvancedFieldChange: (key: string, value: any) => void;
+  onAdvancedFieldChange: (key: string, value: unknown) => void;
   onAdvancedToggleMatchMode: (key: string, defaultMatchMode?: 'fuzzy' | 'exact') => void;
   onResetAdvanced: () => void;
   onCollapseAdvanced: () => void;

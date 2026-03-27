@@ -7,13 +7,30 @@ import { getExecutionSchedules } from '@/services/auto-healing/execution';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
+type ScheduleItem = {
+    id?: string;
+    enabled?: boolean;
+    status?: string;
+    name?: string;
+    task_name?: string;
+    next_run_at?: string;
+    cron_expression?: string;
+    schedule_type?: string;
+    task?: { name?: string };
+};
+
+type ScheduleResponse = {
+    data?: ScheduleItem[];
+    items?: ScheduleItem[];
+};
+
 const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
     const canViewSchedules = !!access.canViewTasks;
     const { data: rawData, loading, refresh } = useRequest(() => getExecutionSchedules({ page_size: 15 }), {
         ready: canViewSchedules,
     });
-    const data = rawData as any;
+    const data = rawData as ScheduleResponse | undefined;
     const items = data?.data ?? data?.items ?? [];
 
     return (
@@ -46,7 +63,7 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                         </div>
                     ) : (
-                        items.map((item: any, index: number) => {
+                        items.map((item, index) => {
                             const taskName = item.task?.name || item.task_name || '-';
                             const nextRun = item.next_run_at ? dayjs(item.next_run_at).format('MM-DD HH:mm') : '-';
 

@@ -98,7 +98,11 @@ const BlacklistRuleForm: React.FC = () => {
         const loadRule = async () => {
             setLoading(true);
             try {
-                const rule = await getCommandBlacklistRule(formParams.id!);
+                const ruleId = formParams.id;
+                if (!ruleId) {
+                    return;
+                }
+                const rule = await getCommandBlacklistRule(ruleId);
                 setLoadFailed(false);
                 form.setFieldsValue({
                     name: rule.name,

@@ -9,27 +9,13 @@
  * 5. 自动持久化 - localStorage
  */
 
-import {
-  AppstoreAddOutlined,
-  BlockOutlined,
-  CloseOutlined,
-  DashboardOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  LockOutlined,
-  MinusCircleOutlined,
-  PlusOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
-import { useAccess, useModel } from '@umijs/max';
-import { Button, message } from 'antd';
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useAccess } from '@umijs/max';
+import React, { useState, useEffect, useMemo } from 'react';
 import './index.css';
 import { useContainerWidth } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-import { getDefaultWorkspace } from '../dashboardStore';
 import { buildDashboardWidgetLibrarySections } from './dashboardWidgetLibrarySections';
 import DashboardCanvasSurface from './DashboardCanvasSurface';
 import DashboardRenameWorkspaceModal from './DashboardRenameWorkspaceModal';
@@ -45,7 +31,6 @@ const DashboardBuilder: React.FC = () => {
   const { containerRef, width } = useContainerWidth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const { initialState } = useModel('@@initialState');
   const access = useAccess();
   const hasWsManage = !!access.canManageWorkspace;
   const hasDashboardConfig = !!access.canManageDashboardConfig;

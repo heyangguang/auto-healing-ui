@@ -14,7 +14,7 @@ type PlaybookEnumDefaultEditorProps = {
     currentDefault: string;
     editedVariables: AutoHealing.PlaybookVariable[];
     onAutoSave: (variables: AutoHealing.PlaybookVariable[]) => void;
-    saveDefault: (nextValue: unknown) => void;
+    saveDefault: (nextValue: AutoHealing.JsonValue) => void;
     variable: AutoHealing.PlaybookVariable;
 };
 

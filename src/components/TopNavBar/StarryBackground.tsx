@@ -9,12 +9,16 @@ const StarryBackground: React.FC = memo(() => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        let width = canvas.width = canvas.parentElement?.clientWidth || window.innerWidth;
-        let height = canvas.height = 58;
+        let width = canvas.parentElement?.clientWidth || window.innerWidth;
+        let height = 58;
+        canvas.width = width;
+        canvas.height = height;
 
         const onResize = () => {
-            width = canvas.width = canvas.parentElement?.clientWidth || window.innerWidth;
-            height = canvas.height = 58;
+            width = canvas.parentElement?.clientWidth || window.innerWidth;
+            height = 58;
+            canvas.width = width;
+            canvas.height = height;
         };
         window.addEventListener('resize', onResize);
 

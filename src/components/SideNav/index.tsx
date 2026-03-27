@@ -4,6 +4,7 @@ import { createStyles } from 'antd-style';
 import { Drawer } from 'antd';
 import { CATEGORIES, SERVICES } from '@/config/navData';
 import { canAccessPath } from '@/utils/pathAccess';
+import type { ServiceItem } from '@/config/navData';
 
 const NAV_HEIGHT = 58;
 const SIDE_WIDTH = 200;
@@ -83,23 +84,22 @@ interface SideNavProps {
 const SideNav: React.FC<SideNavProps> = ({ isMobile, drawerOpen, onDrawerClose }) => {
     const { styles, cx } = useStyles();
     const location = useLocation();
+    const access = useAccess() as unknown as Record<string, boolean>;
 
     const activeCategory = useMemo(() => {
         for (const [catId, items] of Object.entries(SERVICES)) {
-            if (items.some(item => location.pathname === item.path || location.pathname.startsWith(item.path + '/'))) {
+            if (items.some(item => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))) {
                 return CATEGORIES.find(c => c.id === catId);
             }
         }
         return null;
     }, [location.pathname]);
 
-    const access = useAccess();
-
-    const hasServiceAccess = useCallback((svc: any) => {
+    const hasServiceAccess = useCallback((svc: ServiceItem) => {
         if (svc.accesses?.length) {
-            return svc.accesses.every((key: string) => !key || Boolean((access as any)[key]));
+            return svc.accesses.every((key) => !key || Boolean(access[key]));
         }
-        if (svc.access) return Boolean((access as any)[svc.access]);
+        if (svc.access) return Boolean(access[svc.access]);
         return canAccessPath(svc.path, access);
     }, [access]);
 
@@ -123,7 +123,7 @@ const SideNav: React.FC<SideNavProps> = ({ isMobile, drawerOpen, onDrawerClose }
             </div>
             <div style={{ flex: 1, paddingBottom: 20 }}>
                 {menuItems.map((item) => {
-                    const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                    const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
                     return (
                         <div
                             key={item.id}

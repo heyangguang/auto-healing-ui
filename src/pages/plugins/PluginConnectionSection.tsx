@@ -94,7 +94,7 @@ const PluginConnectionSection: React.FC<PluginConnectionSectionProps> = ({
         {authType === 'basic' && (
             <Row gutter={24}>
                 <Col span={8}>
-                    <Form.Item name="username" label="用户名" tooltip="用于调用外部系统 API 的账号用户名" rules={BASIC_AUTH_USERNAME_RULES as any}>
+                    <Form.Item name="username" label="用户名" tooltip="用于调用外部系统 API 的账号用户名" rules={BASIC_AUTH_USERNAME_RULES}>
                         <Input placeholder="api_user" />
                     </Form.Item>
                 </Col>

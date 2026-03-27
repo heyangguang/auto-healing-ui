@@ -16,7 +16,7 @@ const proOptions: ProOptions = { hideAttribution: true };
 export const useInstanceListState = ({ pageSize }: UseInstanceListStateOptions) => {
   const [instances, setInstances] = useState<AutoHealing.FlowInstance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const [_total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [sortBy, setSortBy] = useState('created_at');

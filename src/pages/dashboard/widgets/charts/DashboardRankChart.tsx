@@ -5,14 +5,14 @@
 import { OrderedListOutlined } from '@ant-design/icons';
 import { Bar } from '@ant-design/plots';
 import React from 'react';
-import { useDashboardSection } from '../useDashboardSection';
+import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 interface DashboardRankChartProps extends Partial<WidgetComponentProps> {
-    section: string;
+    section: DashboardSectionKey;
     field: string;
     title: string;
     icon?: React.ReactNode;
@@ -23,12 +23,12 @@ const DashboardRankChart: React.FC<DashboardRankChartProps> = ({ section, field,
     const { data, loading, refresh } = useDashboardSection(section);
     const { ref, width, height } = useContainerSize();
 
-    const items: { name: string; count: number }[] = data?.[field] ?? [];
+    const items = Array.isArray(data?.[field]) ? (data[field] as { name: string; count: number }[]) : [];
 
     const chartData = React.useMemo(() => {
         return items
             .map((d) => ({
-                name: d.name?.length > 16 ? d.name.slice(0, 16) + '…' : d.name ?? '未知',
+                name: d.name?.length > 16 ? `${d.name.slice(0, 16)}…` : d.name ?? '未知',
                 count: Number(d.count),
             }))
             .sort((a, b) => a.count - b.count)

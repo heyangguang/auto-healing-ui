@@ -30,7 +30,7 @@ interface ExecutionMissionControlSidebarProps {
 }
 
 const labelTextStyle = { fontSize: 12 } as const;
-const compactTagStyle = { margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 4px' } as const;
+const _compactTagStyle = { margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 4px' } as const;
 
 const MissionSidebarHeader: React.FC<{ taskId: string }> = ({ taskId }) => (
     <div className="sidebar-header">

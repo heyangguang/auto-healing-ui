@@ -1,5 +1,7 @@
 import { ApiOutlined } from '@ant-design/icons';
 import { Badge, Table, Tag, Typography } from 'antd';
+import type { BadgeProps } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import React from 'react';
 import { useDashboardSection } from '../useDashboardSection';
@@ -7,12 +9,27 @@ import { PLUGIN_STATUS_MAP } from '@/constants/pluginDicts';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
+type PluginItem = {
+    id?: string;
+    name?: string;
+    type?: string;
+    status?: string;
+    last_sync_at?: string;
+};
+
+function resolveBadgeStatus(color?: string): BadgeProps['status'] {
+    if (color === 'success' || color === 'processing' || color === 'error' || color === 'warning') {
+        return color;
+    }
+    return 'default';
+}
+
 const StatusPlugins: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('plugins');
     // 后端 dashboard overview 返回 plugin_overview 字段包含所有插件列表
     const items = data?.plugin_overview ?? data?.plugins_list ?? [];
 
-    const columns = [
+    const columns: ColumnsType<PluginItem> = [
         {
             title: '插件', dataIndex: 'name', key: 'name', width: 150, ellipsis: true,
             render: (name: string) => <Typography.Text strong style={{ fontSize: 12 }}>{name}</Typography.Text>,
@@ -25,7 +42,7 @@ const StatusPlugins: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
             title: '状态', dataIndex: 'status', key: 'status', width: 80,
             render: (status: string) => {
                 const st = PLUGIN_STATUS_MAP[status] || { color: 'default', text: status };
-                return <Badge status={st.color as any} text={<span style={{ fontSize: 12 }}>{st.text}</span>} />;
+                return <Badge status={resolveBadgeStatus(st.color)} text={<span style={{ fontSize: 12 }}>{st.text}</span>} />;
             },
         },
         {

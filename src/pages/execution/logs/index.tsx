@@ -14,6 +14,7 @@ import {
     RUN_SEARCH_FIELDS,
     TEMPLATE_ADVANCED_FIELDS,
     TEMPLATE_SEARCH_FIELDS,
+    type LogSearchParams,
     type RunFilters,
     type TaskFilters,
 } from './logSearchHelpers';
@@ -70,7 +71,7 @@ const ExecutionLogs: React.FC = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     // 用于外部刷新 StandardTable 工具栏
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [_refreshTrigger, setRefreshTrigger] = useState(0);
 
     // ── Ref for stable fetchRuns ──
     const loadingRef = useRef(false);
@@ -88,7 +89,7 @@ const ExecutionLogs: React.FC = () => {
         setLoadingRuns(true);
         try {
             const filters = runFiltersRef.current;
-            const params: any = {
+            const params: Record<string, unknown> = {
                 page: currentPage,
                 page_size: PAGE_SIZE,
                 run_id: filters.run_id,
@@ -139,7 +140,7 @@ const ExecutionLogs: React.FC = () => {
         fetchRuns(1, true);
     }, [selectedTaskId, runFilters]);
 
-    const handleRefresh = useCallback(() => {
+    const _handleRefresh = useCallback(() => {
         fetchRuns(1, true);
         setRefreshTrigger(prev => prev + 1);
     }, [fetchRuns]);
@@ -151,19 +152,14 @@ const ExecutionLogs: React.FC = () => {
     }, [loadingRuns, hasMore, page, fetchRuns]);
 
     // ── StandardTable onSearch 回调 ──
-    const handleSearch = useCallback((params: {
-        searchField?: string;
-        searchValue?: string;
-        advancedSearch?: Record<string, any>;
-        filters?: { field: string; value: string }[];
-    }) => {
+    const handleSearch = useCallback((params: LogSearchParams) => {
         const { runFilters: newRunFilters, taskFilters: newTaskFilters } = parseLogSearchParams(params);
         setRunFilters(newRunFilters);
         setTaskFilters(newTaskFilters);
     }, []);
 
     return (
-        <StandardTable<any>
+        <StandardTable<Record<string, unknown>>
             key={searchScope}
             title="执行记录"
             description="全系统取证时间轴"

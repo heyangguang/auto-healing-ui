@@ -13,109 +13,10 @@ import {
     CheckCircleFilled, InboxOutlined,
 } from '@ant-design/icons';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { createStyles } from 'antd-style';
+import { AUTH_MAP, AUTH_OPTIONS, ROW_HEIGHT, TYPE_MAP, TYPE_OPTIONS } from './constants';
+import { useStyles } from './styles';
 
 const { Text } = Typography;
-
-/* ========== 样式 ========== */
-const useStyles = createStyles(({ token }) => ({
-    filterBar: {
-        display: 'flex',
-        gap: 8,
-        alignItems: 'center',
-    },
-    listContainer: {
-        border: '1px solid #d9d9d9',
-        borderRadius: 4,
-        overflow: 'hidden',
-        background: '#fff',
-    },
-    listScroll: {
-        maxHeight: 320,
-        overflow: 'auto',
-    },
-    listEmpty: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '48px 0',
-        color: '#bfbfbf',
-    },
-    listEmptyIcon: {
-        fontSize: 40,
-        marginBottom: 8,
-        color: '#d9d9d9',
-    },
-    row: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 14px',
-        cursor: 'pointer',
-        borderBottom: '1px solid #f5f5f5',
-        transition: 'background 0.1s',
-        userSelect: 'none' as const,
-        '&:hover': {
-            background: '#fafafa',
-        },
-    },
-    rowSelected: {
-        background: '#e6f7ff !important',
-        borderLeft: `3px solid ${token.colorPrimary}`,
-        paddingLeft: 11,
-    },
-    rowDefault: {
-        /* 默认密钥微标 */
-    },
-    rowLeft: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        minWidth: 0,
-        flex: 1,
-    },
-    rowRight: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        flexShrink: 0,
-    },
-    statusBar: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '6px 12px',
-        background: '#fafafa',
-        borderTop: '1px solid #f0f0f0',
-        fontSize: 12,
-        color: '#8c8c8c',
-    },
-    selectedBanner: {
-        padding: '8px 12px',
-        background: '#e6f7ff',
-        border: '1px solid #91d5ff',
-        borderRadius: 4,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        fontSize: 12,
-    },
-}));
-
-/* ========== 常量 ========== */
-const TYPE_MAP: Record<string, { label: string; color: string }> = {
-    vault: { label: 'Vault', color: '#722ed1' },
-    file: { label: '文件', color: '#1890ff' },
-    webhook: { label: 'Webhook', color: '#13c2c2' },
-};
-
-const AUTH_MAP: Record<string, string> = {
-    ssh_key: 'SSH Key',
-    password: 'Password',
-};
-
-const ROW_HEIGHT = 44;
 
 /* ========== 组件 ========== */
 interface SecretsSourceSelectorProps {
@@ -222,22 +123,13 @@ const SecretsSourceSelector: React.FC<SecretsSourceSelectorProps> = ({
                         value={filterType}
                         onChange={v => { setFilterType(v); }}
                         style={{ width: 100 }}
-                        options={[
-                            { label: '全部类型', value: 'all' },
-                            { label: 'Vault', value: 'vault' },
-                            { label: '文件', value: 'file' },
-                            { label: 'Webhook', value: 'webhook' },
-                        ]}
+                        options={TYPE_OPTIONS}
                     />
                     <Select
                         value={filterAuth}
                         onChange={v => { setFilterAuth(v); }}
                         style={{ width: 110 }}
-                        options={[
-                            { label: '全部认证', value: 'all' },
-                            { label: 'SSH Key', value: 'ssh_key' },
-                            { label: 'Password', value: 'password' },
-                        ]}
+                        options={AUTH_OPTIONS}
                     />
                 </div>
 

@@ -41,7 +41,8 @@ export const TenantOverviewHeaderCard: React.FC<{
   onRefresh: () => void;
 }> = ({ summary, onRefresh }) => (
   <div className="ov-header-card">
-    <svg className="ov-header-decoration-svg" viewBox="0 0 420 120" preserveAspectRatio="none">
+    <svg role="img" className="ov-header-decoration-svg" viewBox="0 0 420 120" preserveAspectRatio="none">
+      <title>租户运营装饰背景</title>
       <g stroke="rgba(22,119,255,0.15)" strokeWidth="1" fill="none">
         <line x1="30" y1="80" x2="110" y2="40" />
         <line x1="110" y1="40" x2="200" y2="70" />
@@ -75,7 +76,7 @@ export const TenantOverviewHeaderCard: React.FC<{
       <div className="ov-header-card-actions">
         <Text type="secondary" style={{ fontSize: 11 }}>{dayjs().format('HH:mm:ss')}</Text>
         <Tooltip title="刷新数据">
-          <button className="ov-refresh-btn" onClick={onRefresh}>
+          <button type="button" className="ov-refresh-btn" onClick={onRefresh}>
             <ReloadOutlined />
           </button>
         </Tooltip>

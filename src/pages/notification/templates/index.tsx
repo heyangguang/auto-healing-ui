@@ -11,7 +11,6 @@ import TemplateSidebar from './TemplateSidebar';
 import TemplateVariableHints from './TemplateVariableHints';
 import TemplateVariablesDrawer from './TemplateVariablesDrawer';
 import {
-    EVENT_TYPE_CONFIG,
     NOTIFICATION_TEMPLATE_COLUMNS,
     NOTIFICATION_TEMPLATE_HEADER_ICON,
     NOTIFICATION_TEMPLATE_SEARCH_FIELDS,

@@ -3,7 +3,6 @@ import {
     CheckCircleOutlined,
     ClockCircleOutlined,
     CloseCircleOutlined,
-    SyncOutlined,
 } from '@ant-design/icons';
 import type { AdvancedSearchField, SearchField } from '@/components/StandardTable';
 import {
@@ -52,6 +51,7 @@ export const playbookAdvancedSearchFields: AdvancedSearchField[] = [
 
 export const playbookHeaderIcon = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>Playbook 执行图标</title>
         <rect x="6" y="4" width="36" height="40" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M14 14h20M14 22h20M14 30h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <circle cx="34" cy="34" r="6" stroke="currentColor" strokeWidth="2" fill="none" />

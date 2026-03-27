@@ -45,6 +45,7 @@ export const advancedSearchFields: AdvancedSearchField[] = [
 
 export const headerIcon = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>密钥库图标</title>
         <rect x="6" y="20" width="36" height="22" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M16 20V14a8 8 0 0116 0v6" stroke="currentColor" strokeWidth="2" fill="none" />
         <circle cx="24" cy="31" r="3" fill="currentColor" opacity="0.6" />

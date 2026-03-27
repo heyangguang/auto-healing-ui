@@ -105,7 +105,7 @@ const NotificationChannelConfigList: React.FC<NotificationChannelConfigListProps
         <div style={LIST_CONTAINER_STYLE}>
             {value.map((config, index) => (
                 <ConfigRow
-                    key={index}
+                    key={`${config.channel_id}-${config.template_id}`}
                     config={config}
                     index={index}
                     isLast={index === value.length - 1}

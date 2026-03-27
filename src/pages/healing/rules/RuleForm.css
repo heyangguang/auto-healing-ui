@@ -84,12 +84,12 @@
 
 /* Select 强制直角边框（同 TemplateForm） */
 .rule-form-card .ant-select .ant-select-selector {
-    border-radius: 0 !important;
+    border-radius: 0;
 }
 
 .rule-form-card .ant-input,
 .rule-form-card .ant-input-number {
-    border-radius: 0 !important;
+    border-radius: 0;
 }
 
 /* ===== 已选流程卡片 ===== */

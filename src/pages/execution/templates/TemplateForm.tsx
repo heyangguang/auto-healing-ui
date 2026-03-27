@@ -13,6 +13,7 @@ import {
     invalidateSelectorInventory,
     selectorInventoryKeys,
 } from '@/utils/selectorInventoryCache';
+import { toJsonValue } from '@/utils/jsonValue';
 import TemplateBasicInfoCard from './TemplateBasicInfoCard';
 import TemplateEnvironmentCard from './TemplateEnvironmentCard';
 import TemplateNotificationCard from './TemplateNotificationCard';
@@ -78,10 +79,13 @@ const TemplateFormPage: React.FC = () => {
     }, [isEdit, params.id]);
 
     const handleVariableChange = useCallback((name: string, value: unknown) => {
-        setVariableValues((previousValues) => ({
-            ...previousValues,
-            [name]: value,
-        }));
+        setVariableValues((previousValues) => {
+            const nextValues: AutoHealing.JsonObject = {
+                ...previousValues,
+                [name]: toJsonValue(value),
+            };
+            return nextValues;
+        });
     }, [setVariableValues]);
 
     const handleSecretsConfirm = useCallback((sourceId: string) => {

@@ -1,4 +1,4 @@
-import { Form, message } from 'antd';
+import { message } from 'antd';
 import type { FormInstance } from 'antd';
 import { useCallback, useRef, useState } from 'react';
 import { validateGitRepo } from '@/services/auto-healing/git-repos';

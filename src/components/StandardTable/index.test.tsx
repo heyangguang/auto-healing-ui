@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import StandardTable from './index';
 
 describe('StandardTable', () => {
@@ -63,4 +63,23 @@ describe('StandardTable', () => {
     });
   });
 
+  it('renders an explicit schema error when dynamic search schema loading fails', async () => {
+    const searchSchemaRequest = jest.fn().mockRejectedValue(new Error('schema failed'));
+
+    render(
+      <StandardTable
+        title="Schema 表格"
+        description="用于 schema error test"
+        searchFields={[{ key: 'name', label: '名称' }]}
+        searchSchemaRequest={searchSchemaRequest}
+      >
+        <div>schema error body</div>
+      </StandardTable>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('高级搜索条件加载失败')).toBeTruthy();
+      expect(screen.getByText('后端搜索 Schema 加载失败: schema failed')).toBeTruthy();
+    });
+  });
 });

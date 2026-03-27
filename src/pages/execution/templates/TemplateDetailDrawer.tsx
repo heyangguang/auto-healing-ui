@@ -6,7 +6,7 @@ import {
 import React, { useState } from 'react';
 import { ExecutorIcon } from './TemplateIcons';
 import {
-    ExecutionTaskRecord,
+    type ExecutionTaskRecord,
     getChangedVariableName,
 } from './templateListHelpers';
 import TemplateDetailSummaryCards from './TemplateDetailSummaryCards';

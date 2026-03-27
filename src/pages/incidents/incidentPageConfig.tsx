@@ -96,6 +96,7 @@ export const advancedSearchFields: AdvancedSearchField[] = [
 
 export const headerIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>工单图标</title>
     <rect x="4" y="6" width="40" height="36" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
     <line x1="4" y1="16" x2="44" y2="16" stroke="currentColor" strokeWidth="1.5" />
     <circle cx="12" cy="25" r="3" fill="#f5222d" opacity="0.8" />

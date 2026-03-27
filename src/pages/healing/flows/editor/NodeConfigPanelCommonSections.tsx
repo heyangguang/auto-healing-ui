@@ -21,7 +21,7 @@ async function requestApproverRoles() {
     return roles.map((role) => ({ label: role.display_name, value: role.name }));
 }
 
-const HostExtractorModeFields: React.FC<{ formRef: NodeConfigSectionProps['formRef'] }> = ({ formRef }) => (
+const HostExtractorModeFields: React.FC = () => (
     <ProFormDependency name={['extract_mode']}>
         {({ extract_mode }) => (
             extract_mode === 'regex' ? (
@@ -78,7 +78,7 @@ export const HostExtractorSection: React.FC<Pick<NodeConfigSectionProps, 'formRe
                 onChange: (mode: string) => formRef.current?.setFieldValue(mode === 'regex' ? 'split_by' : 'regex_pattern', undefined),
             }}
         />
-        <HostExtractorModeFields formRef={formRef} />
+        <HostExtractorModeFields />
         <ProFormText
             name="output_key"
             label="输出变量名"

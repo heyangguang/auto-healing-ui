@@ -1,10 +1,11 @@
 import type { PlaybookStatusSummary } from './playbookTypes';
+import type { PlaybookSearchParams } from './playbookSearchParams';
 import { playbookStatusConfig } from './playbookShellConfig';
 import { usePlaybookMutationActions } from './usePlaybookMutationActions';
 import { usePlaybookSelectionState } from './usePlaybookSelectionState';
 
 type UsePlaybookDetailStateOptions = {
-    loadPlaybooks: (params?: Record<string, any>) => Promise<void>;
+    loadPlaybooks: (params?: PlaybookSearchParams) => Promise<void>;
     mergePlaybookInInventory?: (playbook: AutoHealing.Playbook) => void;
     removePlaybookFromInventory?: (playbook: AutoHealing.Playbook) => void;
 };

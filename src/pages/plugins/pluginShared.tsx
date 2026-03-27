@@ -91,6 +91,7 @@ export const PLUGIN_ADVANCED_SEARCH_FIELDS: AdvancedSearchField[] = [
 
 export const PLUGIN_LIST_HEADER_ICON = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>插件列表图标</title>
         <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M24 16v16M16 24h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <circle cx="24" cy="24" r="6" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.5" />

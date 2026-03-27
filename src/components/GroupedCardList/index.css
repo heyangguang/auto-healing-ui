@@ -101,10 +101,13 @@
 }
 
 .grouped-card-count {
-    margin: 0 !important;
     font-size: 11px;
     line-height: 18px;
-    padding: 0 6px !important;
+}
+
+.grouped-card-block-header .grouped-card-count {
+    margin: 0;
+    padding: 0 6px;
 }
 
 .grouped-card-items {

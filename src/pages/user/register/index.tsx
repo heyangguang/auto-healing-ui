@@ -9,88 +9,16 @@ import {
 } from '@ant-design/icons';
 import { Helmet, history, Link } from '@umijs/max';
 import { Alert, Button, ConfigProvider, Form, Input, message, Spin } from 'antd';
-import { createStyles } from 'antd-style';
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Settings from '../../../../config/defaultSettings';
 import { registerByInvitation, type InvitationValidation, validateInvitationToken } from '@/services/auto-healing/auth';
 import { buildRegisterResultPath } from './registerHelpers';
-
-const NetworkCanvas: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null); const animRef = useRef<number>(0); const nodesRef = useRef<any[]>([]); const init = useRef(false);
-  const makeNodes = useCallback((w: number, h: number) => { const a: any[] = []; for (let i = 0; i < 45; i++) a.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25, r: Math.random() * 2 + 1.2, pulse: Math.random() * Math.PI * 2 }); nodesRef.current = a; }, []);
-  useEffect(() => {
-    const c = canvasRef.current; if (!c) return; const ctx = c.getContext('2d'); if (!ctx) return;
-    const resize = () => { const r = c.parentElement?.getBoundingClientRect(); if (r) { c.width = r.width * devicePixelRatio; c.height = r.height * devicePixelRatio; c.style.width = r.width + 'px'; c.style.height = r.height + 'px'; ctx.scale(devicePixelRatio, devicePixelRatio); } };
-    resize(); if (!init.current) { const r = c.parentElement?.getBoundingClientRect(); if (r) makeNodes(r.width, r.height); init.current = true; }
-    const draw = () => { const r = c.parentElement?.getBoundingClientRect(); if (!r) return; const w = r.width, h = r.height; ctx.clearRect(0, 0, w, h); const ns = nodesRef.current; for (const n of ns) { n.x += n.vx; n.y += n.vy; n.pulse += .015; if (n.x < 0 || n.x > w) n.vx *= -1; if (n.y < 0 || n.y > h) n.vy *= -1; } for (let i = 0; i < ns.length; i++)for (let j = i + 1; j < ns.length; j++) { const dx = ns[i].x - ns[j].x, dy = ns[i].y - ns[j].y, d = Math.sqrt(dx * dx + dy * dy); if (d < 140) { ctx.beginPath(); ctx.moveTo(ns[i].x, ns[i].y); ctx.lineTo(ns[j].x, ns[j].y); ctx.strokeStyle = `rgba(56,189,248,${(1 - d / 140) * .12})`; ctx.lineWidth = .5; ctx.stroke(); } } for (const n of ns) { const g = Math.sin(n.pulse) * .3 + .7; ctx.beginPath(); ctx.arc(n.x, n.y, n.r * g + 1.5, 0, Math.PI * 2); ctx.fillStyle = `rgba(56,189,248,${.06 * g})`; ctx.fill(); ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(56,189,248,${.5 * g})`; ctx.fill(); } animRef.current = requestAnimationFrame(draw); };
-    draw(); window.addEventListener('resize', resize); return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize); };
-  }, [makeNodes]);
-  return <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
-};
-
-const BrandLogo: React.FC<{ children: React.ReactNode; name: string }> = ({ children, name }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-    <div style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{children}</div>
-    <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>{name}</span>
-  </div>
-);
-
-const DockerLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M13 4h3v3h-3V4zm-5 0h3v3H8V4zm5 4h3v3h-3V8zM8 8h3v3H8V8zm5 4h3v3h-3v-3zM3 8h3v3H3V8zm5 4h3v3H8v-3zM3 12h3v3H3v-3zm18-1.5c-.7-.5-2.2-.5-3 0-.2-1.2-1-2.2-2-2.8l-.5-.3-.3.5c-.4.7-.5 1.8-.2 2.6.2.4.5.9 1 1.2-.5.3-1.3.5-2.5.5H.5l-.1.8c0 1.5.3 3 1 4.2 1 1.5 2.5 2.2 4.5 2.2 3.5 0 6.2-1.6 7.5-4.5.5 0 1.5 0 2-.8.1-.1.3-.5.4-.8l.1-.3-.4-.3z" fill="#2496ed" /></svg>;
-const K8sLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 1L3 5.5v5c0 5 3.8 9.7 9 10.5 5.2-.8 9-5.5 9-10.5v-5L12 1z" fill="#326ce5" opacity=".9" /><path d="M12 6l-1 3.3-2.8-2 .7 3.3-3.3.7 2.8 2L5 14.3l3.3.7.7 3.3 2-2.8L12 18l1-2.5 2 2.8.7-3.3 3.3-.7-3.3-1 2.8-2-3.3-.7.7-3.3-2.8 2L12 6z" fill="#fff" opacity=".9" /></svg>;
-const RedHatLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#ee0000" /><path d="M7 12c0-1 .5-2 1.5-2.5S11 9 12 9s2.5.5 3.5 1S17 11 17 12s-.5 2-1.5 2.5-2.5.5-3.5.5-2.5-.5-3.5-1S7 13 7 12z" fill="#fff" /></svg>;
-const AnsibleLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#1a1918" /><path d="M12 5l-5 11h2.5l2.5-5.5 3 5.5h2.5L12 5z" fill="#fff" /></svg>;
-const PrometheusLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#e6522c" /><path d="M12 4a8 8 0 100 16 8 8 0 000-16zm0 2c1 0 2 .5 2 1.5 0 1.5-2 2-2 3v1h-1v-1c0-1 2-1.5 2-3 0-.5-.5-1-1-1s-1 .5-1 1H10c0-1 1-1.5 2-1.5zM11.5 13h1v1h-1v-1z" fill="#fff" opacity=".8" /></svg>;
-const GrafanaLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#f46800" /><rect x="7" y="10" width="2" height="6" rx=".5" fill="#fff" /><rect x="11" y="7" width="2" height="9" rx=".5" fill="#fff" /><rect x="15" y="9" width="2" height="7" rx=".5" fill="#fff" /></svg>;
-const TerraformLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 4v6l5 3V7l-5-3z" fill="#7b42bc" /><path d="M15 7v6l5-3V4l-5 3z" fill="#7b42bc" opacity=".6" /><path d="M9 14v6l5 3v-6l-5-3z" fill="#7b42bc" /><path d="M3 7v6l5 3V10L3 7z" fill="#7b42bc" opacity=".4" /></svg>;
-const JenkinsLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#d33833" /><path d="M12 6c-2.2 0-4 1.8-4 4 0 1.5.8 2.8 2 3.5V15c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-1.5c1.2-.7 2-2 2-3.5 0-2.2-1.8-4-4-4z" fill="#fff" opacity=".85" /></svg>;
-const ElasticLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="3" fill="#00bfb3" /><path d="M6 8h12M6 12h12M6 16h8" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" /></svg>;
-const VaultLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2L3 20h18L12 2z" fill="#000" /><path d="M12 7l-5 10h10L12 7z" fill="#ffd814" opacity=".8" /></svg>;
-
-const useStyles = createStyles(({ token }) => ({
-  container: { display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, fontFamily: "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif" },
-  leftPanel: { flex: '0 0 55%', background: 'linear-gradient(170deg,#080c18 0%,#0f172a 50%,#111827 100%)', position: 'relative', padding: '36px 48px 0', display: 'flex', flexDirection: 'column', color: '#fff', overflow: 'hidden' },
-  topSection: { position: 'relative', zIndex: 2, flexShrink: 0 },
-  subBrand: { fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, marginTop: 10, marginBottom: 20 },
-  heroTitle: { fontSize: 30, fontWeight: 700, color: '#fff', lineHeight: 1.35, marginBottom: 10 },
-  heroHL: { background: 'linear-gradient(90deg,#38bdf8,#818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-  heroDesc: { fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 2, maxWidth: 500 },
-  heroHighlight: { fontWeight: 700, background: 'linear-gradient(90deg, #f97316, #ef4444)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-  heroBold: { fontWeight: 600, color: 'rgba(255,255,255,0.7)' },
-  spacer: { flex: 1, minHeight: 20 },
-  bottomStack: { position: 'relative', zIndex: 2, flexShrink: 0 },
-  engineLabel: { fontSize: 11, fontWeight: 600, color: '#38bdf8', letterSpacing: 2, marginBottom: 14, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)' },
-  engineGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', marginBottom: 18 },
-  engineItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 10px 12px', borderLeft: '3px solid transparent', transition: 'all 0.2s', ':hover': { background: 'rgba(255,255,255,0.02)' } },
-  ecIcon: { fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' as const },
-  ecText: { flex: 1, minWidth: 0 },
-  ecName: { fontSize: 12, fontWeight: 600, color: '#fff', marginBottom: 1 },
-  ecDesc: { fontSize: 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1.3 },
-  metricsRow: { display: 'flex', gap: 0, marginBottom: 0 },
-  metricBox: { flex: 1, padding: '12px 0', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', '&:not(:last-child)': { borderRight: '1px solid rgba(255,255,255,0.08)' } },
-  metricNum: { fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 1 }, metricLb: { fontSize: 10, color: 'rgba(255,255,255,0.3)' },
-  partnerStrip: { background: 'rgba(0,0,0,0.35)', margin: '0 -48px', padding: '14px 48px', borderTop: '1px solid rgba(255,255,255,0.06)' },
-  partnerLabel: { fontSize: 10, color: 'rgba(255,255,255,0.22)', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase', fontWeight: 600 },
-  partnerGrid: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '6px 8px' },
-  rightPanel: { flex: 1, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' },
-  dotBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px)', backgroundSize: '18px 18px', pointerEvents: 'none' },
-  statusBar: { position: 'relative', zIndex: 1, display: 'flex', gap: 0, borderBottom: '1px solid #e5e7eb' },
-  statusItem: { flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: '1px solid #e5e7eb', '&:last-child': { borderRight: 'none' } },
-  statusDot: { display: 'inline-block', width: 6, height: 6, borderRadius: '50%', marginRight: 6, verticalAlign: 'middle' },
-  statusText: { fontSize: 11, color: '#6b7280', fontWeight: 500 },
-  formCenter: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', zIndex: 1, padding: '0 48px' },
-  formInner: { width: '100%', maxWidth: 340 },
-  formLogo: { textAlign: 'center', marginBottom: 16 },
-  formTitle: { fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 4, textAlign: 'center' },
-  formSub: { fontSize: 12, color: '#9ca3af', textAlign: 'center', marginBottom: 22 },
-  inputLbl: { fontSize: 11, fontWeight: 600, color: '#374151', letterSpacing: .5 },
-  helpRow: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 14 },
-  helpLink: { fontSize: 11, color: '#9ca3af', cursor: 'pointer', transition: 'color 0.2s', ':hover': { color: '#2563eb' } },
-  featureStrip: { display: 'flex', gap: 0, borderTop: '1px solid #e5e7eb', position: 'relative', zIndex: 1 },
-  featureItem: { flex: 1, padding: '11px 6px', textAlign: 'center', borderRight: '1px solid #e5e7eb', '&:last-child': { borderRight: 'none' } },
-  featureIcon: { fontSize: 15, color: '#2563eb', display: 'block', marginBottom: 3 }, featureText: { fontSize: 10, color: '#6b7280', fontWeight: 500 },
-  bottomInfo: { position: 'relative', zIndex: 1, padding: '10px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  secBadges: { display: 'flex', gap: 12, alignItems: 'center' }, badge: { display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#9ca3af', fontWeight: 500 }, badgeIco: { color: '#22c55e', fontSize: 11 }, copyright: { fontSize: 10, color: '#d1d5db' },
-}));
+import {
+  getErrorMessage,
+  type RegisterFormValues,
+} from './registerTypes';
+import { NetworkCanvas, BrandLogo, DockerLogo, K8sLogo, RedHatLogo, AnsibleLogo, PrometheusLogo, GrafanaLogo, TerraformLogo, JenkinsLogo, ElasticLogo, VaultLogo } from './registerDecorations';
+import { useStyles } from './registerStyles';
 
 const RegisterPage: React.FC = () => {
   const { styles } = useStyles();
@@ -123,11 +51,11 @@ const RegisterPage: React.FC = () => {
         setInvitationInfo(invitation);
         setTokenError('');
       })
-      .catch((error: any) => {
+      .catch((error: unknown) => {
         if (requestId !== validationRequestIdRef.current) {
           return;
         }
-        const messageText = error?.response?.data?.message || error?.data?.message || error?.message || '邀请不存在或已过期';
+        const messageText = getErrorMessage(error, '邀请不存在或已过期');
         setInvitationInfo(null);
         setTokenError(messageText);
       })
@@ -149,7 +77,7 @@ const RegisterPage: React.FC = () => {
     }
   }, []);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: RegisterFormValues) => {
     setSubmitting(true); setErrorMsg('');
     try {
       await registerByInvitation({ token, username: values.username, password: values.password, display_name: values.display_name || '' });
@@ -157,7 +85,7 @@ const RegisterPage: React.FC = () => {
       redirectTimerRef.current = window.setTimeout(() => {
         history.push(buildRegisterResultPath(values.username));
       }, 1500);
-    } catch (e: any) { setErrorMsg(e?.response?.data?.message || e?.data?.message || e?.message || '注册失败'); }
+    } catch (e: unknown) { setErrorMsg(getErrorMessage(e, '注册失败')); }
     finally { setSubmitting(false); }
   };
 

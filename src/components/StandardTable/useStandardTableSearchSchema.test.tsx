@@ -1,14 +1,9 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { request as umiRequest } from '@umijs/max';
 import { useStandardTableSearchSchema } from './useStandardTableSearchSchema';
-
-jest.mock('@umijs/max', () => ({
-  request: jest.fn(),
-}));
 
 describe('useStandardTableSearchSchema', () => {
   it('loads dynamic schema fields and merges them ahead of static extras', async () => {
-    (umiRequest as jest.Mock).mockResolvedValueOnce({
+    const searchSchemaRequest = jest.fn().mockResolvedValueOnce({
       data: {
         fields: [
           {
@@ -28,7 +23,7 @@ describe('useStandardTableSearchSchema', () => {
           { key: 'name', label: '名称', type: 'input' },
           { key: 'status', label: '静态状态', type: 'input' },
         ],
-        '/api/v1/schema',
+        searchSchemaRequest,
       ),
     );
 
@@ -49,16 +44,17 @@ describe('useStandardTableSearchSchema', () => {
           type: 'input',
         },
       ]);
+      expect(result.current.schemaLoadError).toBeNull();
     });
   });
 
-  it('falls back to static fields when schema loading fails', async () => {
-    (umiRequest as jest.Mock).mockRejectedValueOnce(new Error('schema failed'));
+  it('keeps static fields but exposes the schema error when loading fails', async () => {
+    const searchSchemaRequest = jest.fn().mockRejectedValueOnce(new Error('schema failed'));
 
     const { result } = renderHook(() =>
       useStandardTableSearchSchema(
         [{ key: 'name', label: '名称', type: 'input' }],
-        '/api/v1/schema',
+        searchSchemaRequest,
       ),
     );
 
@@ -66,6 +62,7 @@ describe('useStandardTableSearchSchema', () => {
       expect(result.current.effectiveAdvancedSearchFields).toEqual([
         { key: 'name', label: '名称', type: 'input' },
       ]);
+      expect(result.current.schemaLoadError).toBe('后端搜索 Schema 加载失败: schema failed');
     });
   });
 });

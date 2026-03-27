@@ -30,6 +30,7 @@ import '../../system/audit-logs/index.css';
 
 const headerIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>平台审计图标</title>
     <rect x="8" y="6" width="32" height="36" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M16 16h16M16 24h16M16 32h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     <circle cx="36" cy="36" r="7" stroke="currentColor" strokeWidth="2" fill="none" />

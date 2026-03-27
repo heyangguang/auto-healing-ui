@@ -1,9 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
-type EmptyRecord = Record<PropertyKey, never>;
-
-export type ExtraVarsValueMap = Record<string, any> | EmptyRecord;
-export type ExtraVarsMappings = Record<string, string> | EmptyRecord;
+export type ExtraVarsValueMap = AutoHealing.JsonObject;
+export type ExtraVarsMappings = Record<string, string>;
 export type VariableInputMode = 'static' | 'expression';
 export type VariableModeMap = Record<string, VariableInputMode>;
 export type VariableModesSetter = Dispatch<SetStateAction<VariableModeMap>>;

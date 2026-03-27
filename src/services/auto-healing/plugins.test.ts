@@ -15,6 +15,10 @@ import {
   putTenantPluginsId,
 } from '@/services/generated/auto-healing/plugins';
 
+jest.mock('@umijs/max', () => ({
+  request: jest.fn(),
+}));
+
 jest.mock('@/services/generated/auto-healing/plugins', () => ({
   getTenantPlugins: jest.fn(),
   getTenantPluginsId: jest.fn(),
@@ -40,8 +44,8 @@ describe('auto-healing plugins service', () => {
       status: 'active',
     });
     expect(getTenantPluginsId).toHaveBeenCalledWith({ id: 'plugin-1' });
-    expect(postTenantPlugins).toHaveBeenCalledWith({ data: {} });
-    expect(putTenantPluginsId).toHaveBeenCalledWith({ id: 'plugin-1' }, { data: {} });
+    expect(postTenantPlugins).toHaveBeenCalledWith({});
+    expect(putTenantPluginsId).toHaveBeenCalledWith({ id: 'plugin-1' }, {});
     expect(deleteTenantPluginsId).toHaveBeenCalledWith({ id: 'plugin-1' });
     expect(postTenantPluginsIdSync).toHaveBeenCalledWith({ id: 'plugin-1' });
   });

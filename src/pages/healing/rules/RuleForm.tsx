@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Form, Input, InputNumber, Segmented, Alert, Button, Space, Spin, message,
-    Tag, Typography,
+    Typography,
 } from 'antd';
 import {
     SaveOutlined, SafetyCertificateOutlined, BranchesOutlined, AimOutlined,
-    ExperimentOutlined, PlusOutlined, CloseCircleOutlined, CheckCircleOutlined,
+    ExperimentOutlined,
     ThunderboltOutlined, AuditOutlined, BellOutlined, ForkOutlined,
     NodeIndexOutlined, ApiOutlined, EyeOutlined,
 } from '@ant-design/icons';
@@ -20,7 +20,6 @@ import {
 } from '@/services/auto-healing/healing-rules';
 import { getFlows } from '@/services/auto-healing/healing';
 import { fetchAllPages } from '@/utils/fetchAllPages';
-
 import { NODE_TYPE_COLORS } from '../nodeConfig';
 
 // 节点类型元数据 — 颜色从 nodeConfig 统一导入
@@ -34,10 +33,10 @@ const NODE_TYPE_META: Record<string, { label: string; icon: React.ReactNode; col
     compute: { label: '计算', icon: <NodeIndexOutlined />, color: NODE_TYPE_COLORS.compute },
 };
 import './RuleForm.css';
-
 const { Text } = Typography;
-
 const { TextArea } = Input;
+const hasErrorFields = (error: unknown): error is { errorFields: unknown } =>
+    typeof error === 'object' && error !== null && 'errorFields' in error;
 
 const RuleFormPage: React.FC = () => {
     const params = useParams<{ id?: string }>();
@@ -115,7 +114,6 @@ const RuleFormPage: React.FC = () => {
                 match_mode: values.match_mode || 'all',
                 conditions: conditions || [],
             };
-
             if (isEdit && params.id) {
                 await updateHealingRule(params.id, payload);
                 message.success('规则已更新');
@@ -124,8 +122,8 @@ const RuleFormPage: React.FC = () => {
                 message.success('规则已创建');
             }
             history.push('/healing/rules');
-        } catch (err: any) {
-            if (err?.errorFields) return; // form validation error
+        } catch (error) {
+            if (hasErrorFields(error)) return; // form validation error
         } finally {
             setSaving(false);
         }
@@ -256,7 +254,7 @@ const RuleFormPage: React.FC = () => {
                     <h4 className="rule-form-section-title"><AimOutlined />匹配条件</h4>
 
                     <div className="rule-form-mode-selector">
-                        <label>匹配逻辑：</label>
+                        <span>匹配逻辑：</span>
                         <Form form={form} layout="inline" style={{ flex: 1 }}>
                             <Form.Item name="match_mode" noStyle>
                                 <Segmented

@@ -26,7 +26,7 @@ import {
 import type { StandardColumnDef } from '@/components/StandardTable';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import { ExecutorIcon } from './TemplateIcons';
-import { ExecutionTaskRecord, getChangedVariableName, getTaskHosts } from './templateListHelpers';
+import { type ExecutionTaskRecord, getChangedVariableName, getTaskHosts } from './templateListHelpers';
 
 const { Text: TypographyText } = Typography;
 

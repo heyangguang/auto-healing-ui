@@ -3,7 +3,7 @@ import { history, useParams, useAccess } from '@umijs/max';
 import { Form, Input, Button, message, Spin } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
-import { createRole, getRole, updateRole, assignRolePermissions } from '@/services/auto-healing/roles';
+import { createRole, updateRole, assignRolePermissions } from '@/services/auto-healing/roles';
 import { assignUserRoles } from '@/services/auto-healing/users';
 import { assignRoleWorkspaces } from '@/services/auto-healing/dashboard';
 import './RoleForm.css';
@@ -52,8 +52,10 @@ const RoleFormPage: React.FC = () => {
     /* 所有权限 ID */
     const allPermissionIds = useMemo(() => {
         const ids: string[] = [];
-        Object.values(permissionTree).forEach(perms => {
-            perms.forEach(p => ids.push(p.id));
+        Object.values(permissionTree).forEach((perms) => {
+            perms.forEach((permission) => {
+                ids.push(permission.id);
+            });
         });
         return ids;
     }, [permissionTree]);

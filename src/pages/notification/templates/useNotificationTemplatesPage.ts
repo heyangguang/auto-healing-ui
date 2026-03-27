@@ -27,8 +27,8 @@ import {
     type NotificationTemplateFormValues,
 } from './notificationTemplateMutation';
 import { extractErrorMsg } from '@/utils/errorMsg';
-
 const PAGE_SIZE = 20;
+type TemplateSortOrder = 'asc' | 'desc';
 
 export const useNotificationTemplatesPage = () => {
     const [form] = Form.useForm<NotificationTemplateFormValues>();
@@ -46,7 +46,7 @@ export const useNotificationTemplatesPage = () => {
     const [filterFormat, setFilterFormat] = useState('all');
     const [filterChannel, setFilterChannel] = useState('all');
     const [sortBy, setSortBy] = useState('updated_at');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [sortOrder, setSortOrder] = useState<TemplateSortOrder>('desc');
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -192,7 +192,6 @@ export const useNotificationTemplatesPage = () => {
         if (!selectedTemplate) {
             return;
         }
-
         applyTemplateToForm(form, selectedTemplate);
         setEditorContent(selectedTemplate.body_template || '');
         setIsDirty(false);
@@ -220,7 +219,6 @@ export const useNotificationTemplatesPage = () => {
         try {
             setSaving(true);
             const values = await form.validateFields();
-
             if (isCreating) {
                 const response = await createTemplate(buildCreateTemplatePayload(values, editorContent));
                 message.success('模板已创建');
@@ -264,6 +262,7 @@ export const useNotificationTemplatesPage = () => {
         if (!selectedId && !isCreating) {
             return;
         }
+        const previewTargetId = selectedId;
         if (showPreview) {
             setShowPreview(false);
             return;
@@ -272,13 +271,14 @@ export const useNotificationTemplatesPage = () => {
             message.warning('预览功能仅支持已保存的模板内容，请先保存您的更改。');
             return;
         }
-
         setPreviewLoading(true);
         setShowPreview(true);
         setPreviewData(null);
-
         try {
-            const previewResult = await previewTemplate(selectedId!, {
+            if (!previewTargetId) {
+                return;
+            }
+            const previewResult = await previewTemplate(previewTargetId, {
                 variables: buildPreviewTemplateVariables(),
             });
             setPreviewData(previewResult);
@@ -291,10 +291,9 @@ export const useNotificationTemplatesPage = () => {
         }
     }, [isCreating, isDirty, selectedId, showPreview]);
     return {
-        availableVariables, editorContent, form, handleCreateNew, handleDelete, handlePreview, handleSave,
-        handleSearchChange, handleSelect, hasMore, isCreating, isDirty, leftSidebarWidth, loading, loadingMore,
-        loadMore, previewData, previewLoading, saving, selectedId, selectedTemplate,
-        setEditorContent, setIsDirty, setSortBy, setSortOrder, setVariablesDrawerOpen, showPreview,
-        sortBy, sortOrder, templates, totalTemplates, variablesDrawerOpen,
+        availableVariables, editorContent, form, handleCreateNew, handleDelete, handlePreview, handleSave, handleSearchChange,
+        handleSelect, hasMore, isCreating, isDirty, leftSidebarWidth, loading, loadingMore, loadMore, previewData,
+        previewLoading, saving, selectedId, selectedTemplate, setEditorContent, setIsDirty, setSortBy, setSortOrder,
+        setVariablesDrawerOpen, showPreview, sortBy, sortOrder, templates, totalTemplates, variablesDrawerOpen,
     };
 };

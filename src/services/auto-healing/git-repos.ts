@@ -94,7 +94,7 @@ export async function validateGitRepo(data: {
  */
 export async function createGitRepo(data: AutoHealing.CreateGitRepoRequest) {
     return unwrapData(
-        await postTenantGitRepos({ data }) as { data?: GitRepositoryRecord } | GitRepositoryRecord,
+        await postTenantGitRepos(data) as { data?: GitRepositoryRecord } | GitRepositoryRecord,
     ) as GitRepositoryRecord;
 }
 
@@ -119,7 +119,7 @@ export async function getGitRepos(params?: {
     created_to?: string;
 }) {
     return normalizePaginatedResponse(
-        await getTenantGitRepos({ params }) as AutoHealing.PaginatedResponse<GitRepositoryRecord>,
+        await getTenantGitRepos((params || {}) as GeneratedAutoHealing.getTenantGitReposParams) as AutoHealing.PaginatedResponse<GitRepositoryRecord>,
     );
 }
 

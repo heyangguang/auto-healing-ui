@@ -202,7 +202,7 @@ export const errorConfig: RequestConfig = {
       const headers = config.headers || {};
 
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers.Authorization = `Bearer ${token}`;
       }
 
       const isPlatformAdmin = localStorage.getItem('is-platform-admin') === 'true';

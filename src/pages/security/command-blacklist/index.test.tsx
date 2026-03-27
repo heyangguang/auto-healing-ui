@@ -59,10 +59,10 @@ jest.mock('@/components/StandardTable', () => {
     return (
       <div>
         <div>{props.title}</div>
-        <button onClick={() => props.rowSelection?.onChange(['rule-1'])}>选择规则</button>
-        <button onClick={() => setMode('filtered')}>切换筛选</button>
+        <button type="button" onClick={() => props.rowSelection?.onChange(['rule-1'])}>选择规则</button>
+        <button type="button" onClick={() => setMode('filtered')}>切换筛选</button>
         {rows.map((row: { id: string; name: string }) => (
-          <button key={row.id} onClick={() => props.onRowClick?.(row)}>
+          <button type="button" key={row.id} onClick={() => props.onRowClick?.(row)}>
             {row.name}
           </button>
         ))}

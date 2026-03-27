@@ -5,14 +5,14 @@ import { LineChartOutlined } from '@ant-design/icons';
 import { Area, Line } from '@ant-design/plots';
 import { Empty } from 'antd';
 import React from 'react';
-import { useDashboardSection } from '../useDashboardSection';
+import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 interface DashboardTrendChartProps extends Partial<WidgetComponentProps> {
-    section: string;
+    section: DashboardSectionKey;
     field: string;
     title: string;
     icon?: React.ReactNode;
@@ -24,7 +24,7 @@ const DashboardTrendChart: React.FC<DashboardTrendChartProps> = ({ section, fiel
     const { data, loading, refresh } = useDashboardSection(section);
     const { ref, width, height } = useContainerSize();
 
-    const items: { date: string; count: number }[] = data?.[field] ?? [];
+    const items = Array.isArray(data?.[field]) ? (data[field] as { date: string; count: number }[]) : [];
 
     const chartData = React.useMemo(() => {
         // 尝试解析日期范围 (7d 或 30d)
@@ -89,7 +89,7 @@ const DashboardTrendChart: React.FC<DashboardTrendChartProps> = ({ section, fiel
                                             const mon = String(date.getMonth() + 1).padStart(2, '0');
                                             const day = String(date.getDate()).padStart(2, '0');
                                             return `${mon}-${day}`;
-                                        } catch (e) {
+                                        } catch (_e) {
                                             return v;
                                         }
                                     },

@@ -1,5 +1,4 @@
 import React, { useCallback } from 'react';
-import { Menu } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 
 interface ContextMenuProps {
@@ -13,12 +12,15 @@ interface ContextMenuProps {
     onClose: () => void;
 }
 
-const ContextMenu = ({ id, top, left, right, bottom, type, onClick, onClose }: ContextMenuProps) => {
+const ContextMenu = ({ top, left, right, bottom, type, onClick, onClose }: ContextMenuProps) => {
     // Prevent default context menu
     const handleClick = useCallback(() => {
         onClick();
         onClose();
     }, [onClick, onClose]);
+    const setHoverBackground = (event: React.MouseEvent<HTMLDivElement>, color: string) => {
+        event.currentTarget.style.background = color;
+    };
 
     return (
         <div
@@ -49,8 +51,8 @@ const ContextMenu = ({ id, top, left, right, bottom, type, onClick, onClose }: C
                     color: '#ff4d4f',
                     transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#fff1f0')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                onMouseEnter={(event) => setHoverBackground(event, '#fff1f0')}
+                onMouseLeave={(event) => setHoverBackground(event, 'transparent')}
                 onClick={handleClick}
             >
                 <DeleteOutlined />

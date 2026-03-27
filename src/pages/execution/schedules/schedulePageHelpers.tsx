@@ -1,12 +1,11 @@
 import React from 'react';
 import {
-    ClockCircleOutlined,
     PauseCircleOutlined,
     PlayCircleOutlined,
     ScheduleOutlined,
     SyncOutlined,
 } from '@ant-design/icons';
-import { Tag, Tooltip, Typography } from 'antd';
+import { Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import type { AdvancedSearchField } from '@/components/StandardTable';
 import type {
@@ -87,6 +86,7 @@ export const getScheduleTypeCount = (
 
 export const headerIcon = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>调度主页图标</title>
         <rect x="8" y="6" width="32" height="36" rx="3" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M8 16h32" stroke="currentColor" strokeWidth="2" />
         <circle cx="16" cy="11" r="1.5" fill="currentColor" />

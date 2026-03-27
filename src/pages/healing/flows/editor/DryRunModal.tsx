@@ -1,11 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { Modal, Form, Input, Button, Radio, Space, Typography, message } from 'antd';
 import { ExperimentOutlined, CopyOutlined, DatabaseOutlined, SelectOutlined, StopOutlined } from '@ant-design/icons';
-import { createDryRunStream, SSENodeStartData, SSENodeCompleteData, SSEFlowCompleteData } from '@/services/auto-healing/sse';
+import { createDryRunStream, type SSENodeStartData, type SSENodeCompleteData, type SSEFlowCompleteData } from '@/services/auto-healing/sse';
+import type { DryRunStreamRequest } from '@/services/auto-healing/sse';
 import IncidentSelector from './IncidentSelector';
 
 const { Text } = Typography;
 const { TextArea } = Input;
+
+type DryRunMockIncident = DryRunStreamRequest['mock_incident'];
 
 interface DryRunModalProps {
     open: boolean;
@@ -16,7 +19,7 @@ interface DryRunModalProps {
     onStartRun: () => void; // Reset all nodes before running
     /** 节点结果回调，传递完整的 SSENodeCompleteData */
     onNodeResult: (data: SSENodeCompleteData) => void;
-    onNodeLog?: (nodeId: string, level: string, message: string, details?: any) => void; // Log event
+    onNodeLog?: (nodeId: string, level: string, message: string, details?: Record<string, unknown>) => void; // Log event
     onRunComplete: (success: boolean, message: string) => void;
 }
 
@@ -44,12 +47,12 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
             const values = await form.validateFields();
             setLoading(true);
 
-            let mockIncident: any;
+            let mockIncident: DryRunMockIncident;
 
             if (inputMode === 'json') {
                 try {
-                    mockIncident = JSON.parse(values.rawJson);
-                } catch (e) {
+                    mockIncident = JSON.parse(values.rawJson) as DryRunMockIncident;
+                } catch (_e) {
                     /* global error handler */
                     setLoading(false);
                     return;
@@ -73,7 +76,7 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
             onStartRun();
 
             // Start SSE stream - 传递完整的 DryRunRequest（包含 mock_approvals）
-            const requestBody: any = { mock_incident: mockIncident };
+            const requestBody: DryRunStreamRequest = { mock_incident: mockIncident };
             // 只传递有配置的审批节点
             const effectiveMockApprovals = Object.fromEntries(
                 Object.entries(mockApprovals).filter(([_, v]) => v)
@@ -106,7 +109,7 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
                 },
                 onError: (error) => {
                     console.error('[DryRun] SSE Error:', error);
-                    message.error('Dry-Run 连接失败: ' + error.message);
+                    message.error(`Dry-Run 连接失败: ${error.message}`);
                     onRunComplete(false, '连接失败');
                     setLoading(false);
                     abortControllerRef.current = null;
@@ -115,7 +118,7 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
 
             abortControllerRef.current = controller;
 
-        } catch (error: any) {
+        } catch (_error: unknown) {
             /* global error handler */
             onRunComplete(false, '执行失败');
             setLoading(false);
@@ -220,7 +223,7 @@ const DryRunModal: React.FC<DryRunModalProps> = ({
                         <IncidentSelector
                             open={incidentSelectorOpen}
                             value={selectedIncident?.id}
-                            onSelect={(id, incident) => {
+                            onSelect={(_id, incident) => {
                                 setSelectedIncident(incident);
                                 setIncidentSelectorOpen(false);
                             }}

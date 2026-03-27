@@ -19,12 +19,13 @@ function updateExecutionValues(
     patch: Partial<NodeConfigFormValues>,
 ) {
     const nextValues = { ...(formRef.current?.getFieldsValue() || {}), ...patch };
-    formRef.current?.setFieldsValue(nextValues);
+    type FormValuesArg = Parameters<NonNullable<NodeConfigFormRef['current']>['setFieldsValue']>[0];
+    formRef.current?.setFieldsValue(nextValues as FormValuesArg);
     onChange(nodeId, nextValues);
 }
 
 function getRecordValue(value: unknown) {
-    return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as AutoHealing.JsonObject) : {};
 }
 
 function getVariableMappings(value: unknown) {
@@ -76,7 +77,7 @@ const ExecutionVariablesField: React.FC<{
     nodeId: string;
     onChange: NodeConfigPanelChangeHandler;
     taskTemplateId?: string;
-    extraVars: Record<string, unknown>;
+    extraVars: AutoHealing.JsonObject;
     variableMappings: Record<string, string>;
 }> = ({ extraVars, formRef, nodeId, onChange, taskTemplateId, variableMappings }) => (
     <div style={{ marginBottom: 16 }}>

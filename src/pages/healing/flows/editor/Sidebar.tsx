@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Collapse } from 'antd';
+import { Typography, } from 'antd';
 import {
     CloudServerOutlined,
     SafetyCertificateOutlined,
@@ -73,8 +73,8 @@ const Sidebar: React.FC = () => {
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: 0 }}>
-                {nodeGroups.map((group, groupIndex) => (
-                    <div key={groupIndex}>
+                {nodeGroups.map((group) => (
+                    <div key={group.title}>
                         <div style={{ padding: '12px 16px 8px', background: '#fafafa' }}>
                             <Text type="secondary" style={{ fontSize: 13, fontWeight: 600 }}>{group.title}</Text>
                         </div>
@@ -99,7 +99,7 @@ const Sidebar: React.FC = () => {
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.background = `${item.color}08`;
-                                        e.currentTarget.style.boxShadow = 'inset 0 0 0 1px ' + item.color + '30';
+                                        e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${item.color}30`;
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.background = '#fff';

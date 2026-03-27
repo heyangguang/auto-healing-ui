@@ -155,8 +155,12 @@ export function applyAutoLayout(
         ranksep: 80,
     });
 
-    nodes.forEach((node) => graph.setNode(node.id, { width: LAYOUT_NODE_WIDTH, height: LAYOUT_NODE_HEIGHT }));
-    edges.forEach((edge) => graph.setEdge(edge.source, edge.target));
+    nodes.forEach((node) => {
+        graph.setNode(node.id, { width: LAYOUT_NODE_WIDTH, height: LAYOUT_NODE_HEIGHT });
+    });
+    edges.forEach((edge) => {
+        graph.setEdge(edge.source, edge.target);
+    });
     dagre.layout(graph);
 
     return nodes.map((node) => {

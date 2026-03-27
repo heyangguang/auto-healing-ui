@@ -12,7 +12,7 @@ interface ScheduleVariableOverridesCardProps {
     overrideValues: VariableValueMap;
     templatePlaybook: AutoHealing.Playbook | null;
     onVariableClear: (name: string) => void;
-    onVariableChange: (name: string, value: unknown) => void;
+    onVariableChange: (name: string, value: AutoHealing.JsonValue | undefined) => void;
 }
 
 const ScheduleVariableOverridesCard: React.FC<ScheduleVariableOverridesCardProps> = ({
@@ -59,7 +59,7 @@ const ScheduleVariableOverridesCard: React.FC<ScheduleVariableOverridesCardProps
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <div className="var-type">{variable.type}</div>
-                                {Object.prototype.hasOwnProperty.call(overrideValues, variable.name) && (
+                                {Object.hasOwn(overrideValues, variable.name) && (
                                     <Button
                                         type="link"
                                         size="small"

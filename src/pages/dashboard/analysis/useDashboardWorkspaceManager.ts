@@ -71,7 +71,9 @@ export const useDashboardWorkspaceManager = ({
       if (saveTimeout.current) {
         clearTimeout(saveTimeout.current);
       }
-      systemWorkspaceSaveTimeouts.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      systemWorkspaceSaveTimeouts.current.forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+      });
       systemWorkspaceSaveTimeouts.current.clear();
     };
   }, []);

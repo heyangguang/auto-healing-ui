@@ -1,293 +1,52 @@
-import React, { useState, useEffect, startTransition, lazy, Suspense } from 'react';
-import {
-    QuestionCircleOutlined,
-    HomeOutlined,
-    AppstoreOutlined,
-    DashboardOutlined,
-    DownOutlined,
-    UpOutlined,
-    MenuOutlined,
-} from '@ant-design/icons';
-import { history, useLocation, useAccess, useModel } from '@umijs/max';
-import { createStyles } from 'antd-style';
-import { AvatarDropdown, AvatarName, AvatarFullName } from '@/components/RightContent/AvatarDropdown';
+import React, { startTransition, lazy, Suspense, useMemo, useState } from 'react';
+import { AppstoreOutlined, DashboardOutlined, DownOutlined, HomeOutlined, MenuOutlined, QuestionCircleOutlined, UpOutlined } from '@ant-design/icons';
+import { history, useAccess, useLocation, useModel } from '@umijs/max';
+import { AvatarDropdown, AvatarFullName, AvatarName } from '@/components/RightContent/AvatarDropdown';
+import { SERVICES } from '@/config/navData';
 import StarryBackground from './StarryBackground';
+import { hasAnyVisibleService, readImpersonationActive, type AccessMap } from './access';
+import useTopNavStyles from './styles';
+import useResponsive from './useResponsive';
+
 const ProductMenu = lazy(() => import('@/components/ProductMenu'));
 const GlobalSearch = lazy(() => import('@/components/GlobalSearch'));
 const NotificationBell = lazy(() => import('@/components/NotificationBell'));
 const TenantSwitcher = lazy(() => import('@/components/TenantSwitcher'));
 const ImpersonationBanner = lazy(() => import('@/components/ImpersonationBanner'));
-import { CATEGORIES, SERVICES } from '@/config/navData';
-import { canAccessPath } from '@/utils/pathAccess';
-
-const MOBILE_BP = 768;
-const TABLET_BP = 1200;
-
-const useStyles = createStyles(({ token }) => ({
-    navBar: {
-        display: 'flex',
-        alignItems: 'center',
-        height: 58,
-        padding: '0 16px',
-        background: '#161616',
-        color: '#fff',
-        position: 'sticky' as const,
-        top: 0,
-        zIndex: 1001,
-        borderBottom: '1px solid #333',
-        /* 不要 overflow:hidden，否则搜索下拉面板会被裁剪 */
-    },
-    leftSection: {
-        position: 'relative' as const,
-        zIndex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 0,
-        flexShrink: 1,
-        minWidth: 0,
-    },
-    hamburger: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 40,
-        height: 40,
-        cursor: 'pointer',
-        border: 0,
-        background: 'transparent',
-        color: 'rgba(255,255,255,0.85)',
-        fontSize: 18,
-        marginRight: 4,
-        '&:hover': {
-            color: '#fff',
-            background: 'rgba(255,255,255,0.08)',
-        },
-    },
-    logo: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '0 16px 0 0',
-        cursor: 'pointer',
-        border: 0,
-        background: 'transparent',
-        height: 58,
-        flexShrink: 0,
-        boxSizing: 'border-box' as const,
-    },
-    logoIcon: {
-        height: 32,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-    },
-    logoText: {
-        fontSize: 15,
-        fontWeight: 600,
-        color: '#fff',
-        letterSpacing: 0.5,
-        whiteSpace: 'nowrap' as const,
-    },
-    navLinks: {
-        display: 'flex',
-        gap: 4,
-    },
-    navItem: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        padding: '6px 12px',
-        cursor: 'pointer',
-        border: 0,
-        background: 'transparent',
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: 13,
-        fontWeight: 500,
-        transition: 'all 0.2s',
-        fontFamily: 'inherit',
-        userSelect: 'none' as const,
-        '&:hover': {
-            color: '#fff',
-            background: 'rgba(255,255,255,0.1)',
-        },
-    },
-    navItemActive: {
-        color: '#fff',
-        background: 'rgba(255,255,255,0.1)',
-    },
-    navIcon: {
-        fontSize: 16,
-    },
-    arrowIcon: {
-        fontSize: 12,
-        marginLeft: 1,
-    },
-    /* 移动端隐藏导航文字 */
-    navLabel: {},
-    rightSection: {
-        position: 'relative' as const,
-        zIndex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        flexShrink: 1,
-        paddingRight: 8,
-        marginLeft: 'auto',
-        minWidth: 0,
-    },
-    iconBtn: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 36,
-        height: 36,
-        cursor: 'pointer',
-        border: 0,
-        background: 'transparent',
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: 18,
-        transition: 'all 0.2s',
-        '&:hover': {
-            color: '#fff',
-            background: 'rgba(255,255,255,0.08)',
-        },
-    },
-    divider: {
-        width: 1,
-        height: 20,
-        background: 'rgba(255,255,255,0.2)',
-        margin: '0 8px',
-    },
-    avatarWrapper: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '0 4px 0 8px',
-        height: 58,
-        cursor: 'pointer',
-        border: 0,
-        background: 'transparent',
-        color: 'rgba(255,255,255,0.85)',
-        fontSize: 13,
-        fontFamily: 'inherit',
-        transition: 'all 0.2s',
-        whiteSpace: 'nowrap' as const,
-        '&:hover': {
-            opacity: 0.85,
-        },
-    },
-    userAvatar: {
-        width: 28,
-        height: 28,
-        background: token.colorPrimary,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 12,
-        fontWeight: 600,
-        color: '#fff',
-        flexShrink: 0,
-    },
-    userName: {
-        fontSize: 13,
-        color: 'rgba(255,255,255,0.9)',
-        whiteSpace: 'nowrap' as const,
-    },
-}));
 
 const TopNavBar: React.FC = () => {
-    const { styles, cx } = useStyles();
+    const { styles, cx } = useTopNavStyles();
     const location = useLocation();
-    const access = useAccess() as unknown as Record<string, boolean>;
+    const access = useAccess() as unknown as AccessMap;
     const { initialState } = useModel('@@initialState');
+    const { isMobile, isTablet } = useResponsive();
     const realPlatformAdmin = initialState?.currentUser?.is_platform_admin === true;
     const [menuOpen, setMenuOpen] = useState(false);
-    const [isMobile, setIsMobile] = useState(
-        typeof window !== 'undefined' ? window.innerWidth <= MOBILE_BP : false
-    );
-    const [isTablet, setIsTablet] = useState(
-        typeof window !== 'undefined' ? window.innerWidth <= TABLET_BP : false
-    );
     const globalSearchFallbackWidth = isTablet ? 240 : 320;
-
-    useEffect(() => {
-        const onResize = () => {
-            setIsMobile(window.innerWidth <= MOBILE_BP);
-            setIsTablet(window.innerWidth <= TABLET_BP);
-        };
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, []);
 
     const isWorkbench = location.pathname === '/' || location.pathname === '/workbench';
     const isDashboard = location.pathname.startsWith('/dashboard');
-
-    // 权限检查：监控面板是否可见
-    const showDashboard = !!access.canViewDashboard;
-
-    // 权限检查：是否有任何可见的产品服务
-    const hasAnyService = React.useMemo(() => {
-        for (const [, items] of Object.entries(SERVICES)) {
-            if (items.some((svc: any) => {
-                if (svc.accesses?.length) {
-                    return svc.accesses.every((key: string) => !key || Boolean((access as any)[key]));
-                }
-                if (svc.access) return Boolean((access as any)[svc.access]);
-                return canAccessPath(svc.path, access);
-            })) return true;
-        }
-        return false;
-    }, [access]);
-
-    // 判断当前页面是否有侧边栏
+    const showDashboard = Boolean(access.canViewDashboard);
     const hasSideNav = !isWorkbench && !isDashboard;
-
-    // 🆕 检查 Impersonation 状态（严格校验：isImpersonating + 未过期）
-    const isImpersonating = React.useMemo(() => {
-        try {
-            const raw = localStorage.getItem('impersonation-storage');
-            if (raw) {
-                const imp = JSON.parse(raw);
-                if (imp?.isImpersonating && imp?.session?.expiresAt) {
-                    return new Date(imp.session.expiresAt) > new Date();
-                }
-            }
-        } catch { /* ignore */ }
-        return false;
-    }, []);
+    const isImpersonating = useMemo(readImpersonationActive, []);
+    const showTenantNav = !access.isPlatformAdmin || isImpersonating;
+    const hasAnyService = useMemo(() => hasAnyVisibleService(SERVICES, access), [access]);
 
     return (
         <>
             <div id="top-nav-bar" className={styles.navBar}>
                 <StarryBackground />
                 <div className={styles.leftSection}>
-
-                    {/* 汉堡菜单: 仅移动端 + 有侧边栏时显示 */}
                     {isMobile && hasSideNav && (
-                        <button
-                            type="button"
-                            className={styles.hamburger}
-                            onClick={() => window.dispatchEvent(new Event('toggle-sidenav'))}
-                            aria-label="切换侧边栏"
-                        >
+                        <button type="button" className={styles.hamburger} onClick={() => window.dispatchEvent(new Event('toggle-sidenav'))} aria-label="切换侧边栏">
                             <MenuOutlined />
                         </button>
                     )}
-
-                    {/* Logo */}
-                    <button
-                        type="button"
-                        className={styles.logo}
-                        onClick={() => startTransition(() => history.push('/'))}
-                        aria-label="返回工作台"
-                    >
+                    <button type="button" className={styles.logo} onClick={() => startTransition(() => history.push('/'))} aria-label="返回工作台">
                         <span className={styles.logoIcon}><img src="/pangolin-logo.png" alt="Pangolin" style={{ height: 38 }} /></span>
                     </button>
-
-                    {/* 导航链接 - 平台管理员未 Impersonation 时隐藏租户级导航 */}
                     <div className={styles.navLinks}>
-                        {(!access.isPlatformAdmin || isImpersonating) && (
+                        {showTenantNav && (
                             <button
                                 type="button"
                                 className={cx(styles.navItem, isWorkbench && !menuOpen && styles.navItemActive)}
@@ -298,8 +57,7 @@ const TopNavBar: React.FC = () => {
                                 {!isTablet && <span>工作台</span>}
                             </button>
                         )}
-
-                        {(!access.isPlatformAdmin || isImpersonating) && showDashboard && (
+                        {showTenantNav && showDashboard && (
                             <button
                                 type="button"
                                 className={cx(styles.navItem, isDashboard && !menuOpen && styles.navItemActive)}
@@ -310,8 +68,7 @@ const TopNavBar: React.FC = () => {
                                 {!isTablet && <span>监控面板</span>}
                             </button>
                         )}
-
-                        {(!access.isPlatformAdmin || isImpersonating) && hasAnyService && (
+                        {showTenantNav && hasAnyService && (
                             <button
                                 type="button"
                                 id="tour-product-menu"
@@ -323,80 +80,43 @@ const TopNavBar: React.FC = () => {
                             >
                                 <AppstoreOutlined className={styles.navIcon} />
                                 {!isTablet && <span>产品与服务</span>}
-                                {menuOpen ? (
-                                    <UpOutlined className={styles.arrowIcon} />
-                                ) : (
-                                    <DownOutlined className={styles.arrowIcon} />
-                                )}
+                                {menuOpen ? <UpOutlined className={styles.arrowIcon} /> : <DownOutlined className={styles.arrowIcon} />}
                             </button>
                         )}
                     </div>
                 </div>
 
-                {/* 全局搜索 - 平台管理员未 Impersonation 时隐藏 */}
-                {!isMobile && (!access.isPlatformAdmin || isImpersonating) && (
+                {!isMobile && showTenantNav && (
                     <Suspense fallback={<div style={{ width: globalSearchFallbackWidth, height: 36 }} />}>
                         <GlobalSearch compact={isTablet} />
                     </Suspense>
                 )}
 
-                {/* 右侧操作 */}
                 <div className={styles.rightSection}>
                     {!isMobile && (
                         <>
-                            <button
-                                type="button"
-                                className={styles.iconBtn}
-                                title="帮助文档"
-                                aria-label="帮助文档"
-                                onClick={() => startTransition(() => history.push('/guide'))}
-                            >
+                            <button type="button" className={styles.iconBtn} title="帮助文档" aria-label="帮助文档" onClick={() => startTransition(() => history.push('/guide'))}>
                                 <QuestionCircleOutlined />
                             </button>
-                            {(!access.isPlatformAdmin || isImpersonating) && access.canViewSiteMessages && (
+                            {showTenantNav && access.canViewSiteMessages && (
                                 <Suspense fallback={<span style={{ display: 'inline-block', width: 36, height: 36 }} />}>
                                     <span id="tour-notification-bell"><NotificationBell /></span>
                                 </Suspense>
                             )}
-                            {/* 平台管理员：impersonation 时显示 Banner，否则不显示 */}
-                            {/* 普通用户：显示 TenantSwitcher */}
                             {realPlatformAdmin
-                                ? (
-                                    <Suspense fallback={<div style={{ minWidth: 220, height: 32 }} />}>
-                                        <ImpersonationBanner />
-                                    </Suspense>
-                                )
-                                : (
-                                    <Suspense fallback={<div style={{ width: 160, height: 36 }} />}>
-                                        <TenantSwitcher />
-                                    </Suspense>
-                                )
-                            }
+                                ? <Suspense fallback={<div style={{ minWidth: 220, height: 32 }} />}><ImpersonationBanner /></Suspense>
+                                : <Suspense fallback={<div style={{ width: 160, height: 36 }} />}><TenantSwitcher /></Suspense>}
                             <div className={styles.divider} />
                         </>
                     )}
-
                     <AvatarDropdown menu>
-                        <button
-                            type="button"
-                            className={styles.avatarWrapper}
-                            aria-haspopup="menu"
-                            aria-label="打开用户菜单"
-                        >
-                            <span className={styles.userAvatar}>
-                                <AvatarName />
-                            </span>
-                            {!isMobile && (
-                                <span className={styles.userName}>
-                                    <AvatarFullName />
-                                </span>
-                            )}
+                        <button type="button" className={styles.avatarWrapper} aria-haspopup="menu" aria-label="打开用户菜单">
+                            <span className={styles.userAvatar}><AvatarName /></span>
+                            {!isMobile && <span className={styles.userName}><AvatarFullName /></span>}
                         </button>
                     </AvatarDropdown>
                 </div>
             </div>
-
-            {/* Drawer Mega Menu — 懒加载，仅在用户主动打开时才加载 */}
             <Suspense fallback={null}>
                 <ProductMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
             </Suspense>

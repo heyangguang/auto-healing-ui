@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRequestSequence } from '@/utils/requestSequence';
 
-interface UseAsyncModalSelectorOptions<T, F extends Record<string, any>> {
+type AsyncModalSelectorFilters = Record<string, unknown>;
+
+interface UseAsyncModalSelectorOptions<T, F extends AsyncModalSelectorFilters> {
   open: boolean;
   value?: string;
   initialFilters: F;
@@ -11,7 +13,7 @@ interface UseAsyncModalSelectorOptions<T, F extends Record<string, any>> {
   searchDebounceMs?: number;
 }
 
-export function useAsyncModalSelector<T, F extends Record<string, any>>({
+export function useAsyncModalSelector<T, F extends AsyncModalSelectorFilters>({
   open,
   value,
   initialFilters,

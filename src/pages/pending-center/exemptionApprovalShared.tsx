@@ -27,7 +27,7 @@ export const exemptionStatusMap: Record<string, { color: string; label: string; 
   expired: { color: 'warning', label: '已过期', icon: <ExclamationCircleOutlined /> },
 };
 
-const severityColors: Record<string, string> = {
+const _severityColors: Record<string, string> = {
   critical: 'red',
   high: 'orange',
   medium: 'gold',
@@ -89,6 +89,7 @@ export type ExemptionHistoryApiParams = {
 
 export const exemptionHeaderIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>命令豁免审批图标</title>
     <rect x="6" y="10" width="26" height="32" rx="3" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M12 20h14M12 26h10M12 32h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     <circle cx="36" cy="16" r="9" stroke="currentColor" strokeWidth="2" fill="none" />

@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Drawer, Spin, Empty, Space, Tag, Typography, Button, Descriptions, message } from 'antd';
+import React from 'react';
+import { Drawer, Spin, Empty, Space, Tag, Typography, Button, Descriptions, } from 'antd';
 import { ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, PauseCircleOutlined, StopOutlined, FullscreenOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import { useRequest } from '@umijs/max';
-import ReactFlow, { Background, Controls, Edge, Node, useNodesState, useEdgesState, ProOptions } from 'reactflow';
+import ReactFlow, { Background, Controls, useNodesState, useEdgesState, type ProOptions } from 'reactflow';
 import 'reactflow/dist/style.css';
-import dagre from 'dagre';
 import { getLayoutedElements } from '../utils/layoutUtils';
 import { buildCanvasElements } from '../utils/canvasBuilder';
 import AutoLayoutButton from './AutoLayoutButton';
@@ -68,7 +67,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
         setEdges(layoutedEdges);
     };
 
-    const { data: instance, loading, refresh } = useRequest(
+    const { data: instance, loading } = useRequest(
         async () => {
             if (!instanceId) return null;
             return getHealingInstanceDetail(instanceId);
@@ -78,7 +77,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
             refreshDeps: [instanceId],
             onSuccess: (response) => {
                 const data = response?.data || response;
-                if (data && data.flow_nodes && data.flow_edges) {
+                if (data?.flow_nodes && data.flow_edges) {
                     // 使用共享画布构建函数 — 与列表页/详情页逻辑完全一致
                     const { nodes: builtNodes, edges: builtEdges } = buildCanvasElements({
                         flowNodes: data.flow_nodes,

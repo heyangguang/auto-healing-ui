@@ -8,7 +8,7 @@ import StatCardContent from './StatCardContent';
 
 const StatIncidentTotal: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('incidents');
-    const scanned = getIncidentScannedCount(data);
+    const scanned = getIncidentScannedCount(data ?? undefined);
     return (
         <WidgetWrapper title="工单总数" icon={<AlertOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
             <StatCardContent

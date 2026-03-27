@@ -4,10 +4,9 @@ import {
     Select, Badge, Tooltip, Pagination,
 } from 'antd';
 import {
-    SearchOutlined, BranchesOutlined, CheckCircleOutlined, PauseCircleOutlined,
+    SearchOutlined, BranchesOutlined, CheckCircleOutlined, 
     ThunderboltOutlined, AuditOutlined, BellOutlined, ForkOutlined,
     EyeOutlined, ApiOutlined, NodeIndexOutlined, ClockCircleOutlined,
-    LoadingOutlined,
 } from '@ant-design/icons';
 import { getFlow, getFlows } from '@/services/auto-healing/healing';
 import { useAsyncModalSelector } from '@/hooks/useAsyncModalSelector';

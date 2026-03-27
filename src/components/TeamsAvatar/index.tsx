@@ -5,7 +5,7 @@ function getInitials(seed: string): string {
     if (!seed) return '?';
     const trimmed = seed.trim();
     // 按 _ - . 空格拆分
-    const words = trimmed.split(/[\s_\-\.]+/).filter(Boolean);
+    const words = trimmed.split(/[\s_\-.]+/).filter(Boolean);
     if (words.length >= 2) {
         return (words[0][0] + words[words.length - 1][0]).toUpperCase();
     }

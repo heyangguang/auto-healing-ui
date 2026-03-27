@@ -2,7 +2,6 @@ import React from 'react';
 import {
   AlertOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   InfoCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
@@ -49,6 +48,7 @@ const severityMap: Record<string, { color: string; label: string; icon: React.Re
 
 export const pendingCenterHeaderIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>待办中心图标</title>
     <rect x="10" y="8" width="28" height="34" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M18 8V6a6 6 0 0 1 12 0v2" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M16 18l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

@@ -12,17 +12,25 @@ export const isEmptyOverrideValue = (value: unknown) =>
     || (Array.isArray(value) && value.length === 0)
     || (!!value && typeof value === 'object' && Object.keys(value as Record<string, unknown>).length === 0);
 
+export type ScheduleFormValues = {
+    max_failures?: number;
+    name: string;
+    schedule_expr?: string;
+    scheduled_at?: dayjs.ConfigType;
+    schedule_type: AutoHealing.ScheduleType;
+    task_id: string;
+};
+
 export function buildScheduleRequestData(options: {
     editingSchedule: AutoHealing.ExecutionSchedule | null;
-    formValues: Pick<AutoHealing.CreateExecutionScheduleRequest, 'name' | 'task_id' | 'schedule_type'> & Record<string, any>;
+    formValues: ScheduleFormValues;
     isEdit: boolean;
-    normalizedOverrideValues: Record<string, unknown>;
+    normalizedOverrideValues: AutoHealing.JsonObject;
     secretsSourceIds: string[];
     skipNotification: boolean;
     targetHostsOverride: string[];
 }): AutoHealing.CreateExecutionScheduleRequest & { max_failures?: number } {
     const {
-        editingSchedule,
         formValues,
         isEdit,
         normalizedOverrideValues,
@@ -34,7 +42,7 @@ export function buildScheduleRequestData(options: {
         ...formValues,
         schedule_expr: formValues.schedule_type === 'cron' ? formValues.schedule_expr : undefined,
         scheduled_at: formValues.schedule_type === 'once' && formValues.scheduled_at
-            ? (dayjs.isDayjs(formValues.scheduled_at) ? formValues.scheduled_at.format() : formValues.scheduled_at)
+            ? dayjs(formValues.scheduled_at).format()
             : undefined,
         target_hosts_override: isEdit ? targetHostsOverride.join(',') : (targetHostsOverride.length > 0 ? targetHostsOverride.join(',') : undefined),
         extra_vars_override: isEdit

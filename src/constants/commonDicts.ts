@@ -62,12 +62,24 @@ export let USER_STATUS_OPTIONS: Array<{ label: string; value: string }> = [...FB
 /** 用户状态 map（key → label/color/tagColor/badge） */
 export let USER_STATUS_MAP: Record<string, { label: string; color: string; tagColor: string; badge: string }> = { ...FB_USER_STATUS_MAP };
 
+type NotificationStatusEntry = {
+    color: string;
+    text: string;
+};
+
+type UserStatusEntry = {
+    label: string;
+    color: string;
+    tagColor: string;
+    badge: string;
+};
+
 // ==================== 刷新逻辑 ====================
 
 function refresh() {
     const notifLog = getDictItems('notification_log_status');
     if (notifLog?.length) {
-        const map: Record<string, any> = {};
+        const map: Record<string, NotificationStatusEntry> = {};
         notifLog.forEach(i => {
             map[i.dict_key] = { color: i.tag_color || 'default', text: i.label };
         });
@@ -87,7 +99,7 @@ function refresh() {
     const userStatus = getDictItems('user_status');
     if (userStatus?.length) {
         USER_STATUS_OPTIONS = userStatus.map(i => ({ label: i.label, value: i.dict_key }));
-        const map: Record<string, any> = {};
+        const map: Record<string, UserStatusEntry> = {};
         userStatus.forEach(i => {
             map[i.dict_key] = {
                 label: i.label,

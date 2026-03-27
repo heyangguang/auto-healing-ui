@@ -47,6 +47,7 @@ export const impersonationApprovalAdvancedSearchFields: AdvancedSearchField[] = 
 
 export const impersonationApprovalHeaderIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>会话代登审批图标</title>
     <circle cx="24" cy="16" r="8" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M36 24l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

@@ -6,7 +6,7 @@ import {
     ThunderboltOutlined,
 } from '@ant-design/icons';
 import React from 'react';
-import { TemplateStatItem, TemplateStats } from './templateListHelpers';
+import type { TemplateStatItem, TemplateStats } from './templateListHelpers';
 
 type TemplateStatsBarProps = {
     stats: TemplateStats;

@@ -1,27 +1,37 @@
-import { request as umiRequest } from '@umijs/max';
 import { useEffect, useMemo, useState } from 'react';
-import type { AdvancedSearchField } from './index';
+import type {
+  AdvancedSearchField,
+} from './types';
+import type {
+  SearchSchemaField,
+  SearchSchemaRequest,
+} from '@/services/auto-healing/searchSchema';
 
 export function useStandardTableSearchSchema(
   advancedSearchFields?: AdvancedSearchField[],
-  searchSchemaUrl?: string,
+  searchSchemaRequest?: SearchSchemaRequest,
 ) {
   const [dynamicSearchFields, setDynamicSearchFields] = useState<AdvancedSearchField[] | null>(null);
+  const [schemaLoadError, setSchemaLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     setDynamicSearchFields(null);
-    if (!searchSchemaUrl) {
+    setSchemaLoadError(null);
+    if (!searchSchemaRequest) {
       return;
     }
     let cancelled = false;
     (async () => {
       try {
-        const response = await umiRequest(searchSchemaUrl);
+        const response = await searchSchemaRequest();
         if (cancelled) {
           return;
         }
-        const fields: any[] = response?.fields || response?.data?.fields || [];
-        const converted: AdvancedSearchField[] = fields.map((field: any) => {
+        const fields: SearchSchemaField[] = response?.fields || response?.data?.fields || [];
+        const converted: AdvancedSearchField[] = fields.flatMap((field) => {
+          if (!field.key || !field.label) {
+            return [];
+          }
           let type: AdvancedSearchField['type'] = 'input';
           let options = field.options;
           if (field.type === 'enum') {
@@ -35,7 +45,7 @@ export function useStandardTableSearchSchema(
           } else if (field.type === 'dateRange') {
             type = 'dateRange';
           }
-          return {
+          return [{
             key: field.key,
             label: field.label,
             type,
@@ -43,17 +53,21 @@ export function useStandardTableSearchSchema(
             description: field.description,
             options,
             defaultMatchMode: field.default_match_mode === 'exact' ? 'exact' : 'fuzzy',
-          };
+          }];
         });
         setDynamicSearchFields(converted);
-      } catch {
-        // Ignore schema load failures and fall back to static fields.
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : '未知错误';
+        setSchemaLoadError(`后端搜索 Schema 加载失败: ${message}`);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [searchSchemaUrl]);
+  }, [searchSchemaRequest]);
 
   const effectiveAdvancedSearchFields = useMemo(() => {
     const staticFields = advancedSearchFields || [];
@@ -71,5 +85,6 @@ export function useStandardTableSearchSchema(
 
   return {
     effectiveAdvancedSearchFields,
+    schemaLoadError,
   };
 }

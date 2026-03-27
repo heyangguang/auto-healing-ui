@@ -4,11 +4,11 @@ import RegisterPage from './index';
 import { validateInvitationToken } from '@/services/auto-healing/auth';
 
 jest.mock('@umijs/max', () => ({
-  Helmet: ({ children }: any) => {
+  Helmet: ({ children }: { children?: unknown }) => {
     const mockReact = require('react');
     return mockReact.createElement(mockReact.Fragment, null, children);
   },
-  Link: ({ children, to }: any) => {
+  Link: ({ children, to }: { children?: unknown; to: string }) => {
     const mockReact = require('react');
     return mockReact.createElement('a', { href: to }, children);
   },

@@ -21,6 +21,9 @@ dayjs.locale('zh-cn');
 
 const { Text } = Typography;
 
+const hasErrorFields = (value: unknown): value is { errorFields?: unknown } =>
+    typeof value === 'object' && value !== null && 'errorFields' in value;
+
 const ProfilePage: React.FC = () => {
     const [profile, setProfile] = useState<AutoHealing.UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -98,8 +101,8 @@ const ProfilePage: React.FC = () => {
             message.success('更新成功');
             setEditing(false);
             load();
-        } catch (error: any) {
-            if (!error?.errorFields) {
+        } catch (error: unknown) {
+            if (!hasErrorFields(error) || !error.errorFields) {
                 // global error handler
             }
         } finally {
@@ -113,8 +116,8 @@ const ProfilePage: React.FC = () => {
             await changePassword({ old_password: values.old_password, new_password: values.new_password });
             message.success('密码修改成功');
             setPwdOpen(false);
-        } catch (error: any) {
-            if (!error?.errorFields) {
+        } catch (error: unknown) {
+            if (!hasErrorFields(error) || !error.errorFields) {
                 // global error handler
             }
         }

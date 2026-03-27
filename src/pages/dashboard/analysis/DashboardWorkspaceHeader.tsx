@@ -133,15 +133,16 @@ const DashboardWorkspaceHeader: React.FC<DashboardWorkspaceHeaderProps> = ({
       })}
 
       <Tooltip title="新建工作区">
-        <div
+        <button
+          type="button"
           aria-label="新建工作区"
           onClick={() => hasDashboardConfig && onAddWorkspace()}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', cursor: hasDashboardConfig ? 'pointer' : 'not-allowed', color: '#bfbfbf', borderBottom: '2px solid transparent', transition: 'color 0.12s', opacity: hasDashboardConfig ? 1 : 0.45 }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', cursor: hasDashboardConfig ? 'pointer' : 'not-allowed', color: '#bfbfbf', borderBottom: '2px solid transparent', transition: 'color 0.12s', opacity: hasDashboardConfig ? 1 : 0.45, background: 'transparent', border: 0 }}
           onMouseEnter={(event) => { if (hasDashboardConfig) event.currentTarget.style.color = '#1677ff'; }}
           onMouseLeave={(event) => { event.currentTarget.style.color = '#bfbfbf'; }}
         >
           <PlusOutlined style={{ fontSize: 13 }} />
-        </div>
+        </button>
       </Tooltip>
     </div>
 

@@ -4,7 +4,6 @@ import {
     ThunderboltOutlined,
     CheckCircleOutlined,
     CloseCircleOutlined,
-    ClockCircleOutlined,
     DashboardOutlined,
     CalendarOutlined,
     FieldTimeOutlined,
@@ -104,9 +103,9 @@ const StatsPanel: React.FC = () => {
 
     return (
         <div className="exec-stats-bar">
-            {items.map((s, i) => (
-                <React.Fragment key={i}>
-                    {i > 0 && <div className="exec-stat-divider" />}
+            {items.map((s, index) => (
+                <React.Fragment key={s.cls}>
+                    {index > 0 && <div className="exec-stat-divider" />}
                     <Tooltip title={s.tip}>
                         <div className="exec-stat-item">
                             <span className={`exec-stat-icon exec-stat-icon-${s.cls}`}>{s.icon}</span>

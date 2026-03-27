@@ -18,6 +18,7 @@ import type {
 } from './sseTypes';
 
 export type {
+    DryRunStreamRequest,
     DryRunSSECallbacks,
     NodeStatus,
     SSEConnection,
@@ -37,6 +38,19 @@ const getAuthToken = (): string => {
 function coerceSSEPayload<T>(value: Record<string, unknown>): T {
     return value as unknown as T;
 }
+
+const getErrorName = (value: unknown): string | undefined => {
+    if (value instanceof Error) return value.name;
+    if (value && typeof value === 'object' && 'name' in value) {
+        const name = (value as { name?: unknown }).name;
+        return typeof name === 'string' ? name : undefined;
+    }
+    return undefined;
+};
+
+const isAbortError = (value: unknown) => getErrorName(value) === 'AbortError';
+
+const normalizeError = (value: unknown) => (value instanceof Error ? value : new Error(String(value)));
 
 export const createAuthenticatedEventStream = (
     url: string,
@@ -82,9 +96,9 @@ export const createAuthenticatedEventStream = (
 
                 parser.push(decoder.decode(value, { stream: true }));
             }
-        } catch (error: any) {
-            if (error?.name !== 'AbortError') {
-                callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
+        } catch (error: unknown) {
+            if (!isAbortError(error)) {
+                callbacks.onError?.(normalizeError(error));
             }
         }
     })();
@@ -149,8 +163,8 @@ export const createDryRunStream = async (
                     parser.push(decoder.decode(value, { stream: true }));
                 }
             } catch (error) {
-                if ((error as Error).name !== 'AbortError') {
-                    callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
+                if (!isAbortError(error)) {
+                    callbacks.onError?.(normalizeError(error));
                 }
             }
         };
@@ -158,8 +172,8 @@ export const createDryRunStream = async (
         readStream();
 
     } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-            callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
+        if (!isAbortError(error)) {
+            callbacks.onError?.(normalizeError(error));
         }
     }
 

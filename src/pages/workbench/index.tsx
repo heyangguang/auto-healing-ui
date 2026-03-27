@@ -28,16 +28,29 @@ import WorkbenchUserCard from './WorkbenchUserCard';
 
 const GuideDrawer = lazy(() => import('./GuideDrawer'));
 
+type WorkbenchRoleSummary = {
+    display_name?: string;
+    name?: string;
+};
+
+type WorkbenchCurrentUser = {
+    name?: string;
+    username?: string;
+    display_name?: string;
+    is_platform_admin?: boolean;
+    roles?: WorkbenchRoleSummary[];
+};
+
 const WorkbenchPage: React.FC = () => {
     const { styles } = useWorkbenchPageStyles();
     const access = useAccess();
     const { initialState } = useModel('@@initialState');
-    const user = initialState?.currentUser;
-    const displayName = user?.name || (user as any)?.display_name || (user as any)?.username || '用户';
-    const seed = (user as any)?.username || displayName;
+    const user = initialState?.currentUser as WorkbenchCurrentUser | undefined;
+    const displayName = user?.name || user?.display_name || user?.username || '用户';
+    const seed = user?.username || displayName;
     const role = user?.is_platform_admin
         ? '平台管理员'
-        : (user as any)?.roles?.[0]?.display_name || (user as any)?.roles?.[0]?.name || '普通用户';
+        : user?.roles?.[0]?.display_name || user?.roles?.[0]?.name || '普通用户';
     const [guideDrawerOpen, setGuideDrawerOpen] = useState(false);
     const [guideDrawerArticle, setGuideDrawerArticle] = useState<GuideArticle | null>(null);
     const [selectedDate, setSelectedDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));

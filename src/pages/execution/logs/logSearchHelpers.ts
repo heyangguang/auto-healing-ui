@@ -134,24 +134,47 @@ export interface TaskFilters {
 }
 
 export interface LogSearchParams {
-    advancedSearch?: Record<string, any>;
+    advancedSearch?: Record<string, unknown>;
     filters?: { field: string; value: string }[];
     searchField?: string;
     searchValue?: string;
 }
 
+function getStringValue(values: Record<string, unknown>, key: string): string | undefined {
+    const value = values[key];
+    if (typeof value === 'string' && value.length > 0) {
+        return value;
+    }
+    return undefined;
+}
+
+function getDateRangeValue(values: Record<string, unknown>, key: string): [string, string] | undefined {
+    const value = values[key];
+    if (
+        Array.isArray(value)
+        && value.length === 2
+        && typeof value[0] === 'string'
+        && typeof value[1] === 'string'
+    ) {
+        return [value[0], value[1]];
+    }
+    return undefined;
+}
+
 function assignExactAwareFilter(
     filters: TaskFilters,
-    advancedSearch: Record<string, any>,
+    advancedSearch: Record<string, unknown>,
     key: 'name' | 'description' | 'playbook_name' | 'repository_name' | 'target_hosts',
 ) {
     const exactKey = `${key}__exact` as const;
-    if (advancedSearch[exactKey]) {
-        filters[exactKey] = advancedSearch[exactKey];
+    const exactValue = getStringValue(advancedSearch, exactKey);
+    if (exactValue) {
+        filters[exactKey] = exactValue;
         return;
     }
-    if (advancedSearch[key]) {
-        filters[key] = advancedSearch[key];
+    const fuzzyValue = getStringValue(advancedSearch, key);
+    if (fuzzyValue) {
+        filters[key] = fuzzyValue;
     }
 }
 
@@ -188,27 +211,39 @@ export function parseLogSearchParams(params: LogSearchParams) {
     });
 
     const advancedSearch = params.advancedSearch || {};
-    if (advancedSearch.run_id) runFilters.run_id = advancedSearch.run_id;
-    if (advancedSearch.task_name) runFilters.task_name = advancedSearch.task_name;
-    if (advancedSearch.status) runFilters.status = advancedSearch.status;
-    if (advancedSearch.triggered_by) runFilters.triggered_by = advancedSearch.triggered_by;
-    if (advancedSearch.run_date_range?.length === 2) {
-        runFilters.started_after = toDayRangeStartISO(advancedSearch.run_date_range[0]);
-        runFilters.started_before = toDayRangeEndISO(advancedSearch.run_date_range[1]);
+    const runId = getStringValue(advancedSearch, 'run_id');
+    if (runId) runFilters.run_id = runId;
+    const taskName = getStringValue(advancedSearch, 'task_name');
+    if (taskName) runFilters.task_name = taskName;
+    const status = getStringValue(advancedSearch, 'status');
+    if (status) runFilters.status = status;
+    const triggeredBy = getStringValue(advancedSearch, 'triggered_by');
+    if (triggeredBy) runFilters.triggered_by = triggeredBy;
+    const runDateRange = getDateRangeValue(advancedSearch, 'run_date_range');
+    if (runDateRange) {
+        runFilters.started_after = toDayRangeStartISO(runDateRange[0]);
+        runFilters.started_before = toDayRangeEndISO(runDateRange[1]);
     }
 
     assignExactAwareFilter(taskFilters, advancedSearch, 'name');
     assignExactAwareFilter(taskFilters, advancedSearch, 'description');
-    if (advancedSearch.executor_type) taskFilters.executor_type = advancedSearch.executor_type;
+    const executorType = getStringValue(advancedSearch, 'executor_type');
+    if (executorType) taskFilters.executor_type = executorType;
     assignExactAwareFilter(taskFilters, advancedSearch, 'playbook_name');
     assignExactAwareFilter(taskFilters, advancedSearch, 'repository_name');
     assignExactAwareFilter(taskFilters, advancedSearch, 'target_hosts');
-    if (advancedSearch.task_status) taskFilters.status = advancedSearch.task_status;
-    if (advancedSearch.needs_review) taskFilters.needs_review = advancedSearch.needs_review === 'true';
-    if (advancedSearch.has_runs) taskFilters.has_runs = advancedSearch.has_runs === 'true';
-    if (advancedSearch.has_logs) taskFilters.has_logs = advancedSearch.has_logs === 'true';
-    if (advancedSearch.min_run_count) taskFilters.min_run_count = Number(advancedSearch.min_run_count);
-    if (advancedSearch.last_run_status) taskFilters.last_run_status = advancedSearch.last_run_status;
+    const taskStatus = getStringValue(advancedSearch, 'task_status');
+    if (taskStatus) taskFilters.status = taskStatus;
+    const needsReview = getStringValue(advancedSearch, 'needs_review');
+    if (needsReview) taskFilters.needs_review = needsReview === 'true';
+    const hasRuns = getStringValue(advancedSearch, 'has_runs');
+    if (hasRuns) taskFilters.has_runs = hasRuns === 'true';
+    const hasLogs = getStringValue(advancedSearch, 'has_logs');
+    if (hasLogs) taskFilters.has_logs = hasLogs === 'true';
+    const minRunCount = getStringValue(advancedSearch, 'min_run_count');
+    if (minRunCount) taskFilters.min_run_count = Number(minRunCount);
+    const lastRunStatus = getStringValue(advancedSearch, 'last_run_status');
+    if (lastRunStatus) taskFilters.last_run_status = lastRunStatus;
 
     return { runFilters, taskFilters };
 }

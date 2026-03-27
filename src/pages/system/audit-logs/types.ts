@@ -1,4 +1,5 @@
-import dayjs from 'dayjs';
+import type dayjs from 'dayjs';
+import type { StandardTableSearchValues, StandardTableSort } from '@/components/StandardTable';
 
 export type AuditLogUserSummary = {
   display_name?: string;
@@ -50,7 +51,7 @@ export type TrendPoint = {
 export type AuditCategory = 'operation' | 'login';
 export type AuditDateRange = [dayjs.Dayjs | null, dayjs.Dayjs | null];
 export type AuditSearchValue = string | string[] | AuditDateRange | null | undefined;
-export type AuditAdvancedSearch = Record<string, AuditSearchValue>;
+export type AuditAdvancedSearch = StandardTableSearchValues;
 
 export type AuditExportValues = {
   date_range?: AuditDateRange;
@@ -67,7 +68,7 @@ export type AuditRequestParams = {
   searchField?: string;
   searchValue?: string;
   advancedSearch?: AuditAdvancedSearch;
-  sorter?: { field: string; order: 'ascend' | 'descend' };
+  sorter?: StandardTableSort;
 };
 
 export type AuditApiParams = {

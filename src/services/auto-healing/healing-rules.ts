@@ -40,13 +40,10 @@ export async function createHealingRule(
     body: AutoHealing.CreateHealingRuleRequest,
     options?: ServiceRequestOptions,
 ) {
-    return postTenantHealingRules({
-        data: body,
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        ...(options || {}),
-    }) as Promise<AutoHealing.SuccessResponse & { data: AutoHealing.HealingRule }>;
+    return postTenantHealingRules(
+        body as unknown as GeneratedAutoHealing.HealingRuleCreate,
+        options,
+    ) as Promise<AutoHealing.SuccessResponse & { data: AutoHealing.HealingRule }>;
 }
 
 /** 获取自愈规则详情 GET /api/v1/tenant/healing/rules/{id} */

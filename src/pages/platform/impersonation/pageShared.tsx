@@ -1,11 +1,9 @@
 import React from 'react';
 import {
-  CheckCircleOutlined,
   ClockCircleOutlined,
   EyeOutlined,
   FileTextOutlined,
   LogoutOutlined,
-  SafetyOutlined,
   StopOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
@@ -43,6 +41,7 @@ export const platformImpersonationAdvancedSearchFields: AdvancedSearchField[] = 
 
 export const platformImpersonationHeaderIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>平台代登会话图标</title>
     <circle cx="24" cy="16" r="8" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M32 10l6-6m0 0h-5m5 0v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

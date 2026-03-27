@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge, Card, Empty, Spin } from 'antd';
 import { CodeOutlined, DownOutlined, FolderOpenOutlined, RightOutlined } from '@ant-design/icons';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import type { useVirtualizer } from '@tanstack/react-virtual';
 import type { PlaybookStatusSummary } from './playbookTypes';
 import { playbookStatusConfig } from './playbookShellConfig';
 
@@ -78,7 +78,10 @@ export default function PlaybookSidebarList(props: PlaybookSidebarListProps) {
                                     if (item.type === 'repo') {
                                         return <PlaybookRepoRow key={virtualRow.key} group={groupedPlaybooks[item.repoId]} isExpanded={expandedKeys.includes(item.repoId)} repoId={item.repoId} style={style} onToggleRepo={onToggleRepo} />;
                                     }
-                                    return <PlaybookItemRow key={virtualRow.key} playbook={item.playbook!} selectedPlaybook={selectedPlaybook} style={style} onSelectPlaybook={onSelectPlaybook} />;
+                                    if (!item.playbook) {
+                                        return null;
+                                    }
+                                    return <PlaybookItemRow key={virtualRow.key} playbook={item.playbook} selectedPlaybook={selectedPlaybook} style={style} onSelectPlaybook={onSelectPlaybook} />;
                                 })}
                             </div>}
                 </div>

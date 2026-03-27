@@ -51,7 +51,7 @@ const UserInfoCard: React.FC = () => {
     const user = initialState?.currentUser;
     const displayName = user?.name || user?.display_name || user?.username || '用户';
     const seed = user?.username || displayName;
-    const role = (user as any)?.access === 'admin' ? '系统管理员' : '普通用户';
+    const role = user?.access === 'admin' ? '系统管理员' : '普通用户';
 
     return (
         <div className={styles.card}>

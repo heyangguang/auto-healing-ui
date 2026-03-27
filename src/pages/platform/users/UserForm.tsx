@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-    Form, Input, Button, message, Spin, Space, Select,
+    Form, Input, Button, message, Spin, Select,
 } from 'antd';
 import {
     UserOutlined, CrownOutlined, LockOutlined, MailOutlined, IdcardOutlined,
@@ -83,7 +83,10 @@ const UserForm: React.FC = () => {
         setLoading(true);
         (async () => {
             try {
-                const user = await getPlatformUser(id!) as PlatformUserRecord;
+                if (!id) {
+                    return;
+                }
+                const user = await getPlatformUser(id) as PlatformUserRecord;
                 form.setFieldsValue({
                     username: user.username,
                     display_name: user.display_name,
@@ -108,12 +111,15 @@ const UserForm: React.FC = () => {
         setSubmitting(true);
         try {
             if (isEdit) {
-                await updatePlatformUser(id!, {
+                if (!id) {
+                    throw new Error('缺少平台用户 ID');
+                }
+                await updatePlatformUser(id, {
                     display_name: values.display_name,
                 });
                 const nextRoleId = values.role_id;
                 if (nextRoleId && nextRoleId !== currentRoleId) {
-                    await assignPlatformUserRoles(id!, { role_ids: [nextRoleId] });
+                    await assignPlatformUserRoles(id, { role_ids: [nextRoleId] });
                 }
                 message.success(nextRoleId && nextRoleId !== currentRoleId ? '用户信息与角色更新成功' : '用户信息更新成功');
             } else {

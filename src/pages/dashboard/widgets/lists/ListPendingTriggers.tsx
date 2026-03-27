@@ -15,6 +15,17 @@ const SEVERITY_COLORS: Record<string, string> = {
     info: 'blue',
 };
 
+type PendingTriggerItem = {
+    id?: string;
+    title?: string;
+    external_id?: string;
+    source_plugin_name?: string;
+    plugin?: { name?: string };
+    category?: string;
+    severity?: string;
+    created_at?: string;
+};
+
 const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
     const { data, loading, refresh } = useDashboardSection('healing');
@@ -44,7 +55,7 @@ const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                     {items.slice(0, 15).length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                     ) : (
-                        items.slice(0, 15).map((item: any, index: number) => {
+                        items.slice(0, 15).map((item: PendingTriggerItem, index: number) => {
                             const title = item.title || item.external_id || item.id?.slice(0, 8);
                             const source = item.source_plugin_name || item.plugin?.name || '-';
                             const category = item.category || '-';

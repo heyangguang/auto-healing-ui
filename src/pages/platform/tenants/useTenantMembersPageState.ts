@@ -15,6 +15,8 @@ import type { PlatformTenant } from '@/services/auto-healing/platform/contracts'
 import { getPlatformUsersSimple } from '@/services/auto-healing/platform/users';
 import { getSystemTenantRoles } from '@/services/auto-healing/roles';
 
+const INVITATION_PAGE_SIZE = 20;
+
 type SimpleUser = {
   id: string;
   username: string;
@@ -23,20 +25,25 @@ type SimpleUser = {
   is_platform_admin?: boolean;
 };
 
+type TenantTabKey = 'members' | 'invitations';
+type SetAdminFormValues = { user_id: string };
+type InviteFormValues = { email: string; role_id: string; send_email: boolean };
+type ChangeRoleFormValues = { role_id: string };
+
 export function useTenantMembersPageState(tenantId?: string) {
   const [tenant, setTenant] = useState<PlatformTenant | null>(null);
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<PlatformTenantMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersLoadFailed, setMembersLoadFailed] = useState(false);
-  const [activeTab, setActiveTab] = useState('members');
+  const [activeTab, setActiveTabState] = useState<TenantTabKey>('members');
   const [setAdminModalOpen, setSetAdminModalOpen] = useState(false);
-  const [setAdminForm] = Form.useForm<{ user_id: string }>();
+  const [setAdminForm] = Form.useForm<SetAdminFormValues>();
   const [simpleUsers, setSimpleUsers] = useState<SimpleUser[]>([]);
   const [simpleUsersLoadFailed, setSimpleUsersLoadFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteForm] = Form.useForm<{ email: string; role_id: string; send_email: boolean }>();
+  const [inviteForm] = Form.useForm<InviteFormValues>();
   const [inviteResult, setInviteResult] = useState<TenantInvitation | null>(null);
   const [invitations, setInvitations] = useState<TenantInvitation[]>([]);
   const [invTotal, setInvTotal] = useState(0);
@@ -44,7 +51,7 @@ export function useTenantMembersPageState(tenantId?: string) {
   const [invPage, setInvPage] = useState(1);
   const [changeRoleModalOpen, setChangeRoleModalOpen] = useState(false);
   const [changeRoleTarget, setChangeRoleTarget] = useState<PlatformTenantMember | null>(null);
-  const [changeRoleForm] = Form.useForm<{ role_id: string }>();
+  const [changeRoleForm] = Form.useForm<ChangeRoleFormValues>();
   const [tenantRoles, setTenantRoles] = useState<AutoHealing.Role[]>([]);
   const [tenantRolesLoadFailed, setTenantRolesLoadFailed] = useState(false);
   const tenantRequestSeqRef = useRef(0);
@@ -110,13 +117,31 @@ export function useTenantMembersPageState(tenantId?: string) {
     }
   }, []);
 
+  const loadTenantRoles = useCallback(async () => {
+    const requestSeq = rolesRequestSeqRef.current + 1;
+    rolesRequestSeqRef.current = requestSeq;
+    setTenantRolesLoadFailed(false);
+    try {
+      const roles = await getSystemTenantRoles();
+      if (rolesRequestSeqRef.current === requestSeq) {
+        setTenantRoles(roles);
+      }
+    } catch {
+      if (rolesRequestSeqRef.current === requestSeq) {
+        setTenantRoles([]);
+        setTenantRolesLoadFailed(true);
+        message.error('租户角色加载失败，请刷新页面后重试');
+      }
+    }
+  }, []);
+
   const loadInvitations = useCallback(async (page = 1) => {
     if (!tenantId) return;
     const requestSeq = invitationsRequestSeqRef.current + 1;
     invitationsRequestSeqRef.current = requestSeq;
     setInvLoading(true);
     try {
-      const response = await getTenantInvitations(tenantId, { page, page_size: 20 });
+      const response = await getTenantInvitations(tenantId, { page, page_size: INVITATION_PAGE_SIZE });
       if (invitationsRequestSeqRef.current !== requestSeq) return;
       setInvitations(response.data || []);
       setInvTotal(response.total || 0);
@@ -133,32 +158,14 @@ export function useTenantMembersPageState(tenantId?: string) {
     loadMembers();
     loadSimpleUsers();
     loadInvitations();
-    const requestSeq = rolesRequestSeqRef.current + 1;
-    rolesRequestSeqRef.current = requestSeq;
-    setTenantRolesLoadFailed(false);
-    getSystemTenantRoles()
-      .then((roles) => {
-        if (rolesRequestSeqRef.current === requestSeq) {
-          setTenantRoles(roles);
-        }
-      })
-      .catch(() => {
-        if (rolesRequestSeqRef.current === requestSeq) {
-          setTenantRoles([]);
-          setTenantRolesLoadFailed(true);
-          message.error('租户角色加载失败，请刷新页面后重试');
-        }
-      });
-  }, [loadInvitations, loadMembers, loadSimpleUsers, loadTenant]);
+    loadTenantRoles();
+  }, [loadInvitations, loadMembers, loadSimpleUsers, loadTenant, loadTenantRoles]);
 
   const adminMemberIds = useMemo(
     () => members.filter((member) => member.role?.name === 'admin').map((member) => member.user_id),
     [members],
   );
-  const adminRoleId = useMemo(
-    () => tenantRoles.find((role) => role.name === 'admin')?.id,
-    [tenantRoles],
-  );
+  const adminRoleId = useMemo(() => tenantRoles.find((role) => role.name === 'admin')?.id, [tenantRoles]);
   const memberUserIds = useMemo(() => new Set(members.map((member) => member.user_id)), [members]);
   const availableUsersForAdmin = useMemo(
     () => simpleUsers.filter((user) => (
@@ -168,15 +175,15 @@ export function useTenantMembersPageState(tenantId?: string) {
     )),
     [adminMemberIds, simpleUsers],
   );
-  const pendingInvCount = useMemo(
-    () => invitations.filter((invitation) => invitation.status === 'pending').length,
-    [invitations],
-  );
+  const pendingInvCount = useMemo(() => invitations.filter((invitation) => invitation.status === 'pending').length, [invitations]);
 
   const isLastAdminMember = useCallback(
     (record: PlatformTenantMember) => record.role?.name === 'admin' && adminMemberIds.length <= 1,
     [adminMemberIds],
   );
+  const setActiveTab = useCallback((tabKey: string) => {
+    setActiveTabState(tabKey === 'invitations' ? 'invitations' : 'members');
+  }, []);
 
   const openSetAdminModal = useCallback(() => setSetAdminModalOpen(true), []);
   const closeSetAdminModal = useCallback(() => {
@@ -199,7 +206,7 @@ export function useTenantMembersPageState(tenantId?: string) {
     changeRoleForm.resetFields();
   }, [changeRoleForm]);
 
-  const handleSetTenantAdmin = useCallback(async (values: { user_id: string }) => {
+  const handleSetTenantAdmin = useCallback(async (values: SetAdminFormValues) => {
     if (!tenantId) return;
     if (!adminRoleId) {
       throw new Error('系统租户 admin 角色缺失，无法设置管理员');
@@ -226,7 +233,7 @@ export function useTenantMembersPageState(tenantId?: string) {
     }
   }, [adminRoleId, closeSetAdminModal, loadMembers, loadSimpleUsers, memberUserIds, tenantId]);
 
-  const handleInvite = useCallback(async (values: { email: string; role_id: string; send_email: boolean }) => {
+  const handleInvite = useCallback(async (values: InviteFormValues) => {
     if (!tenantId) return;
     setSubmitting(true);
     try {
@@ -252,7 +259,7 @@ export function useTenantMembersPageState(tenantId?: string) {
     setChangeRoleModalOpen(true);
   }, [changeRoleForm]);
 
-  const handleChangeRole = useCallback(async (values: { role_id: string }) => {
+  const handleChangeRole = useCallback(async (values: ChangeRoleFormValues) => {
     if (!tenantId || !changeRoleTarget) return;
     setSubmitting(true);
     try {
@@ -280,42 +287,11 @@ export function useTenantMembersPageState(tenantId?: string) {
   }, []);
 
   return {
-    activeTab,
-    availableUsersForAdmin,
-    changeRoleForm,
-    changeRoleModalOpen,
-    closeChangeRoleModal,
-    closeInviteModal,
-    closeSetAdminModal,
-    copyInvitationLink,
-    handleCancelInvitation,
-    handleChangeRole,
-    handleInvite,
-    handleSetTenantAdmin,
-    invLoading,
-    invPage,
-    invTotal,
-    invitations,
-    inviteForm,
-    inviteModalOpen,
-    inviteResult,
-    isLastAdminMember,
-    loading,
-    loadInvitations,
-    members,
-    membersLoadFailed,
-    membersLoading,
-    openChangeRole,
-    openInviteModal,
-    openSetAdminModal,
-    pendingInvCount,
-    setActiveTab,
-    setAdminForm,
-    setAdminModalOpen,
-    simpleUsersLoadFailed,
-    submitting,
-    tenant,
-    tenantRoles,
-    tenantRolesLoadFailed,
+    activeTab, availableUsersForAdmin, changeRoleForm, changeRoleModalOpen, closeChangeRoleModal, closeInviteModal,
+    closeSetAdminModal, copyInvitationLink, handleCancelInvitation, handleChangeRole, handleInvite, handleSetTenantAdmin,
+    invLoading, invPage, invTotal, invitations, inviteForm, inviteModalOpen, inviteResult, isLastAdminMember, loading,
+    loadInvitations, members, membersLoadFailed, membersLoading, openChangeRole, openInviteModal, openSetAdminModal,
+    pendingInvCount, setActiveTab, setAdminForm, setAdminModalOpen, simpleUsersLoadFailed, submitting, tenant,
+    tenantRoles, tenantRolesLoadFailed,
   };
 }

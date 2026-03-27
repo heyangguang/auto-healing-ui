@@ -1,6 +1,6 @@
 import LogConsole, { type LogEntry } from '@/components/execution/LogConsole';
 import { CodeOutlined } from '@ant-design/icons';
-import { Drawer, Tabs } from 'antd';
+import { Alert, Drawer, Tabs } from 'antd';
 import React from 'react';
 import NodeConfigContextCards from './NodeConfigContextCards';
 import NodeDetailDrawerHeader from './NodeDetailDrawerHeader';
@@ -14,6 +14,7 @@ type NodeDetailDrawerProps = {
     onClose: () => void;
     open: boolean;
     resolvedNames: Record<string, string>;
+    resolutionErrors: Record<string, string>;
     selectedNodeData?: SelectedNodeDataLike | null;
 };
 
@@ -48,6 +49,7 @@ const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
     onClose,
     open,
     resolvedNames,
+    resolutionErrors,
     selectedNodeData,
 }) => {
     const nodeState = selectedNodeData?.state;
@@ -62,48 +64,67 @@ const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
     const contextEntries = nodeState
         ? Object.entries(nodeState).filter(([key]) => !['stdout', 'stderr', 'error_message', 'message', 'run', 'status'].includes(key))
         : [];
+    const resolutionErrorEntries = Object.entries(resolutionErrors);
 
     return (
         <Drawer title={null} placement="right" size={600} onClose={onClose} open={open} styles={{ header: { display: 'none' }, body: { padding: 0 } }}>
             <NodeDetailDrawerHeader selectedNodeData={selectedNodeData} />
             {selectedNodeData && (
-                <Tabs
-                    defaultActiveKey="overview"
-                    tabBarStyle={{ padding: '0 16px' }}
-                    items={[
-                        {
-                            key: 'overview',
-                            label: '执行详情',
-                            children: (
-                                <div style={{ padding: '16px 20px', height: 'calc(100vh - 160px)', overflow: 'auto' }}>
-                                    <NodePrimaryCards resolvedNames={resolvedNames} selectedNodeData={selectedNodeData} stdoutLogs={stdoutLogs} />
-                                    <NodeConfigContextCards configEntries={configEntries} contextEntries={contextEntries} resolvedNames={resolvedNames} />
-                                </div>
-                            ),
-                        },
-                        ...((runId || stdoutLogs.length > 0) ? [{
-                            key: 'execution_log',
-                            label: '执行日志',
-                            children: <ExecutionLogTab runId={runId} fallbackLogs={stdoutLogs} />,
-                        }] : []),
-                        ...(liveLogs.length > 0 ? [{
-                            key: 'live_logs',
-                            label: '实时日志',
-                            children: (
-                                <LogConsole
-                                    logs={liveLogs}
-                                    height="calc(100vh - 160px)"
-                                    streaming={selectedNodeData.status === 'running'}
-                                />
-                            ),
-                        }] : []),
-                        {
-                            key: 'developer',
-                            label: <span><CodeOutlined /> 开发者排错</span>,
-                            children: <NodeDeveloperTab contextEntries={contextEntries} filteredConfig={filteredConfig} nodeState={nodeState} />,
-                        },
-                    ]}
-                />
+                <>
+                    {resolutionErrorEntries.length > 0 && (
+                        <div style={{ padding: '16px 16px 0' }}>
+                            <Alert
+                                showIcon
+                                type="warning"
+                                title="部分引用名称解析失败"
+                                description={(
+                                    <div>
+                                        {resolutionErrorEntries.map(([key, error]) => (
+                                            <div key={key}>{error}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            />
+                        </div>
+                    )}
+                    <Tabs
+                        defaultActiveKey="overview"
+                        tabBarStyle={{ padding: '0 16px' }}
+                        items={[
+                            {
+                                key: 'overview',
+                                label: '执行详情',
+                                children: (
+                                    <div style={{ padding: '16px 20px', height: 'calc(100vh - 160px)', overflow: 'auto' }}>
+                                        <NodePrimaryCards resolvedNames={resolvedNames} selectedNodeData={selectedNodeData} stdoutLogs={stdoutLogs} />
+                                        <NodeConfigContextCards configEntries={configEntries} contextEntries={contextEntries} resolvedNames={resolvedNames} />
+                                    </div>
+                                ),
+                            },
+                            ...((runId || stdoutLogs.length > 0) ? [{
+                                key: 'execution_log',
+                                label: '执行日志',
+                                children: <ExecutionLogTab runId={runId} fallbackLogs={stdoutLogs} />,
+                            }] : []),
+                            ...(liveLogs.length > 0 ? [{
+                                key: 'live_logs',
+                                label: '实时日志',
+                                children: (
+                                    <LogConsole
+                                        logs={liveLogs}
+                                        height="calc(100vh - 160px)"
+                                        streaming={selectedNodeData.status === 'running'}
+                                    />
+                                ),
+                            }] : []),
+                            {
+                                key: 'developer',
+                                label: <span><CodeOutlined /> 开发者排错</span>,
+                                children: <NodeDeveloperTab contextEntries={contextEntries} filteredConfig={filteredConfig} nodeState={nodeState} />,
+                            },
+                        ]}
+                    />
+                </>
             )}
         </Drawer>
     );

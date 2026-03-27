@@ -3,7 +3,7 @@ import { Button, Col, Empty, Input, Row, Select, Skeleton, Space, Tag, Tooltip, 
 import { BookOutlined, CheckCircleOutlined, CodeOutlined, ExclamationCircleOutlined, FolderOutlined, LoadingOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { TaskTemplate, TaskTemplateStatusFilter } from './taskTemplateSelectorTypes';
-import { useTaskTemplateSelectorState } from './useTaskTemplateSelectorState';
+import type { useTaskTemplateSelectorState } from './useTaskTemplateSelectorState';
 
 const { Text } = Typography;
 type TaskTemplateSelectorViewProps = ReturnType<typeof useTaskTemplateSelectorState>;
