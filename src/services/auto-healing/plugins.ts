@@ -69,14 +69,14 @@ export async function getPlugin(id: string) {
  * 创建插件
  */
 export async function createPlugin(data: AutoHealing.CreatePluginRequest) {
-    return unwrapData(await (postTenantPlugins({ data }) as Promise<{ data: PluginRecord } | PluginRecord>));
+    return unwrapData(await (postTenantPlugins(data) as Promise<{ data: PluginRecord } | PluginRecord>));
 }
 
 /**
  * 更新插件
  */
 export async function updatePlugin(id: string, data: AutoHealing.UpdatePluginRequest) {
-    return unwrapData(await (putTenantPluginsId({ id }, { data }) as Promise<{ data: PluginRecord } | PluginRecord>));
+    return unwrapData(await (putTenantPluginsId({ id }, data) as Promise<{ data: PluginRecord } | PluginRecord>));
 }
 
 /**

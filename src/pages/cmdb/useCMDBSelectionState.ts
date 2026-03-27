@@ -48,7 +48,9 @@ export function useCMDBSelectionState() {
             }
 
             const next = new Map<string, CMDBSelectableItem>();
-            items.forEach((item) => next.set(item.id, item));
+            items.forEach((item) => {
+                next.set(item.id, item);
+            });
             setSelectedRowMap(next);
             message.success(`已全选 ${items.length} 项`);
         } catch {

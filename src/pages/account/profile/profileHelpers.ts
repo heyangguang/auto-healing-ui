@@ -13,13 +13,21 @@ type LoadProfileSidebarDataOptions = {
 };
 
 export function groupPermissions(permissions: string[]): Record<string, string[]> {
-    return permissions.reduce<Record<string, string[]>>((groups, permission) => {
+    const groups: Record<string, string[]> = {};
+
+    permissions.forEach((permission) => {
         const separatorIndex = permission.indexOf(':');
         const module = separatorIndex > 0 ? permission.slice(0, separatorIndex) : 'other';
         const action = separatorIndex > 0 ? permission.slice(separatorIndex + 1) : permission;
-        const items = groups[module] || [];
-        return { ...groups, [module]: [...items, action] };
-    }, {});
+        const items = groups[module];
+        if (items) {
+            items.push(action);
+            return;
+        }
+        groups[module] = [action];
+    });
+
+    return groups;
 }
 
 export function describeActivity(log: ProfileActivityRecord) {

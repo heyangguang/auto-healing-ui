@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Drawer, Button, Space, Typography, Card, Statistic, Row, Col, Alert, Tabs, Tag } from 'antd';
+import { Drawer, Button, Space, Card, Statistic, Row, Col, Alert, Tabs } from 'antd';
 import {
     ReloadOutlined, StopOutlined,
     ClockCircleOutlined, UserOutlined,
     CheckCircleOutlined, CloseCircleOutlined
 } from '@ant-design/icons';
 import { getExecutionRun, getExecutionLogs, cancelExecutionRun, createLogStream } from '@/services/auto-healing/execution';
-import LogConsole, { LogEntry } from './LogConsole';
+import LogConsole, { type LogEntry, toLogEntries, toLogEntry } from './LogConsole';
 import StatusBadge from './StatusBadge';
 import dayjs from 'dayjs';
 
@@ -37,7 +37,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
         setLoadingLogs(true);
         try {
             const res = await getExecutionLogs(id);
-            setLogs(res.data || []);
+            setLogs(toLogEntries(res.data || []));
         } catch { /* ignore */ }
         finally { setLoadingLogs(false); }
     };
@@ -64,9 +64,9 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
             const closeStream = createLogStream(runId, (log) => {
                 setLogs(prev => {
                     if (prev.some(l => l.id === log.id)) return prev;
-                    return [...prev, log];
+                    return [...prev, toLogEntry(log)];
                 });
-            }, (res) => { /* Done */ });
+            }, (_res) => { /* Done */ });
             streamCloserRef.current = closeStream;
 
             const statusInterval = setInterval(() => loadRun(runId), 3000);
@@ -133,7 +133,7 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
                             <Col span={6}>
                                 <Statistic
                                     title="执行耗时"
-                                    value={run.completed_at ? dayjs(run.completed_at).diff(dayjs(run.started_at), 'second') + 's' : '-'}
+                                    value={run.completed_at ? `${dayjs(run.completed_at).diff(dayjs(run.started_at), 'second')}s` : '-'}
                                     prefix={<ClockCircleOutlined />}
                                 />
                             </Col>

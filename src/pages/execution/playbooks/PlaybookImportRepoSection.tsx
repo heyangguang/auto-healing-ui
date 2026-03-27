@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-    AppstoreOutlined,
     BranchesOutlined,
     CheckCircleOutlined,
     ClockCircleOutlined,
@@ -9,7 +8,7 @@ import {
     GlobalOutlined,
     SyncOutlined,
 } from '@ant-design/icons';
-import { Alert, Badge, Button, Col, Empty, Row, Select, Space, Spin, Tag, Typography } from 'antd';
+import { Alert, Button, Col, Empty, Row, Select, Space, Spin, Tag, Typography } from 'antd';
 import { history } from '@umijs/max';
 import { getProviderInfo } from './playbookProviderInfo';
 

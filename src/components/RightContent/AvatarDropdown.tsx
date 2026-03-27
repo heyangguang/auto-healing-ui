@@ -61,7 +61,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
     try {
       const refreshToken = TokenManager.getRefreshToken() || undefined;
       await logout(refreshToken ? { refresh_token: refreshToken } : undefined);
-    } catch (e) {
+    } catch (_e) {
       // 忽略登出错误
     }
     // 清除 Token

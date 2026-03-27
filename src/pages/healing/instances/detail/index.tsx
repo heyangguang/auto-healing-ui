@@ -4,7 +4,7 @@ import {
     retryHealingInstance,
 } from '@/services/auto-healing/instances';
 import { history, useParams, useRequest, useAccess } from '@umijs/max';
-import { Button, Card, Empty, Space, Spin, message } from 'antd';
+import { Button, Empty, Space, Spin, message } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
@@ -13,10 +13,7 @@ import ReactFlow, {
     Controls,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import dagre from 'dagre';
-import { normalizeNodeState } from '../utils/canvasBuilder';
 import AutoLayoutButton from '../components/AutoLayoutButton';
-import type { LogEntry } from '@/components/execution/LogConsole';
 import '../instances.css';
 import InstanceContextDrawer from './InstanceContextDrawer';
 import InstanceDetailTitleExtra from './InstanceDetailTitleExtra';
@@ -50,7 +47,7 @@ const HealingInstanceDetail: React.FC = () => {
     const selectedNodeDataRef = useRef<SelectedNodeDataLike | null>(null);
     const [contextData, setContextData] = useState<Record<string, unknown>>({});
     const [instanceStatus, setInstanceStatus] = useState<string>('pending');
-    const resolvedNames = useResolvedNodeNames(selectedNodeData);
+    const { resolvedNames, resolutionErrors } = useResolvedNodeNames(selectedNodeData);
 
     const [ruleDrawerVisible, setRuleDrawerVisible] = useState(false);
     const [incidentDrawerVisible, setIncidentDrawerVisible] = useState(false);
@@ -66,7 +63,7 @@ const HealingInstanceDetail: React.FC = () => {
             refreshDeps: [id],
             onSuccess: (response) => {
                 const data = response?.data || response;
-                if (data && data.flow_nodes && data.flow_edges) {
+                if (data?.flow_nodes && data.flow_edges) {
                     setInstanceStatus(data.status);
                     setContextData(data.context || {});
                     hydrateCanvasFromInstance(data);
@@ -109,7 +106,7 @@ const HealingInstanceDetail: React.FC = () => {
             await cancelHealingInstance(id);
             message.success('已发送取消请求');
             refresh();
-        } catch (error) {
+        } catch (_error) {
             /* global error handler */
         }
     };
@@ -120,7 +117,7 @@ const HealingInstanceDetail: React.FC = () => {
             await retryHealingInstance(id);
             message.success('已开始重试');
             refresh();
-        } catch (error) {
+        } catch (_error) {
             /* global error handler */
         }
     };
@@ -206,6 +203,7 @@ const HealingInstanceDetail: React.FC = () => {
                 onClose={() => setNodeDetailVisible(false)}
                 open={nodeDetailVisible}
                 resolvedNames={resolvedNames}
+                resolutionErrors={resolutionErrors}
                 selectedNodeData={selectedNodeData}
             />
         </div>

@@ -35,9 +35,9 @@ const WorkbenchResourceOverviewCard: React.FC<WorkbenchResourceOverviewCardProps
             <div className={styles.loadingWrap}><Spin /></div>
         ) : (
             <div className={styles.resourceGrid}>
-                {platformStats.map((item, index) => (
+                {platformStats.map((item) => (
                     <button
-                        key={index}
+                        key={item.path || item.label}
                         type="button"
                         className={`${styles.resourceItem} ${item.locked ? styles.lockedResourceItem : ''}`}
                         onClick={() => {

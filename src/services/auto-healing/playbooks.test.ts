@@ -43,7 +43,9 @@ describe('auto-healing playbooks service', () => {
     });
 
     expect(getTenantPlaybooks).toHaveBeenCalledWith({
-      params: { page: 2, page_size: 50, status: 'ready' },
+      page: 2,
+      page_size: 50,
+      status: 'ready',
     });
   });
 
@@ -58,10 +60,7 @@ describe('auto-healing playbooks service', () => {
       data: { id: 'scan-1', status: 'success' },
     });
 
-    expect(postTenantPlaybooksIdScan).toHaveBeenCalledWith(
-      { id: 'playbook-1' },
-      { data: {} },
-    );
+    expect(postTenantPlaybooksIdScan).toHaveBeenCalledWith({ id: 'playbook-1' });
   });
 
   it('stabilizes request-based playbook helpers', async () => {

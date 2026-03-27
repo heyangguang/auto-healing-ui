@@ -87,8 +87,8 @@ export default function SecretsSourceTestModals(props: SecretsSourceTestModalsPr
                             <Col span={8}><Card size="small"><Statistic title="失败" value={testResults.fail_count} styles={{ content: { color: '#ff4d4f' } }} /></Card></Col>
                         </Row>
                         <div style={{ maxHeight: 350, overflow: 'auto' }}>
-                            {testResults.results.map((result, index) => (
-                                <div key={index} style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: result.success ? '#f6ffed' : '#fff2f0', marginBottom: 8 }}>
+                            {testResults.results.map((result) => (
+                                <div key={`${result.hostname || result.ip_address}-${result.success ? 'ok' : 'fail'}`} style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: result.success ? '#f6ffed' : '#fff2f0', marginBottom: 8 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: result.success ? 0 : 6 }}>
                                         {result.success
                                             ? <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16 }} />

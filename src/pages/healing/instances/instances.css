@@ -1,39 +1,39 @@
 /* ReactFlow — 允许节点内容溢出（徽章/badge 需要在节点外部显示） */
 .react-flow__node {
-    overflow: visible !important;
+    overflow: visible;
 }
 
 /* Node detail drawer — Tabs 自适应高度 */
 
 /* Tabs 根元素：撑满 drawer 剩余空间 */
 .node-drawer-tabs.ant-tabs {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* Tabs 导航条：固定不伸缩 */
 .node-drawer-tabs .ant-tabs-nav {
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
 }
 
 /* 内容容器：flex 填满 */
 .node-drawer-tabs .ant-tabs-content-holder {
-    flex: 1 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* 内容区：100% 高度 */
 .node-drawer-tabs .ant-tabs-content {
-    height: 100% !important;
+    height: 100%;
 }
 
 /* 单个 tab 面板：100% 高度 + 自身滚动 */
 .node-drawer-tabs .ant-tabs-tabpane {
-    height: 100% !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }

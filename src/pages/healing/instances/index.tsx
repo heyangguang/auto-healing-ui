@@ -82,8 +82,7 @@ const InstanceList: React.FC = () => {
 
     // ==================== 渲染 ====================
     return (
-        <>
-            <StandardTable<AutoHealing.FlowInstance>
+        <StandardTable<AutoHealing.FlowInstance>
                 tabs={[{ key: 'list', label: '实例列表' }]}
                 title="流程实例"
                 description="自愈流程运行实例管理，可视化查看执行路径与节点状态"
@@ -121,8 +120,6 @@ const InstanceList: React.FC = () => {
                     />
                 </div>
             </StandardTable>
-
-        </>
     );
 };
 

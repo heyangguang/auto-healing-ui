@@ -6,7 +6,7 @@ import {
     invalidateSelectorInventory,
     selectorInventoryKeys,
 } from '@/utils/selectorInventoryCache';
-import { ExecutionTaskRecord, ReviewGroup } from './templateListHelpers';
+import type { ExecutionTaskRecord, ReviewGroup } from './templateListHelpers';
 
 type UseTemplateBatchReviewOptions = {
     playbooks: AutoHealing.Playbook[];
@@ -37,7 +37,10 @@ export function useTemplateBatchReview({ playbooks, onRefresh }: UseTemplateBatc
                         tasks: [],
                     });
                 }
-                const group = groups.get(playbookId)!;
+                const group = groups.get(playbookId);
+                if (!group) {
+                    return;
+                }
                 group.count += 1;
                 group.tasks.push(task);
             });

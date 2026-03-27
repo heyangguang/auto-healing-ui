@@ -3,6 +3,7 @@ import { message } from 'antd';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { executeTask } from '@/services/auto-healing/execution';
 import { getPlaybook } from '@/services/auto-healing/playbooks';
+import { toJsonValue } from '@/utils/jsonValue';
 import { createRequestSequence } from '@/utils/requestSequence';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import {
@@ -130,7 +131,10 @@ export function useExecuteExecutionSession() {
     }, [additionalHosts, additionalSecretIds, loadingPlaybook, playbookLoadFailed, selectedTemplate, skipNotification, templatePlaybook, variableValues]);
 
     const handleVariableChange = useCallback((name: string, value: unknown) => {
-        setVariableValues((prev) => ({ ...prev, [name]: value }));
+        setVariableValues((prev) => {
+            const nextValues: VariableValueMap = { ...prev, [name]: toJsonValue(value) };
+            return nextValues;
+        });
     }, []);
 
     const handleBackToSelection = useCallback(() => {

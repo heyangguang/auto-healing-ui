@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Popover, Button, Typography, Table, Tag, Divider, Collapse } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 
@@ -95,8 +95,8 @@ const ExpressionHelpContent: React.FC = () => {
                 </Panel>
 
                 <Panel header={<Text strong>💡 常用表达式模式</Text>} key="patterns">
-                    {commonPatterns.map((p, i) => (
-                        <div key={i} style={{ marginBottom: 8 }}>
+                    {commonPatterns.map((p) => (
+                        <div key={p.expression} style={{ marginBottom: 8 }}>
                             <Text type="secondary" style={{ fontSize: 12 }}>{p.scenario}：</Text>
                             <br />
                             <Tag color="purple" style={{ marginTop: 2 }}>{p.expression}</Tag>

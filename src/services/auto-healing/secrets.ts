@@ -76,7 +76,7 @@ export async function getSecretsSources(params?: {
     sort_order?: string;
 }) {
     return normalizePaginatedResponse(
-        await getTenantSecretsSources({ params: params as SecretsSourcesQueryParams }) as AutoHealing.PaginatedResponse<AutoHealing.SecretsSource>,
+        await getTenantSecretsSources((params || {}) as GeneratedAutoHealing.getTenantSecretsSourcesParams) as AutoHealing.PaginatedResponse<AutoHealing.SecretsSource>,
     );
 }
 
@@ -96,7 +96,9 @@ export async function getSecretsSource(id: string) {
  */
 export async function createSecretsSource(data: AutoHealing.CreateSecretsSourceRequest) {
     return unwrapData(
-        await postTenantSecretsSources({ data }) as { data?: AutoHealing.SecretsSource } | AutoHealing.SecretsSource,
+        await postTenantSecretsSources(
+            data as unknown as GeneratedAutoHealing.CreateSecretsSourceRequest,
+        ) as { data?: AutoHealing.SecretsSource } | AutoHealing.SecretsSource,
     ) as AutoHealing.SecretsSource;
 }
 

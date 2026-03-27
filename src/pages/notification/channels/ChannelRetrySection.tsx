@@ -57,7 +57,7 @@ const ChannelRetrySection: React.FC<ChannelRetrySectionProps> = ({ channelType }
                         <Form.Item label="重试间隔配置 (分钟)">
                             <div style={{ display: 'flex', gap: 16 }}>
                                 {Array.from({ length: count }).map((_, index) => (
-                                    <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                                    <div key={`retry-${index + 1}`} style={{ display: 'flex', alignItems: 'center' }}>
                                         <span style={{ marginRight: 8, fontSize: 12, color: '#8c8c8c', whiteSpace: 'nowrap' }}>
                                             第 {index + 1} 次:
                                         </span>

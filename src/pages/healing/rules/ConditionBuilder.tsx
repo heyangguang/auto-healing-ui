@@ -24,6 +24,17 @@ interface ConditionBuilderProps {
 }
 
 export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ value = [], onChange, depth = 0 }) => {
+    const keyedConditions = React.useMemo(() => {
+        const counts = new Map<string, number>();
+        return value.map((item) => {
+            const baseKey = item.type === 'group'
+                ? `group-${item.logic}-${item.conditions?.length || 0}`
+                : `condition-${item.field}-${item.operator}-${String(item.value)}`;
+            const count = (counts.get(baseKey) || 0) + 1;
+            counts.set(baseKey, count);
+            return { item, key: `${baseKey}-${count}` };
+        });
+    }, [value]);
     const handleChange = (index: number, changes: Partial<AutoHealing.HealingRuleCondition>) => {
         const newValue = [...value];
         newValue[index] = { ...newValue[index], ...changes };
@@ -49,8 +60,8 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ value = [], 
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {value.map((item, index) => (
-                <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            {keyedConditions.map(({ item, key }, index) => (
+                <div key={key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                     {/* Logic Connector for items > 0 */}
                     {/* Actually logic is defined by parent's match_mode or group logic. 
                         Here we just render the list. The parent container handles the visual grouping. 
@@ -93,7 +104,7 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ value = [], 
                                         value={item.field}
                                         onChange={v => handleChange(index, { field: v })}
                                         filterOption={(inputValue, option) =>
-                                            option!.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                                            option?.value?.toUpperCase().includes(inputValue.toUpperCase()) ?? false
                                         }
                                         style={{ width: '100%' }}
                                     />

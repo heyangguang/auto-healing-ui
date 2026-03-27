@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Empty, Modal, Space, Tag, Typography } from 'antd';
 import { CheckOutlined, SettingOutlined } from '@ant-design/icons';
+import { toJsonValue } from '@/utils/jsonValue';
 import ExtraVarsVariableRow from './ExtraVarsVariableRow';
 import type {
     ExtraVarsMappings,
@@ -88,10 +89,13 @@ const ExtraVarsOptionalSection: React.FC<ExtraVarsOptionalSectionProps> = ({
     };
 
     const handleModalStaticChange = (varName: string, currentValue: unknown) => {
-        setModalStaticValues((currentValues) => ({
-            ...currentValues,
-            [varName]: currentValue,
-        }));
+        setModalStaticValues((currentValues) => {
+            const nextValues: ExtraVarsValueMap = {
+                ...currentValues,
+                [varName]: toJsonValue(currentValue),
+            };
+            return nextValues;
+        });
     };
 
     const handleModalModeChange = (varName: string, mode: VariableInputMode) => {

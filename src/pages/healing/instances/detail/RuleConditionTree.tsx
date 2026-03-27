@@ -30,8 +30,17 @@ const isGroup = (value: unknown): value is ConditionGroup => (
     Boolean(value) && typeof value === 'object' && (value as ConditionGroup).type === 'group'
 );
 
+const buildConditionKey = (item: unknown, depth: number) => {
+    if (isGroup(item)) {
+        return `group-${depth}-${item.logic || 'AND'}-${item.conditions?.length || 0}`;
+    }
+    const condition = item as RuleCondition;
+    return `condition-${depth}-${condition.field}-${condition.operator}-${String(condition.value)}`;
+};
+
 const RuleConditionTreeNode: React.FC<{ depth: number; item: unknown }> = ({ depth, item }) => {
     if (isGroup(item)) {
+        const childCounts = new Map<string, number>();
         return (
             <div style={{ marginLeft: depth * 16, padding: '8px 12px', background: depth === 0 ? '#fafafa' : '#fff', border: '1px solid #f0f0f0', borderRadius: 6, marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
@@ -39,9 +48,12 @@ const RuleConditionTreeNode: React.FC<{ depth: number; item: unknown }> = ({ dep
                     <Tag color="purple" style={{ fontSize: 11, borderRadius: 8, margin: 0 }}>{item.logic || 'AND'}</Tag>
                     <Typography.Text type="secondary" style={{ fontSize: 11 }}>{item.conditions?.length || 0} 个条件</Typography.Text>
                 </div>
-                {item.conditions?.map((subCondition, index) => (
-                    <RuleConditionTreeNode key={`${depth}-${index}`} depth={depth + 1} item={subCondition} />
-                ))}
+                {item.conditions?.map((subCondition) => {
+                    const baseKey = buildConditionKey(subCondition, depth + 1);
+                    const count = (childCounts.get(baseKey) || 0) + 1;
+                    childCounts.set(baseKey, count);
+                    return <RuleConditionTreeNode key={`${baseKey}-${count}`} depth={depth + 1} item={subCondition} />;
+                })}
             </div>
         );
     }
@@ -69,10 +81,10 @@ const RuleConditionTree: React.FC<RuleConditionTreeProps> = ({
 
     return (
         <>
-            {conditions.map((condition, index) => (
-                <React.Fragment key={index}>
+            {conditions.map((condition) => (
+                <React.Fragment key={buildConditionKey(condition, 0)}>
                     <RuleConditionTreeNode depth={0} item={condition} />
-                    {index < conditions.length - 1 && (
+                    {condition !== conditions[conditions.length - 1] && (
                         <div style={{ textAlign: 'center', margin: '4px 0' }}>
                             <Tag color="orange" style={{ fontSize: 10, borderRadius: 8 }}>
                                 {matchMode === 'all' ? 'AND' : 'OR'}

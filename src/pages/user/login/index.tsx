@@ -9,68 +9,17 @@ import {
 } from '@ant-design/icons';
 import { Helmet, history, SelectLang, useModel } from '@umijs/max';
 import { Alert, App, ConfigProvider, Button, Form, Input, Checkbox, Divider } from 'antd';
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { login } from '@/services/auto-healing/auth';
 import { TokenManager } from '@/requestErrorConfig';
 import { useLoginStyles } from './loginStyles';
+import { getErrorMessage, type LoginFormValues } from './loginTypes';
 import { getLoginInitialValues, persistLoginPreference } from './session';
 import { persistTenantSession } from './tenantSession';
+import { BrandLogo, DockerLogo, K8sLogo, RedHatLogo, AnsibleLogo, PrometheusLogo, GrafanaLogo, TerraformLogo, JenkinsLogo, ElasticLogo, VaultLogo } from './BrandLogos';
+import { NetworkCanvas } from './NetworkCanvas';
 import Settings from '../../../../config/defaultSettings';
-
-/* ==== Canvas 拓扑动画 ==== */
-const NetworkCanvas: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef = useRef<number>(0);
-  const nodesRef = useRef<any[]>([]);
-  const init = useRef(false);
-  const makeNodes = useCallback((w: number, h: number) => {
-    const a: any[] = [];
-    for (let i = 0; i < 45; i++) a.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25, r: Math.random() * 2 + 1.2, pulse: Math.random() * Math.PI * 2 });
-    nodesRef.current = a;
-  }, []);
-  useEffect(() => {
-    const c = canvasRef.current; if (!c) return;
-    const ctx = c.getContext('2d'); if (!ctx) return;
-    const resize = () => { const r = c.parentElement?.getBoundingClientRect(); if (r) { c.width = r.width * devicePixelRatio; c.height = r.height * devicePixelRatio; c.style.width = r.width + 'px'; c.style.height = r.height + 'px'; ctx.scale(devicePixelRatio, devicePixelRatio); } };
-    resize();
-    if (!init.current) { const r = c.parentElement?.getBoundingClientRect(); if (r) makeNodes(r.width, r.height); init.current = true; }
-    const draw = () => {
-      const r = c.parentElement?.getBoundingClientRect(); if (!r) return;
-      const w = r.width, h = r.height; ctx.clearRect(0, 0, w, h);
-      const ns = nodesRef.current;
-      for (const n of ns) { n.x += n.vx; n.y += n.vy; n.pulse += 0.015; if (n.x < 0 || n.x > w) n.vx *= -1; if (n.y < 0 || n.y > h) n.vy *= -1; }
-      for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++) { const dx = ns[i].x - ns[j].x, dy = ns[i].y - ns[j].y, d = Math.sqrt(dx * dx + dy * dy); if (d < 140) { ctx.beginPath(); ctx.moveTo(ns[i].x, ns[i].y); ctx.lineTo(ns[j].x, ns[j].y); ctx.strokeStyle = `rgba(56,189,248,${(1 - d / 140) * .12})`; ctx.lineWidth = .5; ctx.stroke(); } }
-      for (const n of ns) { const g = Math.sin(n.pulse) * .3 + .7; ctx.beginPath(); ctx.arc(n.x, n.y, n.r * g + 1.5, 0, Math.PI * 2); ctx.fillStyle = `rgba(56,189,248,${.06 * g})`; ctx.fill(); ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(56,189,248,${.5 * g})`; ctx.fill(); }
-      animRef.current = requestAnimationFrame(draw);
-    };
-    draw(); window.addEventListener('resize', resize);
-    return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize); };
-  }, [makeNodes]);
-  return <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
-};
-
-/* ==== 品牌 Logo SVG 组件 ==== */
-const BrandLogo: React.FC<{ children: React.ReactNode; name: string }> = ({ children, name }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-    <div style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      {children}
-    </div>
-    <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>{name}</span>
-  </div>
-);
-
-/* 简易品牌 SVG 图标 */
-const DockerLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M13 4h3v3h-3V4zm-5 0h3v3H8V4zm5 4h3v3h-3V8zM8 8h3v3H8V8zm5 4h3v3h-3v-3zM3 8h3v3H3V8zm5 4h3v3H8v-3zM3 12h3v3H3v-3zm18-1.5c-.7-.5-2.2-.5-3 0-.2-1.2-1-2.2-2-2.8l-.5-.3-.3.5c-.4.7-.5 1.8-.2 2.6.2.4.5.9 1 1.2-.5.3-1.3.5-2.5.5H.5l-.1.8c0 1.5.3 3 1 4.2 1 1.5 2.5 2.2 4.5 2.2 3.5 0 6.2-1.6 7.5-4.5.5 0 1.5 0 2-.8.1-.1.3-.5.4-.8l.1-.3-.4-.3z" fill="#2496ed" /></svg>;
-const K8sLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 1L3 5.5v5c0 5 3.8 9.7 9 10.5 5.2-.8 9-5.5 9-10.5v-5L12 1z" fill="#326ce5" opacity=".9" /><path d="M12 6l-1 3.3-2.8-2 .7 3.3-3.3.7 2.8 2L5 14.3l3.3.7.7 3.3 2-2.8L12 18l1-2.5 2 2.8.7-3.3 3.3-.7-3.3-1 2.8-2-3.3-.7.7-3.3-2.8 2L12 6z" fill="#fff" opacity=".9" /></svg>;
-const RedHatLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#ee0000" /><path d="M7 12c0-1 .5-2 1.5-2.5S11 9 12 9s2.5.5 3.5 1S17 11 17 12s-.5 2-1.5 2.5-2.5.5-3.5.5-2.5-.5-3.5-1S7 13 7 12z" fill="#fff" /></svg>;
-const AnsibleLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#1a1918" /><path d="M12 5l-5 11h2.5l2.5-5.5 3 5.5h2.5L12 5z" fill="#fff" /></svg>;
-const PrometheusLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#e6522c" /><path d="M12 4a8 8 0 100 16 8 8 0 000-16zm0 2c1 0 2 .5 2 1.5 0 1.5-2 2-2 3v1h-1v-1c0-1 2-1.5 2-3 0-.5-.5-1-1-1s-1 .5-1 1H10c0-1 1-1.5 2-1.5zM11.5 13h1v1h-1v-1z" fill="#fff" opacity=".8" /></svg>;
-const GrafanaLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#f46800" /><rect x="7" y="10" width="2" height="6" rx=".5" fill="#fff" /><rect x="11" y="7" width="2" height="9" rx=".5" fill="#fff" /><rect x="15" y="9" width="2" height="7" rx=".5" fill="#fff" /></svg>;
-const TerraformLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 4v6l5 3V7l-5-3z" fill="#7b42bc" /><path d="M15 7v6l5-3V4l-5 3z" fill="#7b42bc" opacity=".6" /><path d="M9 14v6l5 3v-6l-5-3z" fill="#7b42bc" /><path d="M3 7v6l5 3V10L3 7z" fill="#7b42bc" opacity=".4" /></svg>;
-const JenkinsLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#d33833" /><path d="M12 6c-2.2 0-4 1.8-4 4 0 1.5.8 2.8 2 3.5V15c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-1.5c1.2-.7 2-2 2-3.5 0-2.2-1.8-4-4-4z" fill="#fff" opacity=".85" /></svg>;
-const ElasticLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="3" fill="#00bfb3" /><path d="M6 8h12M6 12h12M6 16h8" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" /></svg>;
-const VaultLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2L3 20h18L12 2z" fill="#000" /><path d="M12 7l-5 10h10L12 7z" fill="#ffd814" opacity=".8" /></svg>;
 
 const Lang = () => { const { styles } = useLoginStyles(); return <div className={styles.lang} data-lang>{SelectLang && <SelectLang />}</div>; };
 
@@ -96,7 +45,7 @@ const Login: React.FC = () => {
     return userInfo;
   }, [initialState, updateCurrentUser]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: LoginFormValues) => {
     setSubmitting(true); setLoginError('');
     try {
       persistLoginPreference(Boolean(values.autoLogin));
@@ -123,8 +72,8 @@ const Login: React.FC = () => {
       }
       if (tenantSessionState === 'platform') history.push('/platform');
       else history.push(new URL(window.location.href).searchParams.get('redirect') || '/');
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || error?.data?.message || '登录失败，请检查账号或密码';
+    } catch (error: unknown) {
+      const msg = getErrorMessage(error, '登录失败，请检查账号或密码');
       setLoginError(msg);
     } finally { setSubmitting(false); }
   };
@@ -253,7 +202,7 @@ const Login: React.FC = () => {
 
               <Divider style={{ margin: '8px 0 14px', fontSize: 11, color: '#d1d5db' }}>其他登录方式</Divider>
 
-              <button className={styles.ssoBtn} onClick={() => message.info('请联系管理员配置 SSO')}>
+              <button type="button" className={styles.ssoBtn} onClick={() => message.info('请联系管理员配置 SSO')}>
                 <KeyOutlined style={{ fontSize: 14 }} />
                 <span>企业 SSO / LDAP 登录</span>
               </button>

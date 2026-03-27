@@ -65,7 +65,6 @@ function applyIncidentSearchParam(
     case 'title__exact':
       apiParams.title__exact = textValue;
       break;
-    case 'title':
     default:
       apiParams.title = textValue;
       break;

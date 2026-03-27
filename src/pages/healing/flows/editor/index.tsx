@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Layout, Spin, message } from 'antd';
 import { useParams, useAccess, history } from '@umijs/max';
-import { addEdge, Connection, ReactFlowProvider, useEdgesState, useNodesState } from 'reactflow';
+import { addEdge, type Connection, ReactFlowProvider, useEdgesState, useNodesState } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { getFlow, createFlow, updateFlow } from '@/services/auto-healing/healing';
 import {
@@ -36,7 +36,7 @@ const FlowEditorInner: React.FC = () => {
     const [configOpen, setConfigOpen] = useState(false);
     const [dryRunOpen, setDryRunOpen] = useState(false);
     const [menu, setMenu] = useState<ContextMenuState | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [_loading, setLoading] = useState(false);
 
     const activeSelectedNode = useMemo(
         () => (selectedNode ? nodes.find((node) => node.id === selectedNode.id) || null : null),

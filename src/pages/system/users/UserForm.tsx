@@ -43,7 +43,11 @@ const UserFormPage: React.FC = () => {
         setLoading(true);
         (async () => {
             try {
-                const user = await getUser(params.id!);
+                const userId = params.id;
+                if (!userId) {
+                    return;
+                }
+                const user = await getUser(userId);
                 const roleId = (user.roles || [])?.[0]?.id;
                 form.setFieldsValue({
                     username: user.username,

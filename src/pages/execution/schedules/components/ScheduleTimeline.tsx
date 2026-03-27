@@ -1,9 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Tooltip, Tag, Space, Typography, Empty } from 'antd';
-import {
-    ClockCircleOutlined, ThunderboltOutlined,
-    PlayCircleOutlined, PauseCircleOutlined,
-} from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -15,9 +11,9 @@ interface ScheduleTimelineProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const TIMELINE_HEIGHT = 40;
-const ROW_HEIGHT = 44;
-const HEADER_HEIGHT = 32;
+const _TIMELINE_HEIGHT = 40;
+const _ROW_HEIGHT = 44;
+const _HEADER_HEIGHT = 32;
 const LABEL_WIDTH = 200;
 
 const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({ schedules, templateMap, onScheduleClick }) => {
@@ -60,16 +56,16 @@ const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({ schedules, template
                 // Determine execution points for today
                 const points: { time: dayjs.Dayjs; type: 'next' | 'past' | 'disabled' }[] = [];
 
-                if (nextRun && nextRun.isSame(now, 'day')) {
+                if (nextRun?.isSame(now, 'day')) {
                     points.push({ time: nextRun, type: s.enabled ? 'next' : 'disabled' });
                 }
-                if (lastRun && lastRun.isSame(now, 'day')) {
+                if (lastRun?.isSame(now, 'day')) {
                     points.push({ time: lastRun, type: 'past' });
                 }
 
                 // For cron schedules, estimate additional runs today
                 if (s.schedule_type === 'cron' && s.enabled && s.schedule_expr) {
-                    if (nextRun && nextRun.isSame(now, 'day') && lastRun) {
+                    if (nextRun?.isSame(now, 'day') && lastRun) {
                         const intervalMs = nextRun.diff(lastRun);
                         if (intervalMs > 0 && intervalMs < 24 * 60 * 60 * 1000) {
                             let cursor = nextRun.add(intervalMs, 'ms');
@@ -127,7 +123,7 @@ const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({ schedules, template
 
             {/* Rows */}
             <div className="timeline-body">
-                {timelineData.map((row, idx) => (
+                {timelineData.map((row) => (
                     <div
                         key={row.schedule.id}
                         className="timeline-row"
@@ -159,12 +155,12 @@ const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({ schedules, template
                             ))}
 
                             {/* Execution Markers */}
-                            {row.points.map((p, pi) => {
+                            {row.points.map((p) => {
                                 const x = timeToX(p.time);
                                 const color = p.type === 'next' ? '#52c41a' : p.type === 'past' ? '#1890ff' : '#d9d9d9';
                                 return (
                                     <Tooltip
-                                        key={pi}
+                                        key={`${p.type}-${p.time.valueOf()}`}
                                         title={
                                             <Space orientation="vertical" size={2}>
                                                 <Text style={{ color: '#fff', fontWeight: 600 }}>{row.name}</Text>

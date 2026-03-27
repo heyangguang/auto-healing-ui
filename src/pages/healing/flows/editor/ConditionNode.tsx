@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
 import { Typography, Tooltip } from 'antd';
 import { BranchesOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { STATUS_CONFIG, getCurrentNodeShadow, getNodeOutlineStyle, getActiveHandleStyle, getNodeHeaderBg } from './CustomNode';

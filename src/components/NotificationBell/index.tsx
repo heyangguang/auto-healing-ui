@@ -12,7 +12,7 @@ import * as notificationBellShared from './notificationBellShared';
 const NotificationBell: React.FC = () => {
     const S = notificationBellShared.bellStyles;
     const [open, setOpen] = useState(false);
-    const [msgs, setMsgs] = useState<Array<Pick<SiteMessage, 'title' | 'created_at' | 'category'>>>([]);
+    const [msgs, setMsgs] = useState<Array<Pick<SiteMessage, 'id' | 'title' | 'created_at' | 'category'>>>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -73,6 +73,7 @@ const NotificationBell: React.FC = () => {
             );
             const items = listRes.data || [];
             setMsgs(items.slice(0, 10).map((message) => ({
+                id: message.id,
                 title: message.title || '站内信',
                 created_at: message.created_at || '',
                 category: message.category || '',
@@ -222,35 +223,38 @@ const NotificationBell: React.FC = () => {
                     </div>
 
                     {/* 消息列表 */}
-                    <div style={S.body} role="list">
+                    <div style={S.body}>
                         {msgs.length === 0 ? (
                             <div style={S.empty}>{loadError || '暂无未读消息'}</div>
                         ) : (
-                            msgs.map((m, i) => {
-                                const color = getDotColor(m.category);
-                                return (
-                                    <button
-                                        type="button"
-                                        key={i}
-                                        style={{ ...S.msgItem, ...S.msgButton }}
-                                        onClick={() => go('/system/messages')}
-                                        onMouseEnter={e => { e.currentTarget.style.background = '#f5f5f5'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                                        aria-label={`查看消息 ${m.title}`}
-                                    >
-                                        <span style={S.dotWrap}>
-                                            <span style={S.dot(color)} />
-                                            <span style={S.dotGlow(color)} />
-                                        </span>
-                                        <div style={S.msgContent}>
-                                            <div style={S.msgTitle}>{m.title}</div>
-                                            <div style={S.msgTime}>
-                                                {categoryMap[m.category] || m.category} · {formatTime(m.created_at)}
-                                            </div>
-                                        </div>
-                                    </button>
-                                );
-                            })
+                            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                                {msgs.map((m) => {
+                                    const color = getDotColor(m.category);
+                                    return (
+                                        <li key={m.id || `${m.category}-${m.created_at}-${m.title}`}>
+                                            <button
+                                                type="button"
+                                                style={{ ...S.msgItem, ...S.msgButton }}
+                                                onClick={() => go('/system/messages')}
+                                                onMouseEnter={e => { e.currentTarget.style.background = '#f5f5f5'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                                aria-label={`查看消息 ${m.title}`}
+                                            >
+                                                <span style={S.dotWrap}>
+                                                    <span style={S.dot(color)} />
+                                                    <span style={S.dotGlow(color)} />
+                                                </span>
+                                                <div style={S.msgContent}>
+                                                    <div style={S.msgTitle}>{m.title}</div>
+                                                    <div style={S.msgTime}>
+                                                        {categoryMap[m.category] || m.category} · {formatTime(m.created_at)}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
                         )}
                     </div>
 

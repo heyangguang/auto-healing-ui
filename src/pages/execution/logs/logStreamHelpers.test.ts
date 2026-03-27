@@ -1,4 +1,5 @@
 import { mergeLogEntries, sortLogEntries } from './logStreamHelpers';
+import type { LogEntry } from '@/components/execution/LogConsole';
 
 describe('logStreamHelpers', () => {
   it('sorts logs by sequence', () => {
@@ -7,7 +8,7 @@ describe('logStreamHelpers', () => {
         { sequence: 3, message: 'third' },
         { sequence: 1, message: 'first' },
         { sequence: 2, message: 'second' },
-      ] as any),
+      ] as LogEntry[]),
     ).toEqual([
       { sequence: 1, message: 'first' },
       { sequence: 2, message: 'second' },
@@ -21,11 +22,11 @@ describe('logStreamHelpers', () => {
         [
           { sequence: 1, message: 'old-first' },
           { sequence: 2, message: 'second' },
-        ] as any,
+        ] as LogEntry[],
         [
           { sequence: 1, message: 'new-first' },
           { sequence: 3, message: 'third' },
-        ] as any,
+        ] as LogEntry[],
       ),
     ).toEqual([
       { sequence: 1, message: 'new-first' },

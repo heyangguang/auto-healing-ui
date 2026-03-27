@@ -1,5 +1,6 @@
 import { FileTextOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import type { BadgeProps } from 'antd';
 import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -7,6 +8,23 @@ import { RUN_STATUS_MAP } from '@/constants/executionDicts';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
+
+type RunItem = {
+    id?: string;
+    status?: string;
+    triggered_by?: string;
+    task_name?: string;
+    completed_at?: string;
+    started_at?: string;
+    created_at?: string;
+};
+
+function resolveBadgeStatus(color?: string): BadgeProps['status'] {
+    if (color === 'success' || color === 'processing' || color === 'error' || color === 'warning') {
+        return color;
+    }
+    return 'default';
+}
 
 const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
@@ -37,8 +55,9 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                     {(Array.isArray(items) ? items : []).length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                     ) : (
-                        (Array.isArray(items) ? items : []).map((item: any, index: number) => {
-                            const st = RUN_STATUS_MAP[item.status] || { color: 'default', text: item.status };
+                        (Array.isArray(items) ? items : []).map((item: RunItem, index: number) => {
+                            const status = item.status ?? '';
+                            const st = RUN_STATUS_MAP[status] || { color: 'default', text: status };
                             const triggeredBy = item.triggered_by || '-';
 
                             return (
@@ -60,7 +79,7 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                                     onClick={() => access.canViewTaskDetail && history.push(`/execution/runs/${item.id}`)}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                                        <Badge status={st.color as any} />
+                                        <Badge status={resolveBadgeStatus(st.color)} />
                                         <Tooltip title={item.task_name || item.id}>
                                             <Typography.Text ellipsis style={{ fontSize: 13, color: '#333', fontWeight: 500 }}>
                                                 {item.task_name || item.id?.slice(0, 8)}

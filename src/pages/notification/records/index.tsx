@@ -26,7 +26,7 @@ import { buildNotificationRecordColumns } from './notificationRecordColumns';
 const NotificationRecords: React.FC = () => {
     const [detailOpen, setDetailOpen] = useState(false);
     const [currentRecord, setCurrentRecord] = useState<NotificationRecord | null>(null);
-    const [reloadKey, setReloadKey] = useState(0);
+    const [reloadKey, _setReloadKey] = useState(0);
     const [execDetailOpen, setExecDetailOpen] = useState(false);
     const [execDetail, setExecDetail] = useState<AutoHealing.ExecutionRun | null>(null);
     const [execLoading, setExecLoading] = useState(false);

@@ -6,14 +6,14 @@ import { PieChartOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import { Empty } from 'antd';
 import React from 'react';
-import { useDashboardSection } from '../useDashboardSection';
+import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 interface DashboardPieChartProps extends Partial<WidgetComponentProps> {
-    section: string;
+    section: DashboardSectionKey;
     field: string;
     title: string;
     icon?: React.ReactNode;
@@ -28,7 +28,7 @@ const DashboardPieChart: React.FC<DashboardPieChartProps> = ({ section, field, t
     const { data, loading, refresh } = useDashboardSection(section);
     const { ref, width, height } = useContainerSize();
 
-    const items: { status: string; count: number }[] = data?.[field] ?? [];
+    const items = Array.isArray(data?.[field]) ? (data[field] as { status: string; count: number }[]) : [];
 
     const chartData = React.useMemo(() => {
         return items

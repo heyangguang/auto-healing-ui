@@ -18,7 +18,7 @@ import TemplateDetailDrawer from './TemplateDetailDrawer';
 import TemplateStatsBar from './TemplateStatsBar';
 import {
     buildTemplateQueryParams,
-    ExecutionTaskRecord,
+    type ExecutionTaskRecord,
     templateAdvancedSearchFields,
     templateSearchFields,
     type TemplateRequestParams,

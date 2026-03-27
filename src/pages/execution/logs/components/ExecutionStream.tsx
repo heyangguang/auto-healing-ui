@@ -51,6 +51,10 @@ const ExecutionStream: React.FC<ExecutionStreamProps> = ({
         }
     };
 
+    const setRowBackground = (event: React.MouseEvent<HTMLDivElement>, color: string) => {
+        event.currentTarget.style.background = color;
+    };
+
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fff' }}>
             <style>{`
@@ -103,8 +107,8 @@ const ExecutionStream: React.FC<ExecutionStreamProps> = ({
                                 transition: 'background 0.2s',
                                 paddingLeft: 28
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#fafafa'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                            onMouseEnter={(event) => setRowBackground(event, '#fafafa')}
+                            onMouseLeave={(event) => setRowBackground(event, '#fff')}
                         >
                             {/* Status Strip */}
                             <div style={{
@@ -129,7 +133,7 @@ const ExecutionStream: React.FC<ExecutionStreamProps> = ({
                                             <span style={{ fontFamily: 'SFMono-Regular, Consolas, monospace' }}>#{item.id.slice(0, 8)}</span>
                                         </Space>
                                         <Space size={4}>
-                                            {item.triggered_by && item.triggered_by.includes('scheduler') ? <ClockCircleOutlined /> : <UserOutlined />}
+                                            {item.triggered_by?.includes('scheduler') ? <ClockCircleOutlined /> : <UserOutlined />}
                                             <span>{item.triggered_by}</span>
                                         </Space>
                                         <Space size={4}>

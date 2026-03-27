@@ -35,7 +35,7 @@ const DashboardCanvasSurface: React.FC<DashboardCanvasSurfaceProps> = ({
   workspaceCount,
   width,
 }) => (
-  <StandardTable<any>
+  <StandardTable<WidgetInstance>
     title="运维监控中心"
     description={`${workspaceCount} 个工作区 · ${activeWorkspace.widgets.length} 个组件`}
     headerIcon={<DashboardOutlined />}

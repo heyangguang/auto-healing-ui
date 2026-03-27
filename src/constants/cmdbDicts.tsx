@@ -57,12 +57,29 @@ export let CMDB_STATUS_MAP: Record<string, { text: string; color: string; badge:
 export let CMDB_STATUS_LABELS: Record<string, string> = { ...FB_STATUS_LABELS };
 export let CMDB_ENV_MAP: Record<string, { text: string; color: string }> = { ...FB_ENV };
 
+type CmdbTypeEntry = {
+    text: string;
+    icon: React.ReactNode;
+    color: string;
+};
+
+type CmdbStatusEntry = {
+    text: string;
+    color: string;
+    badge: 'success' | 'error' | 'warning' | 'processing' | 'default';
+};
+
+type CmdbEnvironmentEntry = {
+    text: string;
+    color: string;
+};
+
 // ==================== 刷新逻辑 ====================
 
 function refresh() {
     const types = getDictItems('cmdb_type');
     if (types?.length) {
-        const map: Record<string, any> = {};
+        const map: Record<string, CmdbTypeEntry> = {};
         types.forEach(i => {
             map[i.dict_key] = {
                 text: i.label,
@@ -75,7 +92,7 @@ function refresh() {
 
     const status = getDictItems('cmdb_status');
     if (status?.length) {
-        const map: Record<string, any> = {};
+        const map: Record<string, CmdbStatusEntry> = {};
         const labels: Record<string, string> = {};
         status.forEach(i => {
             map[i.dict_key] = { text: i.label, color: i.color || '#8c8c8c', badge: (i.badge || 'default') as 'success' | 'error' | 'warning' | 'processing' | 'default' };
@@ -87,7 +104,7 @@ function refresh() {
 
     const env = getDictItems('cmdb_environment');
     if (env?.length) {
-        const map: Record<string, any> = {};
+        const map: Record<string, CmdbEnvironmentEntry> = {};
         env.forEach(i => {
             map[i.dict_key] = { text: i.label, color: i.tag_color || 'default' };
         });

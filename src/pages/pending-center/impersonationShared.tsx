@@ -19,20 +19,16 @@ type TableSorter = {
   field: string;
   order: 'ascend' | 'descend';
 };
-
 const EXACT_SUFFIX = '__exact';
 const QUICK_STATUS_FILTER_KEY = '__enum__status';
 const TEXT_SEARCH_FIELDS = ['requester_name', 'tenant_name', 'reason'] as const;
 const SEARCH_FIELDS = [...TEXT_SEARCH_FIELDS, 'status'] as const;
-
 type TextSearchField = (typeof TEXT_SEARCH_FIELDS)[number];
 type ImpersonationSearchField = (typeof SEARCH_FIELDS)[number];
 type ExactSearchField = `${TextSearchField}${typeof EXACT_SUFFIX}`;
-
 type ImpersonationSearchFilters = Partial<
   Record<ImpersonationSearchField | ExactSearchField | typeof QUICK_STATUS_FILTER_KEY, string>
 >;
-
 type ImpersonationFilterCriterion = {
   field: ImpersonationSearchField;
   value: string;
@@ -60,24 +56,20 @@ export const impersonationStatusMap: Record<
   expired: { color: 'warning', label: '已过期', icon: <StopOutlined /> },
   cancelled: { color: 'default', label: '已撤销', icon: <MinusCircleOutlined /> },
 };
-
 export const impersonationStatusOptions = Object.entries(impersonationStatusMap).map(([value, meta]) => ({
   label: meta.label,
   value,
 }));
-
 export function renderImpersonationStatusTag(status: ImpersonationStatus) {
   const meta = impersonationStatusMap[status];
   return <Tag color={meta.color} icon={meta.icon} style={{ margin: 0 }}>{meta.label}</Tag>;
 }
-
 export function formatImpersonationTime(value: string | null | undefined) {
   if (!value) {
     return '—';
   }
   return dayjs(value).format('YYYY-MM-DD HH:mm:ss');
 }
-
 export function formatImpersonationDuration(minutes: number) {
   if (minutes >= 60) {
     return `${minutes / 60}h`;
@@ -111,7 +103,6 @@ function normalizeImpersonationFilterKey(key: string): { field: ImpersonationSea
     exact: key === 'status',
   };
 }
-
 function setImpersonationListParam(
   params: ImpersonationListParams,
   key: string,
@@ -165,12 +156,10 @@ function setImpersonationListParam(
   }
   params.reason = value;
 }
-
 function collectImpersonationFilterCriteria(
   params: ImpersonationTableRequestParams,
 ): ImpersonationFilterCriterion[] {
   const criteria = new Map<string, ImpersonationFilterCriterion>();
-
   if (params.searchField && params.searchValue) {
     const normalized = normalizeImpersonationFilterKey(params.searchField);
     if (normalized) {
@@ -190,7 +179,6 @@ function collectImpersonationFilterCriteria(
 
   return [...criteria.values()];
 }
-
 function matchesImpersonationCriterion(
   item: ImpersonationRequest,
   criterion: ImpersonationFilterCriterion,

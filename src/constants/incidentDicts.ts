@@ -4,7 +4,7 @@
  * 数据源优先级：后端 API > localStorage 缓存 > 硬编码兜底
  * 消费组件无需改动，import 方式和用法完全不变。
  */
-import { getDictItems, onDictRefresh, toFullMap, toLabelsMap, toColorsMap } from '@/utils/dictCache';
+import { getDictItems, onDictRefresh, toLabelsMap, } from '@/utils/dictCache';
 
 // ==================== 硬编码兜底（仅在 API + 缓存都为空时使用） ====================
 
@@ -87,6 +87,23 @@ export let INCIDENT_CHART_LABELS: Record<string, string> = {
     failed: '失败', skipped: '已跳过', dismissed: '已忽略',
 };
 
+type SeverityEntry = {
+    text: string;
+    color: string;
+    tagColor: string;
+};
+
+type IncidentStatusEntry = {
+    text: string;
+    color: string;
+};
+
+type HealingEntry = {
+    text: string;
+    color: string;
+    badge: 'success' | 'error' | 'warning' | 'processing' | 'default';
+};
+
 /* ========== Select Options 辅助 ========== */
 
 /** 严重程度下拉选项 */
@@ -116,7 +133,7 @@ export function getHealingStatusFilters() {
 function refresh() {
     const severity = getDictItems('incident_severity');
     if (severity?.length) {
-        const map: Record<string, any> = {};
+        const map: Record<string, SeverityEntry> = {};
         const tagColors: Record<string, string> = {};
         severity.forEach(i => {
             map[i.dict_key] = { text: i.label, color: i.color || '#8c8c8c', tagColor: i.tag_color || 'default' };
@@ -137,14 +154,14 @@ function refresh() {
 
     const status = getDictItems('incident_status');
     if (status?.length) {
-        const map: Record<string, any> = {};
+        const map: Record<string, IncidentStatusEntry> = {};
         status.forEach(i => { map[i.dict_key] = { text: i.label, color: i.tag_color || 'default' }; });
         INCIDENT_STATUS_MAP = map;
     }
 
     const healing = getDictItems('healing_status');
     if (healing?.length) {
-        const map: Record<string, any> = {};
+        const map: Record<string, HealingEntry> = {};
         const colors: Record<string, string> = {};
         const labels: Record<string, string> = {};
         healing.forEach(i => {

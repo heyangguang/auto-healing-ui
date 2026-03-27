@@ -25,6 +25,7 @@ type AuditExportModalProps = {
 
 const AuditExportPreview: React.FC<{ loading: boolean; count: number | null }> = ({ loading, count }) => {
   if (count === null && !loading) return null;
+  const previewCount = count ?? 0;
   return (
     <div className="audit-export-preview">
       {loading ? (
@@ -32,12 +33,12 @@ const AuditExportPreview: React.FC<{ loading: boolean; count: number | null }> =
       ) : (
         <>
           <span>符合条件的日志：</span>
-          <strong style={{ fontSize: 16, color: count! > 10000 ? '#ff4d4f' : '#1677ff' }}>
-            {count!.toLocaleString()}
+          <strong style={{ fontSize: 16, color: previewCount > 10000 ? '#ff4d4f' : '#1677ff' }}>
+            {previewCount.toLocaleString()}
           </strong>
           <span> 条</span>
-          {count! > 10000 && <Tag color="error" style={{ marginLeft: 8 }}>超出上限，仅导出前 10,000 条</Tag>}
-          {count === 0 && <Tag color="warning" style={{ marginLeft: 8 }}>无匹配数据</Tag>}
+          {previewCount > 10000 && <Tag color="error" style={{ marginLeft: 8 }}>超出上限，仅导出前 10,000 条</Tag>}
+          {previewCount === 0 && <Tag color="warning" style={{ marginLeft: 8 }}>无匹配数据</Tag>}
         </>
       )}
     </div>
@@ -51,7 +52,7 @@ const AuditExportModal: React.FC<AuditExportModalProps> = ({ open, category, onC
   const hasExportCondition = useMemo(() => {
     if (!formValues) return false;
     const { date_range, action, resource_type, username, status, risk_level } = formValues;
-    return Boolean((date_range && date_range[0] && date_range[1]) || action || resource_type || username || status || risk_level);
+    return Boolean((date_range?.[0] && date_range[1]) || action || resource_type || username || status || risk_level);
   }, [formValues]);
   const { previewCount, previewLoading } = useAuditExportPreview({
     open,

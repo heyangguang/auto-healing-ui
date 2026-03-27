@@ -2,7 +2,6 @@ import React from 'react';
 import { Badge, Button, Divider, Drawer, Popconfirm, Space, Tag, Typography, Avatar } from 'antd';
 import type { BadgeProps } from 'antd';
 import {
-  CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,

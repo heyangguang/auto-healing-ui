@@ -1,5 +1,6 @@
 import { ForkOutlined } from '@ant-design/icons';
 import { Badge, Typography, Empty, Button } from 'antd';
+import type { BadgeProps } from 'antd';
 import { useAccess } from '@umijs/max';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -11,7 +12,16 @@ import type { WidgetComponentProps } from '../widgetRegistry';
 
 dayjs.extend(relativeTime);
 
-function resolveRepoBadgeStatus(status?: string) {
+type RepoItem = {
+    id?: string;
+    name?: string;
+    status?: string;
+    last_sync_at?: string;
+    branch?: string;
+    default_branch?: string;
+};
+
+function resolveRepoBadgeStatus(status?: string): BadgeProps['status'] {
     if (status === 'error') {
         return 'error';
     }
@@ -42,10 +52,10 @@ const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                 </div>
             ) : (
                 <div style={{ height: '100%', overflowY: 'auto' }}>
-                    {items.map((item: any, index: number) => (
+                    {items.map((item: RepoItem, index: number) => (
                         <div key={item.id || index} style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                                <Badge status={resolveRepoBadgeStatus(item.status) as any} />
+                                <Badge status={resolveRepoBadgeStatus(item.status)} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                         <Typography.Text ellipsis strong style={{ fontSize: 13, color: '#262626' }}>

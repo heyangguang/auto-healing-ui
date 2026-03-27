@@ -32,9 +32,7 @@ import {
     formatRuleUpdatedDate,
     priorityClass,
 } from './ruleDisplayHelpers';
-
 const { Text } = Typography;
-
 interface RuleCardGridProps {
     rules: AutoHealing.HealingRule[];
     loading: boolean;
@@ -55,7 +53,6 @@ interface RuleCardGridProps {
     onToggleRule: (rule: AutoHealing.HealingRule, checked: boolean) => void | Promise<void>;
     onPageChange: (page: number, pageSize: number) => void;
 }
-
 interface RuleCardProps {
     rule: AutoHealing.HealingRule;
     actionLoadingRuleId: string | null;
@@ -69,7 +66,6 @@ interface RuleCardProps {
     ) => void | Promise<void>;
     onToggleRule: (rule: AutoHealing.HealingRule, checked: boolean) => void | Promise<void>;
 }
-
 const RuleCardHeader: React.FC<Pick<RuleCardProps, 'rule'>> = ({ rule }) => (
     <div className="rule-card-header">
         <div className="rule-card-title">{rule.name || '未命名规则'}</div>
@@ -116,18 +112,23 @@ const RuleInfoGrid: React.FC<Pick<RuleCardProps, 'rule'>> = ({ rule }) => {
                     P{rule.priority}
                 </span>
             </span>
-            <span className="rule-card-info-item"><AimOutlined /><span className="info-value">{conditionCount}</span> 条件</span>
+            <span className="rule-card-info-item">
+                <AimOutlined />
+                <span className="info-value">{conditionCount}</span> 条件
+            </span>
             <span className="rule-card-info-item">
                 <Tag color={rule.match_mode === 'all' ? 'blue' : 'purple'} style={{ margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 4px' }}>
                     {rule.match_mode === 'all' ? 'AND' : 'OR'}
                 </Tag>
                 {rule.match_mode === 'all' ? '全部' : '任一'}
             </span>
-            <span className="rule-card-info-item"><ClockCircleOutlined />{formatRuleLastRunRelative(rule.last_run_at)}</span>
+            <span className="rule-card-info-item">
+                <ClockCircleOutlined />
+                {formatRuleLastRunRelative(rule.last_run_at)}
+            </span>
         </div>
     );
 };
-
 const RuleCardActions: React.FC<Omit<RuleCardProps, 'onCardClick'>> = ({
     rule,
     actionLoadingRuleId,
@@ -165,7 +166,6 @@ const RuleCardActions: React.FC<Omit<RuleCardProps, 'onCardClick'>> = ({
         </Space>
     </div>
 );
-
 const RuleCard: React.FC<RuleCardProps> = (props) => {
     const { rule, actionLoadingRuleId, canUpdateRule, canDeleteRule, onCardClick, onEditRule, onDeleteRule, onToggleRule } = props;
     const cardClassName = [
@@ -196,13 +196,11 @@ const RuleCard: React.FC<RuleCardProps> = (props) => {
         </Col>
     );
 };
-
 const RuleLoadingState: React.FC = () => (
     <div style={{ textAlign: 'center', padding: 80 }}>
         <Spin size="large" tip="加载自愈规则..."><div /></Spin>
     </div>
 );
-
 interface RuleEmptyStateProps {
     canCreateRule: boolean;
     onCreateRule: () => void;
@@ -213,7 +211,6 @@ const RuleEmptyState: React.FC<RuleEmptyStateProps> = ({ canCreateRule, onCreate
         <Button type="dashed" disabled={!canCreateRule} onClick={onCreateRule}>新建规则</Button>
     </Empty>
 );
-
 const RuleGridContent: React.FC<Omit<RuleCardGridProps, 'loading' | 'canCreateRule' | 'onCreateRule'>> = ({
     rules,
     total,
@@ -258,7 +255,6 @@ const RuleGridContent: React.FC<Omit<RuleCardGridProps, 'loading' | 'canCreateRu
         </div>
     </>
 );
-
 export const RuleCardGrid: React.FC<RuleCardGridProps> = ({
     rules,
     loading,

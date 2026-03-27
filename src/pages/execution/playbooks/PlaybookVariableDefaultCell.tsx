@@ -1,5 +1,6 @@
 import React from 'react';
 import { Input, InputNumber, Select } from 'antd';
+import { toJsonValue } from '@/utils/jsonValue';
 import PlaybookEnumDefaultEditor from './PlaybookEnumDefaultEditor';
 import PlaybookListDefaultEditor from './PlaybookListDefaultEditor';
 import PlaybookObjectDefaultEditor from './PlaybookObjectDefaultEditor';
@@ -26,7 +27,7 @@ const PlaybookVariableDefaultCell: React.FC<PlaybookVariableDefaultCellProps> = 
     const editorType = normalizeVariableEditorType(variable.type);
 
     const saveDefault = (nextValue: unknown) => {
-        onAutoSave(replaceVariable(editedVariables, variable.name, { default: nextValue }));
+        onAutoSave(replaceVariable(editedVariables, variable.name, { default: toJsonValue(nextValue) }));
     };
 
     if (editorType === 'number') {

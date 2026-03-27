@@ -6,14 +6,14 @@ import { BarChartOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/plots';
 import { Empty } from 'antd';
 import React from 'react';
-import { useDashboardSection } from '../useDashboardSection';
+import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 interface DashboardBarChartProps extends Partial<WidgetComponentProps> {
-    section: string;
+    section: DashboardSectionKey;
     field: string;
     title: string;
     icon?: React.ReactNode;
@@ -25,7 +25,7 @@ const DashboardBarChart: React.FC<DashboardBarChartProps> = ({ section, field, t
     const { data, loading, refresh } = useDashboardSection(section);
     const { ref, width, height } = useContainerSize();
 
-    const items: { status: string; count: number }[] = data?.[field] ?? [];
+    const items = Array.isArray(data?.[field]) ? (data[field] as { status: string; count: number }[]) : [];
 
     const chartData = React.useMemo(() => {
         return items
@@ -51,7 +51,7 @@ const DashboardBarChart: React.FC<DashboardBarChartProps> = ({ section, field, t
                         colorField="type"
                         color={color || ['#1677ff', '#52c41a', '#faad14', '#eb2f96', '#722ed1', '#13c2c2', '#fa541c', '#2f54eb']}
                         label={{
-                            content: (d: any) => `${d.value}`, // 使用 content 属性
+                            content: (d: { value: number }) => `${d.value}`, // 使用 content 属性
                             textBaseline: 'bottom',
                             position: 'top', // 改为 top，位于柱子上方
                             style: {

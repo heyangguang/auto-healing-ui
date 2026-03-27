@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
-    ApiOutlined,
     BellOutlined,
     CalendarOutlined,
     CheckCircleOutlined,
     ClockCircleOutlined,
     CloseCircleOutlined,
     ExclamationCircleOutlined,
-    EyeOutlined,
-    FileTextOutlined,
     HistoryOutlined,
     PlayCircleOutlined,
     RobotOutlined,
     SendOutlined,
 } from '@ant-design/icons';
-import { Space, Tag, Typography, message } from 'antd';
+import { message } from 'antd';
 import type { AdvancedSearchField } from '@/components/StandardTable';
 import { getChannelTypeConfig } from '@/constants/notificationDicts';
 import {
@@ -24,10 +21,9 @@ import {
 } from '@/services/auto-healing/notification';
 import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 
-const { Text } = Typography;
-
 export const RECORDS_HEADER_ICON = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>通知记录图标</title>
         <rect x="6" y="10" width="36" height="28" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M6 18h36M14 26h12M14 32h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <circle cx="36" cy="14" r="6" stroke="currentColor" strokeWidth="2" fill="none" />

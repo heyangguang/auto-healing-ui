@@ -1,4 +1,5 @@
 import { getEnabledNotificationTriggers } from '@/utils/notificationConfig';
+import type { NotificationConfigLike } from '@/utils/notificationConfig';
 import { getPlaybookVariables, type TemplateVariableRecord, type VariableValueMap } from '../../templates/templateVariableHelpers';
 import { splitTargetHosts } from './HostList';
 import type {
@@ -47,25 +48,26 @@ export function getTriggerConfigs(config?: TriggerNotificationConfig) {
     if (config.configs?.length) {
         return config.configs;
     }
-    if (config.channel_ids?.length && config.template_id) {
+    const templateId = config.template_id;
+    if (config.channel_ids?.length && templateId) {
         return config.channel_ids.map((channelId) => ({
             channel_id: channelId,
-            template_id: config.template_id!,
+            template_id: templateId,
         }));
     }
     return [];
 }
 
-export function getTimeoutConfigs(notificationConfig: unknown): NotificationTargetConfig[] {
-    const timeoutConfig = (notificationConfig as { on_timeout?: TriggerNotificationConfig } | undefined)?.on_timeout;
+export function getTimeoutConfigs(notificationConfig?: NotificationConfigLike): NotificationTargetConfig[] {
+    const timeoutConfig = notificationConfig?.on_timeout;
     return getTriggerConfigs(timeoutConfig);
 }
 
 export function shouldShowNotificationDisplay(
-    notificationConfig: unknown,
-    hasNotificationConfig: boolean,
+    notificationConfig?: NotificationConfigLike,
+    hasNotificationConfig = false,
 ) {
-    const enabledTriggers = getEnabledNotificationTriggers(notificationConfig as any);
+    const enabledTriggers = getEnabledNotificationTriggers(notificationConfig);
     return enabledTriggers.some((trigger) => trigger !== 'on_timeout') || !hasNotificationConfig;
 }
 

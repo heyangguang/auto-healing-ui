@@ -69,7 +69,6 @@ function applyCMDBSearchParam(
         case 'name__exact':
             apiParams.name__exact = textValue;
             break;
-        case 'name':
         default:
             apiParams.name = textValue;
             break;

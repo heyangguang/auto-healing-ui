@@ -19,19 +19,19 @@
 
 /* 表格样式 */
 .tenant-members-table .ant-table-thead>tr>th {
-    background: #fafafa !important;
+    background: #fafafa;
     font-size: 12px;
     font-weight: 500;
     color: #8c8c8c;
-    padding: 8px 12px !important;
+    padding: 8px 12px;
 }
 
 .tenant-members-table .ant-table-tbody>tr>td {
-    padding: 12px !important;
+    padding: 12px;
 }
 
 .tenant-members-table .ant-table-tbody>tr:hover>td {
-    background: #f8f9fb !important;
+    background: #f8f9fb;
 }
 
 @media (max-width: 768px) {

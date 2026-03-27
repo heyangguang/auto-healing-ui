@@ -7,19 +7,27 @@ import { useContainerSize } from '../../../../hooks/useContainerSize';
 import { useDashboardSection } from '../useDashboardSection';
 import { CMDB_STATUS_LABELS, CMDB_STATUS_MAP } from '@/constants/cmdbDicts';
 
+type StatusCountItem = {
+    status?: string;
+    count?: number;
+};
+
 const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('cmdb');
     const { ref, width, height } = useContainerSize();
 
     const chartData = React.useMemo(() => {
         if (!data?.by_status) return [];
-        return data.by_status.map((item: any) => ({
-            type: CMDB_STATUS_LABELS[item.status] || item.status,
+        return (data.by_status as StatusCountItem[]).map((item) => {
+            const status = item.status ?? '';
+            return {
+                type: CMDB_STATUS_LABELS[status] || status,
             value: Number(item.count),
-        }));
+            };
+        });
     }, [data]);
 
-    const total = React.useMemo(() => chartData.reduce((s: number, d: any) => s + d.value, 0), [chartData]);
+    const total = React.useMemo(() => chartData.reduce((s, d) => s + d.value, 0), [chartData]);
 
     return (
         <WidgetWrapper title="CMDB 状态分布" icon={<CloudServerOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>

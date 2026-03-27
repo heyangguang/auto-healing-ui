@@ -2,7 +2,7 @@
 
 /* 强制所有 Select 组件使用直角边框 */
 .square-select .ant-select-selector {
-    border-radius: 0 !important;
+    border-radius: 0;
 }
 
 /* ---- 统计栏 ---- */

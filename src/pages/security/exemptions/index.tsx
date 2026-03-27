@@ -2,7 +2,11 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { history, useAccess } from '@umijs/max';
 import { Tag, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import StandardTable, { type StandardColumnDef } from '@/components/StandardTable';
+import StandardTable, {
+    type StandardColumnDef,
+    type StandardTableSearchValues,
+    type StandardTableSort,
+} from '@/components/StandardTable';
 import { getBlacklistExemptions, type ExemptionRecord } from '@/services/auto-healing/blacklistExemption';
 import dayjs from 'dayjs';
 import ExemptionDetailDrawer from './ExemptionDetailDrawer';
@@ -16,24 +20,13 @@ import {
     STATUS_MAP,
 } from './exemptionListConfig';
 
-type ExemptionDateRange = [dayjs.Dayjs | null, dayjs.Dayjs | null];
-type ExemptionSearchValue =
-    | string
-    | number
-    | boolean
-    | dayjs.Dayjs
-    | ExemptionDateRange
-    | null
-    | undefined;
-
-type ExemptionAdvancedSearch = Record<string, ExemptionSearchValue>;
 type ExemptionRequestParams = {
     page: number;
     pageSize: number;
     searchField?: string;
     searchValue?: string;
-    advancedSearch?: ExemptionAdvancedSearch;
-    sorter?: { field: string; order: 'ascend' | 'descend' };
+    advancedSearch?: StandardTableSearchValues;
+    sorter?: StandardTableSort;
 };
 
 type ExemptionApiValue =
@@ -52,7 +45,7 @@ type ExemptionApiParams = {
 /* ============================== Component ============================== */
 const ExemptionListPage: React.FC = () => {
     const access = useAccess();
-    const [refreshKey, setRefreshKey] = useState(0);
+    const [refreshKey, _setRefreshKey] = useState(0);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [detail, setDetail] = useState<ExemptionRecord | null>(null);
     const [statsData, setStatsData] = useState({ total: 0, pending: 0, approved: 0 });
@@ -156,7 +149,9 @@ const ExemptionListPage: React.FC = () => {
                     normalized[key] = value.format('YYYY-MM-DD');
                     return;
                 }
-                normalized[key] = value;
+                if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                    normalized[key] = value;
+                }
             });
             Object.assign(apiParams, normalized);
         }

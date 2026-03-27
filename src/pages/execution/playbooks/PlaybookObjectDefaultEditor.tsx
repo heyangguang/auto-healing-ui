@@ -16,7 +16,7 @@ type PlaybookObjectDefaultEditorProps = {
     editedVariables: AutoHealing.PlaybookVariable[];
     onAutoSave: (variables: AutoHealing.PlaybookVariable[]) => void;
     parsedDefault: string;
-    saveDefault: (nextValue: unknown) => void;
+    saveDefault: (nextValue: AutoHealing.JsonValue) => void;
     variable: AutoHealing.PlaybookVariable;
 };
 

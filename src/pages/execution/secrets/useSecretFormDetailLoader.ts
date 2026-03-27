@@ -5,9 +5,13 @@ import { getSecretsSource } from '@/services/auto-healing/secrets';
 import {
     getSecretFormInitialValues,
     mapSecretsSourceToFormValues,
+    normalizeVaultAuthType,
+    normalizeWebhookAuthType,
     type SecretFormValues,
     type SecretsSourceConfig,
     type SecretsSourceRecord,
+    type VaultAuthType,
+    type WebhookAuthType,
 } from './secretFormConfig';
 import { EDIT_LOAD_ERROR_MESSAGE } from './secretFormUtils';
 
@@ -22,8 +26,8 @@ export function useSecretFormDetailLoader(options: UseSecretFormDetailLoaderOpti
     const [loadError, setLoadError] = useState<string>();
     const [loading, setLoading] = useState(false);
     const [loadedSourceId, setLoadedSourceId] = useState<string>();
-    const [loadedVaultAuthType, setLoadedVaultAuthType] = useState<string>();
-    const [loadedWebhookAuthType, setLoadedWebhookAuthType] = useState<string>();
+    const [loadedVaultAuthType, setLoadedVaultAuthType] = useState<VaultAuthType>();
+    const [loadedWebhookAuthType, setLoadedWebhookAuthType] = useState<WebhookAuthType>();
     const originalConfigRef = useRef<SecretsSourceConfig>({});
     const loadRequestIdRef = useRef(0);
 
@@ -59,8 +63,8 @@ export function useSecretFormDetailLoader(options: UseSecretFormDetailLoaderOpti
                 const config = record.config || {};
                 originalConfigRef.current = config;
                 setLoadedSourceId(record.id);
-                setLoadedVaultAuthType(config.auth?.type || 'token');
-                setLoadedWebhookAuthType(config.auth?.type || 'none');
+                setLoadedVaultAuthType(normalizeVaultAuthType(config.auth?.type));
+                setLoadedWebhookAuthType(normalizeWebhookAuthType(config.auth?.type));
                 form.setFieldsValue(mapSecretsSourceToFormValues(record));
             })
             .catch((error: unknown) => {

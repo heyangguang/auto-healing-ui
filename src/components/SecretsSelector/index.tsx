@@ -5,7 +5,7 @@ import { PlusOutlined, SearchOutlined, KeyOutlined, CloseOutlined, CheckOutlined
 interface SecretsSelectorProps {
     value?: string[];
     onChange?: (value: string[]) => void;
-    dataSource: any[];
+    dataSource: AutoHealing.SecretsSource[];
 }
 
 const SecretsSelector: React.FC<SecretsSelectorProps> = ({ value = [], onChange, dataSource }) => {
@@ -33,6 +33,14 @@ const SecretsSelector: React.FC<SecretsSelectorProps> = ({ value = [], onChange,
     const handleRemove = (id: string) => {
         const newValue = selectedIds.filter(v => v !== id);
         onChange?.(newValue);
+    };
+
+    const highlightRemoveButton = (event: React.MouseEvent<HTMLElement>, color: string) => {
+        event.currentTarget.style.color = color;
+    };
+
+    const highlightRowBackground = (event: React.MouseEvent<HTMLDivElement>, color: string) => {
+        event.currentTarget.style.background = color;
     };
 
     return (
@@ -93,8 +101,8 @@ const SecretsSelector: React.FC<SecretsSelectorProps> = ({ value = [], onChange,
                                         e.stopPropagation();
                                         handleRemove(id);
                                     }}
-                                    onMouseEnter={e => e.currentTarget.style.color = '#ff4d4f'}
-                                    onMouseLeave={e => e.currentTarget.style.color = '#bfbfbf'}
+                                    onMouseEnter={(event) => highlightRemoveButton(event, '#ff4d4f')}
+                                    onMouseLeave={(event) => highlightRemoveButton(event, '#bfbfbf')}
                                 />
                             </div>
                         );
@@ -139,8 +147,16 @@ const SecretsSelector: React.FC<SecretsSelectorProps> = ({ value = [], onChange,
                                         background: isSelected ? '#fff7e6' : '#fff',
                                         transition: 'all 0.2s',
                                     }}
-                                    onMouseEnter={e => !isSelected && (e.currentTarget.style.background = '#fafafa')}
-                                    onMouseLeave={e => !isSelected && (e.currentTarget.style.background = '#fff')}
+                                    onMouseEnter={(event) => {
+                                        if (!isSelected) {
+                                            highlightRowBackground(event, '#fafafa');
+                                        }
+                                    }}
+                                    onMouseLeave={(event) => {
+                                        if (!isSelected) {
+                                            highlightRowBackground(event, '#fff');
+                                        }
+                                    }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <KeyOutlined style={{ marginRight: 10, color: isSelected ? '#fa8c16' : '#bfbfbf', fontSize: 16 }} />

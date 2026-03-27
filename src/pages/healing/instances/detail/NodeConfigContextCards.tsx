@@ -20,12 +20,21 @@ type NodeConfigContextCardsProps = {
 };
 
 const isSimpleArray = (value: unknown[]): boolean => value.every((item) => typeof item !== 'object');
+const buildTagItems = (value: unknown[]) => {
+    const counts = new Map<string, number>();
+    return value.map((item) => {
+        const label = typeof item === 'object' ? JSON.stringify(item) : String(item);
+        const count = (counts.get(label) || 0) + 1;
+        counts.set(label, count);
+        return { key: `${label}-${count}`, label };
+    });
+};
 
 const renderDescriptionValue = (value: unknown) => {
     if (Array.isArray(value)) {
         return (
             <Space size={[4, 4]} wrap>
-                {value.map((item, index) => <Tag key={index} style={{ margin: 0 }}>{typeof item === 'object' ? JSON.stringify(item) : String(item)}</Tag>)}
+                {buildTagItems(value).map((item) => <Tag key={item.key} style={{ margin: 0 }}>{item.label}</Tag>)}
             </Space>
         );
     }
@@ -85,7 +94,7 @@ const NodeConfigContextCards: React.FC<NodeConfigContextCardsProps> = ({
                             return <Descriptions.Item key={key} label={label}><Typography.Paragraph ellipsis={{ rows: 2, expandable: true, symbol: '展开' }} style={{ margin: 0, fontSize: 13 }}>{value}</Typography.Paragraph></Descriptions.Item>;
                         }
                         if (Array.isArray(value) && isSimpleArray(value)) {
-                            return <Descriptions.Item key={key} label={label}><Space size={[4, 4]} wrap>{value.map((item, index) => <Tag key={index} style={{ margin: 0 }}>{String(item)}</Tag>)}</Space></Descriptions.Item>;
+                            return <Descriptions.Item key={key} label={label}><Space size={[4, 4]} wrap>{buildTagItems(value).map((item) => <Tag key={item.key} style={{ margin: 0 }}>{item.label}</Tag>)}</Space></Descriptions.Item>;
                         }
                         if (typeof value === 'number' || typeof value === 'boolean') {
                             return <Descriptions.Item key={key} label={label}>{typeof value === 'boolean' ? <Tag color={value ? 'success' : 'default'} style={{ margin: 0 }}>{String(value)}</Tag> : String(value)}</Descriptions.Item>;

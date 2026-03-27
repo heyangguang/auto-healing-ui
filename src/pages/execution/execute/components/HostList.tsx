@@ -35,8 +35,8 @@ const HostList: React.FC<HostListProps> = ({ hosts }) => {
 
     return (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {parsedHosts.map((host, index) => (
-                <Tooltip key={`${host}-${index}`} title={host}>
+            {parsedHosts.map((host) => (
+                <Tooltip key={host} title={host}>
                     <Tag
                         icon={<DesktopOutlined />}
                         color="blue"

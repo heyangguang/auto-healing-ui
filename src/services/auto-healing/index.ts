@@ -44,7 +44,7 @@ export {
     createRule as createHealingRule, updateRule as updateHealingRule,
     deleteRule as deleteHealingRule, activateRule, deactivateRule,
     getInstances as getHealingInstances, getInstance as getHealingInstance,
-    getInstanceLogs, cancelInstance,
+    cancelInstance,
     getApprovals, getPendingApprovals, getApproval, approveTask, rejectTask,
     getFlowStats as getHealingFlowStats,
     getRuleStats as getHealingRuleStats,

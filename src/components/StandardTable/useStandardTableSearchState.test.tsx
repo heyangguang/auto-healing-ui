@@ -40,8 +40,8 @@ describe('useStandardTableSearchState', () => {
   });
 
   it('resets search state when the search field list changes by content', () => {
-    const fetchData = jest.fn();
-    const setPage = jest.fn();
+    const _fetchData = jest.fn();
+    const _setPage = jest.fn();
 
     const { result, rerender } = renderHook(
       ({ searchFields }) =>

@@ -12,7 +12,7 @@ const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
     const { data, loading, refresh } = useDashboardSection('incidents');
     const { ref, width, height } = useContainerSize();
 
-    const chartData = React.useMemo(() => buildIncidentStatusChartData(data), [data]);
+    const chartData = React.useMemo(() => buildIncidentStatusChartData(data ?? undefined), [data]);
 
     const total = React.useMemo(
         () => Number(data?.total ?? chartData.reduce((sum, item) => sum + item.value, 0)),

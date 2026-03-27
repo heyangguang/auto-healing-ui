@@ -9,7 +9,7 @@ type SearchResultItemFixture = {
   title: string;
   description?: string;
   path?: string;
-  extra?: Record<string, any>;
+  extra?: Record<string, unknown>;
 };
 
 jest.mock('@umijs/max', () => ({

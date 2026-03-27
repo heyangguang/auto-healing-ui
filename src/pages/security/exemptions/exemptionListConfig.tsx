@@ -33,6 +33,7 @@ export const advancedSearchFields: AdvancedSearchField[] = [
 
 export const headerIcon = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>豁免规则图标</title>
         <rect x="6" y="10" width="26" height="32" rx="3" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M12 20h14M12 26h10M12 32h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         <circle cx="36" cy="16" r="9" stroke="currentColor" strokeWidth="2" fill="none" />

@@ -127,7 +127,10 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
         const queue = [currentNodeId];
         executedNodeIds.add(currentNodeId);
         while (queue.length > 0) {
-            const nodeId = queue.shift()!;
+            const nodeId = queue.shift();
+            if (!nodeId) {
+                continue;
+            }
             for (const parent of (reverseAdj[nodeId] || [])) {
                 if (!executedNodeIds.has(parent)) {
                     executedNodeIds.add(parent);
@@ -137,7 +140,9 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
         }
     }
     // 有明确 nodeStates 记录的节点也算已执行
-    Object.keys(nodeStates).forEach(id => executedNodeIds.add(id));
+    Object.keys(nodeStates).forEach((id) => {
+        executedNodeIds.add(id);
+    });
 
     // 正向邻接表（判断节点是否被"穿过"）
     const forwardAdj: Record<string, string[]> = {};

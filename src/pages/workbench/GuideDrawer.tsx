@@ -118,8 +118,8 @@ const GuideDrawer: React.FC<GuideDrawerProps> = ({ open, article, onClose }) => 
                                     <BulbFilled style={{ color: '#faad14' }} /> 小贴士
                                 </div>
                                 <ul className={styles.tipsList}>
-                                    {step.tips.map((tip, i) => (
-                                        <li key={i} className={styles.tipItem}>{tip}</li>
+                                    {step.tips.map((tip) => (
+                                        <li key={`${step.title}-${tip}`} className={styles.tipItem}>{tip}</li>
                                     ))}
                                 </ul>
                             </div>

@@ -46,7 +46,8 @@ const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label,
 );
 
 function renderExecutionDetails(config: FlowNodeConfigLike, onEditExecutionTemplate: (taskTemplateId: string) => void) {
-  if (!config.task_template_id) {
+  const taskTemplateId = config.task_template_id;
+  if (!taskTemplateId) {
     return <DetailRow label="任务模板" value={<span style={{ color: '#faad14', fontSize: 11 }}>⚠ 未配置</span>} />;
   }
 
@@ -55,7 +56,7 @@ function renderExecutionDetails(config: FlowNodeConfigLike, onEditExecutionTempl
       <DetailRow
         label="任务模板"
         value={config.task_template_name ? (
-          <a onClick={(event) => { event.stopPropagation(); onEditExecutionTemplate(config.task_template_id!); }} style={{ cursor: 'pointer' }}>
+          <a onClick={(event) => { event.stopPropagation(); onEditExecutionTemplate(taskTemplateId); }} style={{ cursor: 'pointer' }}>
             {config.task_template_name}
           </a>
         ) : (

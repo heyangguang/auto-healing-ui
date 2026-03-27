@@ -1,4 +1,4 @@
-import type { LogEntry } from '@/components/execution/LogConsole';
+import { type LogEntry, toLogEntries } from '@/components/execution/LogConsole';
 
 const RECENT_STREAM_WINDOW_MS = 30_000;
 const FINAL_RUN_STATUSES = new Set<AutoHealing.ExecutionStatus>([
@@ -10,7 +10,7 @@ const FINAL_RUN_STATUSES = new Set<AutoHealing.ExecutionStatus>([
 ]);
 
 export function sortExecutionLogs(logEntries: AutoHealing.ExecutionLog[]) {
-    return [...logEntries].sort((a, b) => a.sequence - b.sequence) as LogEntry[];
+    return toLogEntries(logEntries).sort((a, b) => a.sequence - b.sequence);
 }
 
 export function mergeExecutionLogs(currentLogs: LogEntry[], nextLogs: AutoHealing.ExecutionLog[]) {

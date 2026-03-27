@@ -13,17 +13,26 @@ const ENV_LABELS: Record<string, string> = {
     test: '测试',
 };
 
+type EnvironmentCountItem = {
+    status?: string;
+    environment?: string;
+    count?: number;
+};
+
 const ChartCMDBEnv: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('cmdb');
     const { ref, width, height } = useContainerSize();
 
     const chartData = React.useMemo(() => {
         if (!data?.by_environment) return [];
-        return data.by_environment.map((item: any) => ({
+        return (data.by_environment as EnvironmentCountItem[]).map((item) => {
+            const envKey = item.status || item.environment || '';
+            return {
             // dashboard overview API 使用 'status' 键, cmdb/stats API 使用 'environment' 键
-            environment: ENV_LABELS[item.status || item.environment] || item.status || item.environment,
+            environment: ENV_LABELS[envKey] || envKey,
             count: Number(item.count),
-        }));
+            };
+        });
     }, [data]);
 
     return (

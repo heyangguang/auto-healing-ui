@@ -56,7 +56,11 @@ const PluginFormPage: React.FC = () => {
         setLoading(true);
         (async () => {
             try {
-                const plugin = await getPlugin(params.id!);
+                const pluginId = params.id;
+                if (!pluginId) {
+                    return;
+                }
+                const plugin = await getPlugin(pluginId);
                 originalConfigRef.current = plugin.config || undefined;
                 setLoadedAuthType(plugin.config?.auth_type || 'basic');
                 form.setFieldsValue(getPluginEditInitialValues(plugin as PluginRecord));

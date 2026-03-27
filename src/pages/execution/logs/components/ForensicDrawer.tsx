@@ -3,7 +3,7 @@ import { Drawer, Space, Typography, Tag, Button } from 'antd';
 import { ReloadOutlined, ExpandOutlined } from '@ant-design/icons';
 import { getExecutionRun, getExecutionLogs, createLogStream } from '@/services/auto-healing/execution';
 import { RUN_STATUS_LABELS } from '@/constants/executionDicts';
-import LogConsole, { LogEntry } from '@/components/execution/LogConsole';
+import LogConsole, { type LogEntry, toLogEntries, toLogEntry } from '@/components/execution/LogConsole';
 import dayjs from 'dayjs';
 import { createRequestSequence } from '@/utils/requestSequence';
 import { mergeLogEntries, sortLogEntries } from '../logStreamHelpers';
@@ -58,7 +58,7 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
             ]);
             if (!requestSequenceRef.current.isCurrent(token)) return undefined;
             setRun(runRes.data);
-            setLogs((prev) => mergeLogEntries(prev, sortLogEntries((logsRes.data || []) as LogEntry[])));
+            setLogs((prev) => mergeLogEntries(prev, sortLogEntries(toLogEntries(logsRes.data || []))));
             return runRes.data;
         } catch (e) {
             if (!requestSequenceRef.current.isCurrent(token)) return undefined;
@@ -77,11 +77,11 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
         setStreaming(true);
         const close = createLogStream(id, (log) => {
             if (!requestSequenceRef.current.isCurrent(token)) return;
-            setLogs((prev) => mergeLogEntries(prev, [log as LogEntry]));
+            setLogs((prev) => mergeLogEntries(prev, [toLogEntry(log)]));
         }, (res) => {
             if (!requestSequenceRef.current.isCurrent(token)) return;
             markStreamClosed();
-            setRun(prev => prev ? { ...prev, status: res.status as any } : prev);
+            setRun(prev => prev ? { ...prev, status: res.status as AutoHealing.ExecutionRun['status'] } : prev);
             void refreshSnapshot(id, token);
         }, () => {
             if (!requestSequenceRef.current.isCurrent(token)) return;
@@ -120,7 +120,7 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
 
             const logsRes = await getExecutionLogs(currentRunId);
             if (!requestSequenceRef.current.isCurrent(token)) return;
-            setLogs((prev) => mergeLogEntries(prev, sortLogEntries((logsRes.data || []) as LogEntry[])));
+            setLogs((prev) => mergeLogEntries(prev, sortLogEntries(toLogEntries(logsRes.data || []))));
         } catch (e) {
             if (!requestSequenceRef.current.isCurrent(token)) return;
             console.error(e);

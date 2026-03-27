@@ -1,5 +1,5 @@
 import React from 'react';
-import { AutoComplete, Button, Form, Input, InputNumber, Segmented, Select, Switch, Tooltip, Typography } from 'antd';
+import { AutoComplete, Form, Input, InputNumber, Segmented, Select, Switch, Tooltip, Typography } from 'antd';
 import type { FormInstance } from 'antd';
 import { FunctionOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import ExtraVarsExpressionHelpButton, { EXTRA_VARS_EXPRESSION_OPTIONS, filterExpressionOption } from './ExtraVarsExpressionHelp';
@@ -21,8 +21,8 @@ interface ExtraVarsVariableRowProps {
     onExpressionChange: (varName: string, expression: string) => void;
     onFormValuesChange?: ExtraVarsFormValuesChange;
     onModeChange: (varName: string, mode: VariableInputMode) => void;
-    onStaticChange?: (varName: string, value: unknown) => void;
-    staticValue?: unknown;
+    onStaticChange?: (varName: string, value: AutoHealing.JsonValue | undefined) => void;
+    staticValue?: AutoHealing.JsonValue | undefined;
     variable: ExtraVarsVariable;
 }
 
@@ -34,8 +34,8 @@ const getVariableOptions = (variable: ExtraVarsVariable): string[] => (
 
 const renderStaticField = (
     variable: ExtraVarsVariable,
-    staticValue: unknown,
-    onStaticChange?: (varName: string, value: unknown) => void,
+    staticValue: AutoHealing.JsonValue | undefined,
+    onStaticChange?: (varName: string, value: AutoHealing.JsonValue | undefined) => void,
 ) => {
     const options = getVariableOptions(variable);
     const placeholder = variable.type === 'choice' ? `请选择 ${variable.name}` : `请输入 ${variable.name}`;

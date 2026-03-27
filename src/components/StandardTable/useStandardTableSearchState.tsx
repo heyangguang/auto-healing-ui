@@ -1,12 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
+import type { FlattenOptionData } from 'rc-select/lib/interface';
+import type {
+  SearchField,
+  StandardTableSearchValues,
+} from './types';
 
 interface SearchFieldOption {
-  key: string;
   label: string;
-  description?: string;
-  options?: { label: string; value: string }[];
+  value?: string;
+  desc?: string;
+  options?: Array<{ label: string; value: string; desc?: string }>;
 }
 
 interface FilterableColumn {
@@ -23,7 +28,7 @@ interface SearchFilterItem {
 }
 
 interface UseStandardTableSearchStateParams {
-  searchFields?: SearchFieldOption[];
+  searchFields?: SearchField[];
   filterableCols: FilterableColumn[];
 }
 
@@ -46,7 +51,7 @@ export function useStandardTableSearchState({
   const [searchField, setSearchField] = useState<string>((searchFields || [])[0]?.key || '');
   const [searchValue, setSearchValue] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advancedValues, setAdvancedValues] = useState<Record<string, any>>({});
+  const [advancedValues, setAdvancedValues] = useState<StandardTableSearchValues>({});
   const [advancedMatchModes, setAdvancedMatchModes] = useState<Record<string, 'fuzzy' | 'exact'>>({});
   const [searchFilters, setSearchFilters] = useState<SearchFilterItem[]>([]);
 
@@ -67,7 +72,7 @@ export function useStandardTableSearchState({
     setAdvancedMatchModes({});
   }, [searchFields]);
 
-  const searchFieldOptions = useMemo((): any[] => {
+  const searchFieldOptions = useMemo(() => {
     const fields = searchFields || [];
     const textGroup = fields
       .filter((field) => !field.key.startsWith('__enum__'))
@@ -92,10 +97,10 @@ export function useStandardTableSearchState({
     ];
   }, [searchFields, filterableCols]);
 
-  const searchFieldOptionRender = useCallback((option: any) => {
-    const description = option.data?.desc;
+  const searchFieldOptionRender = useCallback((option: FlattenOptionData<SearchFieldOption>) => {
+    const description = option.data && 'desc' in option.data ? option.data.desc : undefined;
     if (!description) {
-      return option.label;
+      return option.label ?? null;
     }
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -131,7 +136,10 @@ export function useStandardTableSearchState({
       if (!searchValue) {
         return;
       }
-      const realKey = currentEnumSearchField ? currentEnumSearchField.key : currentEnumCol!.columnKey;
+      const realKey = currentEnumSearchField?.key || currentEnumCol?.columnKey;
+      if (!realKey) {
+        return;
+      }
       const displayLabel = currentEnumSearchField?.label || currentEnumCol?.columnTitle || realKey;
       const displayValue = currentEnumSearchField
         ? (currentEnumSearchField.options?.find((option) => option.value === searchValue)?.label || searchValue)
@@ -193,7 +201,7 @@ export function useStandardTableSearchState({
     fetchData(1, pageSize, sorter, []);
   }, [searchFields]);
 
-  const updateAdvancedField = useCallback((key: string, value: any) => {
+  const updateAdvancedField = useCallback((key: string, value: unknown) => {
     setAdvancedValues((previous) => ({ ...previous, [key]: value }));
   }, []);
 

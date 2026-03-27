@@ -24,7 +24,7 @@ import React from 'react';
 import dayjs from 'dayjs';
 import { DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import {
-    ExecutionTaskRecord,
+    type ExecutionTaskRecord,
     formatVariableDisplayValue,
     getTaskHosts,
 } from './templateListHelpers';
@@ -260,9 +260,9 @@ const TemplateDetailSummaryCards: React.FC<TemplateDetailSummaryCardsProps> = ({
                                 </div>
                                 {isEnabled && channelIds.length > 0 ? (
                                     <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                        {channelIds.map((channelId: string, index: number) => (
+                                        {channelIds.map((channelId: string) => (
                                             <div
-                                                key={`${channelId}-${index}`}
+                                                key={channelId}
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',

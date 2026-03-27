@@ -1,9 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useAccess } from '@umijs/max';
-import {
-  buildTriggerApiParams,
-  type TriggerTableRequestParams,
-} from '../triggerShared';
 import TriggerRecordDrawer from '../TriggerRecordDrawer';
 import TriggerTabsTable from '../TriggerTabsTable';
 import usePendingTriggerActions from '../usePendingTriggerActions';

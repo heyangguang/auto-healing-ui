@@ -82,12 +82,12 @@
 }
 
 .rule-card-inactive::before {
-    background: #bfbfbf !important;
+    background: #bfbfbf;
 }
 
 .rule-card-inactive:hover {
-    border-color: #d9d9d9 !important;
-    box-shadow: none !important;
+    border-color: #d9d9d9;
+    box-shadow: none;
 }
 
 /* ===== 触发模式 Tag（内联在标题行）===== */

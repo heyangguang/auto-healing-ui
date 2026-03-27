@@ -120,6 +120,7 @@ const PlatformSettingsPage: React.FC = () => {
 
     const headerIcon = (
         <svg viewBox="0 0 48 48" fill="none">
+            <title>平台设置图标</title>
             <circle cx="24" cy="24" r="8" stroke="currentColor" strokeWidth="2" fill="none" />
             <path d="M24 4v4M24 40v4M4 24h4M40 24h4M8.686 8.686l2.828 2.828M36.486 36.486l2.828 2.828M8.686 39.314l2.828-2.828M36.486 11.514l2.828-2.828"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

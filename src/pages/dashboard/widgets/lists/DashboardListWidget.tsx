@@ -4,29 +4,51 @@
  */
 import { UnorderedListOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography } from 'antd';
+import type { BadgeProps } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
-import { useDashboardSection } from '../useDashboardSection';
+import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
+
+type ListItem = Record<string, unknown> & {
+    id?: string;
+    title?: string;
+    name?: string;
+    username?: string;
+    subject?: string;
+    playbook_name?: string;
+    plugin_name?: string;
+    repo_name?: string;
+    flow_name?: string;
+    task_name?: string;
+    cmdb_item_name?: string;
+    display_name?: string;
+    status?: string;
+    severity?: string;
+    created_at?: string;
+    started_at?: string;
+    last_login_at?: string;
+    last_sync_at?: string;
+};
 
 interface ColumnDef {
     key: string;
     label?: string;
-    render?: (val: any, record: any) => React.ReactNode;
+    render?: (val: unknown, record: ListItem) => React.ReactNode;
 }
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 interface DashboardListWidgetProps extends Partial<WidgetComponentProps> {
-    section: string;
+    section: DashboardSectionKey;
     field: string;
     title: string;
     icon?: React.ReactNode;
     columns?: ColumnDef[];
-    onItemClick?: (item: any) => void;
+    onItemClick?: (item: ListItem) => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_COLORS: Record<string, BadgeProps['status']> = {
     success: 'success', completed: 'success', active: 'success', healed: 'success', sent: 'success', delivered: 'success', ready: 'success', synced: 'success',
     running: 'processing', processing: 'processing',
     pending: 'warning', pending_trigger: 'warning',
@@ -34,9 +56,9 @@ const STATUS_COLORS: Record<string, string> = {
     cancelled: 'default', skipped: 'default', inactive: 'default', offline: 'default', disabled: 'default', maintenance: 'warning',
 };
 
-const DashboardListWidget: React.FC<DashboardListWidgetProps> = ({ section, field, title, icon, columns, onItemClick, isEditing, onRemove }) => {
+const DashboardListWidget: React.FC<DashboardListWidgetProps> = ({ section, field, title, icon, onItemClick, isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection(section);
-    const items: any[] = data?.[field] ?? [];
+    const items = (data?.[field] as ListItem[] | undefined) ?? [];
 
     return (
         <WidgetWrapper title={title} icon={icon || <UnorderedListOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
@@ -44,7 +66,7 @@ const DashboardListWidget: React.FC<DashboardListWidgetProps> = ({ section, fiel
                 {items.length === 0 ? (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                 ) : (
-                    items.map((item: any, index: number) => {
+                    items.map((item, index) => {
                         const displayTitle = item.title || item.name || item.username || item.subject || item.playbook_name || item.plugin_name || item.repo_name || item.flow_name || item.task_name || item.cmdb_item_name || item.display_name || item.id?.slice?.(0, 8) || '-';
                         const statusVal = item.status || item.severity || '';
                         const badgeStatus = STATUS_COLORS[statusVal] || 'default';
@@ -56,7 +78,7 @@ const DashboardListWidget: React.FC<DashboardListWidgetProps> = ({ section, fiel
                                 onClick={() => onItemClick?.(item)}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                                    <Badge status={badgeStatus as any} />
+                                    <Badge status={badgeStatus} />
                                     <Typography.Text ellipsis style={{ flex: 1, fontSize: 12 }}>
                                         {displayTitle}
                                     </Typography.Text>

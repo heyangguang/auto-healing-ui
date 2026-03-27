@@ -249,17 +249,17 @@
 }
 
 .upcoming-run-countdown-urgent {
-    color: #ff4d4f !important;
+    color: #ff4d4f;
     font-weight: 600;
 }
 
 .upcoming-run-countdown-soon {
-    color: #faad14 !important;
+    color: #faad14;
     font-weight: 500;
 }
 
 .upcoming-run-countdown-later {
-    color: #52c41a !important;
+    color: #52c41a;
 }
 
 .upcoming-run-footer {

@@ -14,7 +14,7 @@ import SortToolbar from '@/components/SortToolbar';
 import {
     getHealingRules, deleteHealingRule, activateHealingRule, deactivateHealingRule,
 } from '@/services/auto-healing/healing-rules';
-import { getRuleStats } from '@/services/auto-healing/healing';
+import { getRuleSearchSchema, getRuleStats } from '@/services/auto-healing/healing';
 import {
     advancedSearchFields,
     buildRuleQueryParams,
@@ -193,7 +193,7 @@ const HealingRulesPage: React.FC = () => {
         return (
             <div className="git-stats-bar">
                 {items.map((s, i) => (
-                    <React.Fragment key={i}>
+                    <React.Fragment key={s.lbl}>
                         {i > 0 && <div className="git-stat-divider" />}
                         <div className="git-stat-item">
                             <span className={`git-stat-icon git-stat-icon-${s.cls}`}>{s.icon}</span>
@@ -232,7 +232,7 @@ const HealingRulesPage: React.FC = () => {
                 headerExtra={statsBar}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/tenant/healing/rules/search-schema"
+                searchSchemaRequest={getRuleSearchSchema}
                 onSearch={handleSearch}
                 primaryActionLabel="新建规则"
                 primaryActionIcon={<PlusOutlined />}

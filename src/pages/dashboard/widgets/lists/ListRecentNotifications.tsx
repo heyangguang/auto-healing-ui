@@ -1,5 +1,6 @@
 import { BellOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import type { BadgeProps } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
 import { useDashboardSection } from '../useDashboardSection';
@@ -8,6 +9,20 @@ import { NOTIF_LOG_STATUS_MAP } from '@/constants/commonDicts';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const STATUS_MAP = NOTIF_LOG_STATUS_MAP;
+type NotificationItem = {
+    id?: string;
+    status?: string;
+    subject?: string;
+    template_name?: string;
+    created_at?: string;
+};
+
+function resolveBadgeStatus(color?: string): BadgeProps['status'] {
+    if (color === 'success' || color === 'processing' || color === 'error' || color === 'warning') {
+        return color;
+    }
+    return 'default';
+}
 
 const ListRecentNotifications: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('notifications');
@@ -40,8 +55,9 @@ const ListRecentNotifications: React.FC<WidgetComponentProps> = ({ isEditing, on
                         </div>
 
                         <div style={{ flex: 1, overflow: 'auto' }}>
-                            {(Array.isArray(items) ? items : []).map((item: any, index: number) => {
-                                const st = STATUS_MAP[item.status] || { color: 'default', text: item.status };
+                            {(Array.isArray(items) ? items : []).map((item: NotificationItem, index: number) => {
+                                const status = item.status ?? '';
+                                const st = STATUS_MAP[status] || { color: 'default', text: status };
                                 const title = item.subject || item.template_name || item.id?.slice(0, 8);
 
                                 return (
@@ -60,7 +76,7 @@ const ListRecentNotifications: React.FC<WidgetComponentProps> = ({ isEditing, on
                                         }}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                                            <Badge status={st.color as any} />
+                                            <Badge status={resolveBadgeStatus(st.color)} />
                                             <Tooltip title={item.subject || title}>
                                                 <Typography.Text ellipsis style={{ fontSize: 13, color: '#333', fontWeight: 500 }}>
                                                     {title}

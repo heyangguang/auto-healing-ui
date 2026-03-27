@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getPreferences, patchPreferences } from '@/services/auto-healing/preferences';
 import type { ColumnSettingItem } from './ColumnSettingsModal';
+import type { JSONValue } from '@/types/json';
+import type { UserPreferencesEnvelope } from '@/services/auto-healing/preferences';
 
 interface PreferenceColumnDef {
   columnKey: string;
@@ -11,9 +13,10 @@ interface PreferenceColumnDef {
 
 type ColumnWidths = Record<string, number>;
 type ColumnWidthsUpdater = ColumnWidths | ((prev: ColumnWidths) => ColumnWidths);
+type PreferencesCacheValue = UserPreferencesEnvelope | null;
 
-let prefsCachePromise: Promise<any> | null = null;
-let prefsCacheResult: any = null;
+let prefsCachePromise: Promise<UserPreferencesEnvelope> | null = null;
+let prefsCacheResult: PreferencesCacheValue = null;
 let prefsCacheTime = 0;
 const PREFS_CACHE_TTL = 10_000;
 
@@ -56,7 +59,7 @@ export function useStandardTablePreferences(
   const [prefsLoaded, setPrefsLoaded] = useState(!preferenceKey);
   const saveTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  const schedulePreferenceSave = useCallback((key: string, value: any) => {
+  const schedulePreferenceSave = useCallback((key: string, value: JSONValue) => {
     if (!preferenceKey) {
       return;
     }
@@ -93,7 +96,7 @@ export function useStandardTablePreferences(
         const preferences = response?.preferences ?? {};
         const savedWidths = preferences[`${preferenceKey}_column_widths`];
         if (savedWidths && typeof savedWidths === 'object') {
-          setColumnWidths(savedWidths);
+          setColumnWidths(savedWidths as ColumnWidths);
         }
         const savedColumns = preferences[`${preferenceKey}_columns`] as string[] | undefined;
         if (Array.isArray(savedColumns) && savedColumns.length > 0) {
@@ -108,7 +111,7 @@ export function useStandardTablePreferences(
               }
             }
             for (const item of entries.values()) {
-              next.push({ ...item, visible: item.fixed ? true : false });
+              next.push({ ...item, visible: !!item.fixed });
             }
             return next;
           });

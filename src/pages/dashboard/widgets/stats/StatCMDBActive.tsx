@@ -5,10 +5,16 @@ import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import StatCardContent from './StatCardContent';
 
+type CMDBStatusItem = {
+    status?: string;
+    count?: number;
+};
+
 const StatCMDBActive: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('cmdb');
     const total = data?.total ?? 0;
-    const active = data?.by_status?.find((s: any) => s.status === 'active')?.count ?? 0;
+    const active = (data?.by_status as CMDBStatusItem[] | undefined)
+        ?.find((s) => s.status === 'active')?.count ?? 0;
     const rate = total > 0 ? ((active / total) * 100).toFixed(1) : '0.0';
     return (
         <WidgetWrapper title="资产活跃率" icon={<DatabaseOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>

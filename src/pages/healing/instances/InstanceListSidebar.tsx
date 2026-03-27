@@ -1,5 +1,5 @@
 import React from 'react';
-import { BranchesOutlined, ClockCircleOutlined, CloseCircleOutlined, HistoryOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { BranchesOutlined, ClockCircleOutlined, CloseCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { Empty, Space, Spin, Tag, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { formatInstanceDuration, getInstanceStatusConfig, hasFailedNodes, hasRejectedNodes } from './instanceStatus';

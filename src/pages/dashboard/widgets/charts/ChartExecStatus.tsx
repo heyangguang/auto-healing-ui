@@ -12,7 +12,7 @@ const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
     const { data, loading, refresh } = useDashboardSection('execution');
     const { ref, width, height } = useContainerSize();
 
-    const chartData = React.useMemo(() => buildExecutionStatusChartData(data), [data]);
+    const chartData = React.useMemo(() => buildExecutionStatusChartData(data ?? undefined), [data]);
 
     return (
         <WidgetWrapper title="执行状态分布" icon={<ExperimentOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>

@@ -2,7 +2,7 @@ import { extractDefaultValue } from '@/components/VariableInput';
 
 const OBJECT_VARIABLE_TYPES = new Set(['object', 'dict']);
 
-export type VariableValueMap = Record<string, unknown>;
+export type VariableValueMap = AutoHealing.JsonObject;
 
 export type TemplateVariableRecord = AutoHealing.PlaybookVariable & {
     name: string;
@@ -20,7 +20,10 @@ function isEmptyCollectionValue(value: unknown) {
     return false;
 }
 
-function normalizeInitialTypedValue(variable: TemplateVariableRecord, value: unknown) {
+function normalizeInitialTypedValue(
+    variable: TemplateVariableRecord,
+    value: AutoHealing.JsonValue | undefined,
+): AutoHealing.JsonValue | undefined {
     if (value === undefined || value === null || value === '') {
         return value;
     }
@@ -84,9 +87,12 @@ export function buildInitialVariableValues(
     return initialValues;
 }
 
-function normalizeObjectVariableValue(variable: TemplateVariableRecord, value: unknown) {
+function normalizeObjectVariableValue(
+    variable: TemplateVariableRecord,
+    value: AutoHealing.JsonValue | undefined,
+): AutoHealing.JsonObject | undefined {
     if (value === undefined || value === null || value === '') {
-        return value;
+        return undefined;
     }
     if (typeof value === 'object' && !Array.isArray(value)) {
         return value;
@@ -105,7 +111,10 @@ function normalizeObjectVariableValue(variable: TemplateVariableRecord, value: u
     }
 }
 
-function normalizeVariableSubmissionValue(variable: TemplateVariableRecord, value: unknown) {
+function normalizeVariableSubmissionValue(
+    variable: TemplateVariableRecord,
+    value: AutoHealing.JsonValue | undefined,
+): AutoHealing.JsonValue | undefined {
     if (variable.type === 'number') {
         if (value === undefined || value === null || value === '') {
             return value;

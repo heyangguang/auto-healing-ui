@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Typography, Space, Progress } from 'antd';
+import { Typography, Progress } from 'antd';
 import {
     CheckCircleFilled, PauseCircleFilled,
     ClockCircleFilled, ThunderboltFilled,
@@ -13,7 +13,7 @@ interface ScheduleDistributionProps {
     templateMap: Record<string, AutoHealing.ExecutionTask>;
 }
 
-const ScheduleDistribution: React.FC<ScheduleDistributionProps> = ({ schedules, templateMap }) => {
+const ScheduleDistribution: React.FC<ScheduleDistributionProps> = ({ schedules }) => {
     const stats = useMemo(() => {
         const total = schedules.length;
         const active = schedules.filter(s => s.enabled).length;

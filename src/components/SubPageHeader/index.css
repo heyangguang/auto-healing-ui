@@ -32,13 +32,13 @@
     gap: 12px;
 }
 
-.sub-page-header-back-btn {
-    color: #595959 !important;
-    padding: 4px !important;
+.sub-page-header-bar .sub-page-header-back-btn {
+    color: #595959;
+    padding: 4px;
 }
 
-.sub-page-header-back-btn:hover {
-    color: #1677ff !important;
+.sub-page-header-bar .sub-page-header-back-btn:hover {
+    color: #1677ff;
 }
 
 .sub-page-header-title {

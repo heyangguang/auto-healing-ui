@@ -8,7 +8,7 @@ import {
 import { getExecutionTaskStats, type ExecutionTaskStatsSummary } from '@/services/auto-healing/execution';
 import { getSecretsSources } from '@/services/auto-healing/secrets';
 import { createRequestSequence } from '@/utils/requestSequence';
-import { TemplateStats } from './templateListHelpers';
+import type { TemplateStats } from './templateListHelpers';
 
 const EMPTY_STATS: TemplateStats = {
     total: 0,

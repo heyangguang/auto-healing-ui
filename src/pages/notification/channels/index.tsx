@@ -1,11 +1,4 @@
-import {
-    BellOutlined,
-    CheckCircleOutlined,
-    DingdingOutlined,
-    GlobalOutlined,
-    MailOutlined,
-    StopOutlined,
-} from '@ant-design/icons';
+
 import {
     Button,
     Empty,
@@ -24,13 +17,13 @@ import {
     getChannels, deleteChannel, testChannel, updateChannel
 } from '@/services/auto-healing/notification';
 import './index.css';
-import { CHANNEL_TYPE_CONFIG, getChannelTypeConfig } from '@/constants/notificationDicts';
+import { getChannelTypeConfig } from '@/constants/notificationDicts';
 import NotificationChannelCard from './NotificationChannelCard';
 import NotificationChannelDetailDrawer from './NotificationChannelDetailDrawer';
 
 const { Text } = Typography;
 
-const getTypeConfig = (type: string) => getChannelTypeConfig(type);
+const _getTypeConfig = (type: string) => getChannelTypeConfig(type);
 
 type NotificationChannelsAdvancedSearch = {
     name?: string;
@@ -170,6 +163,7 @@ const NotificationChannelsPage: React.FC = () => {
             description={`管理通知渠道配置，当前共 ${total} 个渠道`}
             headerIcon={
                 <svg viewBox="0 0 48 48" fill="none">
+                    <title>通知渠道图标</title>
                     <path d="M24 6v4M24 38v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     <path d="M10 24c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="currentColor" strokeWidth="2" fill="none" />
                     <path d="M8 28h32v2a4 4 0 01-4 4H12a4 4 0 01-4-4v-2z" stroke="currentColor" strokeWidth="2" fill="none" />

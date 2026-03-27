@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, Descriptions, Drawer, Empty, Space, Tag, Tooltip, Typography, Alert } from 'antd';
+import { Button, Card, Descriptions, Drawer, Empty, Space, Tag, Typography, Alert } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { getChannelTypeConfig } from '@/constants/notificationDicts';
 
@@ -90,9 +90,9 @@ const NotificationChannelDetailDrawer: React.FC<NotificationChannelDetailDrawerP
             <Card size="small" title={`接收者列表 (${channel.recipients?.length || 0})`}>
                 {channel.recipients && channel.recipients.length > 0 ? (
                     <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                        {channel.recipients.map((recipient, index) => (
+                        {channel.recipients.map((recipient) => (
                             <div
-                                key={`${recipient}-${index}`}
+                                key={recipient}
                                 style={{
                                     padding: '8px 12px',
                                     borderBottom: '1px solid #f0f0f0',

@@ -36,6 +36,7 @@ const PlatformMessagesPage: React.FC = () => {
   } = usePlatformMessageSettings(access.canViewSiteMessageSettings);
   const headerIcon = (
     <svg viewBox="0 0 48 48" fill="none">
+      <title>平台消息图标</title>
       <path d="M6 10h36v24a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10z" stroke="currentColor" strokeWidth="2" fill="none" />
       <path d="M6 10l18 14L42 10" stroke="currentColor" strokeWidth="2" fill="none" />
     </svg>

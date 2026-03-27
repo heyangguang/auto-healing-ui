@@ -18,6 +18,14 @@ import type {
   ResetPasswordValues,
 } from './platformUserManagementTypes';
 
+type PlatformUsersSearchField = 'username' | 'display_name';
+type ApiErrorWithMessage = { response?: { data?: { message?: string } } };
+
+const getApiErrorMessage = (error: unknown, fallback: string): string =>
+  (error as ApiErrorWithMessage).response?.data?.message || fallback;
+const normalizeSearchField = (field?: string): PlatformUsersSearchField =>
+  field === 'display_name' ? 'display_name' : 'username';
+
 type UsePlatformUsersControllerResult = {
   advancedSearch?: PlatformUsersAdvancedSearch;
   closeDrawer: () => void;
@@ -57,7 +65,7 @@ export const usePlatformUsersController = (): UsePlatformUsersControllerResult =
   const [pageSize, setPageSize] = useState(16);
   const [total, setTotal] = useState(0);
   const [searchValue, setSearchValue] = useState('');
-  const [searchField, setSearchField] = useState('username');
+  const [searchField, setSearchField] = useState<PlatformUsersSearchField>('username');
   const [advancedSearch, setAdvancedSearch] = useState<PlatformUsersAdvancedSearch>();
   const [platformAdminRoleId, setPlatformAdminRoleId] = useState<string | null>(null);
   const [platformAdminActiveCount, setPlatformAdminActiveCount] = useState<number | null>(null);
@@ -74,7 +82,7 @@ export const usePlatformUsersController = (): UsePlatformUsersControllerResult =
     currentPage: number,
     currentPageSize: number,
     value?: string,
-    field?: string,
+    field?: PlatformUsersSearchField,
     advanced?: PlatformUsersAdvancedSearch,
   ) => {
     const requestSeq = listRequestSeqRef.current + 1;
@@ -168,7 +176,7 @@ export const usePlatformUsersController = (): UsePlatformUsersControllerResult =
   const handleSearch = useCallback((params: PlatformUsersSearchParams) => {
     const quickFilter = params.filters?.[0];
     const nextValue = quickFilter?.value || params.searchValue || '';
-    const nextField = quickFilter?.field || params.searchField || 'username';
+    const nextField = normalizeSearchField(quickFilter?.field || params.searchField);
     setSearchValue(nextValue);
     setSearchField(nextField);
     setAdvancedSearch(params.advancedSearch);
@@ -202,9 +210,8 @@ export const usePlatformUsersController = (): UsePlatformUsersControllerResult =
       loadData(nextPage, pageSize, searchValue, searchField, advancedSearch);
       loadStats();
       loadPlatformAdminActiveCount();
-    } catch (error: unknown) {
-      const requestError = error as { response?: { data?: { message?: string } } };
-      message.error(requestError.response?.data?.message || '删除失败');
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '删除失败'));
     }
   }, [advancedSearch, closeDrawer, loadData, loadPlatformAdminActiveCount, loadStats, page, pageSize, searchField, searchValue, total]);
 
@@ -271,30 +278,9 @@ export const usePlatformUsersController = (): UsePlatformUsersControllerResult =
   }, [advancedSearch, loadData, searchField, searchValue]);
 
   return {
-    advancedSearch,
-    closeDrawer,
-    closeResetPasswordModal,
-    data,
-    drawerLoading,
-    drawerOpen,
-    drawerUser,
-    handleDelete,
-    handlePageChange,
-    handleResetPassword,
-    handleSearch,
-    handleToggleStatus,
-    isLastPlatformAdmin,
-    loading,
-    openDrawer,
-    openResetPasswordModal,
-    page,
-    pageSize,
-    resetPwdForm,
-    resetPwdOpen,
-    searchField,
-    searchValue,
-    stats,
-    submitting,
+    advancedSearch, closeDrawer, closeResetPasswordModal, data, drawerLoading, drawerOpen, drawerUser, handleDelete,
+    handlePageChange, handleResetPassword, handleSearch, handleToggleStatus, isLastPlatformAdmin, loading, openDrawer,
+    openResetPasswordModal, page, pageSize, resetPwdForm, resetPwdOpen, searchField, searchValue, stats, submitting,
     total,
   };
 };

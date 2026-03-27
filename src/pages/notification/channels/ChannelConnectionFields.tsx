@@ -1,6 +1,6 @@
 import React from 'react';
 import { Col, Divider, Form, Input, InputNumber, Row, Segmented, Select, Switch } from 'antd';
-import { ChannelFormValues, type WebhookAuthType } from './channelFormHelpers';
+import type { ChannelFormValues, WebhookAuthType } from './channelFormHelpers';
 
 const { TextArea } = Input;
 

@@ -2,7 +2,7 @@ import { Empty, Spin, Tag, Typography } from 'antd';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { sanitizeHtml } from '@/utils/safeHtml';
+import { renderSanitizedHtml } from '@/utils/safeHtml';
 
 const { Text } = Typography;
 
@@ -18,8 +18,9 @@ const renderPreviewBody = (format: AutoHealing.TemplateFormat | undefined, body:
             <div
                 className="html-preview"
                 style={{ lineHeight: 1.6, fontSize: 14 }}
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) }}
-            />
+            >
+                {renderSanitizedHtml(body)}
+            </div>
         );
     }
     if (format === 'markdown') {

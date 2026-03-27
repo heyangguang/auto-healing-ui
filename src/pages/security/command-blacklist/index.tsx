@@ -9,6 +9,7 @@ import { Button, message, Typography } from 'antd';
 import StandardTable from '@/components/StandardTable';
 import { extractErrorMsg } from '@/utils/errorMsg';
 import {
+    getCommandBlacklistSearchSchema,
     getCommandBlacklist,
     deleteCommandBlacklistRule,
     toggleCommandBlacklistRule,
@@ -159,7 +160,7 @@ const CommandBlacklistPage: React.FC = () => {
             headerIcon={headerIcon}
             headerExtra={statsBar}
             searchFields={searchFields}
-            searchSchemaUrl="/api/v1/tenant/command-blacklist/search-schema"
+            searchSchemaRequest={getCommandBlacklistSearchSchema}
             primaryActionLabel="添加规则"
             primaryActionIcon={<PlusOutlined />}
             primaryActionDisabled={!canManage}

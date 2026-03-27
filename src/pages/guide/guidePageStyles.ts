@@ -1,5 +1,4 @@
 import { createStyles } from 'antd-style';
-
 export const useGuidePageStyles = createStyles(({ token }) => ({
     page: {
         display: 'flex',

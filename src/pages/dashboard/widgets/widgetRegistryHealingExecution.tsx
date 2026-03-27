@@ -45,7 +45,7 @@ import StatHealingPendingTriggers from './stats/StatHealingPendingTriggers';
 import StatHealingRulesTotal from './stats/StatHealingRulesTotal';
 import StatInstanceTotal from './stats/StatInstanceTotal';
 import StatPendingItems from './stats/StatPendingItems';
-import type { WidgetDefinition } from './widgetRegistryTypes';
+import type { WidgetComponentProps, WidgetDefinition } from './widgetRegistryTypes';
 
 export const HEALING_EXECUTION_WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
   'stat-healing-flows': {
@@ -102,25 +102,25 @@ export const HEALING_EXECUTION_WIDGET_REGISTRY: Record<string, WidgetDefinition>
     id: 'chart-instance-trend-7d', name: '近7天实例趋势', description: '最近7天实例创建趋势',
     category: 'chart', section: 'healing', icon: <LineChartOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardTrendChart section="healing" field="instance_trend_7d" title="近7天实例趋势" color="#722ed1" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardTrendChart section="healing" field="instance_trend_7d" title="近7天实例趋势" color="#722ed1" {...props} />,
   },
   'chart-approval-status': {
     id: 'chart-approval-status', name: '审批状态分布', description: '审批任务按状态分组',
     category: 'chart', section: 'healing', icon: <PieChartOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardPieChart section="healing" field="approvals_by_status" title="审批状态分布" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardPieChart section="healing" field="approvals_by_status" title="审批状态分布" {...props} />,
   },
   'chart-rule-trigger-mode': {
     id: 'chart-rule-trigger-mode', name: '规则触发模式', description: '规则按触发模式分组',
     category: 'chart', section: 'healing', icon: <PieChartOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardPieChart section="healing" field="rules_by_trigger_mode" title="规则触发模式" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardPieChart section="healing" field="rules_by_trigger_mode" title="规则触发模式" {...props} />,
   },
   'chart-flow-top10': {
     id: 'chart-flow-top10', name: '流程触发排行 TOP10', description: '按触发次数排序的流程排行榜',
     category: 'chart', section: 'healing', icon: <OrderedListOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardRankChart section="healing" field="flow_top10" title="流程触发排行 TOP10" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardRankChart section="healing" field="flow_top10" title="流程触发排行 TOP10" {...props} />,
   },
   'list-recent-instances': {
     id: 'list-recent-instances', name: '最近自愈实例', description: '最新的自愈流程实例列表',
@@ -171,25 +171,25 @@ export const HEALING_EXECUTION_WIDGET_REGISTRY: Record<string, WidgetDefinition>
     id: 'chart-exec-trend-7d', name: '近7天执行趋势', description: '最近7天执行记录趋势',
     category: 'chart', section: 'execution', icon: <LineChartOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardTrendChart section="execution" field="trend_7d" title="近7天执行趋势" color="#52c41a" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardTrendChart section="execution" field="trend_7d" title="近7天执行趋势" color="#52c41a" {...props} />,
   },
   'chart-exec-trend-30d': {
     id: 'chart-exec-trend-30d', name: '近30天执行趋势', description: '最近30天执行记录趋势',
     category: 'chart', section: 'execution', icon: <FundOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardTrendChart section="execution" field="trend_30d" title="近30天执行趋势" chartType="area" color="#13c2c2" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardTrendChart section="execution" field="trend_30d" title="近30天执行趋势" chartType="area" color="#13c2c2" {...props} />,
   },
   'chart-exec-schedule-type': {
     id: 'chart-exec-schedule-type', name: '定时任务类型', description: '按调度类型分组的饼图',
     category: 'chart', section: 'execution', icon: <PieChartOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardPieChart section="execution" field="schedules_by_type" title="定时任务类型" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardPieChart section="execution" field="schedules_by_type" title="定时任务类型" {...props} />,
   },
   'chart-exec-task-top10': {
     id: 'chart-exec-task-top10', name: '任务执行排行 TOP10', description: '按执行次数排序的任务排行榜',
     category: 'chart', section: 'execution', icon: <OrderedListOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardRankChart section="execution" field="task_top10" title="任务执行排行 TOP10" color="#1677ff" {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardRankChart section="execution" field="task_top10" title="任务执行排行 TOP10" color="#1677ff" {...props} />,
   },
   'list-recent-runs': {
     id: 'list-recent-runs', name: '最近执行记录', description: '最新的执行记录列表',
@@ -200,7 +200,7 @@ export const HEALING_EXECUTION_WIDGET_REGISTRY: Record<string, WidgetDefinition>
     id: 'list-failed-runs', name: '失败执行记录', description: '最近失败的执行记录',
     category: 'list', section: 'execution', icon: <WarningOutlined />,
     defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: any) => <DashboardListWidget section="execution" field="failed_runs" title="失败执行记录" icon={<WarningOutlined />} {...props} />,
+    component: (props: WidgetComponentProps) => <DashboardListWidget section="execution" field="failed_runs" title="失败执行记录" icon={<WarningOutlined />} {...props} />,
   },
   'list-schedules': {
     id: 'list-schedules', name: '定时任务列表', description: '当前配置的定时调度任务',

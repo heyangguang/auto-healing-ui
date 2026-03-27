@@ -2,7 +2,7 @@ import React from 'react';
 import { ClockCircleOutlined, MailOutlined } from '@ant-design/icons';
 import { Typography } from 'antd';
 import type { SiteMessage } from '@/services/auto-healing/siteMessage';
-import { sanitizeHtml } from '@/utils/safeHtml';
+import { renderSanitizedHtml } from '@/utils/safeHtml';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -56,10 +56,9 @@ function MessageContent({ content }: { content: string }) {
           消息内容
         </Text>
       </div>
-      <div
-        style={{ padding: '12px 16px', background: '#fafafa', borderRadius: 6, lineHeight: 1.8, fontSize: 14, color: '#333' }}
-        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
-      />
+      <div style={{ padding: '12px 16px', background: '#fafafa', borderRadius: 6, lineHeight: 1.8, fontSize: 14, color: '#333' }}>
+        {renderSanitizedHtml(content)}
+      </div>
     </>
   );
 }

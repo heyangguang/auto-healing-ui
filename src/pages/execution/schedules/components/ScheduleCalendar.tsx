@@ -68,15 +68,20 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, template
         const startDow = (firstDay.day() + 6) % 7;
         const daysInMonth = currentMonth.daysInMonth();
 
-        const days: (dayjs.Dayjs | null)[] = [];
+        const days: Array<{ day: dayjs.Dayjs | null; key: string }> = [];
         // Padding before
-        for (let i = 0; i < startDow; i++) days.push(null);
+        for (let i = 0; i < startDow; i++) days.push({ day: null, key: `pad-start-${i}` });
         // Month days
         for (let d = 1; d <= daysInMonth; d++) {
-            days.push(currentMonth.date(d));
+            const date = currentMonth.date(d);
+            days.push({ day: date, key: `day-${date.format('YYYY-MM-DD')}` });
         }
         // Padding after (fill to complete row of 7)
-        while (days.length % 7 !== 0) days.push(null);
+        let padAfter = 0;
+        while (days.length % 7 !== 0) {
+            days.push({ day: null, key: `pad-end-${padAfter}` });
+            padAfter += 1;
+        }
 
         return days;
     }, [currentMonth]);
@@ -92,6 +97,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, template
             {/* Month Navigation */}
             <div className="calendar-header">
                 <button
+                    type="button"
                     className="calendar-nav-btn"
                     onClick={() => setCurrentMonth(m => m.subtract(1, 'month'))}
                 >
@@ -101,6 +107,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, template
                     {currentMonth.format('YYYY 年 M 月')}
                 </Text>
                 <button
+                    type="button"
                     className="calendar-nav-btn"
                     onClick={() => setCurrentMonth(m => m.add(1, 'month'))}
                 >
@@ -117,17 +124,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, template
 
             {/* Day Grid */}
             <div className="calendar-grid">
-                {calendarDays.map((day, idx) => {
-                    if (!day) return <div key={idx} className="calendar-cell calendar-cell-empty" />;
+                {calendarDays.map(({ day, key }) => {
+                    if (!day) return <div key={key} className="calendar-cell calendar-cell-empty" />;
 
-                    const key = day.format('YYYY-MM-DD');
-                    const density = densityMap[key];
-                    const isToday = key === today;
+                    const dayKey = day.format('YYYY-MM-DD');
+                    const density = densityMap[dayKey];
+                    const isToday = dayKey === today;
                     const opacity = density ? Math.max(0.2, density.count / maxDensity) : 0;
 
                     return (
                         <Tooltip
-                            key={idx}
+                            key={key}
                             title={density ? (
                                 <Space orientation="vertical" size={2}>
                                     <Text style={{ color: '#fff', fontWeight: 600 }}>{day.format('M月D日')}</Text>
@@ -165,9 +172,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, template
             <div className="calendar-legend">
                 <Text type="secondary" style={{ fontSize: 11 }}>密度：</Text>
                 <div className="calendar-legend-scale">
-                    {[0.15, 0.35, 0.55, 0.75, 1].map((op, i) => (
+                    {[0.15, 0.35, 0.55, 0.75, 1].map((op) => (
                         <div
-                            key={i}
+                            key={op}
                             className="calendar-legend-cell"
                             style={{ backgroundColor: `rgba(24, 144, 255, ${op})` }}
                         />

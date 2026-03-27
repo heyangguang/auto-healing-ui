@@ -45,7 +45,6 @@ export const useDashboardWorkspaceActions = ({
   notifyWorkspaceMutation,
   renameModal,
   saveState,
-  saveSystemWorkspaceToBackend,
   setIsEditing,
   setRenameModal,
   setSaveSystemModalOpen,

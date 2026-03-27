@@ -33,6 +33,15 @@ type NodePrimaryCardsProps = {
 const descLabelStyle = { background: '#fafafa', color: '#595959', width: 100, fontSize: 12 };
 const descContentStyle = { color: '#262626', fontSize: 13 };
 
+function buildDuplicateSafeEntries(values: string[]) {
+    const counts = new Map<string, number>();
+    return values.map((value) => {
+        const count = (counts.get(value) || 0) + 1;
+        counts.set(value, count);
+        return { key: `${value}-${count}`, value };
+    });
+}
+
 const getBadgeStatus = (status?: string) => {
     if (status === 'failed' || status === 'error' || status === 'rejected') return 'error';
     if (status === 'completed' || status === 'success' || status === 'approved') return 'success';
@@ -167,9 +176,9 @@ const NodePrimaryCards: React.FC<NodePrimaryCardsProps> = ({
             {isExecution && stdoutLogs.length > 0 && (
                 <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><CodeOutlined style={{ marginRight: 6 }} />执行日志 ({stdoutLogs.length} 行)</span>} style={{ marginBottom: 16 }} bodyStyle={{ padding: 0 }}>
                     <div style={{ background: '#0d1117', padding: '12px 16px', maxHeight: 250, overflow: 'auto', fontFamily: "'SF Mono', Menlo, Monaco, Consolas, monospace", fontSize: 11.5, lineHeight: 1.6 }}>
-                        {stdoutLogs.slice(-30).map((log, index) => (
-                            <div key={index} style={{ color: log.log_level === 'error' ? '#ff6b6b' : log.log_level === 'changed' ? '#faad14' : log.log_level === 'ok' ? '#52c41a' : log.log_level === 'skipping' ? '#8c8c8c' : '#c9d1d9', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                                {log.message}
+                        {buildDuplicateSafeEntries(stdoutLogs.slice(-30).map((log) => log.message)).map((entry, index) => (
+                            <div key={entry.key} style={{ color: stdoutLogs.slice(-30)[index].log_level === 'error' ? '#ff6b6b' : stdoutLogs.slice(-30)[index].log_level === 'changed' ? '#faad14' : stdoutLogs.slice(-30)[index].log_level === 'ok' ? '#52c41a' : stdoutLogs.slice(-30)[index].log_level === 'skipping' ? '#8c8c8c' : '#c9d1d9', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                                {entry.value}
                             </div>
                         ))}
                     </div>
@@ -185,8 +194,8 @@ const NodePrimaryCards: React.FC<NodePrimaryCardsProps> = ({
             {nodeType === 'host_extractor' && nodeState?.extracted_hosts && (
                 <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><AimOutlined style={{ color: '#52c41a', marginRight: 6 }} />提取结果</span>} style={{ marginBottom: 16, borderLeft: '3px solid #52c41a' }}>
                     <Space size={[6, 6]} wrap>
-                        {(Array.isArray(nodeState.extracted_hosts) ? nodeState.extracted_hosts : String(nodeState.extracted_hosts).split(',').map((host) => host.trim()).filter(Boolean)).map((host, index) => (
-                            <Tag key={`${host}-${index}`} color="green" style={{ margin: 0 }}>{host}</Tag>
+                        {buildDuplicateSafeEntries(Array.isArray(nodeState.extracted_hosts) ? nodeState.extracted_hosts : String(nodeState.extracted_hosts).split(',').map((host) => host.trim()).filter(Boolean)).map((host) => (
+                            <Tag key={host.key} color="green" style={{ margin: 0 }}>{host.value}</Tag>
                         ))}
                     </Space>
                     {nodeState.extract_mode && <div style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>提取方式: {nodeState.extract_mode}{nodeState.source_field ? ` | 来源: ${nodeState.source_field}` : ''}</div>}
@@ -199,13 +208,13 @@ const NodePrimaryCards: React.FC<NodePrimaryCardsProps> = ({
                     {Array.isArray(nodeState.validated_hosts) && nodeState.validated_hosts.length > 0 && (
                         <div style={{ marginBottom: 8 }}>
                             <span style={{ fontSize: 12, color: '#52c41a', fontWeight: 500 }}>✓ 验证通过 ({nodeState.validated_hosts.length})</span>
-                            <div style={{ marginTop: 4 }}><Space size={[4, 4]} wrap>{nodeState.validated_hosts.map((host, index) => <Tag key={`${host}-${index}`} color="success" style={{ margin: 0 }}>{host}</Tag>)}</Space></div>
+                            <div style={{ marginTop: 4 }}><Space size={[4, 4]} wrap>{buildDuplicateSafeEntries(nodeState.validated_hosts).map((host) => <Tag key={host.key} color="success" style={{ margin: 0 }}>{host.value}</Tag>)}</Space></div>
                         </div>
                     )}
                     {Array.isArray(nodeState.invalid_hosts) && nodeState.invalid_hosts.length > 0 && (
                         <div>
                             <span style={{ fontSize: 12, color: '#ff4d4f', fontWeight: 500 }}>✗ 未通过 ({nodeState.invalid_hosts.length})</span>
-                            <div style={{ marginTop: 4 }}><Space size={[4, 4]} wrap>{nodeState.invalid_hosts.map((host, index) => <Tag key={`${host}-${index}`} color="error" style={{ margin: 0 }}>{host}</Tag>)}</Space></div>
+                            <div style={{ marginTop: 4 }}><Space size={[4, 4]} wrap>{buildDuplicateSafeEntries(nodeState.invalid_hosts).map((host) => <Tag key={host.key} color="error" style={{ margin: 0 }}>{host.value}</Tag>)}</Space></div>
                         </div>
                     )}
                 </Card>

@@ -100,6 +100,24 @@ export interface ServiceItem {
     accesses?: string[];
 }
 
+interface NavRouteConfig {
+    path: string;
+    name?: string;
+    icon?: string;
+    access?: string;
+    navAccess?: string;
+    navIcon?: string;
+    categoryId?: string;
+    categoryLabel?: string;
+    label?: string;
+    desc?: string;
+    redirect?: string;
+    hideInMenu?: boolean;
+    routes?: NavRouteConfig[];
+}
+
+const isNonEmptyString = (value: string | undefined): value is string => typeof value === 'string' && value.length > 0;
+
 /* ──── 分类排序优先级 ──── */
 const CATEGORY_ORDER = [
     'dashboard', 'assets', 'execution', 'healing',
@@ -111,7 +129,7 @@ function buildNavData(): { categories: Category[]; services: Record<string, Serv
     const categoriesMap = new Map<string, Category>();
     const services: Record<string, ServiceItem[]> = {};
 
-    for (const route of routes as any[]) {
+    for (const route of routes as NavRouteConfig[]) {
         const catId = route.categoryId;
         if (!catId) continue;
 
@@ -121,7 +139,7 @@ function buildNavData(): { categories: Category[]; services: Record<string, Serv
             categoriesMap.set(catId, {
                 id: catId,
                 label: route.categoryLabel || route.name || catId,
-                icon: ICON_MAP[catIcon] || <AppstoreOutlined />,
+                icon: (catIcon && ICON_MAP[catIcon]) || <AppstoreOutlined />,
             });
         }
 
@@ -138,7 +156,7 @@ function buildNavData(): { categories: Category[]; services: Record<string, Serv
                     desc: child.desc,
                     icon: child.navIcon ? ICON_MAP[child.navIcon] : undefined,
                     access: child.navAccess || child.access || route.navAccess || route.access,
-                    accesses: [route.access, route.navAccess, child.access, child.navAccess].filter(Boolean),
+                    accesses: [route.access, route.navAccess, child.access, child.navAccess].filter(isNonEmptyString),
                 });
             }
             if (items.length > 0) {
@@ -153,7 +171,7 @@ function buildNavData(): { categories: Category[]; services: Record<string, Serv
                 desc: route.desc,
                 icon: route.navIcon ? ICON_MAP[route.navIcon] : undefined,
                 access: route.navAccess || route.access,
-                accesses: [route.access, route.navAccess].filter(Boolean),
+                accesses: [route.access, route.navAccess].filter(isNonEmptyString),
             }];
         }
     }
@@ -161,7 +179,10 @@ function buildNavData(): { categories: Category[]; services: Record<string, Serv
     // 按优先级排序
     const categories = CATEGORY_ORDER
         .filter(id => categoriesMap.has(id))
-        .map(id => categoriesMap.get(id)!);
+        .flatMap((id) => {
+            const category = categoriesMap.get(id);
+            return category ? [category] : [];
+        });
 
     // 加入未列在优先级中的分类
     for (const [id, cat] of categoriesMap) {
@@ -182,7 +203,7 @@ export const SERVICES: Record<string, ServiceItem[]> = services;
 export function findServiceByPath(pathname: string): ServiceItem | null {
     for (const items of Object.values(SERVICES)) {
         const match = items.find(
-            (item) => pathname === item.path || pathname.startsWith(item.path + '/'),
+            (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
         );
         if (match) return match;
     }

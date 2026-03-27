@@ -4,10 +4,18 @@ import { getPlaybooks, getPlaybookStats } from '@/services/auto-healing/playbook
 import { getCachedGitRepoInventory, getCachedPlaybookInventory } from '@/utils/selectorInventoryCache';
 import { fetchAllPages } from '@/utils/fetchAllPages';
 import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
-import { buildPlaybookQueryParams, buildPlaybookSearchParams } from './playbookSearchParams';
+import {
+    buildPlaybookQueryParams,
+    buildPlaybookSearchParams,
+    type PlaybookSearchParams,
+} from './playbookSearchParams';
 
 const INITIAL_STATS = { total: 0, ready: 0, pendingScan: 0, pendingOnline: 0, error: 0 };
 type PlaybookStatsState = typeof INITIAL_STATS;
+type PlaybookDateRangeValue = [Parameters<typeof toDayRangeStartISO>[0], Parameters<typeof toDayRangeEndISO>[0]];
+type PlaybookAdvancedSearchParams = Record<string, unknown> & {
+    created_at?: PlaybookDateRangeValue;
+};
 
 function mapPlaybookStats(statsResponse: Awaited<ReturnType<typeof getPlaybookStats>>) {
     const byStatus = statsResponse.by_status || [];
@@ -79,11 +87,10 @@ function useExpandedRepoKeys(groupedPlaybooks: Record<string, { repo: AutoHealin
 
     return { expandedKeys, toggleRepo };
 }
-
 export function usePlaybookInventoryState() {
     const [playbooks, setPlaybooks] = useState<AutoHealing.Playbook[]>([]);
     const [repos, setRepos] = useState<AutoHealing.GitRepository[]>([]);
-    const [searchParams, setSearchParams] = useState<Record<string, any>>({});
+    const [searchParams, setSearchParams] = useState<PlaybookSearchParams>({});
     const [initialized, setInitialized] = useState(false);
     const [stats, setStats] = useState(INITIAL_STATS);
     const playbookRequestIdRef = useRef(0);
@@ -94,7 +101,7 @@ export function usePlaybookInventoryState() {
         setPlaybooks(items);
     }, []);
 
-    const loadPlaybooks = useCallback(async (params?: Record<string, any>) => {
+    const loadPlaybooks = useCallback(async (params?: PlaybookSearchParams) => {
         const requestId = playbookRequestIdRef.current + 1;
         playbookRequestIdRef.current = requestId;
         const nextParams = params || searchParams;
@@ -177,14 +184,20 @@ export function usePlaybookInventoryState() {
     }, [playbooks, repos]);
     const expansion = useExpandedRepoKeys(groupedPlaybooks);
 
-    const handleSearch = useCallback(({ advancedSearch, searchField, searchValue }: { advancedSearch?: Record<string, any>; searchField?: string; searchValue?: string }) => {
-        const params = buildPlaybookSearchParams(advancedSearch);
+    const handleSearch = useCallback(({ advancedSearch, searchField, searchValue }: {
+        advancedSearch?: PlaybookAdvancedSearchParams;
+        searchField?: string;
+        searchValue?: string;
+    }) => {
+        const createdAt = advancedSearch?.created_at;
+        const { created_at: _createdAt, ...searchFields } = advancedSearch || {};
+        const params = buildPlaybookSearchParams(searchFields);
         if (searchField && searchValue !== undefined) {
             params[searchField.replace(/^__enum__/, '')] = searchValue;
         }
-        if (Array.isArray(advancedSearch?.created_at) && advancedSearch.created_at.length === 2) {
-            if (advancedSearch.created_at[0]) params.created_from = toDayRangeStartISO(advancedSearch.created_at[0]);
-            if (advancedSearch.created_at[1]) params.created_to = toDayRangeEndISO(advancedSearch.created_at[1]);
+        if (Array.isArray(createdAt) && createdAt.length === 2) {
+            if (createdAt[0]) params.created_from = toDayRangeStartISO(createdAt[0]);
+            if (createdAt[1]) params.created_to = toDayRangeEndISO(createdAt[1]);
             delete params.created_at;
         }
         setSearchParams(params);

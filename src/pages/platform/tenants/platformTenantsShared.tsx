@@ -83,6 +83,7 @@ export const advancedSearchFields: AdvancedSearchField[] = [
 
 export const headerIcon = (
   <svg viewBox="0 0 48 48" fill="none">
+    <title>租户列表图标</title>
     <rect x="4" y="20" width="40" height="24" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
     <path d="M12 20V14a12 12 0 0 1 24 0v6" stroke="currentColor" strokeWidth="2" fill="none" />
     <rect x="18" y="28" width="12" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" />

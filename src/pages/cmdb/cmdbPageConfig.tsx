@@ -1,7 +1,6 @@
 import React from 'react';
 import {
     CloudOutlined,
-    CloudServerOutlined,
     LinuxOutlined,
     WindowsOutlined,
 } from '@ant-design/icons';
@@ -103,6 +102,7 @@ export const advancedSearchFields: AdvancedSearchField[] = [
 
 export const headerIcon = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>CMDB 资产图标</title>
         <rect x="6" y="8" width="36" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
         <rect x="6" y="22" width="36" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
         <rect x="6" y="36" width="36" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.5" />

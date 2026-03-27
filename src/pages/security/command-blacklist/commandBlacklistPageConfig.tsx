@@ -13,8 +13,6 @@ import {
     SecurityScanOutlined,
     WarningOutlined,
 } from '@ant-design/icons';
-import { Tag } from 'antd';
-import type { CommandBlacklistRule } from '@/services/auto-healing/commandBlacklist';
 
 export const SEVERITY_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode; tagColor: string }> = {
     critical: { label: '严重', color: '#ff4d4f', icon: <FireOutlined />, tagColor: 'red' },
@@ -37,6 +35,7 @@ export const MATCH_TYPE_CONFIG: Record<string, { label: string; desc: string; ic
 
 export const headerIcon = (
     <svg viewBox="0 0 48 48" fill="none">
+        <title>命令黑名单图标</title>
         <rect x="4" y="8" width="40" height="32" rx="3" stroke="currentColor" strokeWidth="2" fill="none" />
         <path d="M4 16h40" stroke="currentColor" strokeWidth="2" opacity="0.3" />
         <circle cx="10" cy="12" r="1.5" fill="currentColor" opacity="0.4" />

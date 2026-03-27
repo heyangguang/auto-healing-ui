@@ -32,5 +32,5 @@ export interface ExecutionMissionControlProps {
     onBack: () => void;
     onExecute: () => void;
     onSkipNotificationChange: (checked: boolean) => void;
-    onVariableChange: (name: string, value: unknown) => void;
+    onVariableChange: (name: string, value: AutoHealing.JsonValue | undefined) => void;
 }

@@ -7,6 +7,14 @@ import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
+type PendingApprovalItem = {
+    id?: string;
+    node_id?: string;
+    flow_name?: string;
+    flow_instance_id?: string;
+    created_at?: string;
+};
+
 const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
     const { data, loading, refresh } = useDashboardSection('healing');
@@ -37,7 +45,7 @@ const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRem
                             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                         </div>
                     ) : (
-                        items.map((item: any, index: number) => {
+                        items.map((item: PendingApprovalItem, index: number) => {
                             const nodeId = item.node_id || item.id?.slice(0, 8);
                             const flowName = item.flow_name || '-';
                             const instanceId = item.flow_instance_id || '-';

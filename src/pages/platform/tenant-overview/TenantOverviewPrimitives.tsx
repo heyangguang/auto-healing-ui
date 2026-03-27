@@ -11,7 +11,8 @@ export const AreaChart: React.FC<{
 }> = ({ data, labels, color, height = 140 }) => {
   if (!data || data.length < 2) {
     return (
-      <svg viewBox={`0 0 300 ${height}`} style={{ width: '100%', height }}>
+      <svg role="img" viewBox={`0 0 300 ${height}`} style={{ width: '100%', height }}>
+        <title>暂无数据</title>
         <text x="150" y={height / 2} textAnchor="middle" fontSize={12} fill="#d9d9d9">
           暂无数据
         </text>
@@ -33,7 +34,8 @@ export const AreaChart: React.FC<{
   const gradientId = `tenant-overview-${color.replace('#', '')}`;
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height }}>
+    <svg role="img" viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height }}>
+      <title>数据趋势图</title>
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity={0.25} />

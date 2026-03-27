@@ -42,6 +42,7 @@ const AuditTrendSparkline: React.FC<AuditTrendSparklineProps> = ({
       viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
       className={className}
     >
+      <title>审计趋势折线图</title>
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={strokeColor} stopOpacity="0.3" />

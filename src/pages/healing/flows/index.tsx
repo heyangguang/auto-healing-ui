@@ -8,7 +8,13 @@ import {
 import { history, useAccess } from '@umijs/max';
 import StandardTable from '@/components/StandardTable';
 import SortToolbar from '@/components/SortToolbar';
-import { getFlows, deleteFlow, updateFlow, getFlowStats } from '@/services/auto-healing/healing';
+import {
+    deleteFlow,
+    getFlowSearchSchema,
+    getFlowStats,
+    getFlows,
+    updateFlow,
+} from '@/services/auto-healing/healing';
 import {
     advancedSearchFields,
     buildFlowQueryParams,
@@ -192,7 +198,7 @@ const HealingFlowsPage: React.FC = () => {
                 headerExtra={<FlowStatsBar stats={stats} />}
                 searchFields={searchFields}
                 advancedSearchFields={advancedSearchFields}
-                searchSchemaUrl="/api/v1/tenant/healing/flows/search-schema"
+                searchSchemaRequest={getFlowSearchSchema}
                 onSearch={handleSearch}
                 primaryActionLabel="新建流程"
                 primaryActionIcon={<PlusOutlined />}

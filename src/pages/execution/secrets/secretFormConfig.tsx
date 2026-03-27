@@ -1,7 +1,22 @@
 import React from 'react';
 import { FileOutlined, GlobalOutlined, KeyOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import type { SecretFormValues, SecretsSourceConfig, SecretsSourceRecord } from './secretFormTypes';
-export type { BuildSecretsPayloadOptions, SecretFormValues, SecretsSourceConfig, SecretsSourceRecord } from './secretFormTypes';
+import type {
+    SecretFormValues,
+    SecretsSourceConfig,
+    SecretsSourceRecord,
+    VaultAuthType,
+    WebhookAuthType,
+    WebhookMethod,
+} from './secretFormTypes';
+export type {
+    BuildSecretsPayloadOptions,
+    SecretFormValues,
+    SecretsSourceConfig,
+    SecretsSourceRecord,
+    VaultAuthType,
+    WebhookAuthType,
+    WebhookMethod,
+} from './secretFormTypes';
 export { buildSecretsSourcePayload } from './secretFormPayload';
 
 export const SOURCE_TYPES = [
@@ -31,7 +46,22 @@ export function hasFormErrorFields(error: unknown): error is { errorFields: unkn
     return typeof error === 'object' && error !== null && 'errorFields' in error;
 }
 
-export function getSecretFormInitialValues() {
+export function normalizeVaultAuthType(value?: string): VaultAuthType {
+    return value === 'approle' ? 'approle' : 'token';
+}
+
+export function normalizeWebhookAuthType(value?: string): WebhookAuthType {
+    if (value === 'basic' || value === 'bearer' || value === 'api_key') {
+        return value;
+    }
+    return 'none';
+}
+
+export function normalizeWebhookMethod(value?: string): WebhookMethod {
+    return value === 'GET' ? 'GET' : 'POST';
+}
+
+export function getSecretFormInitialValues(): Partial<SecretFormValues> {
     return {
         auth_type: 'ssh_key',
         is_default: false,
@@ -47,7 +77,7 @@ export function getAvailableSourceTypes(authType: string) {
     return SOURCE_TYPES.filter((item) => authType === 'ssh_key' || item.supportPassword);
 }
 
-export function mapSecretsSourceToFormValues(source: SecretsSourceRecord) {
+export function mapSecretsSourceToFormValues(source: SecretsSourceRecord): Partial<SecretFormValues> {
     const config = source.config || {};
     return {
         auth_type: source.auth_type,
@@ -58,7 +88,7 @@ export function mapSecretsSourceToFormValues(source: SecretsSourceRecord) {
         priority: source.priority,
         type: source.type,
         vault_address: config.address,
-        vault_auth_type: config.auth?.type || 'token',
+        vault_auth_type: normalizeVaultAuthType(config.auth?.type),
         vault_field_password: config.field_mapping?.password,
         vault_field_private_key: config.field_mapping?.private_key,
         vault_field_username: config.field_mapping?.username,
@@ -66,12 +96,12 @@ export function mapSecretsSourceToFormValues(source: SecretsSourceRecord) {
         vault_role_id: config.auth?.role_id,
         vault_secret_path: config.secret_path || (config as SecretsSourceConfig & { path_template?: string }).path_template,
         webhook_api_key_header: config.auth?.header_name,
-        webhook_auth_type: config.auth?.type || 'none',
+        webhook_auth_type: normalizeWebhookAuthType(config.auth?.type),
         webhook_basic_username: config.auth?.username,
         webhook_field_password: config.field_mapping?.password,
         webhook_field_private_key: config.field_mapping?.private_key,
         webhook_field_username: config.field_mapping?.username,
-        webhook_method: config.method || 'POST',
+        webhook_method: normalizeWebhookMethod(config.method),
         webhook_query_key: config.query_key,
         webhook_response_path: config.response_data_path,
         webhook_url: config.url,

@@ -153,7 +153,7 @@ const ExecutionRunDetail: React.FC = () => {
     }, [closeCurrentStream, id, loadLogs, loadRun, startStream]);
     refreshRunDetailRef.current = refreshRunDetail;
     useEffect(() => {
-        fetchAllPages<any>((page, pageSize) => getSecretsSources({ page, page_size: pageSize } as any)).then(setSecretsSources);
+        fetchAllPages<AutoHealing.SecretsSource>((page, pageSize) => getSecretsSources({ page, page_size: pageSize })).then(setSecretsSources);
     }, []);
     useEffect(() => {
         void refreshRunDetail({ reset: true });

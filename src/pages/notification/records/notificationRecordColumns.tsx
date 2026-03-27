@@ -59,7 +59,8 @@ export const buildNotificationRecordColumns = (options: {
         width: 180,
         render: (_value, record) => {
             const executionRun = record.execution_run;
-            if (!executionRun?.task?.name || !record.execution_run_id) return <Text type="secondary">-</Text>;
+            const executionRunId = record.execution_run_id;
+            if (!executionRun?.task?.name || !executionRunId) return <Text type="secondary">-</Text>;
             const triggeredByConfig = getTriggeredByConfig(executionRun.triggered_by);
             return (
                 <div style={{ lineHeight: 1.4 }}>
@@ -68,7 +69,7 @@ export const buildNotificationRecordColumns = (options: {
                             onClick={(event) => {
                                 event.preventDefault();
                                 event.stopPropagation();
-                                options.onOpenExecution(record.execution_run_id!);
+                                options.onOpenExecution(executionRunId);
                             }}
                             style={{ fontWeight: 500, cursor: 'pointer' }}
                         >

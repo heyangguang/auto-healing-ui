@@ -64,7 +64,7 @@ function refresh() {
     if (run?.length) {
         const colors: Record<string, string> = {};
         const labels: Record<string, string> = {};
-        const map: Record<string, any> = {};
+        const map: Record<string, { color: string; text: string }> = {};
         run.forEach(i => {
             colors[i.dict_key] = i.color || '#8c8c8c';
             labels[i.dict_key] = i.label;

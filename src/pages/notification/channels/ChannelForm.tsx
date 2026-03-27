@@ -53,7 +53,11 @@ const ChannelFormPage: React.FC = () => {
         setLoading(true);
         (async () => {
             try {
-                const channel: ChannelDetail = await getChannel(params.id!);
+                const channelId = params.id;
+                if (!channelId) {
+                    return;
+                }
+                const channel: ChannelDetail = await getChannel(channelId);
                 setLoadFailed(false);
                 const originalConfig = channel.config || {};
                 originalConfigRef.current = originalConfig;

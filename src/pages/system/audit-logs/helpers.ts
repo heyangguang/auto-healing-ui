@@ -44,7 +44,9 @@ export const applyAuditSearchFilters = (
   Object.entries(advancedSearch).forEach(([key, value]) => {
     if (SPECIAL_AUDIT_FILTER_KEYS.includes(key as typeof SPECIAL_AUDIT_FILTER_KEYS[number])) return;
     if (value === undefined || value === null || value === '' || Array.isArray(value)) return;
-    params[key] = value;
+    if (typeof value === 'string' || typeof value === 'number') {
+      params[key] = value;
+    }
   });
 };
 

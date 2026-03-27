@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, } from 'react';
 import { useLocation } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import SideNav from '@/components/SideNav';

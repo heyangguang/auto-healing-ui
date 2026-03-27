@@ -13,7 +13,6 @@ import {
   getFlow,
   getFlows,
   getInstance,
-  getInstanceLogs,
   getInstances,
   getRule,
   getRules,
@@ -93,15 +92,15 @@ describe('auto-healing healing service', () => {
       search: 'restart',
     });
     expect(getTenantHealingFlowsId).toHaveBeenCalledWith({ id: 'flow-1' });
-    expect(postTenantHealingFlows).toHaveBeenCalledWith({ data: {} });
+    expect(postTenantHealingFlows).toHaveBeenCalledWith({});
     expect(putTenantHealingFlowsId).toHaveBeenCalledWith(
       { id: 'flow-1' },
-      { data: {} },
+      {},
     );
     expect(deleteTenantHealingFlowsId).toHaveBeenCalledWith({ id: 'flow-1' });
     expect(postTenantHealingFlowsIdDryRun).toHaveBeenCalledWith(
       { id: 'flow-1' },
-      { data: {} },
+      {},
     );
   });
 
@@ -131,15 +130,17 @@ describe('auto-healing healing service', () => {
     await rejectTask('approval-1', {} as AutoHealing.ApprovalDecisionRequest);
 
     expect(getTenantHealingApprovals).toHaveBeenCalledWith({
-      params: { page: 1, page_size: 20, status: 'pending' },
+      page: 1,
+      page_size: 20,
+      status: 'pending',
     });
     expect(postTenantHealingApprovalsIdApprove).toHaveBeenCalledWith(
       { id: 'approval-1' },
-      { data: {} },
+      {},
     );
     expect(postTenantHealingApprovalsIdReject).toHaveBeenCalledWith(
       { id: 'approval-1' },
-      { data: {} },
+      {},
     );
   });
 
@@ -158,7 +159,7 @@ describe('auto-healing healing service', () => {
       flow_id: 'flow-1',
     });
     expect(getTenantHealingRulesId).toHaveBeenCalledWith({ id: 'rule-1' });
-    expect(postTenantHealingRules).toHaveBeenCalledWith({ data: {} });
+    expect(postTenantHealingRules).toHaveBeenCalledWith({});
     expect(postTenantHealingRulesIdActivate).toHaveBeenCalledWith({ id: 'rule-1' });
     expect(getTenantHealingInstances).toHaveBeenCalledWith({
       page: 2,
@@ -173,7 +174,6 @@ describe('auto-healing healing service', () => {
     await updateRule('rule-1', {} as AutoHealing.UpdateRuleRequest);
     await deleteRule('rule-1', true);
     await deactivateRule('rule-1');
-    await getInstanceLogs('instance-1', { node_id: 'node-1', level: 'error' });
     await cancelInstance('instance-1');
     await getApproval('approval-1');
 
@@ -188,14 +188,10 @@ describe('auto-healing healing service', () => {
     expect(request).toHaveBeenNthCalledWith(3, '/api/v1/tenant/healing/rules/rule-1/deactivate', {
       method: 'POST',
     });
-    expect(request).toHaveBeenNthCalledWith(4, '/api/v1/tenant/healing/instances/instance-1/logs', {
-      method: 'GET',
-      params: { node_id: 'node-1', level: 'error' },
-    });
-    expect(request).toHaveBeenNthCalledWith(5, '/api/v1/tenant/healing/instances/instance-1/cancel', {
+    expect(request).toHaveBeenNthCalledWith(4, '/api/v1/tenant/healing/instances/instance-1/cancel', {
       method: 'POST',
     });
-    expect(request).toHaveBeenNthCalledWith(6, '/api/v1/tenant/healing/approvals/approval-1', {
+    expect(request).toHaveBeenNthCalledWith(5, '/api/v1/tenant/healing/approvals/approval-1', {
       method: 'GET',
     });
   });

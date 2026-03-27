@@ -50,9 +50,9 @@ const QuickActions: React.FC = () => {
     return (
         <div className={styles.card}>
             <div className={styles.title}>快速操作</div>
-            {actions.map((action, idx) => (
+            {actions.map((action) => (
                 <div
-                    key={idx}
+                    key={action.path || action.label}
                     className={styles.actionItem}
                     onClick={() => (!action.path || canAccessPath(action.path, access)) && action.onClick()}
                     style={action.path && !canAccessPath(action.path, access) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}

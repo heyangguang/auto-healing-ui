@@ -112,10 +112,10 @@ describe('auto-healing execution service', () => {
     expect(request).toHaveBeenNthCalledWith(3, '/api/v1/tenant/execution-tasks/task-1', {
       method: 'GET',
     });
-    expect(postTenantExecutionTasks).toHaveBeenCalledWith({ data: {} });
+    expect(postTenantExecutionTasks).toHaveBeenCalledWith({});
     expect(postTenantExecutionTasksIdExecute).toHaveBeenCalledWith(
       { id: 'task-1' },
-      { data: {} },
+      {},
     );
   });
 

@@ -1,5 +1,5 @@
 /* 站内通知 — 隐藏选择列右侧多余的竖线 */
 .standard-table-body .ant-table-thead>tr>th.ant-table-selection-column,
 .standard-table-body .ant-table-tbody>tr>td.ant-table-selection-column {
-    border-right: none !important;
+    border-right: none;
 }

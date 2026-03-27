@@ -1,81 +1,81 @@
 /* NotificationBell — 阿里云风格通知面板 */
 
 .nb-wrapper {
-    position: relative !important;
-    display: inline-flex !important;
-    align-items: center !important;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
 }
 
 .nb-bell {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 36px !important;
-    height: 36px !important;
-    cursor: pointer !important;
-    color: rgba(255, 255, 255, 0.7) !important;
-    font-size: 18px !important;
-    transition: color 0.15s !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 18px;
+    transition: color 0.15s;
 }
 
 .nb-bell:hover {
-    color: #fff !important;
+    color: #fff;
 }
 
 .nb-badge {
-    position: absolute !important;
-    top: 4px !important;
-    right: 2px !important;
-    min-width: 16px !important;
-    height: 16px !important;
-    border-radius: 8px !important;
-    background: #ff4d4f !important;
-    color: #fff !important;
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0 4px !important;
-    line-height: 1 !important;
+    position: absolute;
+    top: 4px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    background: #ff4d4f;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
 }
 
 /* 面板 — 直角、简洁 */
 .nb-panel {
-    position: fixed !important;
-    top: 56px !important;
-    right: 0 !important;
-    width: 300px !important;
-    background: #fff !important;
-    border: 1px solid #ddd !important;
-    border-top: none !important;
-    border-radius: 0 !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
-    z-index: 99 !important;
+    position: fixed;
+    top: 56px;
+    right: 0;
+    width: 300px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    z-index: 99;
 }
 
 /* 标题 */
 .nb-header {
-    display: flex !important;
-    align-items: center !important;
-    height: 38px !important;
-    padding: 0 16px !important;
-    border-bottom: 1px solid #eee !important;
-    box-sizing: border-box !important;
+    display: flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 16px;
+    border-bottom: 1px solid #eee;
+    box-sizing: border-box;
 }
 
 .nb-header-title {
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    color: #1a1a1a !important;
-    line-height: 1 !important;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
 }
 
 /* 消息内容区 — 最多3条可滚动 */
 .nb-body {
-    padding: 0 !important;
-    max-height: 210px !important;
-    overflow-y: auto !important;
+    padding: 0;
+    max-height: 210px;
+    overflow-y: auto;
 }
 
 .nb-body::-webkit-scrollbar {
@@ -88,47 +88,47 @@
 }
 
 .nb-msg-item {
-    display: flex !important;
-    align-items: flex-start !important;
-    gap: 10px !important;
-    padding: 12px 20px !important;
-    border-bottom: 1px solid #f5f5f5 !important;
-    cursor: pointer !important;
-    transition: background 0.15s !important;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+    transition: background 0.15s;
 }
 
 .nb-msg-item:last-child {
-    border-bottom: none !important;
+    border-bottom: none;
 }
 
 .nb-msg-item:hover {
-    background: #f7f8fa !important;
+    background: #f7f8fa;
 }
 
 /* 消息圆点 + 光晕动画 */
 .nb-dot-wrap {
-    position: relative !important;
-    flex-shrink: 0 !important;
-    width: 8px !important;
-    height: 8px !important;
-    margin-top: 6px !important;
+    position: relative;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
 }
 
 .nb-dot {
-    width: 8px !important;
-    height: 8px !important;
-    border-radius: 50% !important;
-    display: block !important;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: block;
 }
 
 .nb-dot-glow {
-    position: absolute !important;
-    top: -3px !important;
-    left: -3px !important;
-    width: 14px !important;
-    height: 14px !important;
-    border-radius: 50% !important;
-    animation: nb-pulse 2s ease-in-out infinite !important;
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    animation: nb-pulse 2s ease-in-out infinite;
 }
 
 @keyframes nb-pulse {
@@ -146,54 +146,54 @@
 }
 
 .nb-msg-content {
-    flex: 1 !important;
-    min-width: 0 !important;
+    flex: 1;
+    min-width: 0;
 }
 
 .nb-msg-title {
-    font-size: 14px !important;
-    color: #333 !important;
-    line-height: 1.6 !important;
-    word-break: break-all !important;
+    font-size: 14px;
+    color: #333;
+    line-height: 1.6;
+    word-break: break-all;
 }
 
 .nb-msg-time {
-    font-size: 13px !important;
-    color: #999 !important;
-    margin-top: 6px !important;
-    line-height: 1.4 !important;
+    font-size: 13px;
+    color: #999;
+    margin-top: 6px;
+    line-height: 1.4;
 }
 
 /* 空状态 */
 .nb-empty {
-    padding: 28px 0 !important;
-    text-align: center !important;
-    font-size: 13px !important;
-    color: #bbb !important;
+    padding: 28px 0;
+    text-align: center;
+    font-size: 13px;
+    color: #bbb;
 }
 
 /* 底部 */
 .nb-footer {
-    display: flex !important;
-    align-items: center !important;
-    height: 43px !important;
-    padding: 0 16px !important;
-    border-top: 1px solid #eee !important;
-    box-sizing: border-box !important;
+    display: flex;
+    align-items: center;
+    height: 43px;
+    padding: 0 16px;
+    border-top: 1px solid #eee;
+    box-sizing: border-box;
 }
 
 .nb-link {
-    font-size: 12px !important;
-    color: #0070cc !important;
-    cursor: pointer !important;
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-    line-height: 1 !important;
-    text-decoration: none !important;
+    font-size: 12px;
+    color: #0070cc;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+    text-decoration: none;
 }
 
 .nb-link:hover {
-    color: #0090ff !important;
-    text-decoration: underline !important;
+    color: #0090ff;
+    text-decoration: underline;
 }
