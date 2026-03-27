@@ -11,7 +11,6 @@ import TopNavBar from '@/components/TopNavBar';
 import AppLayout from '@/components/AppLayout';
 
 // 本地字体引入（不依赖 Google CDN）
-import '@fontsource/inter/300.css';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/700.css';
@@ -23,6 +22,23 @@ import { initDictCache } from '@/utils/dictCache';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
+
+type InitialStateUser = API.CurrentUser;
+type RefreshBootstrapResponse = {
+  access_token?: string;
+  refresh_token?: string;
+};
+
+const toInitialStateUser = (userInfo: AutoHealing.UserInfo): InitialStateUser => ({
+  ...userInfo,
+  userid: userInfo.id,
+  name: userInfo.display_name || userInfo.username,
+  username: userInfo.username,
+  display_name: userInfo.display_name,
+  avatar: undefined,
+  access: userInfo.roles?.[0] || 'user',
+  permissions: userInfo.permissions || [],
+});
 
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
@@ -43,22 +59,8 @@ export async function getInitialState(): Promise<{
         return undefined;
       }
 
-      const response = await getCurrentUser({ skipErrorHandler: true });
-      // 后端返回格式: { code: 0, message: "success", data: { id, username, ... } }
-      // 需要从 response.data 获取用户信息
-      const userInfo = (response as any).data || response;
-
-      // 需要同时设置 name 和 username，AvatarDropdown 会检查这两个字段
-      const currentUserObj = {
-        userid: userInfo.id,
-        name: userInfo.display_name || userInfo.username,
-        username: userInfo.username,
-        display_name: userInfo.display_name,
-        avatar: undefined,
-        access: userInfo.roles?.[0] || 'user',
-        permissions: userInfo.permissions || [],
-        ...userInfo,
-      } as API.CurrentUser;
+      const userInfo = await getCurrentUser({ skipErrorHandler: true });
+      const currentUserObj = toInitialStateUser(userInfo);
 
       // 🆕 同步平台管理员标志到 localStorage（供 request interceptor 使用）
       localStorage.setItem('is-platform-admin', currentUserObj.is_platform_admin ? 'true' : 'false');
@@ -75,23 +77,13 @@ export async function getInitialState(): Promise<{
             body: JSON.stringify({ refresh_token: refreshTokenValue }),
           });
           if (refreshRes.ok) {
-            const refreshData = await refreshRes.json();
+            const refreshData = await refreshRes.json() as RefreshBootstrapResponse;
             if (refreshData.access_token) {
               TokenManager.setTokens(refreshData.access_token, refreshData.refresh_token);
               console.log('[Auth] 启动时 Token 已自动刷新');
               // 刷新成功，重新获取用户信息
-              const retryResponse = await getCurrentUser({ skipErrorHandler: true });
-              const retryUser = (retryResponse as any).data || retryResponse;
-              const retryObj = {
-                userid: retryUser.id,
-                name: retryUser.display_name || retryUser.username,
-                username: retryUser.username,
-                display_name: retryUser.display_name,
-                avatar: undefined,
-                access: retryUser.roles?.[0] || 'user',
-                permissions: retryUser.permissions || [],
-                ...retryUser,
-              } as API.CurrentUser;
+              const retryUser = await getCurrentUser({ skipErrorHandler: true });
+              const retryObj = toInitialStateUser(retryUser);
               localStorage.setItem('is-platform-admin', retryObj.is_platform_admin ? 'true' : 'false');
               return retryObj;
             }

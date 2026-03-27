@@ -34,7 +34,6 @@ export default function access(
   initialState: { currentUser?: API.CurrentUser } | undefined,
 ) {
   const { currentUser } = initialState ?? {};
-  const permissions = currentUser?.permissions ?? [];
 
   const hasActiveImpersonationSession = (() => {
     try {
@@ -50,6 +49,8 @@ export default function access(
     }
     return false;
   })();
+
+  const permissions = currentUser?.permissions ?? [];
 
   /**
    * 检查用户是否拥有指定权限

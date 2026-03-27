@@ -11,8 +11,9 @@ import { Helmet, history, Link } from '@umijs/max';
 import { Alert, Button, ConfigProvider, Form, Input, message, Spin } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { request } from '@umijs/max';
 import Settings from '../../../../config/defaultSettings';
+import { registerByInvitation, type InvitationValidation, validateInvitationToken } from '@/services/auto-healing/auth';
+import { buildRegisterResultPath } from './registerHelpers';
 
 const NetworkCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null); const animRef = useRef<number>(0); const nodesRef = useRef<any[]>([]); const init = useRef(false);
@@ -96,17 +97,66 @@ const RegisterPage: React.FC = () => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [invitationInfo, setInvitationInfo] = useState<InvitationValidation | null>(null);
   const [validatingToken, setValidatingToken] = useState(true);
   const [tokenError, setTokenError] = useState('');
+  const validationRequestIdRef = useRef(0);
+  const redirectTimerRef = useRef<number | null>(null);
   const token = new URLSearchParams(window.location.search).get('token') || '';
-  useEffect(() => { if (!token) setTokenError('缺少邀请令牌，平台暂不开放自助注册。'); setValidatingToken(false); }, [token]);
+  useEffect(() => {
+    const requestId = validationRequestIdRef.current + 1;
+    validationRequestIdRef.current = requestId;
+
+    if (!token) {
+      setTokenError('缺少邀请令牌，平台暂不开放自助注册。');
+      setInvitationInfo(null);
+      setValidatingToken(false);
+      return;
+    }
+
+    setValidatingToken(true);
+    validateInvitationToken(token)
+      .then((invitation) => {
+        if (requestId !== validationRequestIdRef.current) {
+          return;
+        }
+        setInvitationInfo(invitation);
+        setTokenError('');
+      })
+      .catch((error: any) => {
+        if (requestId !== validationRequestIdRef.current) {
+          return;
+        }
+        const messageText = error?.response?.data?.message || error?.data?.message || error?.message || '邀请不存在或已过期';
+        setInvitationInfo(null);
+        setTokenError(messageText);
+      })
+      .finally(() => {
+        if (requestId !== validationRequestIdRef.current) {
+          return;
+        }
+        setValidatingToken(false);
+      });
+
+    return () => {
+      validationRequestIdRef.current += 1;
+    };
+  }, [token]);
+
+  useEffect(() => () => {
+    if (redirectTimerRef.current !== null) {
+      window.clearTimeout(redirectTimerRef.current);
+    }
+  }, []);
 
   const handleSubmit = async (values: any) => {
     setSubmitting(true); setErrorMsg('');
     try {
-      await request('/api/v1/auth/register', { method: 'POST', data: { token, username: values.username, password: values.password, display_name: values.display_name || '' } });
+      await registerByInvitation({ token, username: values.username, password: values.password, display_name: values.display_name || '' });
       message.success('注册成功！');
-      setTimeout(() => history.push('/user/login'), 1500);
+      redirectTimerRef.current = window.setTimeout(() => {
+        history.push(buildRegisterResultPath(values.username));
+      }, 1500);
     } catch (e: any) { setErrorMsg(e?.response?.data?.message || e?.data?.message || e?.message || '注册失败'); }
     finally { setSubmitting(false); }
   };
@@ -173,12 +223,19 @@ const RegisterPage: React.FC = () => {
               <div className={styles.formTitle}>创建账号</div>
               <div className={styles.formSub}>请填写信息完成注册</div>
               {tokenError ? (
-                <div><Alert type="warning" message="无法注册" description={tokenError} showIcon icon={<SafetyOutlined />} style={{ marginBottom: 16 }} /><Button block onClick={() => history.push('/user/login')} style={{ height: 40 }}>返回登录</Button></div>
+                <div><Alert type="warning" title="无法注册" description={tokenError} showIcon icon={<SafetyOutlined />} style={{ marginBottom: 16 }} /><Button block onClick={() => history.push('/user/login')} style={{ height: 40 }}>返回登录</Button></div>
               ) : validatingToken ? (
                 <div style={{ textAlign: 'center', padding: '40px 0' }}><Spin /><div style={{ marginTop: 12, color: '#8c8c8c', fontSize: 12 }}>验证邀请令牌…</div></div>
               ) : (
                 <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
-                  {errorMsg && <Alert message={errorMsg} type="error" showIcon style={{ marginBottom: 12, fontSize: 12 }} />}
+                  {errorMsg && <Alert title={errorMsg} type="error" showIcon style={{ marginBottom: 12, fontSize: 12 }} />}
+                  <Alert
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 12, fontSize: 12 }}
+                    title="邀请信息已验证"
+                    description={`邮箱：${invitationInfo?.email || '-'} · 租户：${invitationInfo?.tenant_name || '-'} · 角色：${invitationInfo?.role_name || '-'}`}
+                  />
                   <Form.Item label={<span className={styles.inputLbl}>登录账号</span>} name="username" rules={[{ required: true, message: '请输入账号' }, { min: 3, message: '最少 3 字符' }, { max: 50 }, { pattern: /^[a-zA-Z0-9_.-]+$/, message: '仅支持字母、数字、下划线等' }]} style={{ marginBottom: 12 }}>
                     <Input prefix={<UserOutlined style={{ color: '#bfbfbf' }} />} placeholder="请设置登录账号" />
                   </Form.Item>

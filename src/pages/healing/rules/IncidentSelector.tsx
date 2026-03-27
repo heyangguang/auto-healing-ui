@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo } from 'react';
 import {
     Modal, Input, Typography, Tag, Empty, Spin, Space, Row, Col,
     Select, Badge, Tooltip, Pagination,
@@ -7,7 +7,8 @@ import {
     SearchOutlined, AlertOutlined, CheckCircleOutlined, ClockCircleOutlined,
     LoadingOutlined, DatabaseOutlined, DesktopOutlined, UserOutlined,
 } from '@ant-design/icons';
-import { getIncident, getIncidents } from '@/services/auto-healing/incidents';
+import { getIncident, getIncidents, type IncidentQueryParams } from '@/services/auto-healing/incidents';
+import { useAsyncModalSelector } from '@/hooks/useAsyncModalSelector';
 import { INCIDENT_SEVERITY_MAP, INCIDENT_STATUS_MAP, INCIDENT_HEALING_MAP, getSeverityOptions, getIncidentStatusOptions } from '@/constants/incidentDicts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -17,16 +18,12 @@ dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
 const { Text } = Typography;
-
-// ==================== Types ====================
 interface IncidentSelectorProps {
     open: boolean;
     value?: string;
     onSelect: (incident: AutoHealing.Incident) => void;
     onCancel: () => void;
 }
-
-// 本地适配器：将集中化字典的 { text, color } 转为本文件需要的 { label, color }
 const SEVERITY_META: Record<string, { label: string; color: string }> = Object.fromEntries(
     Object.entries(INCIDENT_SEVERITY_MAP).map(([k, v]) => [k, { label: v.text, color: v.color }])
 );
@@ -38,114 +35,50 @@ const HEALING_STATUS_META: Record<string, { label: string; color: string }> = Ob
 );
 
 const PAGE_SIZE = 15;
-
-// ==================== Component ====================
 const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSelect, onCancel }) => {
-    // Data
-    const [incidents, setIncidents] = useState<AutoHealing.Incident[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(1);
-
-    // Filters
-    const [search, setSearch] = useState('');
-    const [severityFilter, setSeverityFilter] = useState<string | undefined>();
-    const [statusFilter, setStatusFilter] = useState<string | undefined>();
-
-    // Selection
-    const [selectedId, setSelectedId] = useState<string | undefined>(value);
-    const [selectedIncident, setSelectedIncident] = useState<AutoHealing.Incident | null>(null);
-
-    // Debounce ref
-    const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-    // ==================== Load (server-side) ====================
-    const loadIncidents = useCallback(async (p: number, q: string, severity?: string, status?: string) => {
-        setLoading(true);
-        try {
-            const params: any = { page: p, page_size: PAGE_SIZE };
+    const initialFilters = useMemo(() => ({
+        severityFilter: undefined as string | undefined,
+        statusFilter: undefined as string | undefined,
+    }), []);
+    const {
+        items: incidents,
+        loading,
+        total,
+        page,
+        search,
+        filters,
+        selectedId,
+        selectedItem: selectedIncident,
+        handleSearchChange,
+        handleFilterChange,
+        handlePageChange,
+        handleSelect,
+    } = useAsyncModalSelector<AutoHealing.Incident, { severityFilter?: string; statusFilter?: string }>({
+        open,
+        value,
+        initialFilters,
+        loadList: async (p, q, currentFilters) => {
+            const params: IncidentQueryParams = { page: p, page_size: PAGE_SIZE };
             if (q.trim()) params.title = q.trim();
-            if (severity) params.severity = severity;
-            if (status) params.status = status;
+            if (currentFilters.severityFilter) params.severity = currentFilters.severityFilter;
+            if (currentFilters.statusFilter) params.status = currentFilters.statusFilter;
             const res = await getIncidents(params);
-            setIncidents(res.data || []);
-            setTotal(res.total || 0);
-        } catch { /* */ } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Initial load & filter changes
-    useEffect(() => {
-        if (open) {
-            loadIncidents(page, search, severityFilter, statusFilter);
-        } else {
-            setSearch('');
-            setSeverityFilter(undefined);
-            setStatusFilter(undefined);
-            setPage(1);
-        }
-    }, [open, page, severityFilter, statusFilter]);
-
-    // Debounced search
-    const handleSearchChange = (val: string) => {
-        setSearch(val);
-        if (searchTimer.current) clearTimeout(searchTimer.current);
-        searchTimer.current = setTimeout(() => {
-            setPage(1);
-            loadIncidents(1, val, severityFilter, statusFilter);
-        }, 300);
-    };
-
-    // Sync value prop
-    useEffect(() => {
-        setSelectedId(value);
-    }, [value]);
-
-    // Pre-select from value
-    useEffect(() => {
-        if (value && incidents.length > 0) {
-            const found = incidents.find(i => i.id === value);
-            if (found) {
-                setSelectedIncident(found);
-                setSelectedId(value);
-            }
-        }
-    }, [value, incidents]);
-
-    useEffect(() => {
-        if (!open || !value || selectedIncident?.id === value) return;
-        getIncident(value)
-            .then((incident) => {
-                if (incident?.id) {
-                    setSelectedIncident(incident);
-                    setSelectedId(incident.id);
-                }
-            })
-            .catch(() => {
-                // ignore stale selection
-            });
-    }, [open, value, selectedIncident?.id]);
-
-    // ==================== Handlers ====================
-    const handleSelect = (incident: AutoHealing.Incident) => {
-        setSelectedId(incident.id);
-        setSelectedIncident(incident);
-    };
+            return { items: res.data || [], total: res.total || 0 };
+        },
+        loadDetail: async (id) => {
+            const incident = await getIncident(id);
+            return incident || null;
+        },
+        getId: (item) => item.id,
+    });
+    const severityFilter = filters.severityFilter;
+    const statusFilter = filters.statusFilter;
 
     const handleConfirm = () => {
         if (selectedIncident) {
             onSelect(selectedIncident);
         }
     };
-
-    const handleFilterChange = (type: 'severity' | 'status', val: string | undefined) => {
-        if (type === 'severity') setSeverityFilter(val);
-        else setStatusFilter(val);
-        setPage(1);
-    };
-
-    // ==================== Render ====================
     return (
         <Modal
             title={
@@ -162,7 +95,6 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
             width={780}
             destroyOnHidden
         >
-            {/* ===== Search & Filter Bar ===== */}
             <Row gutter={12} style={{ marginBottom: 16 }}>
                 <Col span={10}>
                     <Input
@@ -177,7 +109,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                     <Select
                         placeholder="严重级别"
                         value={severityFilter}
-                        onChange={v => handleFilterChange('severity', v)}
+                        onChange={(value) => handleFilterChange('severityFilter', value)}
                         allowClear
                         style={{ width: '100%' }}
                         options={getSeverityOptions()}
@@ -187,7 +119,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                     <Select
                         placeholder="工单状态"
                         value={statusFilter}
-                        onChange={v => handleFilterChange('status', v)}
+                        onChange={(value) => handleFilterChange('statusFilter', value)}
                         allowClear
                         style={{ width: '100%' }}
                         options={getIncidentStatusOptions()}
@@ -195,7 +127,6 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                 </Col>
             </Row>
 
-            {/* ===== Count ===== */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                     <AlertOutlined style={{ marginRight: 4 }} />工单列表
@@ -205,7 +136,6 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                 </Text>
             </div>
 
-            {/* ===== Incident List ===== */}
             <div style={{ height: 400, overflow: 'auto' }}>
                 {loading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -239,7 +169,6 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                                     }}
                                 >
                                     <div style={{ width: '100%' }}>
-                                        {/* Row 1: Severity + Title + Status */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                                             <Tag
                                                 color={sevMeta.color}
@@ -270,7 +199,6 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                                             )}
                                         </div>
 
-                                        {/* Row 2: Description */}
                                         {incident.description && (
                                             <div style={{ marginLeft: 14, marginBottom: 4 }}>
                                                 <Text type="secondary" style={{ fontSize: 11 }} ellipsis={{ tooltip: incident.description }}>
@@ -279,7 +207,6 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                                             </div>
                                         )}
 
-                                        {/* Row 3: Meta — CI / Category / Source / Time */}
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -320,7 +247,6 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                 )}
             </div>
 
-            {/* ===== Pagination ===== */}
             {total > PAGE_SIZE && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
                     <Pagination
@@ -328,14 +254,13 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({ open, value, onSele
                         current={page}
                         pageSize={PAGE_SIZE}
                         total={total}
-                        onChange={p => setPage(p)}
+                        onChange={handlePageChange}
                         showSizeChanger={false}
                         showTotal={(t) => `共 ${t} 条`}
                     />
                 </div>
             )}
 
-            {/* ===== Selected Hint ===== */}
             {selectedIncident && (
                 <div style={{
                     marginTop: 12,

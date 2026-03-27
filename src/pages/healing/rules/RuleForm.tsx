@@ -14,6 +14,7 @@ import SubPageHeader from '@/components/SubPageHeader';
 import { ConditionBuilder } from './ConditionBuilder';
 import { RuleTester } from './RuleTester';
 import FlowSelector from './FlowSelector';
+import { RuleSelectedFlowCard } from './RuleSelectedFlowCard';
 import {
     getHealingRule, createHealingRule, updateHealingRule,
 } from '@/services/auto-healing/healing-rules';
@@ -227,92 +228,16 @@ const RuleFormPage: React.FC = () => {
                         <Text type="secondary" style={{ fontSize: 12 }}>规则匹配成功后将执行所关联的自愈流程</Text>
                     </div>
 
-                    {selectedFlow ? (
-                        <div className="rule-form-selected-flow">
-                            <div className="rule-form-selected-flow-main">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                    <BranchesOutlined style={{ color: '#1890ff' }} />
-                                    <Text strong style={{ fontSize: 14 }}>{selectedFlow.name}</Text>
-                                    {selectedFlow.is_active ? (
-                                        <Tag icon={<CheckCircleOutlined />} color="success" style={{ margin: 0, fontSize: 10 }}>启用</Tag>
-                                    ) : (
-                                        <Tag color="default" style={{ margin: 0, fontSize: 10 }}>已停用</Tag>
-                                    )}
-                                </div>
-                                {selectedFlow.description && (
-                                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                                        {selectedFlow.description}
-                                    </Text>
-                                )}
-                                <Space size={4} wrap>
-                                    {(selectedFlow.nodes || []).filter(n => n.type !== 'start' && n.type !== 'end').length > 0 ? (
-                                        Object.entries(
-                                            (selectedFlow.nodes || []).reduce((acc, n) => {
-                                                if (n.type !== 'start' && n.type !== 'end') {
-                                                    acc[n.type] = (acc[n.type] || 0) + 1;
-                                                }
-                                                return acc;
-                                            }, {} as Record<string, number>)
-                                        ).map(([type, count]) => {
-                                            const meta = NODE_TYPE_META[type] || { label: type, icon: <NodeIndexOutlined />, color: '#8c8c8c' };
-                                            return (
-                                                <Tag
-                                                    key={type}
-                                                    icon={meta.icon}
-                                                    style={{
-                                                        fontSize: 10,
-                                                        lineHeight: '16px',
-                                                        padding: '0 4px',
-                                                        margin: 0,
-                                                        color: meta.color,
-                                                        borderColor: meta.color,
-                                                        background: 'transparent',
-                                                    }}
-                                                >
-                                                    {meta.label}×{count}
-                                                </Tag>
-                                            );
-                                        })
-                                    ) : (
-                                        <Tag style={{ fontSize: 10, margin: 0, color: '#bfbfbf' }}>空流程</Tag>
-                                    )}
-                                    <Text type="secondary" style={{ fontSize: 10 }}>
-                                        ({(selectedFlow.nodes || []).filter(n => n.type !== 'start' && n.type !== 'end').length}节点 · {(selectedFlow.edges || []).length}连线)
-                                    </Text>
-                                </Space>
-                            </div>
-                            <Space size={4}>
-                                <Button
-                                    type="link"
-                                    size="small"
-                                    onClick={() => setFlowSelectorOpen(true)}
-                                >
-                                    更换
-                                </Button>
-                                <Button
-                                    type="link"
-                                    danger
-                                    size="small"
-                                    icon={<CloseCircleOutlined />}
-                                    onClick={() => {
-                                        setSelectedFlow(null);
-                                        form.setFieldValue('flow_id', undefined);
-                                    }}
-                                >
-                                    清除
-                                </Button>
-                            </Space>
-                        </div>
-                    ) : (
-                        <Button
-                            type="dashed"
-                            icon={<PlusOutlined />}
-                            style={{ width: '100%', height: 56 }}
-                            onClick={() => setFlowSelectorOpen(true)}
-                        >
-                            点击选择自愈流程
-                        </Button>
-                    )}
+                    <RuleSelectedFlowCard
+                        nodeTypeMeta={NODE_TYPE_META}
+                        onClear={() => {
+                            setSelectedFlow(null);
+                            setOriginalFlowId(null);
+                            form.setFieldValue('flow_id', undefined);
+                        }}
+                        onOpenSelector={() => setFlowSelectorOpen(true)}
+                        selectedFlow={selectedFlow}
+                    />
 
                     <FlowSelector
                         open={flowSelectorOpen}

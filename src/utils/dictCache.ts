@@ -90,8 +90,8 @@ export async function refreshDictCache(): Promise<void> {
 
 async function _fetchFromAPI() {
     const res = await getDictionaries();
-    if (res?.data) {
-        _cache = res.data;
+    if (Object.keys(res).length > 0) {
+        _cache = res;
         _saveToStorage();
     }
 }

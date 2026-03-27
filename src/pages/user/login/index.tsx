@@ -9,11 +9,13 @@ import {
 } from '@ant-design/icons';
 import { Helmet, history, SelectLang, useModel } from '@umijs/max';
 import { Alert, App, ConfigProvider, Button, Form, Input, Checkbox, Divider } from 'antd';
-import { createStyles } from 'antd-style';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { login } from '@/services/auto-healing/auth';
 import { TokenManager } from '@/requestErrorConfig';
+import { useLoginStyles } from './loginStyles';
+import { getLoginInitialValues, persistLoginPreference } from './session';
+import { persistTenantSession } from './tenantSession';
 import Settings from '../../../../config/defaultSettings';
 
 /* ==== Canvas 拓扑动画 ==== */
@@ -70,132 +72,57 @@ const JenkinsLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><circl
 const ElasticLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="3" fill="#00bfb3" /><path d="M6 8h12M6 12h12M6 16h8" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" /></svg>;
 const VaultLogo = () => <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2L3 20h18L12 2z" fill="#000" /><path d="M12 7l-5 10h10L12 7z" fill="#ffd814" opacity=".8" /></svg>;
 
-const useStyles = createStyles(({ token }) => ({
-  lang: { width: 42, height: 42, lineHeight: '42px', position: 'fixed', right: 16, top: 16, borderRadius: 0, ':hover': { backgroundColor: 'rgba(0,0,0,0.04)' }, zIndex: 999 },
-  container: { display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif" },
-
-  /* ========== 左侧 ========== */
-  leftPanel: { flex: '0 0 55%', background: 'linear-gradient(170deg, #080c18 0%, #0f172a 50%, #111827 100%)', position: 'relative', padding: '36px 48px 0', display: 'flex', flexDirection: 'column', color: '#fff', overflow: 'hidden' },
-  topSection: { position: 'relative', zIndex: 2, flexShrink: 0 },
-  subBrand: { fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, marginTop: 10, marginBottom: 20 },
-  heroTitle: { fontSize: 30, fontWeight: 700, color: '#fff', lineHeight: 1.35, marginBottom: 10 },
-  heroHL: { background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-  heroDesc: { fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 2, maxWidth: 500 },
-  heroHighlight: { fontWeight: 700, background: 'linear-gradient(90deg, #f97316, #ef4444)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-  heroBold: { fontWeight: 600, color: 'rgba(255,255,255,0.7)' },
-
-  spacer: { flex: 1, minHeight: 20 },
-
-  bottomStack: { position: 'relative', zIndex: 2, flexShrink: 0 },
-
-  /* 引擎能力 - 左侧彩色线条列表 */
-  engineLabel: { fontSize: 11, fontWeight: 600, color: '#38bdf8', letterSpacing: 2, marginBottom: 14, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)' },
-  engineGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', marginBottom: 18 },
-  engineItem: {
-    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 10px 12px',
-    borderLeft: '3px solid transparent', transition: 'all 0.2s',
-    ':hover': { background: 'rgba(255,255,255,0.02)' },
-  },
-  ecIcon: { fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' as const },
-  ecText: { flex: 1, minWidth: 0 },
-  ecName: { fontSize: 12, fontWeight: 600, color: '#fff', marginBottom: 1 },
-  ecDesc: { fontSize: 10, color: 'rgba(255,255,255,0.35)', lineHeight: 1.3 },
-
-  /* 指标 */
-  metricsRow: { display: 'flex', gap: 0, marginBottom: 0 },
-  metricBox: { flex: 1, padding: '14px 0', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', '&:not(:last-child)': { borderRight: '1px solid rgba(255,255,255,0.08)' } },
-  metricNum: { fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 2 },
-  metricLb: { fontSize: 10, color: 'rgba(255,255,255,0.3)' },
-
-  /* 合作伙伴 */
-  partnerStrip: { background: 'rgba(0,0,0,0.35)', margin: '0 -48px', padding: '14px 48px', borderTop: '1px solid rgba(255,255,255,0.06)' },
-  partnerLabel: { fontSize: 10, color: 'rgba(255,255,255,0.22)', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase', fontWeight: 600 },
-  partnerGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px 8px' },
-
-  /* ========== 右侧 ========== */
-  rightPanel: { flex: 1, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' },
-  dotBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.03) 1px, transparent 1px)', backgroundSize: '18px 18px', pointerEvents: 'none' },
-
-  statusBar: { position: 'relative', zIndex: 1, display: 'flex', gap: 0, borderBottom: '1px solid #e5e7eb' },
-  statusItem: { flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: '1px solid #e5e7eb', '&:last-child': { borderRight: 'none' } },
-  statusDot: { display: 'inline-block', width: 6, height: 6, borderRadius: '50%', marginRight: 6, verticalAlign: 'middle' },
-  statusText: { fontSize: 11, color: '#6b7280', fontWeight: 500 },
-
-  formCenter: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative', zIndex: 1, padding: '0 48px' },
-  formInner: { width: '100%', maxWidth: 360 },
-  formLogo: { textAlign: 'center', marginBottom: 16 },
-  formTitle: { fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 4, textAlign: 'center' },
-  formSub: { fontSize: 13, color: '#9ca3af', textAlign: 'center', marginBottom: 24 },
-  inputLbl: { fontSize: 12, fontWeight: 600, color: '#374151', letterSpacing: 0.5 },
-
-  ssoBtn: {
-    width: '100%', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-    border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 500,
-    transition: 'all 0.2s', ':hover': { borderColor: '#93c5fd', color: '#2563eb' },
-  },
-
-  helpRow: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 },
-  helpLink: { fontSize: 12, color: '#9ca3af', cursor: 'pointer', transition: 'color 0.2s', ':hover': { color: '#2563eb' } },
-
-  featureStrip: { display: 'flex', gap: 0, borderTop: '1px solid #e5e7eb', position: 'relative', zIndex: 1 },
-  featureItem: { flex: 1, padding: '12px 6px', textAlign: 'center', borderRight: '1px solid #e5e7eb', '&:last-child': { borderRight: 'none' } },
-  featureIcon: { fontSize: 16, color: '#2563eb', display: 'block', marginBottom: 3 },
-  featureText: { fontSize: 10, color: '#6b7280', fontWeight: 500 },
-
-  bottomInfo: { position: 'relative', zIndex: 1, padding: '10px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  secBadges: { display: 'flex', gap: 12, alignItems: 'center' },
-  badge: { display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#9ca3af', fontWeight: 500 },
-  badgeIco: { color: '#22c55e', fontSize: 11 },
-  copyright: { fontSize: 10, color: '#d1d5db' },
-}));
-
-const Lang = () => { const { styles } = useStyles(); return <div className={styles.lang} data-lang>{SelectLang && <SelectLang />}</div>; };
+const Lang = () => { const { styles } = useLoginStyles(); return <div className={styles.lang} data-lang>{SelectLang && <SelectLang />}</div>; };
 
 const Login: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { initialState, setInitialState } = useModel('@@initialState');
-  const { styles } = useStyles();
+  type CurrentUser = NonNullable<NonNullable<typeof initialState>['currentUser']>;
+  type LoginCurrentUser = AutoHealing.UserInfo | CurrentUser;
+  const { styles } = useLoginStyles();
   const { message } = App.useApp();
+  const updateCurrentUser = useCallback((currentUser: LoginCurrentUser) => {
+    flushSync(() => {
+      setInitialState((state) => ({ ...state, currentUser: currentUser as CurrentUser }));
+    });
+  }, [setInitialState]);
 
-  // 读取记住的账号密码
-  const getSavedCredentials = () => {
-    try {
-      const saved = localStorage.getItem('auto_healing_saved_login');
-      if (saved) {
-        const parsed = JSON.parse(atob(saved));
-        return { username: parsed.u, password: parsed.p, autoLogin: true };
-      }
-    } catch { /* ignore */ }
-    return { autoLogin: false };
-  };
-
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = useCallback(async () => {
     const userInfo = await initialState?.fetchUserInfo?.();
-    if (userInfo) flushSync(() => { setInitialState((s) => ({ ...s, currentUser: userInfo })); });
-  };
+    if (userInfo) {
+      updateCurrentUser(userInfo);
+    }
+    return userInfo;
+  }, [initialState, updateCurrentUser]);
 
   const handleSubmit = async (values: any) => {
     setSubmitting(true); setLoginError('');
     try {
+      persistLoginPreference(Boolean(values.autoLogin));
       const response = await login({ username: values.username, password: values.password });
+      updateCurrentUser(response.user);
       TokenManager.setTokens(response.access_token, response.refresh_token);
 
-      // 记住登录：保存/清除账号密码
-      if (values.autoLogin) {
-        localStorage.setItem('auto_healing_saved_login', btoa(JSON.stringify({ u: values.username, p: values.password })));
-      } else {
-        localStorage.removeItem('auto_healing_saved_login');
-      }
-
       const isPlatformAdmin = response.user?.is_platform_admin === true;
-      localStorage.setItem('is-platform-admin', isPlatformAdmin ? 'true' : 'false');
-      if (isPlatformAdmin) localStorage.removeItem('tenant-storage');
-      else if (response.tenants?.length > 0) localStorage.setItem('tenant-storage', JSON.stringify({ currentTenantId: response.current_tenant_id, tenants: response.tenants }));
-      await fetchUserInfo();
-      if (isPlatformAdmin) history.push('/platform');
-      else if (response.tenants?.length > 0) history.push(new URL(window.location.href).searchParams.get('redirect') || '/');
-      else { message.warning('无可用租户权限'); history.push('/no-tenant'); }
+      const tenantSessionState = persistTenantSession({
+        currentTenantId: response.current_tenant_id,
+        isPlatformAdmin,
+        tenants: response.tenants,
+      });
+      if (tenantSessionState === 'none') {
+        message.warning('无可用租户权限');
+        history.push('/no-tenant');
+        return;
+      }
+      try {
+        await fetchUserInfo();
+      } catch (error) {
+        console.error('[Login] Failed to sync current user after login:', error);
+        message.warning('登录成功，但当前用户信息同步失败，进入系统后会继续重试。');
+      }
+      if (tenantSessionState === 'platform') history.push('/platform');
+      else history.push(new URL(window.location.href).searchParams.get('redirect') || '/');
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.data?.message || '登录失败，请检查账号或密码';
       setLoginError(msg);
@@ -306,7 +233,7 @@ const Login: React.FC = () => {
 
               {loginError && <Alert message={loginError} type="error" showIcon style={{ marginBottom: 14, fontSize: 12 }} />}
 
-              <Form layout="vertical" onFinish={handleSubmit} initialValues={getSavedCredentials()} requiredMark={false}>
+              <Form layout="vertical" onFinish={handleSubmit} initialValues={getLoginInitialValues()} requiredMark={false}>
                 <Form.Item label={<span className={styles.inputLbl}>账号</span>} name="username" rules={[{ required: true, message: '请输入账号' }]} style={{ marginBottom: 16 }}>
                   <Input prefix={<UserOutlined style={{ color: '#bfbfbf' }} />} placeholder="请输入登录账号" />
                 </Form.Item>

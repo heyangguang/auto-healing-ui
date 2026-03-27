@@ -130,7 +130,9 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
                     stats[item.environment] = item.count;
                 });
                 setEnvStats(stats);
-            }).catch(console.error);
+            }).catch(() => {
+                // environment stats are optional for the selector UI
+            });
         }
     }, [open]);
 

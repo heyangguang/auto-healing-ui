@@ -236,8 +236,8 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
         if (!open) return;
         setLoadingFav(true);
         Promise.all([
-            getFavorites().then((res) => setFavorites(res?.data || [])),
-            getRecents().then((res) => setRecents(res?.data || [])),
+            getFavorites().then((items) => setFavorites(items || [])),
+            getRecents().then((items) => setRecents(items || [])),
         ]).finally(() => setLoadingFav(false));
     }, [open]);
 
@@ -256,9 +256,9 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
                     setFavorites((prev) => prev.filter((f) => f.menu_key !== menuKey));
                     message.success('已取消收藏');
                 } else {
-                    const res = await addFavorite({ menu_key: menuKey, name, path });
-                    if (res?.data) {
-                        setFavorites((prev) => [...prev, res.data]);
+                    const item = await addFavorite({ menu_key: menuKey, name, path });
+                    if (item) {
+                        setFavorites((prev) => [...prev, item]);
                     }
                     message.success('已添加收藏');
                 }

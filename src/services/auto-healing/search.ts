@@ -1,4 +1,6 @@
 import { request } from '@umijs/max';
+import { unwrapData } from './responseAdapters';
+import type { JSONObject } from '@/types/json';
 
 /** 全局搜索结果项 */
 export interface SearchResultItem {
@@ -6,7 +8,7 @@ export interface SearchResultItem {
     title: string;
     description: string;
     path: string;
-    extra?: Record<string, any>;
+    extra?: JSONObject;
 }
 
 /** 搜索分类结果 */
@@ -27,9 +29,8 @@ export interface SearchResponse {
  * 全局搜索
  */
 export async function globalSearch(params: { q: string; limit?: number }) {
-    const res = await request<{ code: number; message: string; data: SearchResponse }>(
+    return unwrapData(await request<{ code: number; message: string; data: SearchResponse }>(
         '/api/v1/common/search',
         { method: 'GET', params, skipErrorHandler: true },
-    );
-    return res.data;
+    ));
 }

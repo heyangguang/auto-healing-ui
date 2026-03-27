@@ -46,9 +46,13 @@ build
 .copilot/
 .github-copilot/
 .aider*
+.codex-tasks/
+.parallel-review/
 
 # logs
 logs.json
 runs.json
 .env.local
 docker-images/
+playwright-report/
+test-results/

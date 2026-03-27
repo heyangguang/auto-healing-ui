@@ -1,11 +1,12 @@
 import { Gauge, Liquid, WordCloud } from '@ant-design/plots';
 import { GridContent } from '@ant-design/pro-components';
 import { useRequest } from '@umijs/max';
-import { Card, Col, Progress, Row, Statistic } from 'antd';
+import { Card, Col, Progress, Row, Spin, Statistic } from 'antd';
 import numeral from 'numeral';
+import React, { Suspense, lazy } from 'react';
 import type { FC } from 'react';
-import ActiveChart from './components/ActiveChart';
-import MonitorMap from './components/Map';
+const ActiveChart = lazy(() => import('./components/ActiveChart'));
+const MonitorMap = lazy(() => import('./components/Map'));
 import { queryTags } from './service';
 import useStyles from './style.style';
 
@@ -63,7 +64,9 @@ const Monitor: FC = () => {
               </Col>
             </Row>
             <div className={styles.mapChart}>
-              <MonitorMap />
+              <Suspense fallback={<div style={{ height: '452px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}>
+                <MonitorMap />
+              </Suspense>
             </div>
           </Card>
         </Col>
@@ -75,7 +78,9 @@ const Monitor: FC = () => {
             }}
             bordered={false}
           >
-            <ActiveChart />
+            <Suspense fallback={<div style={{ height: 186, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}>
+              <ActiveChart />
+            </Suspense>
           </Card>
           <Card
             title="券核效率"

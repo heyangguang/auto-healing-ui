@@ -14,7 +14,7 @@ import {
 import { useAccess } from '@umijs/max';
 import StandardTable from '@/components/StandardTable';
 import type { SearchField } from '@/components/StandardTable';
-import { getPlatformRoles, deletePlatformRole, getPlatformRoleUsers } from '@/services/auto-healing/roles';
+import { getPlatformRoles, deletePlatformRole, getPlatformRole, getPlatformRoleUsers } from '@/services/auto-healing/roles';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -27,6 +27,27 @@ dayjs.locale('zh-cn');
 const { Text } = Typography;
 
 import { PERMISSION_MODULE_LABELS as MODULE_LABELS } from '@/constants/permissionDicts';
+
+type PlatformRoleRecord = AutoHealing.RoleWithStats & {
+    updated_at?: string;
+};
+
+type PlatformRoleUser = {
+    id: string;
+    username: string;
+    display_name: string;
+    email: string;
+    status: 'active' | 'inactive';
+};
+
+type PlatformRoleSearchParams = {
+    searchField?: string;
+    searchValue?: string;
+    advancedSearch?: Record<string, string | undefined>;
+    filters?: { field: string; value: string }[];
+};
+
+type PlatformRoleUserPage = AutoHealing.PaginatedResponse<PlatformRoleUser>;
 
 const searchFields: SearchField[] = [
     { key: 'display_name', label: '角色名称' },
@@ -47,8 +68,9 @@ const headerIcon = (
    ================================================================== */
 const PlatformRolesPage: React.FC = () => {
     const access = useAccess();
-    const [data, setData] = useState<any[]>([]);
+    const [data, setData] = useState<PlatformRoleRecord[]>([]);
     const [loading, setLoading] = useState(false);
+    const [listLoadFailed, setListLoadFailed] = useState(false);
     const [stats, setStats] = useState({ total: 0, system: 0 });
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(16);
@@ -58,20 +80,35 @@ const PlatformRolesPage: React.FC = () => {
 
     // Drawer
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [drawerRole, setDrawerRole] = useState<any>(null);
-    const [roleUsers, setRoleUsers] = useState<any[]>([]);
+    const [drawerRole, setDrawerRole] = useState<PlatformRoleRecord | null>(null);
+    const [drawerRoleLoading, setDrawerRoleLoading] = useState(false);
+    const [roleUsers, setRoleUsers] = useState<PlatformRoleUser[]>([]);
     const [roleUsersLoading, setRoleUsersLoading] = useState(false);
+    const [roleUsersLoadFailed, setRoleUsersLoadFailed] = useState(false);
     const [roleUsersTotal, setRoleUsersTotal] = useState(0);
     const [userSearch, setUserSearch] = useState('');
     const [userPage, setUserPage] = useState(1);
     const userPageSize = 20;
     const currentRoleIdRef = useRef<string>('');
+    const drawerRoleRequestSeqRef = useRef(0);
+    const roleUsersRequestSeqRef = useRef(0);
+    const listRequestSeqRef = useRef(0);
 
     const loadData = useCallback(async (p: number, ps: number, value?: string, field: 'display_name' | 'name' = 'display_name') => {
+        const requestSeq = listRequestSeqRef.current + 1;
+        listRequestSeqRef.current = requestSeq;
         setLoading(true);
+        setListLoadFailed(false);
         try {
-            const res = await getPlatformRoles();
-            let list: any[] = (res as any)?.data || [];
+            const allRoles = await getPlatformRoles();
+            if (listRequestSeqRef.current !== requestSeq) {
+                return;
+            }
+            let list: PlatformRoleRecord[] = allRoles || [];
+            setStats({
+                total: list.length,
+                system: list.filter(role => role.is_system).length,
+            });
 
             // 前端搜索
             const sv = value?.trim().toLowerCase();
@@ -84,19 +121,23 @@ const PlatformRolesPage: React.FC = () => {
             }
 
             const tot = list.length;
-            const systemCount = list.filter(r => r.is_system).length;
-            if (p === 1 && !sv) {
-                setStats({ total: tot, system: systemCount });
-            }
             setTotal(tot);
 
             // 前端分页
             const start = (p - 1) * ps;
             setData(list.slice(start, start + ps));
         } catch {
-            /* global error handler */
+            if (listRequestSeqRef.current === requestSeq) {
+                setData([]);
+                setTotal(0);
+                setStats({ total: 0, system: 0 });
+                setListLoadFailed(true);
+                message.error('平台角色列表加载失败，请刷新页面重试');
+            }
         } finally {
-            setLoading(false);
+            if (listRequestSeqRef.current === requestSeq) {
+                setLoading(false);
+            }
         }
     }, []);
 
@@ -104,12 +145,7 @@ const PlatformRolesPage: React.FC = () => {
         loadData(1, pageSize);
     }, []);
 
-    const handleSearch = useCallback((params: {
-        searchField?: string;
-        searchValue?: string;
-        advancedSearch?: Record<string, any>;
-        filters?: { field: string; value: string }[];
-    }) => {
+    const handleSearch = useCallback((params: PlatformRoleSearchParams) => {
         const quickFilter = params.filters?.[0];
         const value = quickFilter?.value || params.searchValue || '';
         const field = (quickFilter?.field || params.searchField || 'display_name') as 'display_name' | 'name';
@@ -121,42 +157,83 @@ const PlatformRolesPage: React.FC = () => {
 
     // ==================== Drawer ====================
     const loadRoleUsers = useCallback(async (roleId: string, search: string, page: number, append = false) => {
+        const requestSeq = roleUsersRequestSeqRef.current + 1;
+        roleUsersRequestSeqRef.current = requestSeq;
         setRoleUsersLoading(true);
+        setRoleUsersLoadFailed(false);
         try {
             const res = await getPlatformRoleUsers(roleId, {
                 page,
                 page_size: userPageSize,
                 ...(search ? { name: search } : {}),
-            });
-            const list: any[] = (res as any)?.data || [];
-            const tot = Number((res as any)?.total) || 0;
+            }) as PlatformRoleUserPage;
+            if (roleUsersRequestSeqRef.current !== requestSeq || currentRoleIdRef.current !== roleId) {
+                return;
+            }
+            const list = res.data || [];
+            const tot = Number(res.total || 0);
             setRoleUsers(prev => append ? [...prev, ...list] : list);
             setRoleUsersTotal(tot);
         } catch {
-            // 静默失败
+            if (roleUsersRequestSeqRef.current === requestSeq && currentRoleIdRef.current === roleId) {
+                setRoleUsers((prev) => (append ? prev : []));
+                setRoleUsersTotal((prev) => (append ? prev : 0));
+                setRoleUsersLoadFailed(true);
+                message.error('角色关联用户加载失败，请刷新页面重试');
+            }
         } finally {
-            setRoleUsersLoading(false);
+            if (roleUsersRequestSeqRef.current === requestSeq && currentRoleIdRef.current === roleId) {
+                setRoleUsersLoading(false);
+            }
         }
     }, []);
 
-    const openDrawer = useCallback((role: any) => {
+    const openDrawer = useCallback((role: PlatformRoleRecord) => {
+        const requestSeq = drawerRoleRequestSeqRef.current + 1;
+        drawerRoleRequestSeqRef.current = requestSeq;
         setDrawerRole(role);
         setDrawerOpen(true);
+        setDrawerRoleLoading(true);
         setRoleUsers([]);
+        setRoleUsersLoading(false);
+        setRoleUsersLoadFailed(false);
         setUserSearch('');
         setUserPage(1);
         setRoleUsersTotal(0);
         currentRoleIdRef.current = role.id;
-
-        if (role.user_count > 0) {
-            loadRoleUsers(role.id, '', 1);
-        }
+        roleUsersRequestSeqRef.current += 1;
+        getPlatformRole(role.id)
+            .then((detail) => {
+                if (drawerRoleRequestSeqRef.current !== requestSeq) return;
+                setDrawerRole(detail);
+                if ((detail.user_count ?? 0) > 0) {
+                    loadRoleUsers(detail.id, '', 1);
+                    return;
+                }
+                setRoleUsers([]);
+                setRoleUsersTotal(0);
+            })
+            .catch(() => {
+                if (role.user_count > 0) {
+                    loadRoleUsers(role.id, '', 1);
+                }
+            })
+            .finally(() => {
+                if (drawerRoleRequestSeqRef.current === requestSeq) {
+                    setDrawerRoleLoading(false);
+                }
+            });
     }, [loadRoleUsers]);
 
     const closeDrawer = useCallback(() => {
+        drawerRoleRequestSeqRef.current += 1;
+        roleUsersRequestSeqRef.current += 1;
         setDrawerOpen(false);
         setDrawerRole(null);
+        setDrawerRoleLoading(false);
         setRoleUsers([]);
+        setRoleUsersLoading(false);
+        setRoleUsersLoadFailed(false);
         setRoleUsersTotal(0);
         setUserSearch('');
         setUserPage(1);
@@ -196,8 +273,8 @@ const PlatformRolesPage: React.FC = () => {
     }, [page, pageSize, searchValue, searchField, loadData, total]);
 
     // ==================== 权限分组 ====================
-    const groupPermissions = (perms: any[]) => {
-        const groups: Record<string, any[]> = {};
+    const groupPermissions = (perms: AutoHealing.Permission[]) => {
+        const groups: Record<string, AutoHealing.Permission[]> = {};
         for (const p of perms) {
             const mod = p.module || 'other';
             if (!groups[mod]) groups[mod] = [];
@@ -207,7 +284,7 @@ const PlatformRolesPage: React.FC = () => {
     };
 
     // ==================== 渲染卡片 ====================
-    const renderCard = (role: any) => {
+    const renderCard = (role: PlatformRoleRecord) => {
         const isSystem = role.is_system;
         const cardClass = `role-card ${isSystem ? 'role-card-system' : 'role-card-custom'}`;
 
@@ -303,29 +380,30 @@ const PlatformRolesPage: React.FC = () => {
                     header: { display: 'none' },
                 }}
             >
-                {/* Header */}
-                <div className="role-drawer-header">
-                    <div className="role-drawer-header-top">
-                        <div className="role-drawer-header-icon">
-                            <SafetyCertificateOutlined />
-                        </div>
-                        <div className="role-drawer-header-info">
-                            <div className="role-drawer-title">{drawerRole.display_name}</div>
-                            <div className="role-drawer-sub">
-                                <IdcardOutlined style={{ marginRight: 4 }} />
-                                {drawerRole.name}
+                <Spin spinning={drawerRoleLoading}>
+                    {/* Header */}
+                    <div className="role-drawer-header">
+                        <div className="role-drawer-header-top">
+                            <div className="role-drawer-header-icon">
+                                <SafetyCertificateOutlined />
                             </div>
+                            <div className="role-drawer-header-info">
+                                <div className="role-drawer-title">{drawerRole.display_name}</div>
+                                <div className="role-drawer-sub">
+                                    <IdcardOutlined style={{ marginRight: 4 }} />
+                                    {drawerRole.name}
+                                </div>
+                            </div>
+                            <Button
+                                type="text"
+                                icon={<CloseOutlined />}
+                                onClick={closeDrawer}
+                                style={{ flexShrink: 0, color: '#8c8c8c' }}
+                            />
                         </div>
-                        <Button
-                            type="text"
-                            icon={<CloseOutlined />}
-                            onClick={closeDrawer}
-                            style={{ flexShrink: 0, color: '#8c8c8c' }}
-                        />
                     </div>
-                </div>
 
-                <div className="role-drawer-body">
+                    <div className="role-drawer-body">
                     {/* 基本信息 */}
                     <div className="role-drawer-card">
                         <div className="role-drawer-card-header">
@@ -431,13 +509,19 @@ const PlatformRolesPage: React.FC = () => {
                                 </div>
                             ) : roleUsers.length === 0 && !roleUsersLoading ? (
                                 <Empty
-                                    description={userSearch ? '未找到匹配用户' : '暂无关联用户'}
+                                    description={
+                                        roleUsersLoadFailed
+                                            ? '关联用户加载失败，请刷新页面重试'
+                                            : userSearch
+                                                ? '未找到匹配用户'
+                                                : '暂无关联用户'
+                                    }
                                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                                 />
                             ) : (
                                 <>
                                     <div className="role-users-scroll">
-                                        {roleUsers.map((user: any) => (
+                                        {roleUsers.map((user) => (
                                             <div className="role-user-row" key={user.id}>
                                                 <Avatar
                                                     size={28}
@@ -500,7 +584,7 @@ const PlatformRolesPage: React.FC = () => {
                                             {MODULE_LABELS[mod] || mod}
                                         </Text>
                                         <div className="role-perm-list">
-                                            {modulePerms.map((p: any) => (
+                                            {modulePerms.map((p) => (
                                                 <span key={p.code} className="role-perm-tag">
                                                     {p.name || p.code}
                                                 </span>
@@ -511,7 +595,8 @@ const PlatformRolesPage: React.FC = () => {
                             )}
                         </div>
                     </div>
-                </div>
+                    </div>
+                </Spin>
             </Drawer>
         );
     };
@@ -542,7 +627,7 @@ const PlatformRolesPage: React.FC = () => {
 
     // ==================== 主渲染 ====================
     return (
-        <StandardTable<any>
+        <StandardTable<PlatformRoleRecord>
             title="平台角色管理"
             description="管理平台级角色及权限，平台角色用于控制平台管理功能的访问权限。"
             headerIcon={headerIcon}
@@ -552,7 +637,10 @@ const PlatformRolesPage: React.FC = () => {
         >
             <Spin spinning={loading}>
                 {data.length === 0 && !loading ? (
-                    <Empty style={{ padding: 60 }} description="暂无平台角色" />
+                    <Empty
+                        style={{ padding: 60 }}
+                        description={listLoadFailed ? '平台角色列表加载失败，请刷新页面重试' : '暂无平台角色'}
+                    />
                 ) : (
                     <>
                         <div className="roles-grid">

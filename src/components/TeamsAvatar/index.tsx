@@ -30,7 +30,9 @@ const TeamsAvatar: React.FC<TeamsAvatarProps> = ({ seed, size = 32 }) => {
     const fontSize = initials.length > 1 ? Math.round(size * 0.36) : Math.round(size * 0.44);
 
     return (
-        <div style={{
+        <span
+            aria-hidden="true"
+            style={{
             width: size,
             height: size,
             backgroundColor: '#ECEDF5',
@@ -44,9 +46,10 @@ const TeamsAvatar: React.FC<TeamsAvatarProps> = ({ seed, size = 32 }) => {
             lineHeight: 1,
             userSelect: 'none',
             fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
-        }}>
+        }}
+        >
             {initials}
-        </div>
+        </span>
     );
 };
 

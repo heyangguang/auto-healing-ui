@@ -1,7 +1,9 @@
-import { Result, Button, ConfigProvider } from 'antd';
+import React from 'react';
+import { Result, Button, ConfigProvider, message } from 'antd';
 import { useNavigate } from '@@/exports';
 import { StopOutlined } from '@ant-design/icons';
 import { TokenManager } from '@/requestErrorConfig';
+import { logout } from '@/services/auto-healing/auth';
 
 /**
  * 无租户权限提示页面
@@ -10,12 +12,14 @@ import { TokenManager } from '@/requestErrorConfig';
 const NoTenantPage: React.FC = () => {
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        // 清除所有认证信息
+    const handleLogout = async () => {
+        try {
+            const refreshToken = TokenManager.getRefreshToken() || undefined;
+            await logout(refreshToken ? { refresh_token: refreshToken } : undefined);
+        } catch {
+            message.warning('服务端登出失败，已清除本地登录状态');
+        }
         TokenManager.clearTokens();
-        localStorage.removeItem('tenant-storage');
-
-        // 跳转到登录页
         navigate('/user/login');
     };
 

@@ -1,0 +1,14 @@
+{
+  "assetCountMax": 850,
+  "totalBytesMax": 61600000,
+  "kindBytesMax": {
+    "js": 7210000,
+    "css": 1320000,
+    "font": 16800000,
+    "image": 8950000
+  },
+  "largestAssetBytesMax": {
+    "js": 3360000,
+    "css": 1180000
+  }
+}

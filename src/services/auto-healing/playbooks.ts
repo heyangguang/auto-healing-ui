@@ -1,9 +1,35 @@
 import { request } from '@umijs/max';
+import {
+    getTenantPlaybooks,
+    postTenantPlaybooksIdScan,
+} from '@/services/generated/auto-healing/gitPlaybooks';
+import { normalizePaginatedResponse, unwrapData } from './responseAdapters';
 
 /**
  * Playbook 模板管理 API
  * 基于 docs/playbook-management.md
  */
+
+type PlaybookStatsSummary = {
+    total: number;
+    by_status: Array<{ status: string; count: number }>;
+    by_config_mode: Array<{ config_mode: string; count: number }>;
+};
+
+type RequestOptions = {
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    data?: unknown;
+    params?: Record<string, unknown>;
+};
+
+async function requestWrappedData<T>(url: string, options: RequestOptions) {
+    const response = await request<{ data?: T } | T>(url, options);
+    return { data: unwrapData(response) as T };
+}
+
+async function wrapGeneratedData<T>(promise: Promise<{ data?: T } | T>) {
+    return { data: unwrapData(await promise) as T };
+}
 
 /**
  * 获取 Playbook 列表
@@ -27,10 +53,9 @@ export async function getPlaybooks(params?: {
     page?: number;
     page_size?: number;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.Playbook>>('/api/v1/tenant/playbooks', {
-        method: 'GET',
-        params,
-    });
+    return normalizePaginatedResponse(
+        await getTenantPlaybooks({ params }) as AutoHealing.PaginatedResponse<AutoHealing.Playbook>,
+    );
 }
 
 /**
@@ -38,7 +63,7 @@ export async function getPlaybooks(params?: {
  * GET /api/v1/tenant/playbooks/{id}
  */
 export async function getPlaybook(id: string) {
-    return request<{ data: AutoHealing.Playbook }>(`/api/v1/tenant/playbooks/${id}`, {
+    return requestWrappedData<AutoHealing.Playbook>(`/api/v1/tenant/playbooks/${id}`, {
         method: 'GET',
     });
 }
@@ -48,7 +73,7 @@ export async function getPlaybook(id: string) {
  * POST /api/v1/tenant/playbooks
  */
 export async function createPlaybook(data: AutoHealing.CreatePlaybookRequest) {
-    return request<{ data: AutoHealing.Playbook }>('/api/v1/tenant/playbooks', {
+    return requestWrappedData<AutoHealing.Playbook>('/api/v1/tenant/playbooks', {
         method: 'POST',
         data,
     });
@@ -59,7 +84,7 @@ export async function createPlaybook(data: AutoHealing.CreatePlaybookRequest) {
  * PUT /api/v1/tenant/playbooks/{id}
  */
 export async function updatePlaybook(id: string, data: AutoHealing.UpdatePlaybookRequest) {
-    return request<{ data: AutoHealing.Playbook }>(`/api/v1/tenant/playbooks/${id}`, {
+    return requestWrappedData<AutoHealing.Playbook>(`/api/v1/tenant/playbooks/${id}`, {
         method: 'PUT',
         data,
     });
@@ -80,10 +105,9 @@ export async function deletePlaybook(id: string) {
  * POST /api/v1/tenant/playbooks/{id}/scan
  */
 export async function scanPlaybook(id: string, data?: AutoHealing.ScanPlaybookRequest) {
-    return request<{ data: AutoHealing.PlaybookScanLog }>(`/api/v1/tenant/playbooks/${id}/scan`, {
-        method: 'POST',
-        data,
-    });
+    return wrapGeneratedData(
+        postTenantPlaybooksIdScan({ id }, { data }) as Promise<{ data?: AutoHealing.PlaybookScanLog } | AutoHealing.PlaybookScanLog>,
+    );
 }
 
 /**
@@ -91,7 +115,7 @@ export async function scanPlaybook(id: string, data?: AutoHealing.ScanPlaybookRe
  * PUT /api/v1/tenant/playbooks/{id}/variables
  */
 export async function updatePlaybookVariables(id: string, data: AutoHealing.UpdatePlaybookVariablesRequest) {
-    return request<{ data: AutoHealing.Playbook }>(`/api/v1/tenant/playbooks/${id}/variables`, {
+    return requestWrappedData<AutoHealing.Playbook>(`/api/v1/tenant/playbooks/${id}/variables`, {
         method: 'PUT',
         data,
     });
@@ -115,10 +139,12 @@ export async function getPlaybookScanLogs(id: string, params?: {
     page?: number;
     page_size?: number;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.PlaybookScanLog>>(`/api/v1/tenant/playbooks/${id}/scan-logs`, {
-        method: 'GET',
-        params,
-    });
+    return normalizePaginatedResponse(
+        await request<AutoHealing.PaginatedResponse<AutoHealing.PlaybookScanLog>>(`/api/v1/tenant/playbooks/${id}/scan-logs`, {
+            method: 'GET',
+            params,
+        }),
+    );
 }
 
 /**
@@ -136,7 +162,7 @@ export async function setPlaybookOffline(id: string) {
  * GET /api/v1/tenant/playbooks/{id}/files
  */
 export async function getPlaybookFiles(id: string) {
-    return request<{ data: { files: AutoHealing.PlaybookFile[] } }>(`/api/v1/tenant/playbooks/${id}/files`, {
+    return requestWrappedData<{ files: AutoHealing.PlaybookFile[] }>(`/api/v1/tenant/playbooks/${id}/files`, {
         method: 'GET',
     });
 }
@@ -146,12 +172,7 @@ export async function getPlaybookFiles(id: string) {
  * GET /api/v1/tenant/playbooks/stats
  */
 export async function getPlaybookStats() {
-    return request<{
-        code: number;
-        data: {
-            total: number;
-            by_status: Array<{ status: string; count: number }>;
-            by_config_mode: Array<{ config_mode: string; count: number }>;
-        };
-    }>('/api/v1/tenant/playbooks/stats', { method: 'GET' });
+    return unwrapData(
+        await request<{ data?: PlaybookStatsSummary } | PlaybookStatsSummary>('/api/v1/tenant/playbooks/stats', { method: 'GET' }),
+    ) as PlaybookStatsSummary;
 }

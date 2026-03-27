@@ -1,12 +1,25 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Drawer, Space, Typography, Tag, Button, Tabs, Spin } from 'antd';
-import { CloseOutlined, ReloadOutlined, ExpandOutlined } from '@ant-design/icons';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Drawer, Space, Typography, Tag, Button } from 'antd';
+import { ReloadOutlined, ExpandOutlined } from '@ant-design/icons';
 import { getExecutionRun, getExecutionLogs, createLogStream } from '@/services/auto-healing/execution';
 import { RUN_STATUS_LABELS } from '@/constants/executionDicts';
 import LogConsole, { LogEntry } from '@/components/execution/LogConsole';
 import dayjs from 'dayjs';
+import { createRequestSequence } from '@/utils/requestSequence';
+import { mergeLogEntries, sortLogEntries } from '../logStreamHelpers';
 
 const { Text } = Typography;
+const RECENT_STREAM_WINDOW_MS = 30_000;
+
+const shouldKeepLiveStream = (runData?: AutoHealing.ExecutionRun) => {
+    const isRecent = !!runData?.created_at
+        && (Date.now() - new Date(runData.created_at).getTime()) < RECENT_STREAM_WINDOW_MS;
+    return !!runData?.status && (
+        runData.status === 'running'
+        || runData.status === 'pending'
+        || isRecent
+    );
+};
 
 interface ForensicDrawerProps {
     runId?: string;
@@ -20,86 +33,166 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
     const [loading, setLoading] = useState(false);
     const [streaming, setStreaming] = useState(false);
     const closeStreamRef = useRef<(() => void) | null>(null);
+    const requestSequenceRef = useRef(createRequestSequence());
+    const streamingRef = useRef(false);
+    const currentStreamRunIdRef = useRef<string | undefined>(undefined);
 
-    const loadData = async () => {
-        if (!runId) return;
-        setLoading(true);
-        // Clear previous logs to avoid stale data showing while loading
-        setLogs([]);
+    const markStreamClosed = useCallback(() => {
+        streamingRef.current = false;
+        currentStreamRunIdRef.current = undefined;
+        closeStreamRef.current = null;
+        setStreaming(false);
+    }, []);
+
+    const closeCurrentStream = useCallback(() => {
+        const closeStream = closeStreamRef.current;
+        markStreamClosed();
+        closeStream?.();
+    }, [markStreamClosed]);
+
+    const refreshSnapshot = useCallback(async (currentRunId: string, token = requestSequenceRef.current.current()) => {
         try {
             const [runRes, logsRes] = await Promise.all([
-                getExecutionRun(runId),
-                getExecutionLogs(runId)
+                getExecutionRun(currentRunId),
+                getExecutionLogs(currentRunId),
             ]);
+            if (!requestSequenceRef.current.isCurrent(token)) return undefined;
             setRun(runRes.data);
-            const rawLogs = logsRes.data || [];
-            // Console.log debugging if needed, but for now rely on sorting
-            setLogs(rawLogs.sort((a: any, b: any) => a.sequence - b.sequence));
-
-            // Start stream if needed
-            if (runRes.data.status === 'running' || runRes.data.status === 'pending') {
-                startStream(runId);
-            }
-
+            setLogs((prev) => mergeLogEntries(prev, sortLogEntries((logsRes.data || []) as LogEntry[])));
+            return runRes.data;
         } catch (e) {
+            if (!requestSequenceRef.current.isCurrent(token)) return undefined;
             console.error(e);
-        } finally {
-            setLoading(false);
+            return undefined;
         }
-    };
+    }, []);
 
-    const startStream = (id: string) => {
-        if (streaming) return;
+    const startStream = useCallback((id: string, token: number) => {
+        if (streamingRef.current && currentStreamRunIdRef.current === id) {
+            return;
+        }
+        closeCurrentStream();
+        streamingRef.current = true;
+        currentStreamRunIdRef.current = id;
         setStreaming(true);
         const close = createLogStream(id, (log) => {
-            setLogs(prev => {
-                if (prev.some(p => p.sequence === log.sequence)) return prev;
-                return [...prev, log as LogEntry];
-            });
+            if (!requestSequenceRef.current.isCurrent(token)) return;
+            setLogs((prev) => mergeLogEntries(prev, [log as LogEntry]));
         }, (res) => {
-            setStreaming(false);
+            if (!requestSequenceRef.current.isCurrent(token)) return;
+            markStreamClosed();
             setRun(prev => prev ? { ...prev, status: res.status as any } : prev);
+            void refreshSnapshot(id, token);
+        }, () => {
+            if (!requestSequenceRef.current.isCurrent(token)) return;
+            markStreamClosed();
+            void refreshSnapshot(id, token).then((runData) => {
+                if (!requestSequenceRef.current.isCurrent(token)) return;
+                const shouldStream = runData?.status === 'running' || runData?.status === 'pending';
+                if (shouldStream) {
+                    startStream(id, token);
+                }
+            });
         });
         closeStreamRef.current = close;
-    };
+    }, [closeCurrentStream, markStreamClosed, refreshSnapshot]);
+
+    const loadData = useCallback(async (currentRunId: string) => {
+        const token = requestSequenceRef.current.next();
+        const isSameRun = run?.id === currentRunId;
+        if (!isSameRun) {
+            closeCurrentStream();
+            setLogs([]);
+            setRun(undefined);
+        }
+        setLoading(true);
+        try {
+            const runRes = await getExecutionRun(currentRunId);
+            if (!requestSequenceRef.current.isCurrent(token)) return;
+            setRun(runRes.data);
+
+            const shouldStream = shouldKeepLiveStream(runRes.data);
+            if (shouldStream) {
+                startStream(currentRunId, token);
+            } else if (currentStreamRunIdRef.current === currentRunId) {
+                closeCurrentStream();
+            }
+
+            const logsRes = await getExecutionLogs(currentRunId);
+            if (!requestSequenceRef.current.isCurrent(token)) return;
+            setLogs((prev) => mergeLogEntries(prev, sortLogEntries((logsRes.data || []) as LogEntry[])));
+        } catch (e) {
+            if (!requestSequenceRef.current.isCurrent(token)) return;
+            console.error(e);
+        } finally {
+            if (requestSequenceRef.current.isCurrent(token)) {
+                setLoading(false);
+            }
+        }
+    }, [closeCurrentStream, run?.id, startStream]);
+
+    const handleRefresh = useCallback(async () => {
+        if (!runId) {
+            return;
+        }
+        const token = requestSequenceRef.current.current();
+        setLoading(true);
+        try {
+            const runData = await refreshSnapshot(runId, token);
+            if (!requestSequenceRef.current.isCurrent(token)) return;
+            const shouldStream = shouldKeepLiveStream(runData);
+            if (shouldStream && !streamingRef.current) {
+                startStream(runId, token);
+            }
+            if (!shouldStream && currentStreamRunIdRef.current === runId) {
+                closeCurrentStream();
+            }
+        } finally {
+            if (requestSequenceRef.current.isCurrent(token)) {
+                setLoading(false);
+            }
+        }
+    }, [closeCurrentStream, refreshSnapshot, runId, startStream]);
 
     useEffect(() => {
         if (open && runId) {
-            loadData();
+            void loadData(runId);
         } else {
-            // Clean up
-            if (closeStreamRef.current) closeStreamRef.current();
+            requestSequenceRef.current.invalidate();
+            closeCurrentStream();
             setLogs([]);
             setRun(undefined);
-            setStreaming(false);
         }
-    }, [open, runId]);
+    }, [closeCurrentStream, loadData, open, runId]);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (closeStreamRef.current) closeStreamRef.current();
+            requestSequenceRef.current.invalidate();
+            closeCurrentStream();
         };
-    }, []);
+    }, [closeCurrentStream]);
+
+    const activeRun = run?.id === runId ? run : undefined;
+    const activeLogs = activeRun ? logs : [];
 
     const Title = (
         <Space size={16}>
             <Text style={{ fontFamily: 'Fira Code' }}>#{runId?.slice(0, 8)}</Text>
-            {run && (
+            {activeRun && (
                 <Tag color={
-                    run.status === 'running' ? '#1890ff' :
-                        run.status === 'success' ? '#52c41a' :
-                            run.status === 'partial' ? '#fa8c16' :
-                                run.status === 'timeout' ? '#eb2f96' :
-                                    run.status === 'cancelled' ? '#8c8c8c' :
-                                        run.status === 'pending' ? '#722ed1' :
+                    activeRun.status === 'running' ? '#1890ff' :
+                        activeRun.status === 'success' ? '#52c41a' :
+                            activeRun.status === 'partial' ? '#fa8c16' :
+                                activeRun.status === 'timeout' ? '#eb2f96' :
+                                    activeRun.status === 'cancelled' ? '#8c8c8c' :
+                                        activeRun.status === 'pending' ? '#722ed1' :
                                             '#ff4d4f'
                 }>
-                    {RUN_STATUS_LABELS[run.status] || run.status.toUpperCase()}
+                    {RUN_STATUS_LABELS[activeRun.status] || activeRun.status.toUpperCase()}
                 </Tag>
             )}
             <Text type="secondary" style={{ fontSize: 13 }}>
-                {run?.started_at ? dayjs(run.started_at).format('YYYY-MM-DD HH:mm:ss') : ''}
+                {activeRun?.started_at ? dayjs(activeRun.started_at).format('YYYY-MM-DD HH:mm:ss') : ''}
             </Text>
         </Space>
     );
@@ -114,7 +207,7 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
             destroyOnHidden
             extra={
                 <Space>
-                    <Button icon={<ReloadOutlined />} size="small" onClick={loadData}>刷新</Button>
+                    <Button icon={<ReloadOutlined />} size="small" onClick={() => void handleRefresh()}>刷新</Button>
                     <Button
                         icon={<ExpandOutlined />}
                         size="small"
@@ -128,8 +221,8 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
         >
             <div style={{ flex: 1, background: '#1e1e1e', display: 'flex', flexDirection: 'column' }}>
                 <LogConsole
-                    logs={logs}
-                    loading={loading && logs.length === 0}
+                    logs={activeLogs}
+                    loading={loading && activeLogs.length === 0}
                     streaming={streaming}
                     height="100%"
                     theme="dark"

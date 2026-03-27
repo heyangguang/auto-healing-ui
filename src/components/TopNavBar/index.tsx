@@ -11,12 +11,12 @@ import {
 import { history, useLocation, useAccess, useModel } from '@umijs/max';
 import { createStyles } from 'antd-style';
 import { AvatarDropdown, AvatarName, AvatarFullName } from '@/components/RightContent/AvatarDropdown';
-import GlobalSearch from '@/components/GlobalSearch';
-import NotificationBell from '@/components/NotificationBell';
-import TenantSwitcher from '@/components/TenantSwitcher';
-import ImpersonationBanner from '@/components/ImpersonationBanner';
 import StarryBackground from './StarryBackground';
 const ProductMenu = lazy(() => import('@/components/ProductMenu'));
+const GlobalSearch = lazy(() => import('@/components/GlobalSearch'));
+const NotificationBell = lazy(() => import('@/components/NotificationBell'));
+const TenantSwitcher = lazy(() => import('@/components/TenantSwitcher'));
+const ImpersonationBanner = lazy(() => import('@/components/ImpersonationBanner'));
 import { CATEGORIES, SERVICES } from '@/config/navData';
 import { canAccessPath } from '@/utils/pathAccess';
 
@@ -53,6 +53,8 @@ const useStyles = createStyles(({ token }) => ({
         width: 40,
         height: 40,
         cursor: 'pointer',
+        border: 0,
+        background: 'transparent',
         color: 'rgba(255,255,255,0.85)',
         fontSize: 18,
         marginRight: 4,
@@ -67,6 +69,8 @@ const useStyles = createStyles(({ token }) => ({
         gap: 10,
         padding: '0 16px 0 0',
         cursor: 'pointer',
+        border: 0,
+        background: 'transparent',
         height: 58,
         flexShrink: 0,
         boxSizing: 'border-box' as const,
@@ -95,10 +99,13 @@ const useStyles = createStyles(({ token }) => ({
         gap: 5,
         padding: '6px 12px',
         cursor: 'pointer',
+        border: 0,
+        background: 'transparent',
         color: 'rgba(255,255,255,0.7)',
         fontSize: 13,
         fontWeight: 500,
         transition: 'all 0.2s',
+        fontFamily: 'inherit',
         userSelect: 'none' as const,
         '&:hover': {
             color: '#fff',
@@ -136,6 +143,8 @@ const useStyles = createStyles(({ token }) => ({
         width: 36,
         height: 36,
         cursor: 'pointer',
+        border: 0,
+        background: 'transparent',
         color: 'rgba(255,255,255,0.7)',
         fontSize: 18,
         transition: 'all 0.2s',
@@ -157,8 +166,11 @@ const useStyles = createStyles(({ token }) => ({
         padding: '0 4px 0 8px',
         height: 58,
         cursor: 'pointer',
+        border: 0,
+        background: 'transparent',
         color: 'rgba(255,255,255,0.85)',
         fontSize: 13,
+        fontFamily: 'inherit',
         transition: 'all 0.2s',
         whiteSpace: 'nowrap' as const,
         '&:hover': {
@@ -197,6 +209,7 @@ const TopNavBar: React.FC = () => {
     const [isTablet, setIsTablet] = useState(
         typeof window !== 'undefined' ? window.innerWidth <= TABLET_BP : false
     );
+    const globalSearchFallbackWidth = isTablet ? 240 : 320;
 
     useEffect(() => {
         const onResize = () => {
@@ -252,46 +265,61 @@ const TopNavBar: React.FC = () => {
 
                     {/* 汉堡菜单: 仅移动端 + 有侧边栏时显示 */}
                     {isMobile && hasSideNav && (
-                        <div
+                        <button
+                            type="button"
                             className={styles.hamburger}
                             onClick={() => window.dispatchEvent(new Event('toggle-sidenav'))}
+                            aria-label="切换侧边栏"
                         >
                             <MenuOutlined />
-                        </div>
+                        </button>
                     )}
 
                     {/* Logo */}
-                    <div className={styles.logo} onClick={() => startTransition(() => history.push('/'))}>
-                        <div className={styles.logoIcon}><img src="/pangolin-logo.png" alt="Pangolin" style={{ height: 38 }} /></div>
-                    </div>
+                    <button
+                        type="button"
+                        className={styles.logo}
+                        onClick={() => startTransition(() => history.push('/'))}
+                        aria-label="返回工作台"
+                    >
+                        <span className={styles.logoIcon}><img src="/pangolin-logo.png" alt="Pangolin" style={{ height: 38 }} /></span>
+                    </button>
 
                     {/* 导航链接 - 平台管理员未 Impersonation 时隐藏租户级导航 */}
                     <div className={styles.navLinks}>
                         {(!access.isPlatformAdmin || isImpersonating) && (
-                            <div
+                            <button
+                                type="button"
                                 className={cx(styles.navItem, isWorkbench && !menuOpen && styles.navItemActive)}
                                 onClick={() => { setMenuOpen(false); startTransition(() => history.push('/')); }}
+                                aria-current={isWorkbench && !menuOpen ? 'page' : undefined}
                             >
                                 <HomeOutlined className={styles.navIcon} />
                                 {!isTablet && <span>工作台</span>}
-                            </div>
+                            </button>
                         )}
 
                         {(!access.isPlatformAdmin || isImpersonating) && showDashboard && (
-                            <div
+                            <button
+                                type="button"
                                 className={cx(styles.navItem, isDashboard && !menuOpen && styles.navItemActive)}
                                 onClick={() => { setMenuOpen(false); startTransition(() => history.push('/dashboard')); }}
+                                aria-current={isDashboard && !menuOpen ? 'page' : undefined}
                             >
                                 <DashboardOutlined className={styles.navIcon} />
                                 {!isTablet && <span>监控面板</span>}
-                            </div>
+                            </button>
                         )}
 
                         {(!access.isPlatformAdmin || isImpersonating) && hasAnyService && (
-                            <div
+                            <button
+                                type="button"
                                 id="tour-product-menu"
                                 className={cx(styles.navItem, menuOpen && styles.navItemActive)}
                                 onClick={() => setMenuOpen(!menuOpen)}
+                                aria-haspopup="dialog"
+                                aria-expanded={menuOpen}
+                                aria-label="打开产品与服务菜单"
                             >
                                 <AppstoreOutlined className={styles.navIcon} />
                                 {!isTablet && <span>产品与服务</span>}
@@ -300,45 +328,70 @@ const TopNavBar: React.FC = () => {
                                 ) : (
                                     <DownOutlined className={styles.arrowIcon} />
                                 )}
-                            </div>
+                            </button>
                         )}
                     </div>
                 </div>
 
                 {/* 全局搜索 - 平台管理员未 Impersonation 时隐藏 */}
-                {!isMobile && (!access.isPlatformAdmin || isImpersonating) && <GlobalSearch compact={isTablet} />}
+                {!isMobile && (!access.isPlatformAdmin || isImpersonating) && (
+                    <Suspense fallback={<div style={{ width: globalSearchFallbackWidth, height: 36 }} />}>
+                        <GlobalSearch compact={isTablet} />
+                    </Suspense>
+                )}
 
                 {/* 右侧操作 */}
                 <div className={styles.rightSection}>
                     {!isMobile && (
                         <>
-                            <div className={styles.iconBtn} title="帮助文档" onClick={() => startTransition(() => history.push('/guide'))}>
+                            <button
+                                type="button"
+                                className={styles.iconBtn}
+                                title="帮助文档"
+                                aria-label="帮助文档"
+                                onClick={() => startTransition(() => history.push('/guide'))}
+                            >
                                 <QuestionCircleOutlined />
-                            </div>
+                            </button>
                             {(!access.isPlatformAdmin || isImpersonating) && access.canViewSiteMessages && (
-                                <span id="tour-notification-bell"><NotificationBell /></span>
+                                <Suspense fallback={<span style={{ display: 'inline-block', width: 36, height: 36 }} />}>
+                                    <span id="tour-notification-bell"><NotificationBell /></span>
+                                </Suspense>
                             )}
                             {/* 平台管理员：impersonation 时显示 Banner，否则不显示 */}
                             {/* 普通用户：显示 TenantSwitcher */}
                             {realPlatformAdmin
-                                ? <ImpersonationBanner />
-                                : <TenantSwitcher />
+                                ? (
+                                    <Suspense fallback={<div style={{ minWidth: 220, height: 32 }} />}>
+                                        <ImpersonationBanner />
+                                    </Suspense>
+                                )
+                                : (
+                                    <Suspense fallback={<div style={{ width: 160, height: 36 }} />}>
+                                        <TenantSwitcher />
+                                    </Suspense>
+                                )
                             }
                             <div className={styles.divider} />
                         </>
                     )}
 
                     <AvatarDropdown menu>
-                        <div className={styles.avatarWrapper}>
-                            <div className={styles.userAvatar}>
+                        <button
+                            type="button"
+                            className={styles.avatarWrapper}
+                            aria-haspopup="menu"
+                            aria-label="打开用户菜单"
+                        >
+                            <span className={styles.userAvatar}>
                                 <AvatarName />
-                            </div>
+                            </span>
                             {!isMobile && (
                                 <span className={styles.userName}>
                                     <AvatarFullName />
                                 </span>
                             )}
-                        </div>
+                        </button>
                     </AvatarDropdown>
                 </div>
             </div>

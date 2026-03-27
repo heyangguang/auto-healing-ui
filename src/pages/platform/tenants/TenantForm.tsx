@@ -4,64 +4,53 @@ import {
 } from 'antd';
 import {
     InfoCircleOutlined, AppstoreOutlined,
-    BankOutlined, ShopOutlined, TeamOutlined, CloudOutlined,
-    ApartmentOutlined, ToolOutlined, GlobalOutlined, RocketOutlined,
-    HomeOutlined, BulbOutlined, SafetyOutlined, ThunderboltOutlined,
-    DatabaseOutlined, ApiOutlined, DeploymentUnitOutlined, ClusterOutlined,
-    DashboardOutlined, ExperimentOutlined, MonitorOutlined, CodeOutlined,
-    BuildOutlined, FundOutlined, TrophyOutlined, StarOutlined,
-    ProductOutlined, AlertOutlined, AuditOutlined, FireOutlined,
-    CustomerServiceOutlined, ControlOutlined, SendOutlined, FolderOpenOutlined,
 } from '@ant-design/icons';
 import { history, useParams, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
 import {
-    getTenant, createTenant, updateTenant,
+    getTenant, createTenant, updateTenant, type PlatformTenantRecord,
 } from '@/services/auto-healing/platform/tenants';
+import type { CreateTenantRequest, PlatformTenant, UpdateTenantRequest } from '@/services/auto-healing/platform/contracts';
+import { TENANT_ICON_OPTIONS, findTenantIconOption } from './tenantFormOptions';
 import './TenantForm.css';
 
 const { Text } = Typography;
 
-const ICON_OPTIONS: { label: string; value: string; icon: React.ReactNode }[] = [
-    { label: '银行', value: 'bank', icon: <BankOutlined /> },
-    { label: '商店', value: 'shop', icon: <ShopOutlined /> },
-    { label: '团队', value: 'team', icon: <TeamOutlined /> },
-    { label: '云服务', value: 'cloud', icon: <CloudOutlined /> },
-    { label: '企业', value: 'apartment', icon: <ApartmentOutlined /> },
-    { label: '工具', value: 'tool', icon: <ToolOutlined /> },
-    { label: '全球', value: 'global', icon: <GlobalOutlined /> },
-    { label: '火箭', value: 'rocket', icon: <RocketOutlined /> },
-    { label: '主页', value: 'home', icon: <HomeOutlined /> },
-    { label: '灯泡', value: 'bulb', icon: <BulbOutlined /> },
-    { label: '安全', value: 'safety', icon: <SafetyOutlined /> },
-    { label: '闪电', value: 'thunder', icon: <ThunderboltOutlined /> },
-    { label: '数据库', value: 'database', icon: <DatabaseOutlined /> },
-    { label: 'API', value: 'api', icon: <ApiOutlined /> },
-    { label: '部署', value: 'deployment', icon: <DeploymentUnitOutlined /> },
-    { label: '集群', value: 'cluster', icon: <ClusterOutlined /> },
-    { label: '仪表盘', value: 'dashboard', icon: <DashboardOutlined /> },
-    { label: '实验', value: 'experiment', icon: <ExperimentOutlined /> },
-    { label: '监控', value: 'monitor', icon: <MonitorOutlined /> },
-    { label: '代码', value: 'code', icon: <CodeOutlined /> },
-    { label: '构建', value: 'build', icon: <BuildOutlined /> },
-    { label: '基金', value: 'fund', icon: <FundOutlined /> },
-    { label: '奖杯', value: 'trophy', icon: <TrophyOutlined /> },
-    { label: '星级', value: 'star', icon: <StarOutlined /> },
-    { label: '产品', value: 'product', icon: <ProductOutlined /> },
-    { label: '告警', value: 'alert', icon: <AlertOutlined /> },
-    { label: '审计', value: 'audit', icon: <AuditOutlined /> },
-    { label: '火焰', value: 'fire', icon: <FireOutlined /> },
-    { label: '客服', value: 'service', icon: <CustomerServiceOutlined /> },
-    { label: '控制', value: 'control', icon: <ControlOutlined /> },
-    { label: '发送', value: 'send', icon: <SendOutlined /> },
-    { label: '文件夹', value: 'folder', icon: <FolderOpenOutlined /> },
-];
+type TenantFormValues = {
+    name: string;
+    code: string;
+    description?: string;
+    icon?: string;
+    status?: PlatformTenant['status'];
+};
+
+const toTenantFormValues = (tenant: PlatformTenantRecord): TenantFormValues => ({
+    name: tenant.name,
+    code: tenant.code,
+    description: tenant.description,
+    icon: tenant.icon,
+    status: tenant.status,
+});
+
+const buildCreateTenantPayload = (values: TenantFormValues): CreateTenantRequest => ({
+    name: values.name,
+    code: values.code,
+    description: values.description,
+    icon: values.icon,
+});
+
+const buildUpdateTenantPayload = (values: TenantFormValues): UpdateTenantRequest => ({
+    name: values.name,
+    description: values.description,
+    icon: values.icon,
+    status: values.status,
+});
 
 const TenantForm: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const access = useAccess();
     const isEdit = !!id;
-    const [form] = Form.useForm();
+    const [form] = Form.useForm<TenantFormValues>();
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
@@ -74,28 +63,24 @@ const TenantForm: React.FC = () => {
     useEffect(() => {
         if (!isEdit) return;
         setLoading(true);
-        getTenant(id).then((res: any) => {
-            const tenant = res?.data || res;
-            form.setFieldsValue({
-                name: tenant.name,
-                code: tenant.code,
-                description: tenant.description,
-                icon: tenant.icon,
-                status: tenant.status,
-            });
-        }).catch(() => {
-            /* global error handler */
-        }).finally(() => setLoading(false));
+        getTenant(id)
+            .then((tenant) => {
+                form.setFieldsValue(toTenantFormValues(tenant));
+            })
+            .catch(() => {
+                /* global error handler */
+            })
+            .finally(() => setLoading(false));
     }, [id, isEdit, form]);
 
-    const handleSubmit = async (values: any) => {
+    const handleSubmit = async (values: TenantFormValues) => {
         setSubmitting(true);
         try {
             if (isEdit) {
-                await updateTenant(id, values);
+                await updateTenant(id, buildUpdateTenantPayload(values));
                 message.success('租户更新成功');
             } else {
-                await createTenant(values);
+                await createTenant(buildCreateTenantPayload(values));
                 message.success('租户创建成功');
             }
             history.push('/platform/tenants');
@@ -207,7 +192,7 @@ const TenantForm: React.FC = () => {
                                     style={{ width: 360 }}
                                     optionFilterProp="label"
                                     optionRender={(opt) => {
-                                        const icon = ICON_OPTIONS.find(o => o.value === opt.value);
+                                        const icon = findTenantIconOption(String(opt.value));
                                         return (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                 <span style={{ fontSize: 16, color: '#1677ff', width: 20, display: 'flex', justifyContent: 'center' }}>
@@ -218,7 +203,9 @@ const TenantForm: React.FC = () => {
                                         );
                                     }}
                                     labelRender={(opt) => {
-                                        const icon = ICON_OPTIONS.find(o => o.value === opt.value);
+                                        const icon = findTenantIconOption(
+                                            opt.value === undefined ? undefined : String(opt.value),
+                                        );
                                         return (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <span style={{ fontSize: 14, color: '#1677ff' }}>{icon?.icon}</span>
@@ -226,7 +213,7 @@ const TenantForm: React.FC = () => {
                                             </div>
                                         );
                                     }}
-                                    options={ICON_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
+                                    options={TENANT_ICON_OPTIONS.map(option => ({ label: option.label, value: option.value }))}
                                 />
                             </Form.Item>
 

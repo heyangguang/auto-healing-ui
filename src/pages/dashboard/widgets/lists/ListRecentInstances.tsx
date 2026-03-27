@@ -1,22 +1,17 @@
 import { NodeIndexOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
-import { useAccess, useRequest, history } from '@umijs/max';
+import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
-import { getHealingInstances } from '@/services/auto-healing/instances';
 import { INSTANCE_STATUS_MAP } from '@/constants/instanceDicts';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
-    // 增加 page_size 到 15 以填充大屏幕
-    const { data: rawData, loading, refresh } = useRequest(() => getHealingInstances({ page_size: 15 }), {
-        formatResult: (r: any) => r,
-        ready: !!access.canViewInstances,
-    });
-    const data = rawData as any;
-    const items = data?.data ?? data?.items ?? [];
+    const { data, loading, refresh } = useDashboardSection('healing');
+    const items = Array.isArray(data?.recent_instances) ? data.recent_instances : [];
 
     return (
         <WidgetWrapper title="最近自愈实例" icon={<NodeIndexOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>

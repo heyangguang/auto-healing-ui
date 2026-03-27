@@ -6,10 +6,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy dependency files first (for better Docker layer caching)
-COPY package.json yarn.lock* package-lock.json* .npmrc* ./
+COPY package.json package-lock.json* .npmrc* ./
 
 # Install dependencies
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
 # Copy source code
 COPY . .

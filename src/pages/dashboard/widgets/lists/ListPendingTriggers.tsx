@@ -1,9 +1,9 @@
 import { RocketOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
-import { useAccess, useRequest, history } from '@umijs/max';
+import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
-import { getPendingTriggers } from '@/services/auto-healing/healing';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
@@ -17,11 +17,8 @@ const SEVERITY_COLORS: Record<string, string> = {
 
 const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
-    const { data, loading, refresh } = useRequest(() => getPendingTriggers({ page_size: 15 }), {
-        ready: !!access.canViewPendingTrigger,
-    });
-    const rawData = data as any;
-    const items = Array.isArray(rawData?.data) ? rawData.data : (rawData?.data?.items ?? []);
+    const { data, loading, refresh } = useDashboardSection('healing');
+    const items = Array.isArray(data?.pending_trigger_list) ? data.pending_trigger_list : [];
 
     return (
         <WidgetWrapper title="待触发列表" icon={<RocketOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>

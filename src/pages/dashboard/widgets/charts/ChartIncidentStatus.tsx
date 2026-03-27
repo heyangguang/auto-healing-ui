@@ -1,31 +1,23 @@
 import { PieChartOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
-import { useRequest } from '@umijs/max';
 import React from 'react';
-import { getIncidentStats } from '@/services/auto-healing/incidents';
-import { INCIDENT_CHART_COLORS, INCIDENT_CHART_LABELS } from '@/constants/incidentDicts';
+import { INCIDENT_CHART_COLORS } from '@/constants/incidentDicts';
+import { buildIncidentStatusChartData } from '../dashboardOverviewHelpers';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 
 const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(getIncidentStats, { formatResult: (r: any) => r });
+    const { data, loading, refresh } = useDashboardSection('incidents');
     const { ref, width, height } = useContainerSize();
 
-    const data = rawData as any;
-    const chartData = React.useMemo(() => {
-        if (!data) return [];
-        return [
-            { type: INCIDENT_CHART_LABELS.pending, value: data.pending ?? 0 },
-            { type: INCIDENT_CHART_LABELS.processing, value: data.processing ?? 0 },
-            { type: INCIDENT_CHART_LABELS.healed, value: data.healed ?? 0 },
-            { type: INCIDENT_CHART_LABELS.failed, value: data.failed ?? 0 },
-            { type: INCIDENT_CHART_LABELS.skipped, value: data.skipped ?? 0 },
-            { type: INCIDENT_CHART_LABELS.dismissed, value: data.dismissed ?? 0 },
-        ].filter((d) => d.value > 0);
-    }, [data]);
+    const chartData = React.useMemo(() => buildIncidentStatusChartData(data), [data]);
 
-    const total = React.useMemo(() => chartData.reduce((s, d) => s + d.value, 0), [chartData]);
+    const total = React.useMemo(
+        () => Number(data?.total ?? chartData.reduce((sum, item) => sum + item.value, 0)),
+        [chartData, data?.total],
+    );
 
     return (
         <WidgetWrapper title="工单状态分布" icon={<PieChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>

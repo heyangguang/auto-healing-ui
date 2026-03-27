@@ -145,6 +145,7 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
         selectedKeys: [],
         onClick: onMenuClick,
         items: menuItems,
+        'aria-label': '用户菜单',
       }}
       trigger={['click']}
       getPopupContainer={() => document.body}

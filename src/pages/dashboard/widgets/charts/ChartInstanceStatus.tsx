@@ -1,31 +1,21 @@
 import { FundOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
-import { useRequest } from '@umijs/max';
 import React from 'react';
-import { getHealingInstanceStats } from '@/services/auto-healing/instances';
-import { INSTANCE_STATUS_COLORS, INSTANCE_STATUS_LABELS } from '@/constants/instanceDicts';
+import { INSTANCE_STATUS_COLORS } from '@/constants/instanceDicts';
+import { buildInstanceStatusChartData } from '../dashboardOverviewHelpers';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 
 const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(() => getHealingInstanceStats());
+    const { data, loading, refresh } = useDashboardSection('healing');
     const { ref, width, height } = useContainerSize();
 
-    const data = rawData as any;
-    const chartData = React.useMemo(() => {
-        const statsData = data?.data ?? data ?? {};
-        const byStatus = statsData.by_status ?? [];
-        if (!Array.isArray(byStatus) || byStatus.length === 0) return [];
-        return byStatus.map((item: any) => ({
-            type: INSTANCE_STATUS_LABELS[item.status] || item.status,
-            value: item.count,
-        }));
-    }, [data]);
+    const chartData = React.useMemo(() => buildInstanceStatusChartData(data), [data]);
 
     const total = React.useMemo(() => {
-        const statsData = data?.data ?? data ?? {};
-        return statsData.total ?? chartData.reduce((s: number, d: any) => s + d.value, 0);
+        return Number(data?.instances_total ?? chartData.reduce((sum, item) => sum + item.value, 0));
     }, [data, chartData]);
 
     return (

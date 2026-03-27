@@ -2,52 +2,13 @@
  * SSE 辅助函数
  * 用于连接后端 SSE 流式接口
  */
+import { getTenantContextHeaders } from '@/utils/tenantContext';
 
 // 获取认证 Token
 const getAuthToken = (): string => {
     return localStorage.getItem('auto_healing_token')
         || sessionStorage.getItem('auto_healing_token')
         || '';
-};
-
-const getTenantContext = () => {
-    try {
-        const raw = localStorage.getItem('impersonation-storage');
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed?.isImpersonating && parsed?.session?.tenantId && parsed?.session?.requestId) {
-                return {
-                    tenantId: parsed.session.tenantId as string,
-                    isImpersonating: true,
-                    requestId: parsed.session.requestId as string,
-                };
-            }
-        }
-    } catch {
-        // ignore
-    }
-
-    try {
-        const raw = localStorage.getItem('tenant-storage');
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed?.currentTenantId) {
-                return {
-                    tenantId: parsed.currentTenantId as string,
-                    isImpersonating: false,
-                    requestId: undefined,
-                };
-            }
-        }
-    } catch {
-        // ignore
-    }
-
-    return {
-        tenantId: undefined,
-        isImpersonating: false,
-        requestId: undefined,
-    };
 };
 
 export interface SSEConnection {
@@ -66,7 +27,6 @@ export const createAuthenticatedEventStream = (
 ): SSEConnection => {
     const controller = new AbortController();
     const token = getAuthToken();
-    const tenant = getTenantContext();
 
     const headers: Record<string, string> = {
         Accept: 'text/event-stream',
@@ -74,13 +34,7 @@ export const createAuthenticatedEventStream = (
     if (token) {
         headers.Authorization = `Bearer ${token}`;
     }
-    if (tenant.tenantId) {
-        headers['X-Tenant-ID'] = tenant.tenantId;
-    }
-    if (tenant.isImpersonating && tenant.requestId) {
-        headers['X-Impersonation'] = 'true';
-        headers['X-Impersonation-Request-ID'] = tenant.requestId;
-    }
+    Object.assign(headers, getTenantContextHeaders(url, localStorage.getItem('is-platform-admin') === 'true'));
 
     void (async () => {
         try {
@@ -217,14 +171,16 @@ export const createDryRunStream = async (
 ): Promise<AbortController> => {
     const controller = new AbortController();
     const token = getAuthToken();
+    const url = `/api/v1/tenant/healing/flows/${flowId}/dry-run-stream`;
 
     try {
-        const response = await fetch(`/api/v1/tenant/healing/flows/${flowId}/dry-run-stream`, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
                 'Accept': 'text/event-stream',
+                ...getTenantContextHeaders(url, localStorage.getItem('is-platform-admin') === 'true'),
             },
             body: JSON.stringify(request),
             signal: controller.signal,

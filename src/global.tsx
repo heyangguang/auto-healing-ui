@@ -1,9 +1,13 @@
-import { useIntl } from '@umijs/max';
 import { Button, message, notification } from 'antd';
 import defaultSettings from '../config/defaultSettings';
+import pwaMessages from './locales/zh-CN/pwa';
 
 const { pwa } = defaultSettings;
 const isHttps = document.location.protocol === 'https:';
+
+const formatPwaMessage = (id: string) => {
+  return pwaMessages[id as keyof typeof pwaMessages] || id;
+};
 
 const clearCache = () => {
   // remove all caches
@@ -23,7 +27,7 @@ const clearCache = () => {
 if (pwa) {
   // Notify user if offline now
   window.addEventListener('sw.offline', () => {
-    message.warning(useIntl().formatMessage({ id: 'app.pwa.offline' }));
+    message.warning(formatPwaMessage('app.pwa.offline'));
   });
 
   // Pop up a prompt on the page asking the user if they want to use the latest version
@@ -62,14 +66,12 @@ if (pwa) {
           reloadSW();
         }}
       >
-        {useIntl().formatMessage({ id: 'app.pwa.serviceworker.updated.ok' })}
+        {formatPwaMessage('app.pwa.serviceworker.updated.ok')}
       </Button>
     );
     notification.open({
-      message: useIntl().formatMessage({ id: 'app.pwa.serviceworker.updated' }),
-      description: useIntl().formatMessage({
-        id: 'app.pwa.serviceworker.updated.hint',
-      }),
+      message: formatPwaMessage('app.pwa.serviceworker.updated'),
+      description: formatPwaMessage('app.pwa.serviceworker.updated.hint'),
       btn,
       key,
       onClose: async () => null,

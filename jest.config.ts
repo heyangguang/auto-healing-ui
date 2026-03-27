@@ -8,11 +8,12 @@ export default async (): Promise<any> => {
   });
   return {
     ...config,
+    openHandlesTimeout: 5000,
     testEnvironmentOptions: {
       ...(config?.testEnvironmentOptions || {}),
       url: 'http://localhost:8000',
     },
-    setupFiles: [...(config.setupFiles || []), './tests/setupTests.jsx'],
+    setupFilesAfterEnv: [...(config.setupFilesAfterEnv || []), './tests/setupTests.jsx'],
     globals: {
       ...config.globals,
       localStorage: null,

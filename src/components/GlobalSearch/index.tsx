@@ -25,6 +25,7 @@ import { createStyles } from 'antd-style';
 import { globalSearch } from '@/services/auto-healing/search';
 import type { SearchCategoryResult, SearchResultItem } from '@/services/auto-healing/search';
 import { canAccessPath } from '@/utils/pathAccess';
+import { createRequestSequence } from '@/utils/requestSequence';
 import './search-glow.css';
 
 /* ── 分类图标 & 颜色 ── */
@@ -54,11 +55,22 @@ const STATUS_DOT: Record<string, string> = {
     scanned: '#13c2c2', inactive: '#666',
 };
 
-function getStatusInfo(extra?: Record<string, any>): { label: string; color: string } | null {
+function getStatusValue(extra?: SearchResultItem['extra']): string | null {
     if (!extra) return null;
-    const status = extra.status
-        || (extra.is_active !== undefined ? (extra.is_active ? 'active' : 'inactive') : null)
-        || (extra.is_enabled !== undefined ? (extra.is_enabled ? 'active' : 'disabled') : null);
+    const rawStatus = typeof extra.status === 'string' ? extra.status : null;
+    const activeStatus = typeof extra.is_active === 'boolean'
+        ? (extra.is_active ? 'active' : 'inactive')
+        : null;
+    const enabledStatus = typeof extra.is_enabled === 'boolean'
+        ? (extra.is_enabled ? 'active' : 'disabled')
+        : null;
+    const status = rawStatus || activeStatus || enabledStatus;
+    if (!status) return null;
+    return status;
+}
+
+function getStatusInfo(extra?: SearchResultItem['extra']): { label: string; color: string } | null {
+    const status = getStatusValue(extra);
     if (!status) return null;
     return { label: status, color: STATUS_DOT[status] || '#666' };
 }
@@ -153,6 +165,11 @@ const useStyles = createStyles(({ token }) => ({
         cursor: 'pointer',
         gap: 8,
         transition: 'background 0.1s',
+        width: '100%',
+        textAlign: 'left' as const,
+        border: 'none',
+        background: 'transparent',
+        font: 'inherit',
         '&:hover': { background: 'rgba(255,255,255,0.06)' },
     },
     itemActive: {
@@ -218,6 +235,11 @@ const useStyles = createStyles(({ token }) => ({
         color: 'rgba(255,255,255,0.3)',
         cursor: 'pointer',
         gap: 4,
+        width: '100%',
+        textAlign: 'left' as const,
+        border: 'none',
+        background: 'transparent',
+        font: 'inherit',
         '&:hover': { color: token.colorPrimary },
     },
 
@@ -309,6 +331,7 @@ const CATEGORY_LIST: Record<string, string> = {
 };
 
 const DEBOUNCE = 280;
+const GLOBAL_SEARCH_RESULTS_ID = 'global-search-results';
 
 const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
     const { styles, cx } = useStyles();
@@ -322,6 +345,7 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
     const boxRef = useRef<HTMLDivElement>(null);
     const inRef = useRef<any>(null);
     const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const searchSequenceRef = useRef(createRequestSequence());
 
     /* 扁平列表 → 键盘导航 */
     const flat = React.useMemo(() => {
@@ -332,15 +356,31 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
 
     /* 搜索 */
     const search = useCallback(async (q: string) => {
-        if (!q.trim()) { setResults([]); setTotal(0); setOpen(false); return; }
+        if (!q.trim()) {
+            searchSequenceRef.current.invalidate();
+            setResults([]);
+            setTotal(0);
+            setOpen(false);
+            return;
+        }
+        const token = searchSequenceRef.current.next();
         setLoading(true); setOpen(true);
         try {
             const d = await globalSearch({ q: q.trim(), limit: 5 });
+            if (!searchSequenceRef.current.isCurrent(token)) return;
             setResults(d.results || []);
             setTotal(d.total_count || 0);
             setAi(-1);
-        } catch { setResults([]); setTotal(0); }
-        finally { setLoading(false); }
+        } catch {
+            if (!searchSequenceRef.current.isCurrent(token)) return;
+            setResults([]);
+            setTotal(0);
+        }
+        finally {
+            if (searchSequenceRef.current.isCurrent(token)) {
+                setLoading(false);
+            }
+        }
     }, []);
 
     const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -394,6 +434,13 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
         return () => document.removeEventListener('keydown', h);
     }, []);
 
+    useEffect(() => {
+        return () => {
+            if (timer.current) clearTimeout(timer.current);
+            searchSequenceRef.current.invalidate();
+        };
+    }, []);
+
     const onFocus = useCallback(() => {
         if (kw.trim() && results.length) setOpen(true);
     }, [kw, results]);
@@ -416,6 +463,11 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
                     prefix={loading ? <LoadingOutlined spin /> : <SearchOutlined />}
                     suffix={<span className={styles.kbdInline}>⌘K</span>}
                     placeholder={compact ? '搜索...' : '搜索产品、资源...'}
+                    aria-label="全局搜索"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={open}
+                    aria-controls={open ? GLOBAL_SEARCH_RESULTS_ID : undefined}
                     allowClear
                     size="middle"
                     value={kw}
@@ -426,7 +478,7 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
             </div>
 
             {open && (
-                <div className={styles.dropdown}>
+                <div id={GLOBAL_SEARCH_RESULTS_ID} className={styles.dropdown} role="listbox" aria-label="全局搜索结果">
                     {loading ? (
                         <div className={styles.loadingBox}>
                             <LoadingOutlined spin style={{ fontSize: 16, marginBottom: 6 }} />
@@ -448,8 +500,12 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
                                             const idx = gi++;
                                             const st = getStatusInfo(it.extra);
                                             return (
-                                                <div
+                                                <button
+                                                    type="button"
                                                     key={it.id}
+                                                    role="option"
+                                                    aria-selected={ai === idx}
+                                                    tabIndex={-1}
                                                     className={cx(styles.item, ai === idx && styles.itemActive)}
                                                     onClick={() => go(it, cat.category)}
                                                     onMouseEnter={() => setAi(idx)}
@@ -471,11 +527,12 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
                                                             title={st.label}
                                                         />
                                                     )}
-                                                </div>
+                                                </button>
                                             );
                                         })}
                                         {cat.total > cat.items.length && (
-                                            <div
+                                            <button
+                                                type="button"
                                                 className={styles.viewMore}
                                                 onClick={() => {
                                                     const listPath = CATEGORY_LIST[cat.category] || '/';
@@ -483,10 +540,11 @@ const GlobalSearch: React.FC<{ compact?: boolean }> = ({ compact }) => {
                                                     setOpen(false); setKw('');
                                                     startTransition(() => history.push(listPath));
                                                 }}
+                                                aria-label={`前往${cat.category_label}列表页`}
                                                 style={!canAccessPath(CATEGORY_LIST[cat.category] || '/', access) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
                                             >
                                                 前往列表页 <RightOutlined style={{ fontSize: 9 }} />
-                                            </div>
+                                            </button>
                                         )}
                                     </div>
                                 );

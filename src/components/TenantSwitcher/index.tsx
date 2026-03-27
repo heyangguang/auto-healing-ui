@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 
 import { request } from '@umijs/max';
+import { createRequestSequence } from '@/utils/requestSequence';
 import {
     BankOutlined, CheckOutlined, SearchOutlined, CaretDownFilled,
     ShopOutlined, TeamOutlined, CloudOutlined, ApartmentOutlined,
@@ -42,8 +43,13 @@ const S = {
         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
         padding: '0 14px', height: 58,
         borderLeft: '1px solid rgba(255,255,255,0.12)',
+        borderTop: 'none',
+        borderRight: 'none',
+        borderBottom: 'none',
         transition: 'background 0.2s',
+        background: 'transparent',
         color: 'rgba(255,255,255,0.85)', userSelect: 'none' as const,
+        font: 'inherit',
     },
     triggerName: {
         fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)',
@@ -74,6 +80,7 @@ const S = {
 };
 
 const TenantSwitcher: React.FC = () => {
+    const panelId = 'tenant-switcher-panel';
 
     const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
     const [tenants, setTenants] = useState<TenantBrief[]>([]);
@@ -82,8 +89,9 @@ const TenantSwitcher: React.FC = () => {
     const [searching, setSearching] = useState(false);
     const [open, setOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
+    const searchSequenceRef = useRef(createRequestSequence());
     const containerRef = useRef<HTMLDivElement>(null);
-    const triggerRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const [panelPos, setPanelPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
@@ -136,6 +144,7 @@ const TenantSwitcher: React.FC = () => {
 
     useEffect(() => {
         if (open) {
+            searchSequenceRef.current.invalidate();
             setSearchValue(''); setSearchResults(null);
             // 计算面板位置
             if (triggerRef.current) {
@@ -151,17 +160,24 @@ const TenantSwitcher: React.FC = () => {
         setSearchValue(value);
 
         if (!value.trim()) {
+            searchSequenceRef.current.invalidate();
             setSearchResults(null);
             setSearching(false);
             return;
         }
+        const token = searchSequenceRef.current.next();
         setSearching(true);
         request('/api/v1/common/user/tenants', { params: { name: value.trim() } })
             .then((res: any) => {
+                if (!searchSequenceRef.current.isCurrent(token)) return;
                 if (res?.data && Array.isArray(res.data)) setSearchResults(res.data);
             })
             .catch(() => { /* ignore */ })
-            .finally(() => setSearching(false));
+            .finally(() => {
+                if (searchSequenceRef.current.isCurrent(token)) {
+                    setSearching(false);
+                }
+            });
     }, []);
 
     /* 切换租户：更新 localStorage → 整页刷新 */
@@ -191,17 +207,22 @@ const TenantSwitcher: React.FC = () => {
     return (
         <div ref={containerRef} style={S.container}>
             {/* ── 触发按钮 ── */}
-            <div
+            <button
+                type="button"
                 ref={triggerRef}
                 onClick={() => setOpen(v => !v)}
                 style={S.trigger}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                aria-controls={open ? panelId : undefined}
+                aria-label={cur?.name ? `当前租户 ${cur.name}，点击切换` : '选择租户'}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
                 <span style={{ fontSize: 16 }}>{curIcon}</span>
                 <span style={S.triggerName}>{cur?.name || '选择租户'}</span>
                 <CaretDownFilled style={S.triggerCaret} />
-            </div>
+            </button>
 
             {/* ── 下拉面板（Portal 到 body，脱离 navBar 层叠上下文） ── */}
             {open && ReactDOM.createPortal(
@@ -221,6 +242,7 @@ const TenantSwitcher: React.FC = () => {
                                 placeholder="搜索租户..."
                                 value={searchValue}
                                 onChange={e => handleSearchChange(e.target.value)}
+                                aria-label="搜索租户"
                                 style={{
                                     flex: 1, border: 'none', outline: 'none',
                                     background: 'transparent', fontSize: 12, height: 28,
@@ -229,28 +251,37 @@ const TenantSwitcher: React.FC = () => {
                             />
                         </div>
                     )}
-                    <div style={S.list}>
+                    <div id={panelId} role="listbox" aria-label="租户列表" style={S.list}>
                         {displayList.map(tenant => {
                             const active = tenant.id === currentTenantId;
                             const icon = (tenant.icon && ICON_MAP[tenant.icon]) ?? <BankOutlined />;
                             return (
-                                <div
+                                <button
+                                    type="button"
                                     key={tenant.id}
                                     onClick={() => handleChange(tenant.id)}
-                                    style={S.item(active)}
-                                    onMouseEnter={e => { e.currentTarget.style.background = '#f5f5f5'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                    role="option"
+                                    aria-selected={active}
+                                    style={{
+                                        ...S.item(active),
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        border: 'none',
+                                        background: active ? '#eaf2ff' : 'transparent',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = active ? '#eaf2ff' : '#f5f5f5'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = active ? '#eaf2ff' : 'transparent'; }}
                                 >
                                     <span style={S.itemIcon(active)}>{icon}</span>
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {tenant.name}
                                     </span>
                                     {active && <CheckOutlined style={S.check} />}
-                                </div>
+                                </button>
                             );
                         })}
                         {displayList.length === 0 && (
-                            <div style={S.empty}>{searching ? '搜索中...' : '无匹配租户'}</div>
+                            <div role="status" aria-live="polite" style={S.empty}>{searching ? '搜索中...' : '无匹配租户'}</div>
                         )}
                     </div>
                 </div>,

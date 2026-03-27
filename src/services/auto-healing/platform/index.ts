@@ -3,8 +3,7 @@
  */
 export {
     getTenants, getPlatformTenants, createTenant, updateTenant, deleteTenant,
-    getTenant, getTenantMembers, updateTenantMemberRole,
-    addTenantMember, removeTenantMember,
+    getTenant, getTenantMembers, addTenantMember, updateTenantMemberRole,
     inviteToTenant, getTenantInvitations, cancelTenantInvitation,
 } from './tenants';
 export * from './users';

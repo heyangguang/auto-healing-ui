@@ -11,6 +11,27 @@ import { PERMISSION_MODULE_LABELS as MODULE_LABELS } from '@/constants/permissio
 
 const { Text } = Typography;
 
+type WorkspaceSummary = {
+    id: string;
+    name: string;
+    is_default?: boolean;
+};
+
+type RoleDrawerDetail = AutoHealing.RoleWithStats & {
+    _workspaceNames?: string[];
+    updated_at?: string;
+};
+
+type RoleAdvancedSearch = Record<string, string | number | boolean | null | undefined>;
+type RoleRequestParams = {
+    page: number;
+    pageSize: number;
+    searchField?: string;
+    searchValue?: string;
+    advancedSearch?: RoleAdvancedSearch;
+    sorter?: { field: string; order: 'ascend' | 'descend' };
+};
+
 /* ========== 搜索字段配置 ========== */
 const searchFields: SearchField[] = [
     { key: 'display_name', label: '角色名称' },
@@ -31,10 +52,20 @@ const RolesPage: React.FC = () => {
 
     /* ---- 详情 Drawer ---- */
     const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
-    const [detailRole, setDetailRole] = useState<any>(null);
+    const [detailRole, setDetailRole] = useState<RoleDrawerDetail | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const detailRequestSeqRef = useRef(0);
 
-    const openDetailDrawer = useCallback(async (record: any) => {
+    const closeDetailDrawer = useCallback(() => {
+        detailRequestSeqRef.current += 1;
+        setDetailDrawerOpen(false);
+        setDetailLoading(false);
+        setDetailRole(null);
+    }, []);
+
+    const openDetailDrawer = useCallback(async (record: AutoHealing.RoleWithStats) => {
+        const requestSeq = detailRequestSeqRef.current + 1;
+        detailRequestSeqRef.current = requestSeq;
         setDetailRole(record);
         setDetailDrawerOpen(true);
         setDetailLoading(true);
@@ -44,24 +75,32 @@ const RolesPage: React.FC = () => {
                 getRoleWorkspaces(record.id).catch(() => null),
                 listSystemWorkspaces().catch(() => null),
             ]);
-            const roleData = (roleRes as any)?.data || roleRes;
-            // 解析工作区名称
-            const wsIds: string[] = (wsIdsRes as any)?.data?.workspace_ids || [];
-            const wsList: any[] = (wsListRes as any)?.data || [];
-            const wsNames = wsIds
-                .map((id: string) => wsList.find((w: any) => w.id === id)?.name)
+            if (detailRequestSeqRef.current !== requestSeq) return;
+            const wsIds: string[] = wsIdsRes?.workspace_ids || [];
+            const wsList = (wsListRes || []) as WorkspaceSummary[];
+            const explicitWorkspaceNames = wsIds
+                .map((id: string) => wsList.find((workspace) => workspace.id === id)?.name)
+                .filter((name): name is string => Boolean(name));
+            const defaultWorkspaceNames = wsList
+                .filter((workspace) => workspace.is_default)
+                .map((workspace) => workspace.name)
                 .filter(Boolean);
-            roleData._workspaceNames = wsNames;
+            const roleData: RoleDrawerDetail = {
+                ...roleRes,
+                _workspaceNames: Array.from(new Set([...defaultWorkspaceNames, ...explicitWorkspaceNames])),
+            };
             setDetailRole(roleData);
         } catch {
             /* global error handler */
         } finally {
-            setDetailLoading(false);
+            if (detailRequestSeqRef.current === requestSeq) {
+                setDetailLoading(false);
+            }
         }
     }, []);
 
     /* ========== 列定义 ========== */
-    const columns: StandardColumnDef<any>[] = [
+    const columns: StandardColumnDef<AutoHealing.RoleWithStats>[] = [
         {
             columnKey: 'display_name',
             columnTitle: '角色名称 / 标识',
@@ -69,7 +108,7 @@ const RolesPage: React.FC = () => {
             dataIndex: 'display_name',
             width: 200,
             sorter: true,
-            render: (_: any, record: any) => (
+            render: (_, record) => (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <a
@@ -94,7 +133,7 @@ const RolesPage: React.FC = () => {
             dataIndex: 'description',
             width: 240,
             ellipsis: true,
-            render: (_: any, record: any) => record.description || <Text type="secondary">-</Text>,
+            render: (_, record) => record.description || <Text type="secondary">-</Text>,
         },
         {
             columnKey: 'user_count',
@@ -102,7 +141,7 @@ const RolesPage: React.FC = () => {
             dataIndex: 'user_count',
             width: 90,
             sorter: true,
-            render: (_: any, record: any) => (
+            render: (_, record) => (
                 <Badge
                     count={record.user_count ?? 0}
                     showZero
@@ -118,7 +157,7 @@ const RolesPage: React.FC = () => {
             dataIndex: 'permission_count',
             width: 90,
             sorter: true,
-            render: (_: any, record: any) => (
+            render: (_, record) => (
                 <Badge
                     count={record.permission_count ?? 0}
                     showZero
@@ -137,7 +176,7 @@ const RolesPage: React.FC = () => {
                 { label: '系统角色', value: 'true' },
                 { label: '自定义角色', value: 'false' },
             ],
-            render: (_: any, record: any) => (
+            render: (_, record) => (
                 <Tag color={record.is_system ? 'blue' : 'default'}>
                     {record.is_system ? '系统' : '自定义'}
                 </Tag>
@@ -149,7 +188,7 @@ const RolesPage: React.FC = () => {
             dataIndex: 'created_at',
             width: 170,
             sorter: true,
-            render: (_: any, record: any) =>
+            render: (_, record) =>
                 record.created_at ? dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss') : '-',
         },
         {
@@ -157,7 +196,7 @@ const RolesPage: React.FC = () => {
             columnTitle: '操作',
             fixedColumn: true,
             width: 140,
-            render: (_: any, record: any) => (
+            render: (_, record) => (
                 <Space size="small">
                     <Tooltip title="分配用户">
                         <Button
@@ -214,16 +253,9 @@ const RolesPage: React.FC = () => {
     ];
 
     /* ========== 数据请求（前端搜索 + 假分页） ========== */
-    const handleRequest = useCallback(async (params: {
-        page: number;
-        pageSize: number;
-        searchField?: string;
-        searchValue?: string;
-        advancedSearch?: Record<string, any>;
-        sorter?: { field: string; order: 'ascend' | 'descend' };
-    }) => {
+    const handleRequest = useCallback(async (params: RoleRequestParams) => {
         const res = await getRoles();
-        let items: any[] = res?.data || [];
+        let items: AutoHealing.RoleWithStats[] = res || [];
 
         // 搜索过滤
         const skipQuickSearch = params.searchField === 'is_system';
@@ -251,7 +283,7 @@ const RolesPage: React.FC = () => {
             // 布尔字段转换
             if (adv.is_system !== undefined && adv.is_system !== '') {
                 const isSystem = adv.is_system === 'true';
-                items = items.filter(i => i.is_system === isSystem);
+                items = items.filter((item) => item.is_system === isSystem);
             }
             // 通用字段传递（客户端字符串过滤）
             const specialKeys = ['is_system'];
@@ -261,9 +293,9 @@ const RolesPage: React.FC = () => {
                 const fieldName = isExact ? key.replace(/__exact$/, '') : key;
                 const strVal = String(value);
                 if (isExact) {
-                    items = items.filter(i => String(i[fieldName] || '') === strVal);
+                    items = items.filter((item) => String(item[fieldName as keyof AutoHealing.RoleWithStats] || '') === strVal);
                 } else {
-                    items = items.filter(i => String(i[fieldName] || '').toLowerCase().includes(strVal.toLowerCase()));
+                    items = items.filter((item) => String(item[fieldName as keyof AutoHealing.RoleWithStats] || '').toLowerCase().includes(strVal.toLowerCase()));
                 }
             });
         }
@@ -271,10 +303,13 @@ const RolesPage: React.FC = () => {
         // 排序
         if (params.sorter) {
             const { field, order } = params.sorter;
+            const sortField = field as keyof AutoHealing.RoleWithStats;
             items.sort((a, b) => {
-                const va = a[field] ?? '';
-                const vb = b[field] ?? '';
-                const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
+                const va = a[sortField] ?? '';
+                const vb = b[sortField] ?? '';
+                const cmp = typeof va === 'number' && typeof vb === 'number'
+                    ? va - vb
+                    : String(va).localeCompare(String(vb));
                 return order === 'ascend' ? cmp : -cmp;
             });
         }
@@ -297,7 +332,7 @@ const RolesPage: React.FC = () => {
 
     return (
         <>
-            <StandardTable<any>
+            <StandardTable<AutoHealing.RoleWithStats>
                 key={refreshCountRef.current}
                 tabs={[{ key: 'list', label: '角色列表' }]}
                 title="角色管理"
@@ -321,7 +356,7 @@ const RolesPage: React.FC = () => {
                 title={null}
                 size={560}
                 open={detailDrawerOpen}
-                onClose={() => setDetailDrawerOpen(false)}
+                onClose={closeDetailDrawer}
                 styles={{ header: { display: 'none' }, body: { padding: 0 } }}
             >
                 <Spin spinning={detailLoading}>
@@ -346,7 +381,7 @@ const RolesPage: React.FC = () => {
                                         size="small"
                                         icon={<UsergroupAddOutlined />}
                                         disabled={!access.canUpdateRole}
-                                        onClick={() => { setDetailDrawerOpen(false); history.push(`/system/roles/${detailRole.id}/edit`); }}
+                                        onClick={() => { closeDetailDrawer(); history.push(`/system/roles/${detailRole.id}/edit`); }}
                                     >
                                         分配用户
                                     </Button>
@@ -354,7 +389,7 @@ const RolesPage: React.FC = () => {
                                         size="small"
                                         icon={<AppstoreOutlined />}
                                         disabled={!access.canUpdateRole}
-                                        onClick={() => { setDetailDrawerOpen(false); history.push(`/system/roles/${detailRole.id}/edit`); }}
+                                        onClick={() => { closeDetailDrawer(); history.push(`/system/roles/${detailRole.id}/edit`); }}
                                     >
                                         分配工作区
                                     </Button>
@@ -364,7 +399,7 @@ const RolesPage: React.FC = () => {
                                                 size="small"
                                                 icon={<EditOutlined />}
                                                 disabled={!access.canUpdateRole}
-                                                onClick={() => { setDetailDrawerOpen(false); history.push(`/system/roles/${detailRole.id}/edit`); }}
+                                                onClick={() => { closeDetailDrawer(); history.push(`/system/roles/${detailRole.id}/edit`); }}
                                             >
                                                 编辑
                                             </Button>
@@ -374,7 +409,7 @@ const RolesPage: React.FC = () => {
                                                     try {
                                                         await deleteRole(detailRole.id);
                                                         message.success('删除成功');
-                                                        setDetailDrawerOpen(false);
+                                                        closeDetailDrawer();
                                                         refreshCountRef.current += 1;
                                                         forceUpdate(n => n + 1);
                                                     } catch { /* global error handler */ }
@@ -435,12 +470,12 @@ const RolesPage: React.FC = () => {
                                 </div>
                                 {detailRole.permissions && detailRole.permissions.length > 0 ? (
                                     Object.entries(
-                                        (detailRole.permissions || []).reduce((acc: Record<string, any[]>, p: any) => {
-                                            const mod = p.module || 'other';
+                                        (detailRole.permissions || []).reduce((acc: Record<string, AutoHealing.Permission[]>, permission) => {
+                                            const mod = permission.module || 'other';
                                             if (!acc[mod]) acc[mod] = [];
-                                            acc[mod].push(p);
+                                            acc[mod].push(permission);
                                             return acc;
-                                        }, {})
+                                        }, {} as Record<string, AutoHealing.Permission[]>)
                                     ).map(([mod, perms]) => (
                                         <div key={mod} style={{
                                             marginBottom: 12,
@@ -449,15 +484,15 @@ const RolesPage: React.FC = () => {
                                             border: '1px solid #f0f0f0',
                                         }}>
                                             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
-                                                {MODULE_LABELS[mod] || mod} ({(perms as any[]).length})
+                                                {MODULE_LABELS[mod] || mod} ({perms.length})
                                             </Text>
                                             <Space size={[4, 4]} wrap>
-                                                {(perms as any[]).map((p: any) => (
+                                                {perms.map((permission) => (
                                                     <Tag
-                                                        key={p.id}
+                                                        key={permission.id}
                                                         style={{ fontSize: 12, margin: 0, padding: '1px 8px' }}
                                                     >
-                                                        {p.display_name || p.name}
+                                                        {permission.name}
                                                     </Tag>
                                                 ))}
                                             </Space>

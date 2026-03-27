@@ -1,21 +1,32 @@
-type PagedResponse<T> =
-  | { data?: T[]; total?: number; page?: number; page_size?: number; pagination?: { total?: number } }
-  | { items?: T[]; total?: number; pagination?: { total?: number } }
-  | { data?: { items?: T[]; total?: number; pagination?: { total?: number } } };
+type NestedItemsEnvelope<T> = { items?: T[]; total?: number; pagination?: { total?: number } };
+type PagedResponse<T> = {
+  data?: T[] | NestedItemsEnvelope<T>;
+  items?: T[];
+  total?: number;
+  page?: number;
+  page_size?: number;
+  pagination?: { total?: number };
+};
+
+function isNestedItemsEnvelope<T>(value: PagedResponse<T>['data']): value is NestedItemsEnvelope<T> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 function extractItems<T>(res: PagedResponse<T>): T[] {
-  if (Array.isArray((res as any)?.data)) return (res as any).data;
-  if (Array.isArray((res as any)?.items)) return (res as any).items;
-  if (Array.isArray((res as any)?.data?.items)) return (res as any).data.items;
+  if (Array.isArray(res.data)) return res.data;
+  if (Array.isArray(res.items)) return res.items;
+  if (isNestedItemsEnvelope<T>(res.data) && Array.isArray(res.data.items)) return res.data.items;
   return [];
 }
 
 function extractTotal<T>(res: PagedResponse<T>, fallback: number): number {
+  const nestedTotal = isNestedItemsEnvelope<T>(res.data)
+    ? res.data.total ?? res.data.pagination?.total
+    : undefined;
   return Number(
-    (res as any)?.total
-      ?? (res as any)?.pagination?.total
-      ?? (res as any)?.data?.total
-      ?? (res as any)?.data?.pagination?.total
+    res.total
+      ?? res.pagination?.total
+      ?? nestedTotal
       ?? fallback,
   );
 }

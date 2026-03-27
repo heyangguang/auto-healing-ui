@@ -1,0 +1,45 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    name: Test, Typecheck, Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check OpenAPI source
+        run: npm run openapi:check
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tests
+        run: npm test -- --runInBand
+
+      - name: Run typecheck
+        run: npm run tsc
+
+      - name: Run build
+        run: npm run build
+
+      - name: Check bundle budgets
+        run: npm run size:check
+
+      - name: Run smoke E2E
+        run: npm run test:e2e:smoke:ci

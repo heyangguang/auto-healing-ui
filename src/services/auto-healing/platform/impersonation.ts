@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { normalizePaginatedResponse, unwrapData, unwrapItems } from '../responseAdapters';
 
 /**
  * 平台级 Impersonation API
@@ -26,6 +27,22 @@ export interface ImpersonationRequest {
     updated_at: string;
 }
 
+export type ImpersonationStatus = ImpersonationRequest['status'];
+
+export interface ImpersonationListParams {
+    page?: number;
+    page_size?: number;
+    requester_name?: string;
+    requester_name__exact?: string;
+    tenant_name?: string;
+    tenant_name__exact?: string;
+    reason?: string;
+    reason__exact?: string;
+    status?: ImpersonationStatus;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+}
+
 export interface ImpersonationApprover {
     id: string;
     tenant_id: string;
@@ -42,51 +59,51 @@ export async function createImpersonationRequest(data: {
     reason?: string;
     duration_minutes: number;
 }) {
-    return request<{ code: number; data: ImpersonationRequest }>('/api/v1/platform/impersonation/requests', {
+    return unwrapData(await request<{ data: ImpersonationRequest }>('/api/v1/platform/impersonation/requests', {
         method: 'POST',
         data,
-    });
+    })) as ImpersonationRequest;
 }
 
 /** 获取我的申请列表 */
-export async function listMyImpersonationRequests(params?: { page?: number; page_size?: number }) {
-    return request<{ code: number; data: ImpersonationRequest[]; total: number }>('/api/v1/platform/impersonation/requests', {
+export async function listMyImpersonationRequests(params?: ImpersonationListParams) {
+    return normalizePaginatedResponse(await request<AutoHealing.PaginatedResponse<ImpersonationRequest>>('/api/v1/platform/impersonation/requests', {
         method: 'GET',
         params,
-    });
+    }));
 }
 
 /** 获取申请详情 */
 export async function getImpersonationRequest(id: string) {
-    return request<{ code: number; data: ImpersonationRequest }>(`/api/v1/platform/impersonation/requests/${id}`, {
+    return unwrapData(await request<{ data: ImpersonationRequest }>(`/api/v1/platform/impersonation/requests/${id}`, {
         method: 'GET',
-    });
+    })) as ImpersonationRequest;
 }
 
 /** 进入租户（开始 Impersonation 会话） */
 export async function enterTenant(requestId: string) {
-    return request<{ code: number; data: ImpersonationRequest }>(`/api/v1/platform/impersonation/requests/${requestId}/enter`, {
+    return unwrapData(await request<{ data: ImpersonationRequest }>(`/api/v1/platform/impersonation/requests/${requestId}/enter`, {
         method: 'POST',
-    });
+    })) as ImpersonationRequest;
 }
 
 /** 退出租户（结束 Impersonation 会话） */
 export async function exitTenant(requestId: string) {
-    return request<{ code: number; message: string }>(`/api/v1/platform/impersonation/requests/${requestId}/exit`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/impersonation/requests/${requestId}/exit`, {
         method: 'POST',
     });
 }
 
 /** 终止会话（彻底结束，不可再进入） */
 export async function terminateSession(requestId: string) {
-    return request<{ code: number; message: string }>(`/api/v1/platform/impersonation/requests/${requestId}/terminate`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/impersonation/requests/${requestId}/terminate`, {
         method: 'POST',
     });
 }
 
 /** 撤销申请 */
 export async function cancelImpersonationRequest(requestId: string) {
-    return request<{ code: number; message: string }>(`/api/v1/platform/impersonation/requests/${requestId}/cancel`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/impersonation/requests/${requestId}/cancel`, {
         method: 'POST',
     });
 }
@@ -96,30 +113,32 @@ export async function cancelImpersonationRequest(requestId: string) {
 
 /** 获取待审批列表 */
 export async function listPendingImpersonation() {
-    return request<{ code: number; data: ImpersonationRequest[] }>('/api/v1/tenant/impersonation/pending', {
+    return unwrapItems(await request<{ data: ImpersonationRequest[] }>('/api/v1/tenant/impersonation/pending', {
         method: 'GET',
-    });
+    })) as ImpersonationRequest[];
 }
 
 /** 获取审批记录（历史） */
-export async function listImpersonationHistory(params?: Record<string, any>) {
-    return request<{ code: number; data: ImpersonationRequest[]; total: number }>('/api/v1/tenant/impersonation/history', {
+export async function listImpersonationHistory(params?: ImpersonationListParams) {
+    return normalizePaginatedResponse(await request<AutoHealing.PaginatedResponse<ImpersonationRequest>>('/api/v1/tenant/impersonation/history', {
         method: 'GET',
         params,
-    });
+    }));
 }
 
 /** 审批通过 */
-export async function approveImpersonation(requestId: string) {
-    return request<{ code: number; message: string }>(`/api/v1/tenant/impersonation/${requestId}/approve`, {
+export async function approveImpersonation(requestId: string, data?: AutoHealing.ApprovalDecisionRequest) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/impersonation/${requestId}/approve`, {
         method: 'POST',
+        data,
     });
 }
 
 /** 审批拒绝 */
-export async function rejectImpersonation(requestId: string) {
-    return request<{ code: number; message: string }>(`/api/v1/tenant/impersonation/${requestId}/reject`, {
+export async function rejectImpersonation(requestId: string, data?: AutoHealing.ApprovalDecisionRequest) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/impersonation/${requestId}/reject`, {
         method: 'POST',
+        data,
     });
 }
 
@@ -127,14 +146,14 @@ export async function rejectImpersonation(requestId: string) {
 
 /** 获取审批人列表 */
 export async function getImpersonationApprovers() {
-    return request<{ code: number; data: ImpersonationApprover[] }>('/api/v1/tenant/settings/impersonation-approvers', {
+    return unwrapItems(await request<{ data: ImpersonationApprover[] }>('/api/v1/tenant/settings/impersonation-approvers', {
         method: 'GET',
-    });
+    })) as ImpersonationApprover[];
 }
 
 /** 设置审批人 */
 export async function setImpersonationApprovers(userIds: string[]) {
-    return request<{ code: number; message: string }>('/api/v1/tenant/settings/impersonation-approvers', {
+    return request<AutoHealing.SuccessResponse>('/api/v1/tenant/settings/impersonation-approvers', {
         method: 'PUT',
         data: { user_ids: userIds },
     });

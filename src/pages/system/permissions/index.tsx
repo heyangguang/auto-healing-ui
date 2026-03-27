@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tag } from 'antd';
+import { message, Tag } from 'antd';
 import { getPermissions } from '@/services/auto-healing/permissions';
 import StandardTable from '@/components/StandardTable';
 import GroupedCardList from '@/components/GroupedCardList';
@@ -23,13 +23,19 @@ const ACTION_COLORS: Record<string, string> = {
 const PermissionsPage: React.FC = () => {
     const [data, setData] = useState<AutoHealing.Permission[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
 
     const loadData = useCallback(async () => {
         setLoading(true);
+        setLoadFailed(false);
         try {
             const res = await getPermissions();
-            setData((res as any)?.data || []);
-        } catch { /* ignore */ } finally {
+            setData(res);
+        } catch {
+            setData([]);
+            setLoadFailed(true);
+            message.error('权限数据加载失败，请刷新重试');
+        } finally {
             setLoading(false);
         }
     }, []);
@@ -47,7 +53,7 @@ const PermissionsPage: React.FC = () => {
     );
 
     return (
-        <StandardTable<any>
+        <StandardTable<AutoHealing.Permission>
             tabs={[{ key: 'list', label: '权限列表' }]}
             title="权限列表"
             description="系统所有权限码一览。权限按功能模块分组展示，通过角色分配给用户。"
@@ -72,7 +78,7 @@ const PermissionsPage: React.FC = () => {
                         共 <b>{count}</b> 项权限，<b>{groups}</b> 个模块
                     </span>
                 )}
-                emptyText="暂无权限数据"
+                emptyText={loadFailed ? '权限数据加载失败，请刷新重试' : '暂无权限数据'}
                 emptySearchText="未找到匹配的权限"
                 onRefresh={loadData}
                 renderItem={(p) => (

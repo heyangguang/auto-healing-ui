@@ -75,3 +75,54 @@
     color: #8c8c8c;
     line-height: 1.4;
 }
+
+.exec-logs-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+.exec-logs-scrollbar:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.exec-logs-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.exec-logs-scrollbar::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 3px;
+    transition: background-color 0.3s;
+}
+
+.exec-logs-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.exec-logs-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.task-nav-card {
+    position: relative;
+    cursor: pointer;
+}
+
+.task-nav-card .ant-card-body {
+    padding: 10px 12px !important;
+}
+
+.task-nav-card:hover .task-nav-name {
+    color: #1677ff;
+}
+
+.task-nav-card-selected::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 3px;
+    background: #1890ff;
+    z-index: 1;
+}

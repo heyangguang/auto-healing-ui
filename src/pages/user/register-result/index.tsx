@@ -6,31 +6,34 @@ import useStyles from './style.style';
 const RegisterResult: React.FC<Record<string, unknown>> = () => {
   const { styles } = useStyles();
   const [params] = useSearchParams();
+  const account = params?.get('account')?.trim() || '';
+  const hasAccount = account.length > 0;
 
   const actions = (
     <div className={styles.actions}>
-      <a href="">
+      <Link to="/user/login">
         <Button size="large" type="primary">
-          <span>查看邮箱</span>
+          <span>前往登录</span>
         </Button>
-      </a>
+      </Link>
       <Link to="/">
         <Button size="large">返回首页</Button>
       </Link>
     </div>
   );
 
-  const email = params?.get('account') || 'AntDesign@example.com';
   return (
     <Result
       className={styles.registerResult}
-      status="success"
+      status={hasAccount ? 'success' : 'warning'}
       title={
         <div className={styles.title}>
-          <span>你的账户：{email} 注册成功</span>
+          <span>{hasAccount ? `你的登录账号：${account} 已创建` : '注册结果不可用'}</span>
         </div>
       }
-      subTitle="激活邮件已发送到你的邮箱中，邮件有效期为24小时。请及时登录邮箱，点击邮件中的链接激活帐户。"
+      subTitle={hasAccount
+        ? '邀请注册已完成，请使用刚刚设置的账号密码登录。'
+        : '当前页面缺少账号信息，无法确认注册结果。请返回登录页重新进入。'}
       extra={actions}
     />
   );

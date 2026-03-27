@@ -1,33 +1,18 @@
 import { ExperimentOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/plots';
-import { useRequest } from '@umijs/max';
 import React from 'react';
-import { getExecutionRunStats } from '@/services/auto-healing/execution';
-import { RUN_STATUS_COLORS, RUN_STATUS_LABELS } from '@/constants/executionDicts';
+import { RUN_STATUS_COLORS } from '@/constants/executionDicts';
+import { buildExecutionStatusChartData } from '../dashboardOverviewHelpers';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 
 const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
-    const { data: rawData, loading, refresh } = useRequest(() => getExecutionRunStats());
+    const { data, loading, refresh } = useDashboardSection('execution');
     const { ref, width, height } = useContainerSize();
 
-    const data = rawData as any;
-    const chartData = React.useMemo(() => {
-        const statsData = data?.data ?? data ?? {};
-        // API 返回扁平字段: success_count, failed_count, partial_count, cancelled_count
-        const entries = [
-            { status: 'success', count: Number(statsData.success_count ?? 0) },
-            { status: 'failed', count: Number(statsData.failed_count ?? 0) },
-            { status: 'partial', count: Number(statsData.partial_count ?? 0) },
-            { status: 'cancelled', count: Number(statsData.cancelled_count ?? 0) },
-        ].filter((item) => item.count > 0);
-        return entries.map((item) => ({
-            status: RUN_STATUS_LABELS[item.status] || item.status,
-            count: item.count,
-            color: RUN_STATUS_COLORS[item.status] || '#8c8c8c',
-        }));
-    }, [data]);
+    const chartData = React.useMemo(() => buildExecutionStatusChartData(data), [data]);
 
     return (
         <WidgetWrapper title="执行状态分布" icon={<ExperimentOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
@@ -37,10 +22,10 @@ const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
                         width={width}
                         height={height}
                         data={chartData}
-                        xField="status"
+                        xField="label"
                         yField="count"
-                        colorField="status"
-                        color={Object.values(RUN_STATUS_COLORS)}
+                        colorField="label"
+                        color={(datum: { status?: string }) => RUN_STATUS_COLORS[datum.status || ''] || '#8c8c8c'}
                         label={{
                             text: 'count',
                             position: 'inside',

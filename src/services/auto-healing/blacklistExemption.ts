@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { normalizePaginatedResponse, unwrapData } from './responseAdapters';
 
 // ===== 安全豁免 API =====
 
@@ -25,23 +26,20 @@ export interface ExemptionRecord {
     updated_at: string;
 }
 
-/** 查询豁免列表 */
-export async function getBlacklistExemptions(params?: Record<string, any>) {
-    return request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions', {
-        method: 'GET',
-        params,
-    });
+type BlacklistExemptionQueryValue =
+    | string
+    | number
+    | boolean
+    | [string | undefined, string | undefined];
+
+export interface BlacklistExemptionListParams {
+    page?: number;
+    page_size?: number;
+    status?: ExemptionRecord['status'];
+    [key: string]: BlacklistExemptionQueryValue | undefined;
 }
 
-/** 获取单个豁免详情 */
-export async function getBlacklistExemption(id: string) {
-    return request<ExemptionRecord>(`/api/v1/tenant/blacklist-exemptions/${id}`, {
-        method: 'GET',
-    });
-}
-
-/** 创建豁免申请 */
-export async function createBlacklistExemption(data: {
+export type CreateBlacklistExemptionRequest = {
     task_id: string;
     task_name: string;
     rule_id: string;
@@ -50,11 +48,29 @@ export async function createBlacklistExemption(data: {
     rule_pattern: string;
     reason: string;
     validity_days: number;
-}) {
-    return request<ExemptionRecord>('/api/v1/tenant/blacklist-exemptions', {
+};
+
+/** 查询豁免列表 */
+export async function getBlacklistExemptions(params?: BlacklistExemptionListParams) {
+    return normalizePaginatedResponse(await request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions', {
+        method: 'GET',
+        params,
+    }));
+}
+
+/** 获取单个豁免详情 */
+export async function getBlacklistExemption(id: string) {
+    return unwrapData(await request<{ data: ExemptionRecord }>(`/api/v1/tenant/blacklist-exemptions/${id}`, {
+        method: 'GET',
+    })) as ExemptionRecord;
+}
+
+/** 创建豁免申请 */
+export async function createBlacklistExemption(data: CreateBlacklistExemptionRequest) {
+    return unwrapData(await request<{ data: ExemptionRecord }>('/api/v1/tenant/blacklist-exemptions', {
         method: 'POST',
         data,
-    });
+    })) as ExemptionRecord;
 }
 
 /** 审批通过 */
@@ -73,9 +89,9 @@ export async function rejectBlacklistExemption(id: string, rejectReason?: string
 }
 
 /** 获取待审批列表 */
-export async function getPendingExemptions(params?: Record<string, any>) {
-    return request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions/pending', {
+export async function getPendingExemptions(params?: BlacklistExemptionListParams) {
+    return normalizePaginatedResponse(await request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions/pending', {
         method: 'GET',
         params,
-    });
+    }));
 }

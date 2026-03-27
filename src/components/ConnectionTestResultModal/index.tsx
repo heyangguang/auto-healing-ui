@@ -9,6 +9,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Modal, Button, Typography, Tag, Progress, Space, Tooltip, Table } from 'antd';
+import type { TableColumnsType } from 'antd';
 import {
     CheckCircleFilled, CloseCircleFilled, DownOutlined,
     RightOutlined, DesktopOutlined, CopyOutlined,
@@ -133,9 +134,21 @@ interface ConnectionTestResultModalProps {
     open: boolean;
     results: AutoHealing.CMDBBatchConnectionTestResult | null;
     /** 传入 CMDB 资产列表（selectedRows 或 [singleTestTarget]），用于关联展示丰富信息 */
-    cmdbItems?: AutoHealing.CMDBItem[];
+    cmdbItems?: Array<{
+        id: string;
+        name?: string;
+        hostname?: string;
+        ip_address?: string;
+        status?: string;
+        os?: string;
+        os_version?: string;
+        type?: string;
+        environment?: string;
+    }>;
     onClose: () => void;
 }
+
+type CMDBItemLike = NonNullable<ConnectionTestResultModalProps['cmdbItems']>[number];
 
 interface HostInfo {
     host: string;
@@ -161,7 +174,7 @@ interface AggregatedGroup {
 
 /* ========== 组内 Table 列定义 ========== */
 const getGroupColumns = (isSuccess: boolean) => {
-    const cols: any[] = [
+    const cols: TableColumnsType<HostInfo> = [
         {
             title: 'IP',
             dataIndex: 'host',
@@ -247,7 +260,7 @@ const ConnectionTestResultModal: React.FC<ConnectionTestResultModalProps> = ({
 
     /* 构建 cmdb_id -> CMDBItem 查找表 */
     const cmdbMap = useMemo(() => {
-        const m = new Map<string, AutoHealing.CMDBItem>();
+        const m = new Map<string, CMDBItemLike>();
         for (const item of cmdbItems) {
             m.set(item.id, item);
         }

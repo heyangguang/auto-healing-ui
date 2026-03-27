@@ -1,4 +1,29 @@
 import { request } from '@umijs/max';
+import type {
+    AssignPlatformUserRolesRequest,
+    CreatePlatformUserRequest,
+    CreateTenantUserRequest,
+    PlatformUserPageResponse,
+    PlatformUserRecord,
+    PlatformUsersListParams,
+    PlatformUserSimpleRecord,
+    PlatformUsersSimpleParams,
+    ResetPlatformUserPasswordRequest,
+    ServiceDataEnvelope,
+    ServiceItemsEnvelope,
+    ServicePaginatedEnvelope,
+    TenantUsersListParams,
+    UpdatePlatformUserRequest,
+} from './contracts';
+import { normalizePaginatedResponse, unwrapData, unwrapItems } from '../responseAdapters';
+
+const normalizePlatformUsersPage = <T>(
+    response: AutoHealing.PaginatedResponse<T>,
+    requestedPageSize?: number,
+): AutoHealing.PaginatedResponse<T> => ({
+    ...response,
+    page_size: (response.page_size ?? 0) > 0 ? response.page_size : requestedPageSize ?? 1,
+});
 
 /**
  * 平台级用户管理 API
@@ -10,52 +35,53 @@ import { request } from '@umijs/max';
  */
 
 /** 获取平台用户列表（拥有平台角色的用户） */
-export async function getPlatformUsers(params?: {
-    page?: number;
-    page_size?: number;
-    status?: string;
-    username?: string;
-    email?: string;
-    display_name?: string;
-    created_from?: string;
-    created_to?: string;
-    sort_by?: string;
-    sort_order?: 'asc' | 'desc';
-}) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.User>>(
-        '/api/v1/platform/users',
-        { method: 'GET', params }
+export async function getPlatformUsers(
+    params?: PlatformUsersListParams,
+): Promise<PlatformUserPageResponse> {
+    return normalizePlatformUsersPage(
+        normalizePaginatedResponse(
+            await request<ServicePaginatedEnvelope<PlatformUserRecord>>('/api/v1/platform/users', {
+                method: 'GET',
+                params,
+            }),
+        ),
+        params?.page_size,
     );
 }
 
 /** 全量轻量用户池（设置租户管理员时用，不过滤角色） */
-export async function getPlatformUsersSimple(params?: { name?: string; status?: string }) {
-    return request<{ code: number; data: { id: string; username: string; display_name: string; status: string }[] }>(
-        '/api/v1/platform/users/simple',
-        { method: 'GET', params }
+export async function getPlatformUsersSimple(
+    params?: PlatformUsersSimpleParams,
+): Promise<PlatformUserSimpleRecord[]> {
+    return unwrapItems(
+        await request<ServiceItemsEnvelope<PlatformUserSimpleRecord>>('/api/v1/platform/users/simple', {
+            method: 'GET',
+            params,
+        }),
     );
 }
 
 /** 创建平台用户（可指定角色，不传默认 platform_admin） */
-export async function createPlatformUser(data: {
-    username: string;
-    email: string;
-    password: string;
-    display_name?: string;
-    role_id?: string;
-}) {
-    return request<AutoHealing.User>('/api/v1/platform/users', {
-        method: 'POST',
-        data,
-    });
+export async function createPlatformUser(
+    data: CreatePlatformUserRequest,
+): Promise<PlatformUserRecord> {
+    return unwrapData(
+        await request<ServiceDataEnvelope<PlatformUserRecord> | PlatformUserRecord>('/api/v1/platform/users', {
+            method: 'POST',
+            data,
+        }),
+    );
 }
 
 /** 更新平台用户信息 */
-export async function updatePlatformUser(id: string, data: AutoHealing.UpdateUserRequest) {
-    return request<AutoHealing.User>(`/api/v1/platform/users/${id}`, {
+export async function updatePlatformUser(
+    id: string,
+    data: UpdatePlatformUserRequest,
+): Promise<PlatformUserRecord> {
+    return unwrapData(await request<ServiceDataEnvelope<PlatformUserRecord>>(`/api/v1/platform/users/${id}`, {
         method: 'PUT',
         data,
-    });
+    }));
 }
 
 /** 删除平台用户（最后一个 platform_admin 不可删，后端返回 400） */
@@ -65,44 +91,58 @@ export async function deletePlatformUser(id: string) {
     });
 }
 
-/** 获取渴望详情 */
-export async function getPlatformUser(id: string) {
-    return request<AutoHealing.User>(`/api/v1/platform/users/${id}`, {
+/** 获取平台用户详情 */
+export async function getPlatformUser(id: string): Promise<PlatformUserRecord> {
+    return unwrapData(await request<ServiceDataEnvelope<PlatformUserRecord>>(`/api/v1/platform/users/${id}`, {
         method: 'GET',
-    });
+    }));
 }
 
 /** 重置平台用户密码 */
-export async function resetPlatformUserPassword(id: string, data: { new_password: string }) {
+export async function resetPlatformUserPassword(
+    id: string,
+    data: ResetPlatformUserPasswordRequest,
+) {
     return request<AutoHealing.SuccessResponse>(
         `/api/v1/platform/users/${id}/reset-password`,
         { method: 'POST', data }
     );
 }
 
+/** 变更平台用户全局角色 */
+export async function assignPlatformUserRoles(
+    id: string,
+    data: AssignPlatformUserRolesRequest,
+) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/platform/users/${id}/roles`, {
+        method: 'PUT',
+        data,
+    });
+}
+
 // ===== 租户级用户管理 API（租户管理员专用，自动携带 X-Tenant-ID） =====
 
 /** 获取当前租户用户列表 */
-export async function getTenantUsers(params?: {
-    page?: number;
-    page_size?: number;
-    role_id?: string;
-    username?: string;
-    email?: string;
-    display_name?: string;
-    created_from?: string;
-    created_to?: string;
-}) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.User>>(
-        '/api/v1/tenant/users',
-        { method: 'GET', params }
+export async function getTenantUsers(
+    params?: TenantUsersListParams,
+): Promise<AutoHealing.PaginatedResponse<AutoHealing.User>> {
+    return normalizePlatformUsersPage(
+        normalizePaginatedResponse(
+            await request<ServicePaginatedEnvelope<AutoHealing.User>>('/api/v1/tenant/users', {
+                method: 'GET',
+                params,
+            }),
+        ),
+        params?.page_size,
     );
 }
 
 /** 创建租户用户 */
-export async function createTenantUser(data: AutoHealing.CreateTenantUserRequest) {
-    return request<AutoHealing.User>('/api/v1/tenant/users', {
-        method: 'POST',
-        data,
-    });
+export async function createTenantUser(data: CreateTenantUserRequest) {
+    return unwrapData(
+        await request<ServiceDataEnvelope<AutoHealing.User> | AutoHealing.User>('/api/v1/tenant/users', {
+            method: 'POST',
+            data,
+        }),
+    );
 }

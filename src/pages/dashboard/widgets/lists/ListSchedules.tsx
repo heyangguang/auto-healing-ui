@@ -9,8 +9,9 @@ import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
+    const canViewSchedules = !!access.canViewTasks;
     const { data: rawData, loading, refresh } = useRequest(() => getExecutionSchedules({ page_size: 15 }), {
-        ready: !!access.canViewTasks,
+        ready: canViewSchedules,
     });
     const data = rawData as any;
     const items = data?.data ?? data?.items ?? [];
@@ -36,7 +37,11 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto' }}>
-                    {(!Array.isArray(items) || items.length === 0) ? (
+                    {!canViewSchedules ? (
+                        <div style={{ padding: '24px 0' }}>
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无权限查看定时任务" />
+                        </div>
+                    ) : (!Array.isArray(items) || items.length === 0) ? (
                         <div style={{ padding: '24px 0' }}>
                             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
                         </div>
@@ -54,14 +59,14 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                                         gridTemplateColumns: '1.2fr 1fr 50px 120px',
                                         gap: 8,
                                         padding: '8px 12px',
-                                        cursor: access.canViewTasks ? 'pointer' : 'default',
+                                        cursor: canViewSchedules ? 'pointer' : 'default',
                                         background: index % 2 === 1 ? '#fafafa' : '#fff',
                                         borderBottom: '1px solid #f0f0f0',
                                         transition: 'background 0.3s',
                                         alignItems: 'center',
-                                        ...(access.canViewTasks ? {} : { opacity: 0.65 }),
+                                        ...(canViewSchedules ? {} : { opacity: 0.65 }),
                                     }}
-                                    onClick={() => access.canViewTasks && history.push('/execution/schedules')}
+                                    onClick={() => canViewSchedules && history.push('/execution/schedules')}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
                                         <Badge status={item.enabled ? 'success' : 'default'} />

@@ -1,28 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Card, Typography, Space, Badge, Tag, Tooltip } from 'antd';
+import { Card, Typography, Space, Badge, Tag, Tooltip, message } from 'antd';
 import {
     AuditOutlined, RocketOutlined, FileTextOutlined,
     DesktopOutlined, CloudServerOutlined,
 } from '@ant-design/icons';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
+import { EXECUTOR_TYPE_CONFIG } from '@/constants/executionDicts';
+import { createRequestSequence } from '@/utils/requestSequence';
+import type { TaskFilters } from '../logSearchHelpers';
 
 const { Text } = Typography;
-
-interface TaskFilters {
-    search?: string;
-    name?: string;
-    description?: string;
-    executor_type?: string;
-    target_hosts?: string;
-    playbook_name?: string;
-    repository_name?: string;
-    status?: string;
-    has_runs?: boolean;
-    has_logs?: boolean;
-    needs_review?: boolean;
-    min_run_count?: number;
-    last_run_status?: string;
-}
 
 interface TaskNavigatorProps {
     selectedTaskId?: string;
@@ -30,8 +17,6 @@ interface TaskNavigatorProps {
     /** 来自 StandardTable 统一搜索的外部筛选参数 */
     externalFilters?: TaskFilters;
 }
-
-import { EXECUTOR_TYPE_CONFIG } from '@/constants/executionDicts';
 
 /* 执行器类型配置（从集中化字典 + 本地 icon 组装） */
 const EXECUTOR_ICON_MAP: Record<string, React.ReactNode> = {
@@ -65,11 +50,13 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
     const PAGE_SIZE = 10;
 
     const loadingRef = useRef(false);
+    const requestSequenceRef = useRef(createRequestSequence());
     const externalFiltersRef = useRef(externalFilters);
     externalFiltersRef.current = externalFilters;
 
     const fetchTasks = useCallback(async (currentPage: number, isReset: boolean) => {
-        if (loadingRef.current) return;
+        if (!isReset && loadingRef.current) return;
+        const token = requestSequenceRef.current.next();
         loadingRef.current = true;
         setLoading(true);
         try {
@@ -78,11 +65,16 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
                 page: currentPage,
                 page_size: PAGE_SIZE,
                 name: ef.name,
+                name__exact: ef.name__exact,
                 description: ef.description,
+                description__exact: ef.description__exact,
                 executor_type: ef.executor_type,
                 target_hosts: ef.target_hosts,
+                target_hosts__exact: ef.target_hosts__exact,
                 playbook_name: ef.playbook_name,
+                playbook_name__exact: ef.playbook_name__exact,
                 repository_name: ef.repository_name,
+                repository_name__exact: ef.repository_name__exact,
                 status: ef.status,
                 has_runs: ef.has_runs,
                 has_logs: ef.has_logs,
@@ -90,6 +82,7 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
                 min_run_count: ef.min_run_count,
                 last_run_status: ef.last_run_status,
             });
+            if (!requestSequenceRef.current.isCurrent(token)) return;
             const newTasks = res.data || [];
 
             if (isReset) {
@@ -101,24 +94,40 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
             setHasMore(newTasks.length === PAGE_SIZE);
             setPage(currentPage);
         } catch (e) {
-            console.error(e);
+            if (requestSequenceRef.current.isCurrent(token)) {
+                console.error(e);
+                message.error('加载模板分组失败');
+                if (isReset) {
+                    setTasks([]);
+                    setHasMore(false);
+                    setPage(currentPage);
+                    onSelectTask(undefined);
+                }
+            }
         } finally {
-            loadingRef.current = false;
-            setLoading(false);
+            if (requestSequenceRef.current.isCurrent(token)) {
+                loadingRef.current = false;
+                setLoading(false);
+            }
         }
-    }, []);
+    }, [onSelectTask]);
 
     // Reload on external filter changes
     useEffect(() => {
         fetchTasks(1, true);
     }, [
         externalFilters.name,
+        externalFilters.name__exact,
         externalFilters.description,
+        externalFilters.description__exact,
         externalFilters.search,
         externalFilters.executor_type,
         externalFilters.target_hosts,
+        externalFilters.target_hosts__exact,
         externalFilters.playbook_name,
+        externalFilters.playbook_name__exact,
         externalFilters.repository_name,
+        externalFilters.repository_name__exact,
         externalFilters.status,
         externalFilters.has_runs,
         externalFilters.has_logs,
@@ -141,41 +150,6 @@ const TaskNavigator: React.FC<TaskNavigatorProps> = ({
                 <Text strong style={{ fontSize: 14 }}>模板分组</Text>
                 <Badge count={tasks.length} style={{ backgroundColor: '#f0f0f0', color: '#8c8c8c' }} overflowCount={999} />
             </div>
-
-            <style>{`
-                .exec-logs-scrollbar {
-                    scrollbar-width: thin;
-                    scrollbar-color: transparent transparent;
-                }
-                .exec-logs-scrollbar:hover {
-                    scrollbar-color: rgba(0,0,0,0.2) transparent;
-                }
-                .exec-logs-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .exec-logs-scrollbar::-webkit-scrollbar-thumb {
-                    background-color: transparent;
-                    border-radius: 3px;
-                    transition: background-color 0.3s;
-                }
-                .exec-logs-scrollbar:hover::-webkit-scrollbar-thumb {
-                    background-color: rgba(0,0,0,0.2);
-                }
-                .exec-logs-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .task-nav-card .ant-card-body { padding: 10px 12px !important; }
-                .task-nav-card:hover .task-nav-name { color: #1677ff; }
-                .task-nav-card { position: relative; cursor: pointer; }
-                .task-nav-card-selected::before {
-                    content: '';
-                    position: absolute;
-                    left: -1px; top: -1px; bottom: -1px;
-                    width: 3px;
-                    background: #1890ff;
-                    z-index: 1;
-                }
-            `}</style>
 
             <div
                 className="exec-logs-scrollbar"

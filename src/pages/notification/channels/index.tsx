@@ -1,30 +1,48 @@
 import {
-    DeleteOutlined, EditOutlined, ApiOutlined,
-    MailOutlined, DingdingOutlined, BellOutlined,
-    GlobalOutlined, ThunderboltOutlined,
-    CheckCircleOutlined, StopOutlined,
-    UserOutlined, SafetyCertificateOutlined,
-    SendOutlined, RobotOutlined, TeamOutlined, EyeOutlined,
-    LinkOutlined
+    BellOutlined,
+    CheckCircleOutlined,
+    DingdingOutlined,
+    GlobalOutlined,
+    MailOutlined,
+    StopOutlined,
 } from '@ant-design/icons';
 import {
-    Button, message, Space, Tag, Typography,
-    Empty, Switch, Spin, Popconfirm, Row, Col, Pagination,
-    Drawer, Alert, Card, Descriptions, Tooltip, Divider
+    Button,
+    Empty,
+    Pagination,
+    Row,
+    Spin,
+    Typography,
+    message,
 } from 'antd';
 import React, { useState, useEffect, useCallback } from 'react';
 import { history } from '@umijs/max';
 import { useAccess } from '@umijs/max';
 import StandardTable from '@/components/StandardTable';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import {
     getChannels, deleteChannel, testChannel, updateChannel
 } from '@/services/auto-healing/notification';
 import './index.css';
 import { CHANNEL_TYPE_CONFIG, getChannelTypeConfig } from '@/constants/notificationDicts';
+import NotificationChannelCard from './NotificationChannelCard';
+import NotificationChannelDetailDrawer from './NotificationChannelDetailDrawer';
 
 const { Text } = Typography;
 
 const getTypeConfig = (type: string) => getChannelTypeConfig(type);
+
+type NotificationChannelsAdvancedSearch = {
+    name?: string;
+    type?: AutoHealing.ChannelType;
+};
+
+type NotificationChannelsSearchParams = {
+    searchField?: string;
+    searchValue?: string;
+    advancedSearch?: NotificationChannelsAdvancedSearch;
+    filters?: { field: string; value: string }[];
+};
 
 // ==================== Main Page Component ====================
 const NotificationChannelsPage: React.FC = () => {
@@ -40,7 +58,7 @@ const NotificationChannelsPage: React.FC = () => {
     const [total, setTotal] = useState(0);
     const [pageSize, setPageSize] = useState(12);
     const [searchText, setSearchText] = useState('');
-    const [filterType, setFilterType] = useState<string>('');
+    const [filterType, setFilterType] = useState<AutoHealing.ChannelType | ''>('');
 
     // Detail Drawer
     const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
@@ -53,14 +71,15 @@ const NotificationChannelsPage: React.FC = () => {
             const res = await getChannels({
                 page: currentPage,
                 page_size: pageSize,
-                type: filterType as AutoHealing.ChannelType || undefined,
+                type: filterType || undefined,
                 name: searchText || undefined,
-            } as any);
+            });
             setChannels(res.data || []);
             setTotal(res.total || 0);
-        } catch (error) {
-            console.error('Failed to load channels:', error);
-            /* global error handler */
+        } catch (error: unknown) {
+            setChannels([]);
+            setTotal(0);
+            message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '加载通知渠道失败，请稍后重试'));
         } finally {
             setLoading(false);
         }
@@ -70,19 +89,16 @@ const NotificationChannelsPage: React.FC = () => {
         loadChannels();
     }, [loadChannels]);
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchText, filterType]);
-
     // StandardTable onSearch callback
-    const handleSearchChange = useCallback((params: { searchField?: string; searchValue?: string; advancedSearch?: Record<string, any>; filters?: { field: string; value: string }[] }) => {
+    const handleSearchChange = useCallback((params: NotificationChannelsSearchParams) => {
         const filters = params.filters || [];
         const nameFilter = filters.find(f => f.field === 'name');
         const typeFilter = filters.find(f => f.field === '__enum__type') || filters.find(f => f.field === 'type');
         const advType = params.advancedSearch?.type;
         const advName = params.advancedSearch?.name;
+        setCurrentPage(1);
         setSearchText(nameFilter?.value || advName || '');
-        setFilterType(typeFilter?.value || advType || '');
+        setFilterType((typeFilter?.value as AutoHealing.ChannelType | undefined) || advType || '');
     }, []);
 
     // ==================== Actions ====================
@@ -93,8 +109,12 @@ const NotificationChannelsPage: React.FC = () => {
         try {
             await updateChannel(channel.id, { is_active: checked });
             message.success(checked ? '渠道已启用' : '渠道已禁用');
-        } catch {
+        } catch (error: unknown) {
             setChannels(prev => prev.map(c => c.id === channel.id ? { ...c, is_active: originalState } : c));
+            message.error(extractErrorMsg(
+                error as Parameters<typeof extractErrorMsg>[0],
+                checked ? '启用渠道失败，请稍后重试' : '禁用渠道失败，请稍后重试',
+            ));
         } finally {
             setActionLoading(null);
         }
@@ -114,8 +134,8 @@ const NotificationChannelsPage: React.FC = () => {
             } else {
                 loadChannels();
             }
-        } catch {
-            // 错误消息由全局错误处理器显示
+        } catch (error: unknown) {
+            message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '删除渠道失败，请稍后重试'));
         } finally {
             setActionLoading(null);
         }
@@ -126,8 +146,8 @@ const NotificationChannelsPage: React.FC = () => {
         try {
             await testChannel(channel.id);
             message.success('连接测试成功');
-        } catch {
-            // 错误消息由全局错误处理器显示
+        } catch (error: unknown) {
+            message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '测试渠道失败，请稍后重试'));
         } finally {
             setActionLoading(null);
         }
@@ -138,129 +158,9 @@ const NotificationChannelsPage: React.FC = () => {
         setDetailDrawerOpen(true);
     };
 
-    // ==================== Detail Drawer ====================
-    const renderDetailDrawer = () => {
-        if (!detailChannel) return null;
-        const typeConfig = getTypeConfig(detailChannel.type);
-
-        return (
-            <Drawer
-                title={
-                    <Space>
-                        {React.cloneElement(typeConfig.icon as React.ReactElement<{ style?: React.CSSProperties }>, { style: { fontSize: 18, color: typeConfig.color } })}
-                        <span>{detailChannel.name}</span>
-                        {detailChannel.is_default && <Tag color="gold">默认</Tag>}
-                    </Space>
-                }
-                size={600}
-                open={detailDrawerOpen}
-                onClose={() => setDetailDrawerOpen(false)}
-                extra={
-                    <Space>
-                        <Button onClick={() => { setDetailDrawerOpen(false); handleTest(detailChannel); }} disabled={!access.canTestChannel}>测试通道</Button>
-                        <Button type="primary" onClick={() => { setDetailDrawerOpen(false); history.push(`/notification/channels/${detailChannel.id}/edit`); }} disabled={!access.canUpdateChannel}>编辑</Button>
-                    </Space>
-                }
-            >
-                <Card size="small" style={{ marginBottom: 16 }}>
-                    <Descriptions column={2} size="small" bordered>
-                        <Descriptions.Item label="类型">
-                            <Tag color={typeConfig.color}>{typeConfig.label}</Tag>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="状态">
-                            <Tag color={detailChannel.is_active ? 'success' : 'error'}>
-                                {detailChannel.is_active ? '启用' : '禁用'}
-                            </Tag>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="限流">
-                            {(detailChannel.rate_limit_per_minute ?? 0) > 0
-                                ? `${detailChannel.rate_limit_per_minute} 次/分`
-                                : '无限制'}
-                        </Descriptions.Item>
-                        <Descriptions.Item label="重试机制">
-                            {detailChannel.retry_config?.max_retries || 0} 次
-                            ({(detailChannel.retry_config?.retry_intervals || []).join(', ')}s)
-                        </Descriptions.Item>
-                        <Descriptions.Item label="描述" span={2}>
-                            {detailChannel.description || '无描述'}
-                        </Descriptions.Item>
-                        <Descriptions.Item label="更新时间" span={2}>
-                            {detailChannel.updated_at ? new Date(detailChannel.updated_at).toLocaleString() : '-'}
-                        </Descriptions.Item>
-                    </Descriptions>
-                </Card>
-
-                <Alert
-                    message="配置详情"
-                    description="敏感配置信息（如 Webhook URL、密码、密钥等）出于安全原因不在详情中显示。如需修改配置，请点击「编辑」按钮。"
-                    type="info"
-                    style={{ marginBottom: 16 }}
-                />
-
-                <Card size="small" title={`接收者列表 (${detailChannel.recipients?.length || 0})`}>
-                    {detailChannel.recipients && detailChannel.recipients.length > 0 ? (
-                        <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                            {detailChannel.recipients.map((r, i) => (
-                                <div key={i} style={{
-                                    padding: '8px 12px',
-                                    borderBottom: '1px solid #f0f0f0',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8
-                                }}>
-                                    <UserOutlined style={{ color: '#8c8c8c' }} />
-                                    <Text copyable>{r}</Text>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无接收者" />
-                    )}
-                </Card>
-            </Drawer>
-        );
-    };
-
-    // ==================== Render Helpers ====================
-    const getChannelEndpoint = (channel: AutoHealing.NotificationChannel) => {
-        return channel.description || '无详细描述';
-    };
-
-    const renderRecipientInfo = (channel: AutoHealing.NotificationChannel) => {
-        if (channel.type === 'dingtalk') {
-            const hasRecipients = channel.recipients && channel.recipients.length > 0;
-            return (
-                <Tooltip title={hasRecipients ? `会@提醒: ${channel.recipients.join(', ')}` : '直接推送到钉钉群组'}>
-                    <Space size={4} style={{ cursor: 'help' }}>
-                        {hasRecipients ? <TeamOutlined style={{ fontSize: 13, color: '#8c8c8c' }} /> : <RobotOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                            {hasRecipients ? `${channel.recipients.length} @提醒` : '群组机器人'}
-                        </Text>
-                    </Space>
-                </Tooltip>
-            );
-        }
-        if (channel.type === 'webhook') {
-            return (
-                <Tooltip title="通过 Webhook 推送数据">
-                    <Space size={4} style={{ cursor: 'help' }}>
-                        <ApiOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
-                        <Text type="secondary" style={{ fontSize: 11 }}>远程终端</Text>
-                    </Space>
-                </Tooltip>
-            );
-        }
-        return (
-            <Tooltip title={channel.recipients?.length ? channel.recipients.join(', ') : '无接收者'}>
-                <Space size={4} style={{ cursor: 'help' }}>
-                    <UserOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                        {channel.recipients?.length || 0} 接收者
-                    </Text>
-                </Space>
-            </Tooltip>
-        );
-    };
+    const handleEdit = useCallback((channel: AutoHealing.NotificationChannel) => {
+        history.push(`/notification/channels/${channel.id}/edit`);
+    }, []);
 
     // ==================== Main Render ====================
     return (
@@ -308,139 +208,21 @@ const NotificationChannelsPage: React.FC = () => {
                 </Empty>
             ) : (
                 <Row gutter={[20, 20]} className="channels-grid">
-                    {channels.map(channel => {
-                        const typeConfig = getTypeConfig(channel.type);
-
-                        return (
-                            <Col key={channel.id} xs={24} sm={12} md={12} lg={8} xl={6} xxl={6}>
-                                <div
-                                    className="channel-card"
-                                    onClick={() => handleViewDetail(channel)}
-                                >
-                                    {/* Left Stub: Visual Identity */}
-                                    <div className="channel-card-stub" style={{
-                                        background: channel.is_active ? typeConfig.bg : '#f5f5f5',
-                                    }}>
-                                        {channel.is_default && (
-                                            <div className="channel-card-default-badge">
-                                                <div className="channel-card-default-badge-text">D</div>
-                                            </div>
-                                        )}
-
-                                        <div className="channel-card-stub-content">
-                                            <div style={{
-                                                color: channel.is_active ? typeConfig.color : '#bfbfbf',
-                                                opacity: channel.is_active ? 1 : 0.8
-                                            }}>
-                                                {React.cloneElement(typeConfig.icon as React.ReactElement<{ style?: React.CSSProperties }>, { style: { fontSize: 22 } })}
-                                            </div>
-                                            <div className="channel-card-type-label" style={{
-                                                color: channel.is_active ? typeConfig.color : '#8c8c8c',
-                                            }}>
-                                                {typeConfig.label}
-                                            </div>
-                                        </div>
-
-                                        <div onClick={e => e.stopPropagation()} style={{ marginBottom: 4 }}>
-                                            <Switch
-                                                size="small"
-                                                checked={channel.is_active}
-                                                onChange={c => handleToggle(channel, c)}
-                                                loading={actionLoading === channel.id}
-                                                disabled={!access.canUpdateChannel}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Right Section: Info & Config */}
-                                    <div className="channel-card-body">
-                                        <div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                <Text strong style={{ fontSize: 14, marginBottom: 4, color: channel.is_active ? '#262626' : '#8c8c8c' }} ellipsis>
-                                                    {channel.name}
-                                                </Text>
-                                            </div>
-
-                                            <div className="channel-card-endpoint">
-                                                <LinkOutlined style={{ fontSize: 10, color: '#bfbfbf' }} />
-                                                <Text type="secondary" style={{ fontSize: 11, width: '100%' }} ellipsis={{ tooltip: getChannelEndpoint(channel) }}>
-                                                    {getChannelEndpoint(channel)}
-                                                </Text>
-                                            </div>
-                                        </div>
-
-                                        {/* Operational Metrics */}
-                                        <div className="channel-card-metrics">
-                                            <Tooltip title="最大重试次数">
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <SafetyCertificateOutlined />
-                                                    <span>{channel.retry_config?.max_retries ?? 3} 次</span>
-                                                </div>
-                                            </Tooltip>
-                                            <Divider orientation="vertical" style={{ margin: 0, height: 10 }} />
-                                            <Tooltip title="速率限制">
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <ThunderboltOutlined />
-                                                    <span>{channel.rate_limit_per_minute ? `${channel.rate_limit_per_minute}/m` : '∞'}</span>
-                                                </div>
-                                            </Tooltip>
-                                        </div>
-
-                                        {/* Footer: Recipients & Actions */}
-                                        <div className="channel-card-footer">
-                                            {renderRecipientInfo(channel)}
-
-                                            <div style={{ display: 'flex', gap: 2 }} onClick={e => e.stopPropagation()}>
-                                                <Tooltip title="查看详情">
-                                                    <Button
-                                                        type="text"
-                                                        size="small"
-                                                        icon={<EyeOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
-                                                        onClick={() => handleViewDetail(channel)}
-                                                    />
-                                                </Tooltip>
-                                                <Tooltip title="测试发送">
-                                                    <Button
-                                                        type="text"
-                                                        size="small"
-                                                        icon={<SendOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
-                                                        onClick={() => handleTest(channel)}
-                                                        loading={actionLoading === channel.id}
-                                                        disabled={!access.canTestChannel}
-                                                    />
-                                                </Tooltip>
-                                                <Tooltip title="编辑配置">
-                                                    <Button
-                                                        type="text"
-                                                        size="small"
-                                                        icon={<EditOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
-                                                        onClick={() => history.push(`/notification/channels/${channel.id}/edit`)}
-                                                        disabled={!access.canUpdateChannel}
-                                                    />
-                                                </Tooltip>
-                                                <Popconfirm
-                                                    title="确定删除该渠道?"
-                                                    onConfirm={() => handleDelete(channel)}
-                                                    okText="确定"
-                                                    cancelText="取消"
-                                                    okButtonProps={{ danger: true, size: 'small' }}
-                                                    cancelButtonProps={{ size: 'small' }}
-                                                >
-                                                    <Button
-                                                        type="text"
-                                                        danger
-                                                        size="small"
-                                                        disabled={!access.canDeleteChannel}
-                                                        icon={<DeleteOutlined style={{ fontSize: 13, opacity: 0.6 }} />}
-                                                    />
-                                                </Popconfirm>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Col>
-                        );
-                    })}
+                    {channels.map((channel) => (
+                        <NotificationChannelCard
+                            key={channel.id}
+                            actionLoading={actionLoading === channel.id}
+                            canDelete={!!access.canDeleteChannel}
+                            canTest={!!access.canTestChannel}
+                            canUpdate={!!access.canUpdateChannel}
+                            channel={channel}
+                            onDelete={handleDelete}
+                            onEdit={handleEdit}
+                            onTest={handleTest}
+                            onToggle={handleToggle}
+                            onViewDetail={handleViewDetail}
+                        />
+                    ))}
                 </Row>
             )}
 
@@ -463,8 +245,21 @@ const NotificationChannelsPage: React.FC = () => {
                 </div>
             )}
 
-            {/* 详情抽屉 */}
-            {renderDetailDrawer()}
+            <NotificationChannelDetailDrawer
+                canTest={!!access.canTestChannel}
+                canUpdate={!!access.canUpdateChannel}
+                channel={detailChannel}
+                open={detailDrawerOpen}
+                onClose={() => setDetailDrawerOpen(false)}
+                onEdit={(channel) => {
+                    setDetailDrawerOpen(false);
+                    handleEdit(channel);
+                }}
+                onTest={(channel) => {
+                    setDetailDrawerOpen(false);
+                    void handleTest(channel);
+                }}
+            />
         </StandardTable>
     );
 };

@@ -8,12 +8,15 @@ interface HostListProps {
     hosts: string;
 }
 
+export const splitTargetHosts = (hosts?: string) => {
+    if (!hosts) {
+        return [];
+    }
+    return hosts.split(/[,;\n\s]+/).filter(Boolean);
+};
+
 const HostList: React.FC<HostListProps> = ({ hosts }) => {
-    const parsedHosts = useMemo(() => {
-        if (!hosts) return [];
-        // 支持逗号、换行分隔
-        return hosts.split(/[,;\n\s]+/).filter(Boolean);
-    }, [hosts]);
+    const parsedHosts = useMemo(() => splitTargetHosts(hosts), [hosts]);
 
     if (parsedHosts.length === 0) {
         return <Text type="secondary">-</Text>;

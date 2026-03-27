@@ -32,6 +32,8 @@ export interface DashboardWorkspace {
     layouts: LayoutItem[];
     /** 是否为系统工作区（角色分配） */
     isSystem?: boolean;
+    /** 是否为默认系统工作区 */
+    isDefault?: boolean;
     /** 是否只读（系统工作区默认只读） */
     isReadOnly?: boolean;
 }

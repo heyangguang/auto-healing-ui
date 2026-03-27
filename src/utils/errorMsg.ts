@@ -8,7 +8,19 @@
  *
  * umi-request 抛出的 error 对象中 response.data 包含上述结构
  */
-export function extractErrorMsg(err: any, fallback: string): string {
+type BackendErrorShape = {
+    error?: string | { code?: string; message?: string };
+    message?: string;
+};
+
+type ErrorLike = {
+    _backendMessage?: string;
+    message?: string;
+    response?: { data?: BackendErrorShape };
+    data?: BackendErrorShape;
+};
+
+export function extractErrorMsg(err: ErrorLike | undefined, fallback: string): string {
     // 全局 errorHandler 挂载的后端消息（最高优先级）
     if (typeof err?._backendMessage === 'string' && err._backendMessage) return err._backendMessage;
     // 来自 umi-request 的错误
@@ -16,7 +28,7 @@ export function extractErrorMsg(err: any, fallback: string): string {
     if (data) {
         const raw = data.error;
         if (typeof raw === 'string' && raw) return raw;
-        if (raw?.message) return raw.message;
+        if (typeof raw === 'object' && raw?.message) return raw.message;
         if (typeof data.message === 'string' && data.message) return data.message;
     }
     // 普通 JS Error

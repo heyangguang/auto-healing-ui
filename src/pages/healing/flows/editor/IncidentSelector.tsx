@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Table, Input, Select, Space, Button, Tag, Typography, Row, Col, Empty, DatePicker } from 'antd';
-import { SearchOutlined, ReloadOutlined, AlertOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { getIncident, getIncidents } from '@/services/auto-healing/incidents';
+import React from 'react';
+import { Modal, Table, Input, Select, Space, Button, Tag, Typography, Row, Col, Empty } from 'antd';
+import { SearchOutlined, ReloadOutlined, AlertOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useIncidentSelectorState } from './useIncidentSelectorState';
 
 const { Text } = Typography;
 
@@ -39,82 +39,32 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
     onSelect,
     onCancel
 }) => {
-    const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<AutoHealing.Incident[]>([]);
-    const [total, setTotal] = useState(0);
-    const [selectedRowKey, setSelectedRowKey] = useState<string | undefined>(value);
-    const [selectedIncident, setSelectedIncident] = useState<AutoHealing.Incident | null>(null);
-
-    // Filter states
-    const [search, setSearch] = useState('');
-    const [severity, setSeverity] = useState<string | undefined>();
-    const [status, setStatus] = useState<string | undefined>();
-    const [healingStatus, setHealingStatus] = useState<string | undefined>();
-    const [sourcePlugin, setSourcePlugin] = useState('');
-
-    // Pagination
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-
-    useEffect(() => {
-        if (open) {
-            fetchData();
-        }
-    }, [open, page, pageSize, search, severity, status, healingStatus, sourcePlugin]);
-
-    useEffect(() => {
-        if (value) {
-            setSelectedRowKey(value);
-        }
-    }, [value]);
-
-    useEffect(() => {
-        if (!open || !value || selectedIncident?.id === value) return;
-        getIncident(value)
-            .then((incident) => {
-                if (incident?.id) {
-                    setSelectedIncident(incident);
-                    setSelectedRowKey(incident.id);
-                }
-            })
-            .catch(() => {
-                // ignore stale selection
-            });
-    }, [open, value, selectedIncident?.id]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const params: any = {
-                page,
-                page_size: pageSize,
-            };
-            if (search.trim()) params.title = search.trim();
-            if (sourcePlugin) params.source_plugin_name = sourcePlugin;
-            if (severity) params.severity = severity;
-            if (status) params.status = status;
-            if (healingStatus) params.healing_status = healingStatus;
-
-            const res = await getIncidents(params);
-            const items = res.data || [];
-
-            setData(items);
-            setTotal(res.total || items.length);
-        } catch (error) {
-            console.error('Failed to fetch incidents:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleReset = () => {
-        setSearch('');
-        setSeverity(undefined);
-        setStatus(undefined);
-        setHealingStatus(undefined);
-        setSourcePlugin('');
-        setPage(1);
-    };
+    const {
+        data,
+        handleManualSelect,
+        handlePageChange,
+        handleReset,
+        healingStatus,
+        loading,
+        page,
+        pageSize,
+        search,
+        selectedIncident,
+        selectedRowKey,
+        setHealingStatus,
+        setPage,
+        setSearch,
+        setSeverity,
+        setSourcePlugin,
+        setStatus,
+        severity,
+        sourcePlugin,
+        status,
+        total,
+    } = useIncidentSelectorState({
+        open,
+        value,
+    });
 
     const handleConfirm = () => {
         if (selectedRowKey && selectedIncident) {
@@ -296,7 +246,7 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                     current: page,
                     pageSize,
                     total,
-                    onChange: (p, ps) => { setPage(p); setPageSize(ps || 10); },
+                    onChange: handlePageChange,
                     showSizeChanger: true,
                     showTotal: (t) => `共 ${t} 条`,
                     showQuickJumper: true,
@@ -307,16 +257,12 @@ const IncidentSelector: React.FC<IncidentSelectorProps> = ({
                     selectedRowKeys: selectedRowKey ? [selectedRowKey] : [],
                     onChange: (keys, rows) => {
                         if (keys[0]) {
-                            setSelectedRowKey(keys[0] as string);
-                            setSelectedIncident(rows[0] as AutoHealing.Incident);
+                            handleManualSelect(rows[0] as AutoHealing.Incident);
                         }
                     },
                 }}
                 onRow={(record) => ({
-                    onClick: () => {
-                        setSelectedRowKey(record.id);
-                        setSelectedIncident(record);
-                    },
+                    onClick: () => handleManualSelect(record),
                     style: { cursor: 'pointer' },
                 })}
                 locale={{

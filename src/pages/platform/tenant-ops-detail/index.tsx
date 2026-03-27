@@ -21,7 +21,10 @@ import { history } from '@umijs/max';
 import type { ColumnsType } from 'antd/es/table';
 import StandardTable from '@/components/StandardTable';
 import type { SearchField } from '@/components/StandardTable';
-import { getTenantStats } from '@/services/auto-healing/platform/tenants';
+import {
+    getTenantStats,
+    type PlatformTenantStatsItem,
+} from '@/services/auto-healing/platform/tenants';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -33,7 +36,6 @@ dayjs.locale('zh-cn');
 
 const { Text } = Typography;
 
-/* ── 类型定义 ── */
 /* ── 租户图标映射（与 TenantSwitcher 保持一致） ── */
 const ICON_MAP: Record<string, React.ReactNode> = {
     bank: <BankOutlined />, shop: <ShopOutlined />, team: <TeamOutlined />,
@@ -49,26 +51,46 @@ const ICON_MAP: Record<string, React.ReactNode> = {
     send: <SendOutlined />, folder: <FolderOpenOutlined />,
 };
 
-interface TenantStatsItem {
-    id: string; name: string; code: string; status: string; icon?: string;
-    member_count: number; rule_count: number; instance_count: number;
-    template_count: number; audit_log_count: number; last_activity_at: string | null;
-    cmdb_count: number; git_count: number; playbook_count: number;
-    secret_count: number; plugin_count: number; incident_count: number;
-    flow_count: number; schedule_count: number;
-    notification_channel_count: number; notification_template_count: number;
-    /* 自愈 KPI */
-    healing_success_count: number; healing_total_count: number;
-    incident_covered_count: number;
-}
+type TenantStatsItem = PlatformTenantStatsItem;
 
+type TenantOpsSearchParams = {
+    name?: string;
+    code?: string;
+    status?: TenantStatsItem['status'];
+};
 
+const toSafeCount = (value?: number | null) => Number(value ?? 0);
+const getTenantTotalResources = (tenant: TenantStatsItem) =>
+    toSafeCount(tenant.cmdb_count)
+    + toSafeCount(tenant.template_count)
+    + toSafeCount(tenant.playbook_count)
+    + toSafeCount(tenant.secret_count)
+    + toSafeCount(tenant.plugin_count)
+    + toSafeCount(tenant.git_count);
+const getTenantAutomationTotal = (tenant: TenantStatsItem) =>
+    toSafeCount(tenant.rule_count) + toSafeCount(tenant.flow_count);
+const getTenantHealingFailureCount = (tenant: TenantStatsItem) =>
+    Math.max(0, toSafeCount(tenant.healing_total_count) - toSafeCount(tenant.healing_success_count));
+const getTenantUncoveredIncidentCount = (tenant: TenantStatsItem) =>
+    Math.max(0, toSafeCount(tenant.incident_count) - toSafeCount(tenant.incident_covered_count));
+const getTenantConfiguredModuleCount = (tenant: TenantStatsItem) => [
+    toSafeCount(tenant.rule_count) > 0,
+    toSafeCount(tenant.template_count) > 0,
+    toSafeCount(tenant.flow_count) > 0,
+    toSafeCount(tenant.schedule_count) > 0,
+    toSafeCount(tenant.cmdb_count) > 0,
+    toSafeCount(tenant.secret_count) > 0,
+    toSafeCount(tenant.git_count) > 0,
+    toSafeCount(tenant.plugin_count) > 0,
+    toSafeCount(tenant.notification_channel_count) > 0,
+    toSafeCount(tenant.playbook_count) > 0,
+].filter(Boolean).length;
 
 /* ── 搜索字段 ── */
 const searchFields: SearchField[] = [
     { key: 'name', label: '租户名称' },
     { key: 'code', label: '租户代码' },
-    { key: 'status', label: '租户状态', options: [{ label: '正常', value: 'active' }, { label: '停用', value: 'disabled' }] },
+    { key: '__enum__status', label: '租户状态', options: [{ label: '正常', value: 'active' }, { label: '停用', value: 'disabled' }] },
 ];
 
 /* ── Header Icon ── */
@@ -86,13 +108,24 @@ const headerIcon = (
 /* ── 展开行：AWX 风格租户详情面板 ── */
 const ExpandedRow: React.FC<{ record: TenantStatsItem }> = ({ record }) => {
     const t = record;
+    const memberCount = toSafeCount(t.member_count);
+    const ruleCount = toSafeCount(t.rule_count);
+    const flowCount = toSafeCount(t.flow_count);
+    const instanceCount = toSafeCount(t.instance_count);
+    const templateCount = toSafeCount(t.template_count);
+    const playbookCount = toSafeCount(t.playbook_count);
+    const cmdbCount = toSafeCount(t.cmdb_count);
+    const secretCount = toSafeCount(t.secret_count);
+    const gitCount = toSafeCount(t.git_count);
+    const pluginCount = toSafeCount(t.plugin_count);
+    const notificationChannelCount = toSafeCount(t.notification_channel_count);
+    const notificationTemplateCount = toSafeCount(t.notification_template_count);
+    const incidentCount = toSafeCount(t.incident_count);
+    const healingSuccessCount = toSafeCount(t.healing_success_count);
+    const healingTotalCount = toSafeCount(t.healing_total_count);
 
     const totalConfig = 10;
-    const configured = [
-        t.rule_count > 0, t.template_count > 0, t.flow_count > 0, t.schedule_count > 0,
-        t.cmdb_count > 0, t.secret_count > 0, t.git_count > 0, t.plugin_count > 0,
-        t.notification_channel_count > 0, t.playbook_count > 0,
-    ].filter(Boolean).length;
+    const configured = getTenantConfiguredModuleCount(t);
     const pct = Math.round(configured / totalConfig * 100);
 
     const sections: {
@@ -100,42 +133,42 @@ const ExpandedRow: React.FC<{ record: TenantStatsItem }> = ({ record }) => {
         items: { label: string; value: number | string; icon: React.ReactNode; iconBg: string; iconColor: string }[];
     }[] = [
             {
-                title: '自动化引擎', iconBg: '#fa8c16', badgeColor: '#d46b08', badgeBg: '#fff7e6', badgeText: `${t.rule_count} 规则 · ${t.flow_count} 流程 · ${t.instance_count} 实例`,
+                title: '自动化引擎', iconBg: '#fa8c16', badgeColor: '#d46b08', badgeBg: '#fff7e6', badgeText: `${ruleCount} 规则 · ${flowCount} 流程 · ${instanceCount} 实例`,
                 items: [
-                    { label: '自愈规则', value: t.rule_count, icon: <ThunderboltOutlined />, iconBg: '#fff7e6', iconColor: '#fa8c16' },
-                    { label: '自愈流程', value: t.flow_count, icon: <BranchesOutlined />, iconBg: '#f9f0ff', iconColor: '#722ed1' },
-                    { label: '自愈实例', value: t.instance_count, icon: <PlayCircleOutlined />, iconBg: '#e6fffb', iconColor: '#08979c' },
-                    { label: '自愈成功', value: t.healing_success_count, icon: <CheckCircleOutlined />, iconBg: '#f6ffed', iconColor: '#52c41a' },
-                    { label: '任务模板', value: t.template_count, icon: <AppstoreOutlined />, iconBg: '#fff0f6', iconColor: '#c41d7f' },
-                    { label: 'Playbook', value: t.playbook_count, icon: <AppstoreOutlined />, iconBg: '#f6ffed', iconColor: '#389e0d' },
-                    { label: '定时任务', value: t.schedule_count, icon: <ScheduleOutlined />, iconBg: '#f0f5ff', iconColor: '#1d39c4' },
-                    { label: '工单触发', value: t.incident_count, icon: <AlertOutlined />, iconBg: '#fff1f0', iconColor: '#cf1322' },
+                    { label: '自愈规则', value: ruleCount, icon: <ThunderboltOutlined />, iconBg: '#fff7e6', iconColor: '#fa8c16' },
+                    { label: '自愈流程', value: flowCount, icon: <BranchesOutlined />, iconBg: '#f9f0ff', iconColor: '#722ed1' },
+                    { label: '自愈实例', value: instanceCount, icon: <PlayCircleOutlined />, iconBg: '#e6fffb', iconColor: '#08979c' },
+                    { label: '自愈成功', value: healingSuccessCount, icon: <CheckCircleOutlined />, iconBg: '#f6ffed', iconColor: '#52c41a' },
+                    { label: '任务模板', value: templateCount, icon: <AppstoreOutlined />, iconBg: '#fff0f6', iconColor: '#c41d7f' },
+                    { label: 'Playbook', value: playbookCount, icon: <AppstoreOutlined />, iconBg: '#f6ffed', iconColor: '#389e0d' },
+                    { label: '定时任务', value: toSafeCount(t.schedule_count), icon: <ScheduleOutlined />, iconBg: '#f0f5ff', iconColor: '#1d39c4' },
+                    { label: '工单触发', value: incidentCount, icon: <AlertOutlined />, iconBg: '#fff1f0', iconColor: '#cf1322' },
                 ],
             },
             {
-                title: '基础设施', iconBg: '#1677ff', badgeColor: '#096dd9', badgeBg: '#e6f4ff', badgeText: `${t.cmdb_count} 主机 · ${t.plugin_count} 插件`,
+                title: '基础设施', iconBg: '#1677ff', badgeColor: '#096dd9', badgeBg: '#e6f4ff', badgeText: `${cmdbCount} 主机 · ${pluginCount} 插件`,
                 items: [
-                    { label: 'CMDB 主机', value: t.cmdb_count, icon: <CloudServerOutlined />, iconBg: '#e6f4ff', iconColor: '#1677ff' },
-                    { label: '凭据密钥', value: t.secret_count, icon: <KeyOutlined />, iconBg: '#fcf4e6', iconColor: '#ad6800' },
-                    { label: '代码仓库', value: t.git_count, icon: <BranchesOutlined />, iconBg: '#f6ffed', iconColor: '#237804' },
-                    { label: '插件集成', value: t.plugin_count, icon: <DatabaseOutlined />, iconBg: '#f9f0ff', iconColor: '#531dab' },
-                    { label: '通知渠道', value: t.notification_channel_count, icon: <BellOutlined />, iconBg: '#e6fffb', iconColor: '#006d75' },
-                    { label: '通知模板', value: t.notification_template_count, icon: <BellOutlined />, iconBg: '#f0f5ff', iconColor: '#10239e' },
-                    { label: '总资源数', value: t.cmdb_count + t.template_count + t.playbook_count + t.secret_count + t.plugin_count + t.git_count, icon: <FundProjectionScreenOutlined />, iconBg: '#fff0f6', iconColor: '#c41d7f' },
-                    { label: '总通知数', value: t.notification_channel_count + t.notification_template_count, icon: <BarChartOutlined />, iconBg: '#fff2e8', iconColor: '#d4380d' },
+                    { label: 'CMDB 主机', value: cmdbCount, icon: <CloudServerOutlined />, iconBg: '#e6f4ff', iconColor: '#1677ff' },
+                    { label: '凭据密钥', value: secretCount, icon: <KeyOutlined />, iconBg: '#fcf4e6', iconColor: '#ad6800' },
+                    { label: '代码仓库', value: gitCount, icon: <BranchesOutlined />, iconBg: '#f6ffed', iconColor: '#237804' },
+                    { label: '插件集成', value: pluginCount, icon: <DatabaseOutlined />, iconBg: '#f9f0ff', iconColor: '#531dab' },
+                    { label: '通知渠道', value: notificationChannelCount, icon: <BellOutlined />, iconBg: '#e6fffb', iconColor: '#006d75' },
+                    { label: '通知模板', value: notificationTemplateCount, icon: <BellOutlined />, iconBg: '#f0f5ff', iconColor: '#10239e' },
+                    { label: '总资源数', value: getTenantTotalResources(t), icon: <FundProjectionScreenOutlined />, iconBg: '#fff0f6', iconColor: '#c41d7f' },
+                    { label: '总通知数', value: notificationChannelCount + notificationTemplateCount, icon: <BarChartOutlined />, iconBg: '#fff2e8', iconColor: '#d4380d' },
                 ],
             },
             {
-                title: '运营指标', iconBg: '#722ed1', badgeColor: '#531dab', badgeBg: '#f9f0ff', badgeText: `${t.member_count} 成员 · ${t.audit_log_count} 审计`,
+                title: '运营指标', iconBg: '#722ed1', badgeColor: '#531dab', badgeBg: '#f9f0ff', badgeText: `${memberCount} 成员 · ${toSafeCount(t.audit_log_count)} 审计`,
                 items: [
-                    { label: '团队成员', value: t.member_count, icon: <TeamOutlined />, iconBg: '#e6f4ff', iconColor: '#0958d9' },
-                    { label: '审计日志', value: t.audit_log_count, icon: <AuditOutlined />, iconBg: '#f9f0ff', iconColor: '#722ed1' },
-                    { label: '自愈执行', value: t.healing_total_count, icon: <NodeIndexOutlined />, iconBg: '#fff2e8', iconColor: '#d4380d' },
-                    { label: '自愈失败', value: t.healing_total_count - t.healing_success_count, icon: <CloseCircleOutlined />, iconBg: '#fff1f0', iconColor: '#cf1322' },
-                    { label: '未覆盖工单', value: t.incident_count - t.incident_covered_count, icon: <AlertOutlined />, iconBg: '#fff2e8', iconColor: '#d4380d' },
-                    { label: '人均资源', value: t.member_count > 0 ? Math.round((t.cmdb_count + t.template_count + t.playbook_count + t.secret_count + t.plugin_count + t.git_count) / t.member_count) : 0, icon: <PieChartOutlined />, iconBg: '#e6f4ff', iconColor: '#1677ff' },
-                    { label: '人均审计', value: t.member_count > 0 ? Math.round(t.audit_log_count / t.member_count) : 0, icon: <BarChartOutlined />, iconBg: '#e6fffb', iconColor: '#08979c' },
-                    { label: '规则密度', value: t.cmdb_count > 0 ? (t.rule_count / t.cmdb_count).toFixed(1) : '—', icon: <DashboardOutlined />, iconBg: '#fff7e6', iconColor: '#d48806' },
+                    { label: '团队成员', value: memberCount, icon: <TeamOutlined />, iconBg: '#e6f4ff', iconColor: '#0958d9' },
+                    { label: '审计日志', value: toSafeCount(t.audit_log_count), icon: <AuditOutlined />, iconBg: '#f9f0ff', iconColor: '#722ed1' },
+                    { label: '自愈执行', value: healingTotalCount, icon: <NodeIndexOutlined />, iconBg: '#fff2e8', iconColor: '#d4380d' },
+                    { label: '自愈失败', value: getTenantHealingFailureCount(t), icon: <CloseCircleOutlined />, iconBg: '#fff1f0', iconColor: '#cf1322' },
+                    { label: '未覆盖工单', value: getTenantUncoveredIncidentCount(t), icon: <AlertOutlined />, iconBg: '#fff2e8', iconColor: '#d4380d' },
+                    { label: '人均资源', value: memberCount > 0 ? Math.round(getTenantTotalResources(t) / memberCount) : 0, icon: <PieChartOutlined />, iconBg: '#e6f4ff', iconColor: '#1677ff' },
+                    { label: '人均审计', value: memberCount > 0 ? Math.round(toSafeCount(t.audit_log_count) / memberCount) : 0, icon: <BarChartOutlined />, iconBg: '#e6fffb', iconColor: '#08979c' },
+                    { label: '规则密度', value: cmdbCount > 0 ? (ruleCount / cmdbCount).toFixed(1) : '—', icon: <DashboardOutlined />, iconBg: '#fff7e6', iconColor: '#d48806' },
                 ],
             },
         ];
@@ -181,7 +214,7 @@ const ExpandedRow: React.FC<{ record: TenantStatsItem }> = ({ record }) => {
                         <div className="ops-info-row">
                             <span className="ops-info-label">总资源</span>
                             <span className="ops-info-value" style={{ fontWeight: 700 }}>
-                                {t.cmdb_count + t.template_count + t.playbook_count + t.secret_count + t.plugin_count + t.git_count}
+                                {getTenantTotalResources(t)}
                             </span>
                         </div>
                         <div className="ops-progress-wrap">
@@ -243,16 +276,15 @@ const ExpandedRow: React.FC<{ record: TenantStatsItem }> = ({ record }) => {
    主页面
    ══════════════════════════════════════════════════ */
 const TenantOpsDetailPage: React.FC = () => {
-    const [searchParams, setSearchParams] = useState<Record<string, string>>({});
+    const [searchParams, setSearchParams] = useState<TenantOpsSearchParams>({});
     const [tenants, setTenants] = useState<TenantStatsItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await getTenantStats();
-            const data = res?.data || res;
-            setTenants(data?.tenants || []);
+            const { tenants: tenantStats } = await getTenantStats();
+            setTenants(tenantStats);
         } catch { /* ignore */ } finally { setLoading(false); }
     }, []);
 
@@ -261,9 +293,10 @@ const TenantOpsDetailPage: React.FC = () => {
     /* 搜索过滤 */
     const filteredTenants = useMemo(() => {
         let result = [...tenants];
-        if (searchParams.name) result = result.filter(t => t.name.toLowerCase().includes(searchParams.name.toLowerCase()));
-        if (searchParams.code) result = result.filter(t => t.code.toLowerCase().includes(searchParams.code.toLowerCase()));
-        if (searchParams.status) result = result.filter(t => t.status === searchParams.status);
+        const { name, code, status } = searchParams;
+        if (name) result = result.filter(t => t.name.toLowerCase().includes(name.toLowerCase()));
+        if (code) result = result.filter(t => t.code.toLowerCase().includes(code.toLowerCase()));
+        if (status) result = result.filter(t => t.status === status);
         return result;
     }, [tenants, searchParams]);
 
@@ -272,9 +305,9 @@ const TenantOpsDetailPage: React.FC = () => {
         const total = filteredTenants.length;
         const active = filteredTenants.filter(t => t.status === 'active').length;
         const inactive = total - active;
-        const totalMembers = filteredTenants.reduce((s, t) => s + t.member_count, 0);
-        const totalRules = filteredTenants.reduce((s, t) => s + t.rule_count, 0);
-        const totalAudit = filteredTenants.reduce((s, t) => s + t.audit_log_count, 0);
+        const totalMembers = filteredTenants.reduce((s, t) => s + toSafeCount(t.member_count), 0);
+        const totalRules = filteredTenants.reduce((s, t) => s + toSafeCount(t.rule_count), 0);
+        const totalAudit = filteredTenants.reduce((s, t) => s + toSafeCount(t.audit_log_count), 0);
         return { total, active, inactive, totalMembers, totalRules, totalAudit };
     }, [filteredTenants]);
 
@@ -330,8 +363,8 @@ const TenantOpsDetailPage: React.FC = () => {
         },
         {
             title: '成员', dataIndex: 'member_count', key: 'members', width: 60, align: 'center',
-            sorter: (a, b) => a.member_count - b.member_count,
-            render: (v: number) => <span style={{ fontWeight: 600, color: v > 0 ? '#262626' : '#d9d9d9' }}>{v}</span>,
+            sorter: (a, b) => toSafeCount(a.member_count) - toSafeCount(b.member_count),
+            render: (v: number) => <span style={{ fontWeight: 600, color: toSafeCount(v) > 0 ? '#262626' : '#d9d9d9' }}>{toSafeCount(v)}</span>,
         },
         {
             title: () => (
@@ -343,14 +376,11 @@ const TenantOpsDetailPage: React.FC = () => {
                 </span>
             ),
             key: 'total_resources', width: 95, align: 'center',
-            sorter: (a, b) => {
-                const sum = (t: TenantStatsItem) => t.cmdb_count + t.template_count + t.playbook_count + t.secret_count + t.plugin_count + t.git_count;
-                return sum(a) - sum(b);
-            },
-            render: (_: any, r) => {
-                const total = r.cmdb_count + r.template_count + r.playbook_count + r.secret_count + r.plugin_count + r.git_count;
+            sorter: (a, b) => getTenantTotalResources(a) - getTenantTotalResources(b),
+            render: (_: unknown, r: TenantStatsItem) => {
+                const total = getTenantTotalResources(r);
                 return (
-                    <Tooltip title={`CMDB ${r.cmdb_count} · 模板 ${r.template_count} · Playbook ${r.playbook_count} · 凭据 ${r.secret_count} · 插件 ${r.plugin_count} · 仓库 ${r.git_count}`}>
+                    <Tooltip title={`CMDB ${toSafeCount(r.cmdb_count)} · 模板 ${toSafeCount(r.template_count)} · Playbook ${toSafeCount(r.playbook_count)} · 凭据 ${toSafeCount(r.secret_count)} · 插件 ${toSafeCount(r.plugin_count)} · 仓库 ${toSafeCount(r.git_count)}`}>
                         <span style={{ fontWeight: 600, color: total > 0 ? '#1677ff' : '#d9d9d9' }}>{total}</span>
                     </Tooltip>
                 );
@@ -358,17 +388,17 @@ const TenantOpsDetailPage: React.FC = () => {
         },
         {
             title: '自动化', key: 'automation', width: 150,
-            sorter: (a, b) => (a.rule_count + a.flow_count) - (b.rule_count + b.flow_count),
-            render: (_: any, r) => {
-                const auto = r.rule_count + r.flow_count;
-                if (auto === 0 && r.instance_count === 0) return <span style={{ color: '#d9d9d9' }}>—</span>;
+            sorter: (a, b) => getTenantAutomationTotal(a) - getTenantAutomationTotal(b),
+            render: (_: unknown, r: TenantStatsItem) => {
+                const auto = getTenantAutomationTotal(r);
+                if (auto === 0 && toSafeCount(r.instance_count) === 0) return <span style={{ color: '#d9d9d9' }}>—</span>;
                 return (
                     <span style={{ fontSize: 12 }}>
-                        <span style={{ fontWeight: 600, color: '#fa8c16' }}>{r.rule_count}</span>
+                        <span style={{ fontWeight: 600, color: '#fa8c16' }}>{toSafeCount(r.rule_count)}</span>
                         <span style={{ color: '#b0b0b0' }}> 规则 · </span>
-                        <span style={{ fontWeight: 600, color: '#722ed1' }}>{r.flow_count}</span>
+                        <span style={{ fontWeight: 600, color: '#722ed1' }}>{toSafeCount(r.flow_count)}</span>
                         <span style={{ color: '#b0b0b0' }}> 流程 · </span>
-                        <span style={{ fontWeight: 600, color: '#13c2c2' }}>{r.instance_count}</span>
+                        <span style={{ fontWeight: 600, color: '#13c2c2' }}>{toSafeCount(r.instance_count)}</span>
                         <span style={{ color: '#b0b0b0' }}> 实例</span>
                     </span>
                 );
@@ -376,21 +406,21 @@ const TenantOpsDetailPage: React.FC = () => {
         },
         {
             title: '审计', dataIndex: 'audit_log_count', key: 'audit', width: 65, align: 'center',
-            sorter: (a, b) => a.audit_log_count - b.audit_log_count,
-            render: (v: number) => <span style={{ fontWeight: 600, color: v > 0 ? '#722ed1' : '#d9d9d9' }}>{v}</span>,
+            sorter: (a, b) => toSafeCount(a.audit_log_count) - toSafeCount(b.audit_log_count),
+            render: (v: number) => <span style={{ fontWeight: 600, color: toSafeCount(v) > 0 ? '#722ed1' : '#d9d9d9' }}>{toSafeCount(v)}</span>,
         },
         {
             title: '自愈成功率', key: 'healing_rate', width: 105,
             sorter: (a, b) => {
-                const rA = a.healing_total_count > 0 ? a.healing_success_count / a.healing_total_count : 0;
-                const rB = b.healing_total_count > 0 ? b.healing_success_count / b.healing_total_count : 0;
+                const rA = toSafeCount(a.healing_total_count) > 0 ? toSafeCount(a.healing_success_count) / toSafeCount(a.healing_total_count) : 0;
+                const rB = toSafeCount(b.healing_total_count) > 0 ? toSafeCount(b.healing_success_count) / toSafeCount(b.healing_total_count) : 0;
                 return rA - rB;
             },
-            render: (_: any, r) => {
-                if (r.healing_total_count === 0) return <Text type="secondary">—</Text>;
-                const pct = Math.round(r.healing_success_count / r.healing_total_count * 100);
+            render: (_: unknown, r: TenantStatsItem) => {
+                if (toSafeCount(r.healing_total_count) === 0) return <Text type="secondary">—</Text>;
+                const pct = Math.round(toSafeCount(r.healing_success_count) / toSafeCount(r.healing_total_count) * 100);
                 return (
-                    <Tooltip title={`成功 ${r.healing_success_count} / 总共 ${r.healing_total_count} 次`}>
+                    <Tooltip title={`成功 ${toSafeCount(r.healing_success_count)} / 总共 ${toSafeCount(r.healing_total_count)} 次`}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <div style={{ flex: 1, height: 6, borderRadius: 0, background: '#f0f2f5', overflow: 'hidden' }}>
                                 <div style={{
@@ -407,15 +437,15 @@ const TenantOpsDetailPage: React.FC = () => {
         {
             title: '自愈覆盖', key: 'healing_coverage', width: 105,
             sorter: (a, b) => {
-                const rA = a.incident_count > 0 ? a.incident_covered_count / a.incident_count : 0;
-                const rB = b.incident_count > 0 ? b.incident_covered_count / b.incident_count : 0;
+                const rA = toSafeCount(a.incident_count) > 0 ? toSafeCount(a.incident_covered_count) / toSafeCount(a.incident_count) : 0;
+                const rB = toSafeCount(b.incident_count) > 0 ? toSafeCount(b.incident_covered_count) / toSafeCount(b.incident_count) : 0;
                 return rA - rB;
             },
-            render: (_: any, r) => {
-                if (r.incident_count === 0) return <Text type="secondary">—</Text>;
-                const pct = Math.round(r.incident_covered_count / r.incident_count * 100);
+            render: (_: unknown, r: TenantStatsItem) => {
+                if (toSafeCount(r.incident_count) === 0) return <Text type="secondary">—</Text>;
+                const pct = Math.round(toSafeCount(r.incident_covered_count) / toSafeCount(r.incident_count) * 100);
                 return (
-                    <Tooltip title={`规则覆盖 ${r.incident_covered_count} / 总工单 ${r.incident_count} 件`}>
+                    <Tooltip title={`规则覆盖 ${toSafeCount(r.incident_covered_count)} / 总工单 ${toSafeCount(r.incident_count)} 件`}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <div style={{ flex: 1, height: 6, borderRadius: 0, background: '#f0f2f5', overflow: 'hidden' }}>
                                 <div style={{
@@ -431,12 +461,9 @@ const TenantOpsDetailPage: React.FC = () => {
         },
         {
             title: '配置覆盖', key: 'coverage', width: 105,
-            sorter: (a, b) => {
-                const calc = (t: TenantStatsItem) => [t.rule_count > 0, t.template_count > 0, t.flow_count > 0, t.schedule_count > 0, t.cmdb_count > 0, t.secret_count > 0, t.git_count > 0, t.plugin_count > 0, t.notification_channel_count > 0, t.playbook_count > 0].filter(Boolean).length;
-                return calc(a) - calc(b);
-            },
-            render: (_: any, r) => {
-                const configured = [r.rule_count > 0, r.template_count > 0, r.flow_count > 0, r.schedule_count > 0, r.cmdb_count > 0, r.secret_count > 0, r.git_count > 0, r.plugin_count > 0, r.notification_channel_count > 0, r.playbook_count > 0].filter(Boolean).length;
+            sorter: (a, b) => getTenantConfiguredModuleCount(a) - getTenantConfiguredModuleCount(b),
+            render: (_: unknown, r: TenantStatsItem) => {
+                const configured = getTenantConfiguredModuleCount(r);
                 const pct = Math.round(configured / 10 * 100);
                 return (
                     <Tooltip title={`已配置 ${configured}/10 项`}>
@@ -470,20 +497,35 @@ const TenantOpsDetailPage: React.FC = () => {
             headerIcon={headerIcon}
             headerExtra={statsBar}
             searchFields={searchFields}
-            onSearch={(params) => {
-                const p: Record<string, string> = {};
-                if (params.filters?.length) {
-                    params.filters.forEach((item) => {
-                        if (item.value) p[item.field] = item.value;
-                    });
-                }
-                if (params.advancedSearch) {
-                    Object.entries(params.advancedSearch).forEach(([key, value]) => {
-                        if (value !== undefined && value !== null && value !== '') p[key] = String(value);
-                    });
-                }
-                setSearchParams(p);
-            }}
+                onSearch={(params) => {
+                    const nextParams: TenantOpsSearchParams = {};
+                    if (params.filters?.length) {
+                        params.filters.forEach((item) => {
+                            if (!item.value) {
+                                return;
+                            }
+                            if (item.field === 'name' || item.field === 'code') {
+                                nextParams[item.field] = item.value;
+                            }
+                            if ((item.field === 'status' || item.field === '__enum__status') && (item.value === 'active' || item.value === 'disabled')) {
+                                nextParams.status = item.value;
+                            }
+                        });
+                    }
+                    if (params.advancedSearch) {
+                        const { name, code, status } = params.advancedSearch;
+                        if (typeof name === 'string' && name) {
+                            nextParams.name = name;
+                        }
+                        if (typeof code === 'string' && code) {
+                            nextParams.code = code;
+                        }
+                        if (status === 'active' || status === 'disabled') {
+                            nextParams.status = status;
+                        }
+                    }
+                    setSearchParams(nextParams);
+                }}
         >
             <Table<TenantStatsItem>
                 rowKey="id"

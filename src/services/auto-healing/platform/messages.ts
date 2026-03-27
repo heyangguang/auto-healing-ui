@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { unwrapData, unwrapItems } from '../responseAdapters';
 
 /**
  * 站内信 API
@@ -22,6 +23,11 @@ export interface SiteMessage {
     is_read: boolean;
 }
 
+export interface CreatedSiteMessage extends Partial<SiteMessage> {
+    id: string;
+    title: string;
+}
+
 export interface CreateSiteMessageParams {
     category: string;
     title: string;
@@ -33,16 +39,16 @@ export interface CreateSiteMessageParams {
 
 /** 获取消息分类枚举 */
 export async function getSiteMessageCategories() {
-    return request<{ code: number; message: string; data: SiteMessageCategory[] }>(
+    return unwrapItems(await request<{ data: SiteMessageCategory[] }>(
         '/api/v1/common/site-messages/categories',
         { method: 'GET' },
-    );
+    )) as SiteMessageCategory[];
 }
 
 /** 创建站内信（平台管理员） */
 export async function createSiteMessage(data: CreateSiteMessageParams) {
-    return request<{ code: number; message: string; data: any }>(
+    return unwrapData(await request<{ data: CreatedSiteMessage }>(
         '/api/v1/platform/site-messages',
         { method: 'POST', data },
-    );
+    )) as CreatedSiteMessage;
 }

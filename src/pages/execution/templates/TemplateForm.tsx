@@ -1,41 +1,35 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-    Form, Input, Select, Button, Space, message, Switch, Row, Col,
-    Empty, Spin, Typography, Tag, Alert,
-} from 'antd';
-import {
-    ThunderboltOutlined, DesktopOutlined,
-    GlobalOutlined, KeyOutlined, BellOutlined, SearchOutlined,
-    ExclamationCircleOutlined, SettingOutlined, PlusOutlined,
-    SafetyCertificateOutlined,
-} from '@ant-design/icons';
-import { history, useParams, useAccess } from '@umijs/max';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { KeyOutlined } from '@ant-design/icons';
+import { history, useAccess, useParams } from '@umijs/max';
+import { Button, Form, Spin, message } from 'antd';
 import SubPageHeader from '@/components/SubPageHeader';
-import HostSelector from '@/components/HostSelector';
-import VariableInput, { extractDefaultValue } from '@/components/VariableInput';
-import PlaybookSelector from '@/components/PlaybookSelector';
 import SecretsSourceSelector from '@/components/SecretsSourceSelector';
-import NotificationSelector, { type NotificationConfig } from '@/components/NotificationSelector';
-import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import {
-    getExecutionTask, createExecutionTask, updateExecutionTask,
     confirmExecutionTaskReview,
+    createExecutionTask,
+    updateExecutionTask,
 } from '@/services/auto-healing/execution';
-import { getPlaybooks, getPlaybook } from '@/services/auto-healing/playbooks';
-import { getSecretsSources } from '@/services/auto-healing/secrets';
-import { getChannels, getTemplates } from '@/services/auto-healing/notification';
-import { fetchAllPages } from '@/utils/fetchAllPages';
-import { DockerExecIcon, LocalExecIcon } from './TemplateIcons';
+import {
+    invalidateSelectorInventory,
+    selectorInventoryKeys,
+} from '@/utils/selectorInventoryCache';
+import TemplateBasicInfoCard from './TemplateBasicInfoCard';
+import TemplateEnvironmentCard from './TemplateEnvironmentCard';
+import TemplateNotificationCard from './TemplateNotificationCard';
+import TemplateReviewAlert from './TemplateReviewAlert';
+import TemplateSecretsSourceField from './TemplateSecretsSourceField';
+import TemplateVariablesCard from './TemplateVariablesCard';
+import {
+    buildTemplateMutationPayload,
+    getMissingRequiredVariables,
+    type TemplateFormValues,
+} from './templateFormHelpers';
+import {
+    filterPlaybookVariables,
+    getPlaybookVariables,
+} from './templateVariableHelpers';
+import { useTemplateFormData } from './useTemplateFormData';
 import './TemplateForm.css';
-
-const { Text } = Typography;
-
-const createEmptyNotificationConfig = (): NotificationConfig => ({
-    enabled: false,
-    on_start: { enabled: false, configs: [], channel_ids: [] },
-    on_success: { enabled: false, configs: [], channel_ids: [] },
-    on_failure: { enabled: false, configs: [], channel_ids: [] },
-});
 
 const TemplateFormPage: React.FC = () => {
     const access = useAccess();
@@ -43,124 +37,53 @@ const TemplateFormPage: React.FC = () => {
     const isEdit = !!params.id;
     const [form] = Form.useForm();
     const [submitting, setSubmitting] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    // Playbook 相关
-    const [playbooks, setPlaybooks] = useState<AutoHealing.Playbook[]>([]);
-    const [selectedPlaybook, setSelectedPlaybook] = useState<AutoHealing.Playbook>();
-    const [loadingPlaybook, setLoadingPlaybook] = useState(false);
-    const [variableValues, setVariableValues] = useState<Record<string, any>>({});
+    const [secretsModalOpen, setSecretsModalOpen] = useState(false);
     const [varSearch, setVarSearch] = useState('');
     const [showOnlyRequired, setShowOnlyRequired] = useState(false);
+    const {
+        changedVariables,
+        handleSelectPlaybook,
+        loading,
+        loadingPlaybook,
+        needsReview,
+        notifyChannels,
+        notifyTemplates,
+        playbooks,
+        secretsSources,
+        selectedPlaybook,
+        setVariableValues,
+        variableValues,
+    } = useTemplateFormData({
+        form,
+        isEdit,
+        taskId: params.id,
+    });
+    const selectedSecretIds = Form.useWatch('secrets_source_ids', form) || [];
 
-    // 引用数据
-    const [secretsSources, setSecretsSources] = useState<any[]>([]);
-    const [notifyChannels, setNotifyChannels] = useState<AutoHealing.NotificationChannel[]>([]);
-    const [notifyTemplates, setNotifyTemplates] = useState<AutoHealing.NotificationTemplate[]>([]);
+    const variables = useMemo(
+        () => getPlaybookVariables(selectedPlaybook),
+        [selectedPlaybook],
+    );
+    const filteredVariables = useMemo(
+        () => filterPlaybookVariables(variables, {
+            onlyRequired: showOnlyRequired,
+            searchText: varSearch,
+        }),
+        [showOnlyRequired, varSearch, variables],
+    );
 
-    // 审核状态
-    const [needsReview, setNeedsReview] = useState(false);
-    const [changedVariables, setChangedVariables] = useState<any[]>([]);
-
-    // 凭据选择器
-    const [secretsModalOpen, setSecretsModalOpen] = useState(false);
-    const selectedSecretIds: string[] = Form.useWatch('secrets_source_ids', form) || [];
-
-    // 变量列表
-    const variables = useMemo((): any[] => {
-        if (!selectedPlaybook) return [];
-        const pb = selectedPlaybook as any;
-        return (pb.variables && pb.variables.length > 0)
-            ? pb.variables
-            : (pb.scanned_variables || []);
-    }, [selectedPlaybook]);
-
-    const filteredVariables = useMemo(() => {
-        let list = variables;
-        if (showOnlyRequired) list = list.filter(v => v.required);
-        if (varSearch) list = list.filter(v => v.name.toLowerCase().includes(varSearch.toLowerCase()));
-        return list;
-    }, [variables, varSearch, showOnlyRequired]);
-
-    // 数据加载
     useEffect(() => {
-        Promise.all([
-            fetchAllPages<AutoHealing.Playbook>((page, pageSize) => getPlaybooks({ page, page_size: pageSize })).catch(() => []),
-            getSecretsSources().catch(() => ({ data: [] })),
-            fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize })).catch(() => []),
-            fetchAllPages<AutoHealing.NotificationTemplate>((page, pageSize) => getTemplates({ page, page_size: pageSize })).catch(() => []),
-        ]).then(([pbRes, secRes, chRes, tplRes]) => {
-            setPlaybooks(pbRes as any);
-            setSecretsSources((secRes as any).data || []);
-            setNotifyChannels(chRes as any);
-            setNotifyTemplates(tplRes as any);
-        });
-    }, []);
+        setVarSearch('');
+        setShowOnlyRequired(false);
+    }, [isEdit, params.id]);
 
-    // 编辑模式加载
-    useEffect(() => {
-        if (!isEdit || !params.id) return;
-        setLoading(true);
-        getExecutionTask(params.id).then(async (res) => {
-            const record = res.data;
-            form.setFieldsValue({
-                name: record.name,
-                description: record.description,
-                playbook_id: record.playbook_id,
-                target_hosts: record.target_hosts ? record.target_hosts.split(',') : [],
-                executor_type: record.executor_type || 'local',
-                secrets_source_ids: record.secrets_source_ids || [],
-                notification_config: record.notification_config || {},
-            });
-            setVariableValues(record.extra_vars || {});
-            setNeedsReview(!!record.needs_review);
-            setChangedVariables(record.changed_variables || []);
+    const handleVariableChange = useCallback((name: string, value: unknown) => {
+        setVariableValues((previousValues) => ({
+            ...previousValues,
+            [name]: value,
+        }));
+    }, [setVariableValues]);
 
-            if (record.playbook_id) {
-                try {
-                    const pbRes = await getPlaybook(record.playbook_id);
-                    setSelectedPlaybook(pbRes.data);
-                } catch {
-                    /* ignore */
-                }
-            }
-        }).catch(() => {
-            /* global error handler */
-        }).finally(() => {
-            setLoading(false);
-        });
-    }, [isEdit, params.id, form]);
-
-    // 处理 Playbook 选择
-    const handleSelectPlaybook = async (playbookId: string) => {
-        setLoadingPlaybook(true);
-        form.setFieldsValue({ playbook_id: playbookId });
-        try {
-            const res = await getPlaybook(playbookId);
-            if (res.data) {
-                setSelectedPlaybook(res.data);
-                const newVariables = (res.data.variables && res.data.variables.length > 0)
-                    ? res.data.variables
-                    : ((res.data as any).scanned_variables || []);
-                const initials: Record<string, any> = {};
-                newVariables.forEach((v: any) => {
-                    const def = extractDefaultValue(v);
-                    if (def !== undefined) initials[v.name] = def;
-                });
-                setVariableValues(initials);
-            }
-        } catch {
-            /* global error handler */
-        } finally {
-            setLoadingPlaybook(false);
-        }
-    };
-
-    const handleVariableChange = (name: string, value: any) => {
-        setVariableValues(prev => ({ ...prev, [name]: value }));
-    };
-
-    // 凭据选择确认
     const handleSecretsConfirm = useCallback((sourceId: string) => {
         const current = form.getFieldValue('secrets_source_ids') || [];
         if (!current.includes(sourceId)) {
@@ -169,206 +92,114 @@ const TemplateFormPage: React.FC = () => {
         setSecretsModalOpen(false);
     }, [form]);
 
-    // 移除凭据
     const handleRemoveSecret = useCallback((sourceId: string) => {
         const current = form.getFieldValue('secrets_source_ids') || [];
-        form.setFieldsValue({ secrets_source_ids: current.filter((id: string) => id !== sourceId) });
+        form.setFieldsValue({
+            secrets_source_ids: current.filter((id: string) => id !== sourceId),
+        });
     }, [form]);
 
-    // 提交
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         try {
-            const values = await form.validateFields();
+            const values = await form.validateFields() as TemplateFormValues;
+            if (values.playbook_id && loadingPlaybook) {
+                message.warning('Playbook 变量仍在加载，请稍后再保存');
+                return;
+            }
+            if (values.playbook_id && !selectedPlaybook) {
+                message.error('Playbook 元数据加载失败，无法校验变量，请刷新后重试');
+                return;
+            }
 
-            const missingVars = variables.filter(v => v.required && (variableValues[v.name] === undefined || variableValues[v.name] === ''));
-            if (missingVars.length > 0) {
-                message.error(`缺少必填参数: ${missingVars.map(v => v.name).join(', ')}`);
+            const missingVariables = getMissingRequiredVariables(variables, variableValues);
+            if (missingVariables.length > 0) {
+                message.error(`缺少必填参数: ${missingVariables.map((variable) => variable.name).join(', ')}`);
                 return;
             }
 
             setSubmitting(true);
-
-            let cleanedNotificationConfig: NotificationConfig = values.notification_config
-                ? { ...values.notification_config }
-                : createEmptyNotificationConfig();
-            if (hasEffectiveNotificationConfig(cleanedNotificationConfig as any)) {
-                const triggers = ['on_start', 'on_success', 'on_failure'] as const;
-                let hasAnyConfig = false;
-                for (const trigger of triggers) {
-                    const triggerConfig = cleanedNotificationConfig[trigger];
-                    const triggerEnabled = triggerConfig && (triggerConfig.enabled ?? ((triggerConfig.configs?.length || 0) > 0 || (((triggerConfig.channel_ids?.length || 0) > 0) && !!triggerConfig.template_id)));
-                    if (triggerEnabled) {
-                        const hasConfigs = (triggerConfig.configs?.length || 0) > 0 ||
-                            ((triggerConfig.channel_ids?.length || 0) > 0 && triggerConfig.template_id);
-                        if (!hasConfigs) {
-                            cleanedNotificationConfig = {
-                                ...cleanedNotificationConfig,
-                                [trigger]: { ...triggerConfig, enabled: false }
-                            };
-                        } else {
-                            hasAnyConfig = true;
-                        }
-                    }
-                }
-                if (!hasAnyConfig) {
-                    cleanedNotificationConfig = createEmptyNotificationConfig();
-                }
-            } else {
-                cleanedNotificationConfig = createEmptyNotificationConfig();
-            }
-
-            const payload = {
-                name: values.name,
-                description: values.description,
-                playbook_id: values.playbook_id,
-                target_hosts: Array.isArray(values.target_hosts) ? values.target_hosts.join(',') : values.target_hosts,
-                extra_vars: variableValues,
-                executor_type: values.executor_type,
-                secrets_source_ids: values.secrets_source_ids || [],
-                notification_config: cleanedNotificationConfig,
-            };
+            const payload = buildTemplateMutationPayload({
+                selectedPlaybook,
+                values,
+                variableValues,
+            });
 
             if (isEdit && params.id) {
                 await updateExecutionTask(params.id, payload);
+                if (needsReview) {
+                    await confirmExecutionTaskReview(params.id);
+                }
+                invalidateSelectorInventory(selectorInventoryKeys.executionTasks);
                 message.success('更新成功');
             } else {
-                await createExecutionTask(payload as any);
+                await createExecutionTask(payload as never);
+                invalidateSelectorInventory(selectorInventoryKeys.executionTasks);
                 message.success('创建成功');
             }
 
             history.push('/execution/templates');
         } catch (error) {
+            if (error instanceof Error) {
+                message.error(error.message);
+                return;
+            }
             console.error(error);
         } finally {
             setSubmitting(false);
         }
-    };
+    }, [
+        form,
+        isEdit,
+        loadingPlaybook,
+        needsReview,
+        params.id,
+        selectedPlaybook,
+        variableValues,
+        variables,
+    ]);
 
-    // ============ 渲染 ============
     return (
         <div className="template-form-page">
             <SubPageHeader
                 title={isEdit ? '编辑任务模板' : '创建任务模板'}
                 onBack={() => history.push('/execution/templates')}
-                actions={
+                actions={(
                     <div className="template-form-actions">
                         <Button onClick={() => history.push('/execution/templates')}>取消</Button>
-                        <Button type="primary" onClick={handleSubmit} loading={submitting} disabled={isEdit ? !access.canUpdateTask : !access.canCreateTask}>
+                        <Button
+                            type="primary"
+                            onClick={handleSubmit}
+                            loading={submitting}
+                            disabled={isEdit ? !access.canUpdateTask : !access.canCreateTask}
+                        >
                             {isEdit ? '保存' : '创建'}
                         </Button>
                     </div>
-                }
+                )}
             />
 
             <Spin spinning={loading}>
-                <Form form={form} layout="vertical" requiredMark={false} initialValues={{ executor_type: 'local' }} size="large">
+                <Form
+                    form={form}
+                    layout="vertical"
+                    requiredMark={false}
+                    initialValues={{ executor_type: 'local' }}
+                    size="large"
+                >
                     <div className="template-form-cards">
+                        <TemplateReviewAlert
+                            visible={needsReview}
+                            changedVariables={changedVariables}
+                        />
 
-                        {/* 审核警告 */}
-                        {needsReview && (
-                            <Alert
-                                message={<span style={{ fontWeight: 600, fontSize: 15 }}>Playbook 变量变更待确认</span>}
-                                description={
-                                    <div style={{ marginTop: 8 }}>
-                                        <div style={{ color: '#595959', marginBottom: 12 }}>
-                                            检测到 Playbook 定义已更新。保存将自动确认变更。
-                                        </div>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                            {changedVariables.map((v: any) => {
-                                                const name = typeof v === 'string' ? v : v?.name;
-                                                return <Tag key={name} color="orange">{name}</Tag>;
-                                            })}
-                                        </div>
-                                    </div>
-                                }
-                                type="warning"
-                                showIcon
-                                icon={<ExclamationCircleOutlined style={{ fontSize: 20 }} />}
-                                style={{ border: '1px solid #ffe58f' }}
-                            />
-                        )}
+                        <TemplateBasicInfoCard
+                            form={form}
+                            playbooks={playbooks}
+                            onSelectPlaybook={handleSelectPlaybook}
+                        />
 
-                        {/* ========== Card 1: 基础信息 ========== */}
-                        <div className="template-form-card">
-                            <h4 className="template-form-section-title">
-                                <ThunderboltOutlined />基础信息
-                            </h4>
+                        <TemplateEnvironmentCard />
 
-                            <Row gutter={16}>
-                                <Col span={12}>
-                                    <Form.Item
-                                        name="name"
-                                        label="模板名称"
-                                        rules={[{ required: true, message: '请输入模板名称' }]}
-                                        extra="简短描述该模板的用途，例如「日志轮转」「安全补丁」"
-                                    >
-                                        <Input placeholder="例如：生产环境 Nginx 日志轮转" />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item
-                                        name="playbook_id"
-                                        label="关联 Playbook"
-                                        rules={[{ required: true, message: '请选择 Playbook' }]}
-                                        tooltip="选择要执行的自动化脚本蓝图，关联后将自动载入变量定义"
-                                        extra="选择后将自动加载变量配置"
-                                    >
-                                        <PlaybookSelector
-                                            playbooks={playbooks}
-                                            value={form.getFieldValue('playbook_id')}
-                                            onChange={handleSelectPlaybook}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Form.Item
-                                name="description"
-                                label="任务描述"
-                                extra="可选，用于记录该模板的详细说明或注意事项"
-                            >
-                                <Input.TextArea
-                                    placeholder="例如：每日凌晨 2 点执行日志轮转，保留 7 天..."
-                                    rows={3}
-                                    showCount
-                                    maxLength={500}
-                                />
-                            </Form.Item>
-                        </div>
-
-                        {/* ========== Card 2: 执行环境 ========== */}
-                        <div className="template-form-card">
-                            <h4 className="template-form-section-title">
-                                <GlobalOutlined />执行环境
-                            </h4>
-
-                            <Row gutter={16}>
-                                <Col span={8}>
-                                    <Form.Item
-                                        name="executor_type"
-                                        label="执行器类型"
-                                        tooltip="本地进程：通过 SSH 连接远程主机执行；容器环境：在 Docker 容器内执行"
-                                    >
-                                        <Select options={[
-                                            { label: <span><LocalExecIcon size={14} style={{ marginRight: 6, verticalAlign: '-2px' }} />本地进程 (SSH)</span>, value: 'local' },
-                                            { label: <span><DockerExecIcon size={14} style={{ marginRight: 6, verticalAlign: '-2px' }} />容器 (Docker)</span>, value: 'docker' },
-                                        ]} />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-
-                            <Form.Item
-                                name="target_hosts"
-                                label="目标主机"
-                                rules={[{ required: true, message: '请至少选择一台目标主机' }]}
-                                extra="从 CMDB 资产库选择目标主机，支持多选"
-                                tooltip="选择该模板执行时的目标主机列表"
-                            >
-                                <HostSelector />
-                            </Form.Item>
-                        </div>
-
-                        {/* ========== Card 3: 凭据配置 ========== */}
                         <div className="template-form-card">
                             <h4 className="template-form-section-title">
                                 <KeyOutlined />凭据配置
@@ -380,132 +211,36 @@ const TemplateFormPage: React.FC = () => {
                                 extra="选择用于 SSH 连接的凭据，可选多个。执行时按顺序尝试匹配。"
                                 tooltip="密钥源提供 SSH Key 或密码等认证信息"
                             >
-                                <div>
-                                    <div className="template-form-secrets-display">
-                                        {selectedSecretIds.map((sid: string) => {
-                                            const s = secretsSources.find((x: any) => x.id === sid);
-                                            return (
-                                                <Tag
-                                                    key={sid}
-                                                    closable
-                                                    onClose={() => handleRemoveSecret(sid)}
-                                                    color="blue"
-                                                    style={{ fontSize: 12 }}
-                                                >
-                                                    <SafetyCertificateOutlined style={{ marginRight: 4 }} />
-                                                    {s?.name || sid.substring(0, 8)}
-                                                </Tag>
-                                            );
-                                        })}
-                                        <Button
-                                            type="dashed"
-                                            size="small"
-                                            icon={<PlusOutlined />}
-                                            onClick={() => setSecretsModalOpen(true)}
-                                            style={{ fontSize: 12, height: 24, borderRadius: 4 }}
-                                        >
-                                            添加密钥源
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Form.Item>
-                        </div>
-
-                        {/* ========== Card 4: 变量配置 ========== */}
-                        <div className="template-form-card">
-                            <h4 className="template-form-section-title">
-                                <SettingOutlined />变量配置
-                                {selectedPlaybook && (
-                                    <Tag color="blue" style={{ marginLeft: 8, fontWeight: 400 }}>
-                                        {selectedPlaybook.name}
-                                    </Tag>
-                                )}
-                                <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 400, color: '#8c8c8c' }}>
-                                    {variables.length > 0 ? `${variables.filter(v => v.required).length} 必填 / ${variables.length} 总计` : ''}
-                                </span>
-                            </h4>
-
-                            {variables.length > 0 && (
-                                <div className="template-form-var-toolbar">
-                                    <Input
-                                        placeholder="搜索变量名..."
-                                        prefix={<SearchOutlined style={{ color: 'rgba(0,0,0,.25)' }} />}
-                                        value={varSearch}
-                                        onChange={e => setVarSearch(e.target.value)}
-                                        allowClear
-                                        style={{ width: 220 }}
-                                    />
-                                    <Space>
-                                        <Text style={{ fontSize: 13 }}>仅必填</Text>
-                                        <Switch size="small" checked={showOnlyRequired} onChange={setShowOnlyRequired} />
-                                    </Space>
-                                </div>
-                            )}
-
-                            {!selectedPlaybook ? (
-                                <div className="template-form-var-empty">
-                                    <Empty
-                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                        description="请先在上方选择 Playbook，变量将自动加载"
-                                    />
-                                </div>
-                            ) : loadingPlaybook ? (
-                                <div className="template-form-var-empty">
-                                    <Spin tip="正在解析变量..."><div /></Spin>
-                                </div>
-                            ) : filteredVariables.length === 0 ? (
-                                <div className="template-form-var-empty">
-                                    <Empty
-                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                        description={variables.length === 0 ? '该 Playbook 无可配置变量' : '未找到匹配的变量'}
-                                    />
-                                </div>
-                            ) : (
-                                filteredVariables.map((record) => (
-                                    <div key={record.name} className="template-form-var-row">
-                                        <div className="template-form-var-label">
-                                            <div>
-                                                <span className="var-name">{record.name}</span>
-                                                {record.required && <span className="var-required">*</span>}
-                                            </div>
-                                            <div className="var-type">{record.type}</div>
-                                        </div>
-                                        <div className="template-form-var-input">
-                                            <Form.Item
-                                                style={{ marginBottom: 0 }}
-                                                rules={[{ required: record.required, message: '必填' }]}
-                                            >
-                                                <VariableInput
-                                                    variable={record}
-                                                    value={variableValues[record.name]}
-                                                    onChange={val => handleVariableChange(record.name, val)}
-                                                />
-                                            </Form.Item>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* ========== Card 5: 通知配置 ========== */}
-                        <div className="template-form-card">
-                            <h4 className="template-form-section-title">
-                                <BellOutlined />通知配置
-                            </h4>
-
-                            <Form.Item name="notification_config" noStyle>
-                                <NotificationSelector
-                                    channels={notifyChannels}
-                                    templates={notifyTemplates}
+                                <TemplateSecretsSourceField
+                                    secretIds={selectedSecretIds}
+                                    secretsSources={secretsSources}
+                                    onOpen={() => setSecretsModalOpen(true)}
+                                    onRemove={handleRemoveSecret}
                                 />
                             </Form.Item>
                         </div>
 
+                        <TemplateVariablesCard
+                            filteredVariables={filteredVariables}
+                            loadingPlaybook={loadingPlaybook}
+                            selectedPlaybook={selectedPlaybook}
+                            showOnlyRequired={showOnlyRequired}
+                            varSearch={varSearch}
+                            variableValues={variableValues}
+                            variables={variables}
+                            onShowOnlyRequiredChange={setShowOnlyRequired}
+                            onVarSearchChange={setVarSearch}
+                            onVariableChange={handleVariableChange}
+                        />
+
+                        <TemplateNotificationCard
+                            notifyChannels={notifyChannels}
+                            notifyTemplates={notifyTemplates}
+                        />
                     </div>
                 </Form>
             </Spin>
 
-            {/* 密钥源选择弹窗 */}
             <SecretsSourceSelector
                 open={secretsModalOpen}
                 sources={secretsSources}

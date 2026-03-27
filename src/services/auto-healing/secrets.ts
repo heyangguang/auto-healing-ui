@@ -1,4 +1,64 @@
 import { request } from '@umijs/max';
+import {
+    getTenantSecretsSources,
+    postTenantSecretsSources,
+} from '@/services/generated/auto-healing/secrets';
+import { normalizePaginatedResponse, unwrapData } from './responseAdapters';
+
+type SecretsSourceStatsSummary = {
+    total: number;
+    by_status: Array<{ status: string; count: number }>;
+    by_type: Array<{ type: string; count: number }>;
+};
+
+type SecretsSourcesQueryParams = {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    name?: string;
+    type?: AutoHealing.SecretsSourceType;
+    auth_type?: string;
+    status?: string;
+    is_default?: boolean;
+    sort_by?: string;
+    sort_order?: string;
+};
+
+type RawTestSecretsQueryResult = AutoHealing.TestQuerySingleResult | {
+    success_count: number;
+    fail_count: number;
+    results: AutoHealing.TestQueryBatchResult[];
+};
+
+export type TestSecretsQueryResult = {
+    success_count: number;
+    fail_count: number;
+    results: AutoHealing.TestQueryBatchResult[];
+};
+
+function normalizeTestSecretsQueryResult(
+    result: RawTestSecretsQueryResult,
+    requestData: { hostname: string; ip_address: string } | { hosts: Array<{ hostname: string; ip_address: string }> },
+): TestSecretsQueryResult {
+    if ('results' in result) {
+        return result;
+    }
+
+    const fallbackHost = 'hosts' in requestData ? requestData.hosts[0] : requestData;
+    return {
+        success_count: result.success ? 1 : 0,
+        fail_count: result.success ? 0 : 1,
+        results: [{
+            auth_type: result.auth_type,
+            has_credential: result.has_credential,
+            hostname: fallbackHost?.hostname || '',
+            ip_address: fallbackHost?.ip_address || '',
+            message: result.message,
+            success: result.success,
+            username: result.username,
+        }],
+    };
+}
 
 /**
  * 获取密钥源列表
@@ -6,33 +66,38 @@ import { request } from '@umijs/max';
 export async function getSecretsSources(params?: {
     page?: number;
     page_size?: number;
+    search?: string;
+    name?: string;
     type?: AutoHealing.SecretsSourceType;
+    auth_type?: string;
     status?: string;
     is_default?: boolean;
+    sort_by?: string;
+    sort_order?: string;
 }) {
-    return request<{ data: AutoHealing.SecretsSource[] }>('/api/v1/tenant/secrets-sources', {
-        method: 'GET',
-        params,
-    });
+    return normalizePaginatedResponse(
+        await getTenantSecretsSources({ params: params as SecretsSourcesQueryParams }) as AutoHealing.PaginatedResponse<AutoHealing.SecretsSource>,
+    );
 }
 
 /**
  * 获取密钥源详情
  */
 export async function getSecretsSource(id: string) {
-    return request<AutoHealing.SecretsSource>(`/api/v1/tenant/secrets-sources/${id}`, {
+    return unwrapData(
+        await request<{ data?: AutoHealing.SecretsSource } | AutoHealing.SecretsSource>(`/api/v1/tenant/secrets-sources/${id}`, {
         method: 'GET',
-    });
+        }),
+    ) as AutoHealing.SecretsSource;
 }
 
 /**
  * 创建密钥源
  */
 export async function createSecretsSource(data: AutoHealing.CreateSecretsSourceRequest) {
-    return request<AutoHealing.SecretsSource>('/api/v1/tenant/secrets-sources', {
-        method: 'POST',
-        data,
-    });
+    return unwrapData(
+        await postTenantSecretsSources({ data }) as { data?: AutoHealing.SecretsSource } | AutoHealing.SecretsSource,
+    ) as AutoHealing.SecretsSource;
 }
 
 /**
@@ -71,10 +136,12 @@ export async function testSecretsQuery(
     id: string,
     data: { hostname: string; ip_address: string } | { hosts: Array<{ hostname: string; ip_address: string }> }
 ) {
-    return request<AutoHealing.TestQueryResponse>(`/api/v1/tenant/secrets-sources/${id}/test-query`, {
-        method: 'POST',
-        data,
-    });
+    return normalizeTestSecretsQueryResult(unwrapData(
+        await request<{ data?: RawTestSecretsQueryResult } | RawTestSecretsQueryResult | AutoHealing.TestQueryResponse>(`/api/v1/tenant/secrets-sources/${id}/test-query`, {
+            method: 'POST',
+            data,
+        }),
+    ) as RawTestSecretsQueryResult, data);
 }
 
 /**
@@ -110,12 +177,10 @@ export async function querySecret(data: AutoHealing.SecretQuery) {
  * GET /api/v1/tenant/secrets-sources/stats
  */
 export async function getSecretsSourcesStats() {
-    return request<{
-        code: number;
-        data: {
-            total: number;
-            by_status: Array<{ status: string; count: number }>;
-            by_type: Array<{ type: string; count: number }>;
-        };
-    }>('/api/v1/tenant/secrets-sources/stats', { method: 'GET' });
+    return unwrapData(
+        await request<{ data?: SecretsSourceStatsSummary } | SecretsSourceStatsSummary>(
+            '/api/v1/tenant/secrets-sources/stats',
+            { method: 'GET' },
+        ),
+    ) as SecretsSourceStatsSummary;
 }

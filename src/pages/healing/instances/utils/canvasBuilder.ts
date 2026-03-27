@@ -18,10 +18,43 @@ export const STATUS_EDGE_COLOR: Record<string, string> = {
  * 标准化 node_state 到对象格式
  * 后端可能返回 string（只包含 status）或 object
  */
-export function normalizeNodeState(raw: any): { status: string; error_message?: string; message?: string; description?: string;[key: string]: any } | null {
+type FlowNodeStateLike = Omit<AutoHealing.FlowNodeState, 'status'> & {
+    duration_ms?: number;
+    error?: string;
+    error_message?: string;
+    finished_at?: string;
+    message?: string;
+    started_at?: string;
+    status?: string;
+    task_id?: string;
+    timeout_at?: string;
+    title?: string;
+};
+
+type CanvasNodeData = AutoHealing.FlowNodeConfig & {
+    _nodeState?: FlowNodeStateLike | null;
+    activeHandles?: string[];
+    details?: AutoHealing.HealingRule;
+    dryRunMessage?: string;
+    isCurrent?: boolean;
+    label?: string;
+    status?: string;
+    type?: string;
+};
+
+type CanvasNode = Node<CanvasNodeData>;
+type CanvasEdge = Edge;
+
+function getCanvasEdgeId(edge: AutoHealing.FlowEdge) {
+    return edge.id
+        || `edge-${edge.source}-${edge.target}-${edge.sourceHandle || 'default'}-${edge.targetHandle || 'default'}`;
+}
+
+export function normalizeNodeState(raw: unknown): FlowNodeStateLike | null {
     if (!raw) return null;
     if (typeof raw === 'string') return { status: raw };
-    return raw;
+    if (typeof raw === 'object') return raw as FlowNodeStateLike;
+    return null;
 }
 
 /**
@@ -55,16 +88,16 @@ export function getActiveBranchHandle(
 // ==================== 核心画布构建逻辑 ====================
 
 interface CanvasBuildInput {
-    flowNodes: any[];
-    flowEdges: any[];
-    nodeStates: Record<string, any>;
+    flowNodes: AutoHealing.FlowNode[];
+    flowEdges: AutoHealing.FlowEdge[];
+    nodeStates: Record<string, unknown>;
     currentNodeId: string | null;
-    rule?: any;     // 可选的自愈规则（用于注入虚拟触发节点）
+    rule?: AutoHealing.HealingRule;
 }
 
 interface CanvasBuildResult {
-    nodes: Node[];
-    edges: Edge[];
+    nodes: CanvasNode[];
+    edges: CanvasEdge[];
 }
 
 /**
@@ -117,7 +150,7 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
     const nodeTypeMap: Record<string, string> = {};
     const nodeEffectiveStatus: Record<string, string | undefined> = {};
 
-    let resultNodes: Node[] = flowNodes.map((node: any) => {
+    let resultNodes: CanvasNode[] = flowNodes.map((node) => {
         const nodeState = normalizeNodeState(nodeStates[node.id]);
         nodeTypeMap[node.id] = node.type;
 
@@ -139,18 +172,18 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
             selectable: true,
             data: {
                 ...node.config,
-                label: node.name || node.config?.label || NODE_TYPE_LABELS[node.type] || node.type,
+                label: node.name || String(node.config?.label || NODE_TYPE_LABELS[node.type] || node.type),
                 type: node.type,
                 status: nodeStatus,
                 dryRunMessage: nodeState?.error_message || nodeState?.message || nodeState?.description,
                 _nodeState: nodeState,
                 isCurrent: node.id === currentNodeId,
             },
-        } as Node;
+        };
     });
 
     // ====== Step 3: 边着色 — 分支感知 ======
-    let resultEdges: Edge[] = flowEdges.map((edge: any) => {
+    let resultEdges: CanvasEdge[] = flowEdges.map((edge) => {
         const bothExecuted = executedNodeIds.has(edge.source) && executedNodeIds.has(edge.target);
 
         // 有 sourceHandle 的边需检查是否走的就是这条分支
@@ -170,6 +203,7 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
             : '#d9d9d9';
 
         return {
+            id: getCanvasEdgeId(edge),
             ...edge,
             animated: isExecutedEdge,
             style: {
@@ -181,14 +215,14 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
                 strokeDasharray: (!isExecutedEdge && edge.sourceHandle && bothExecuted) ? '5 3' : undefined,
             },
         };
-    }) as Edge[];
+    });
 
     // ====== Step 4: 注入虚拟规则触发节点 ======
     if (rule) {
         const ruleNodeId = 'virtual-rule-trigger';
-        const startNode = resultNodes.find((n: any) => n.type === 'start') || resultNodes[0];
+        const startNode = resultNodes.find((node) => node.type === 'start') || resultNodes[0];
 
-        const ruleNode: Node = {
+        const ruleNode: CanvasNode = {
             id: ruleNodeId,
             type: 'custom',
             position: {
@@ -223,14 +257,14 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
     const activeHandlesMap: Record<string, string[]> = {};
     for (const edge of resultEdges) {
         if (edge.animated) {
-            const srcH = (edge as any).sourceHandle || 'default';
+            const srcH = edge.sourceHandle || 'default';
             if (!activeHandlesMap[edge.source]) activeHandlesMap[edge.source] = [];
             activeHandlesMap[edge.source].push(srcH);
             if (!activeHandlesMap[edge.target]) activeHandlesMap[edge.target] = [];
             activeHandlesMap[edge.target].push('target');
         }
     }
-    resultNodes = resultNodes.map((node: any) => ({
+    resultNodes = resultNodes.map((node) => ({
         ...node,
         data: { ...node.data, activeHandles: activeHandlesMap[node.id] || [] },
     }));

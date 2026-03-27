@@ -1,4 +1,29 @@
 import { request } from '@umijs/max';
+import {
+    getTenantHealingApprovals,
+    postTenantHealingApprovalsIdApprove,
+    postTenantHealingApprovalsIdReject,
+} from '@/services/generated/auto-healing/approvals';
+import {
+    getTenantHealingInstances,
+    getTenantHealingInstancesId,
+} from '@/services/generated/auto-healing/flowInstances';
+import {
+    deleteTenantHealingFlowsId,
+    getTenantHealingFlows,
+    getTenantHealingFlowsId,
+    postTenantHealingFlows,
+    postTenantHealingFlowsIdDryRun,
+    putTenantHealingFlowsId,
+} from '@/services/generated/auto-healing/healingFlows';
+import {
+    getTenantHealingRules,
+    getTenantHealingRulesId,
+    postTenantHealingRules,
+    postTenantHealingRulesIdActivate,
+} from '@/services/generated/auto-healing/healingRules';
+import type { HealingRuleQueryParams } from './healing-rules';
+import type { HealingInstanceQueryParams } from './instances';
 
 // ==================== 自愈流程 ====================
 
@@ -11,7 +36,9 @@ export async function getFlows(params?: {
     is_active?: boolean;
     search?: string;
     name?: string;
+    name__exact?: string;
     description?: string;
+    description__exact?: string;
     node_type?: string;
     min_nodes?: number;
     max_nodes?: number;
@@ -22,58 +49,44 @@ export async function getFlows(params?: {
     updated_from?: string;
     updated_to?: string;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.HealingFlow>>('/api/v1/tenant/healing/flows', {
-        method: 'GET',
-        params,
-    });
+    return getTenantHealingFlows(
+        (params || {}) as GeneratedAutoHealing.getTenantHealingFlowsParams,
+    ) as Promise<AutoHealing.PaginatedResponse<AutoHealing.HealingFlow>>;
 }
 
 /**
  * 获取自愈流程详情
  */
 export async function getFlow(id: string) {
-    return request<{ data: AutoHealing.HealingFlow }>(`/api/v1/tenant/healing/flows/${id}`, {
-        method: 'GET',
-    });
+    return getTenantHealingFlowsId({ id }) as Promise<{ data: AutoHealing.HealingFlow }>;
 }
 
 /**
  * 创建自愈流程
  */
 export async function createFlow(data: AutoHealing.CreateFlowRequest) {
-    return request<{ data: AutoHealing.HealingFlow }>('/api/v1/tenant/healing/flows', {
-        method: 'POST',
-        data,
-    });
+    return postTenantHealingFlows({ data }) as Promise<{ data: AutoHealing.HealingFlow }>;
 }
 
 /**
  * 更新自愈流程
  */
 export async function updateFlow(id: string, data: AutoHealing.UpdateFlowRequest) {
-    return request<{ data: AutoHealing.HealingFlow }>(`/api/v1/tenant/healing/flows/${id}`, {
-        method: 'PUT',
-        data,
-    });
+    return putTenantHealingFlowsId({ id }, { data }) as Promise<{ data: AutoHealing.HealingFlow }>;
 }
 
 /**
  * 删除自愈流程
  */
 export async function deleteFlow(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/flows/${id}`, {
-        method: 'DELETE',
-    });
+    return deleteTenantHealingFlowsId({ id }) as Promise<AutoHealing.SuccessResponse>;
 }
 
 /**
  * Dry-Run 模拟执行流程
  */
 export async function dryRunFlow(id: string, data: AutoHealing.DryRunRequest) {
-    return request<{ data: AutoHealing.DryRunResponse }>(`/api/v1/tenant/healing/flows/${id}/dry-run`, {
-        method: 'POST',
-        data,
-    });
+    return postTenantHealingFlowsIdDryRun({ id }, { data }) as Promise<{ data: AutoHealing.DryRunResponse }>;
 }
 
 /**
@@ -165,41 +178,48 @@ export async function resetIncidentScan(id: string) {
  * 获取自愈规则列表
  */
 export async function getRules(params?: {
-    page?: number;
-    page_size?: number;
-    is_active?: boolean;
-    flow_id?: string;
+    page?: HealingRuleQueryParams['page'];
+    page_size?: HealingRuleQueryParams['page_size'];
+    search?: HealingRuleQueryParams['search'];
+    name?: HealingRuleQueryParams['name'];
+    name__exact?: HealingRuleQueryParams['name__exact'];
+    description?: HealingRuleQueryParams['description'];
+    description__exact?: HealingRuleQueryParams['description__exact'];
+    is_active?: HealingRuleQueryParams['is_active'];
+    flow_id?: HealingRuleQueryParams['flow_id'];
+    trigger_mode?: HealingRuleQueryParams['trigger_mode'];
+    priority?: HealingRuleQueryParams['priority'];
+    match_mode?: HealingRuleQueryParams['match_mode'];
+    has_flow?: HealingRuleQueryParams['has_flow'];
+    created_from?: HealingRuleQueryParams['created_from'];
+    created_to?: HealingRuleQueryParams['created_to'];
+    sort_by?: HealingRuleQueryParams['sort_by'];
+    sort_order?: HealingRuleQueryParams['sort_order'];
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.HealingRule>>('/api/v1/tenant/healing/rules', {
-        method: 'GET',
-        params,
-    });
+    return getTenantHealingRules(
+        (params || {}) as GeneratedAutoHealing.getTenantHealingRulesParams,
+    ) as Promise<AutoHealing.PaginatedResponse<AutoHealing.HealingRule>>;
 }
 
 /**
  * 获取自愈规则详情
  */
 export async function getRule(id: string) {
-    return request<AutoHealing.HealingRule>(`/healing/rules/${id}`, {
-        method: 'GET',
-    });
+    return getTenantHealingRulesId({ id }) as Promise<{ data: AutoHealing.HealingRule }>;
 }
 
 /**
  * 创建自愈规则
  */
 export async function createRule(data: AutoHealing.CreateRuleRequest) {
-    return request<AutoHealing.HealingRule>('/api/v1/tenant/healing/rules', {
-        method: 'POST',
-        data,
-    });
+    return postTenantHealingRules({ data }) as Promise<{ data: AutoHealing.HealingRule }>;
 }
 
 /**
  * 更新自愈规则
  */
 export async function updateRule(id: string, data: AutoHealing.UpdateRuleRequest) {
-    return request<AutoHealing.HealingRule>(`/healing/rules/${id}`, {
+    return request<AutoHealing.HealingRule>(`/api/v1/tenant/healing/rules/${id}`, {
         method: 'PUT',
         data,
     });
@@ -209,7 +229,7 @@ export async function updateRule(id: string, data: AutoHealing.UpdateRuleRequest
  * 删除自愈规则
  */
 export async function deleteRule(id: string, force?: boolean) {
-    return request<AutoHealing.SuccessResponse>(`/healing/rules/${id}`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/rules/${id}`, {
         method: 'DELETE',
         params: force ? { force: true } : undefined,
     });
@@ -219,16 +239,14 @@ export async function deleteRule(id: string, force?: boolean) {
  * 启用自愈规则
  */
 export async function activateRule(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/healing/rules/${id}/activate`, {
-        method: 'POST',
-    });
+    return postTenantHealingRulesIdActivate({ id }) as Promise<AutoHealing.SuccessResponse>;
 }
 
 /**
  * 停用自愈规则
  */
 export async function deactivateRule(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/healing/rules/${id}/deactivate`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/rules/${id}/deactivate`, {
         method: 'POST',
     });
 }
@@ -239,24 +257,37 @@ export async function deactivateRule(id: string) {
  * 获取流程实例列表
  */
 export async function getInstances(params?: {
-    page?: number;
-    page_size?: number;
-    status?: AutoHealing.FlowInstanceStatus;
-    flow_id?: string;
+    page?: HealingInstanceQueryParams['page'];
+    page_size?: HealingInstanceQueryParams['page_size'];
+    status?: HealingInstanceQueryParams['status'];
+    flow_id?: HealingInstanceQueryParams['flow_id'];
+    rule_id?: HealingInstanceQueryParams['rule_id'];
+    incident_id?: HealingInstanceQueryParams['incident_id'];
+    has_error?: HealingInstanceQueryParams['has_error'];
+    approval_status?: HealingInstanceQueryParams['approval_status'];
+    flow_name?: HealingInstanceQueryParams['flow_name'];
+    rule_name?: HealingInstanceQueryParams['rule_name'];
+    incident_title?: HealingInstanceQueryParams['incident_title'];
+    error_message?: HealingInstanceQueryParams['error_message'];
+    created_from?: HealingInstanceQueryParams['created_from'];
+    created_to?: HealingInstanceQueryParams['created_to'];
+    started_from?: HealingInstanceQueryParams['started_from'];
+    started_to?: HealingInstanceQueryParams['started_to'];
+    completed_from?: HealingInstanceQueryParams['completed_from'];
+    completed_to?: HealingInstanceQueryParams['completed_to'];
+    sort_by?: HealingInstanceQueryParams['sort_by'];
+    sort_order?: HealingInstanceQueryParams['sort_order'];
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.FlowInstance>>('/api/v1/tenant/healing/instances', {
-        method: 'GET',
-        params,
-    });
+    return getTenantHealingInstances(
+        (params || {}) as GeneratedAutoHealing.getTenantHealingInstancesParams,
+    ) as Promise<AutoHealing.PaginatedResponse<AutoHealing.FlowInstance>>;
 }
 
 /**
  * 获取流程实例详情
  */
 export async function getInstance(id: string) {
-    return request<AutoHealing.FlowInstance>(`/healing/instances/${id}`, {
-        method: 'GET',
-    });
+    return getTenantHealingInstancesId({ id }) as Promise<{ data: AutoHealing.FlowInstance }>;
 }
 
 /**
@@ -269,7 +300,7 @@ export async function getInstanceLogs(id: string, params?: {
     page_size?: number;
 }) {
     return request<{ data: AutoHealing.FlowExecutionLog[]; total: number; page: number; page_size: number }>(
-        `/healing/instances/${id}/logs`,
+        `/api/v1/tenant/healing/instances/${id}/logs`,
         {
             method: 'GET',
             params,
@@ -281,7 +312,7 @@ export async function getInstanceLogs(id: string, params?: {
  * 取消流程实例
  */
 export async function cancelInstance(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/healing/instances/${id}/cancel`, {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/instances/${id}/cancel`, {
         method: 'POST',
     });
 }
@@ -296,10 +327,7 @@ export async function getApprovals(params?: {
     page_size?: number;
     status?: AutoHealing.ApprovalStatus;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>('/api/v1/tenant/healing/approvals', {
-        method: 'GET',
-        params,
-    });
+    return getTenantHealingApprovals({ params }) as Promise<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>;
 }
 
 /**
@@ -322,7 +350,7 @@ export async function getPendingApprovals(params?: {
  * 获取审批任务详情
  */
 export async function getApproval(id: string) {
-    return request<AutoHealing.ApprovalTask>(`/healing/approvals/${id}`, {
+    return request<AutoHealing.ApprovalTask>(`/api/v1/tenant/healing/approvals/${id}`, {
         method: 'GET',
     });
 }
@@ -331,20 +359,20 @@ export async function getApproval(id: string) {
  * 批准审批任务
  */
 export async function approveTask(id: string, data?: AutoHealing.ApprovalDecisionRequest) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/approvals/${id}/approve`, {
-        method: 'POST',
-        data,
-    });
+    return postTenantHealingApprovalsIdApprove(
+        { id },
+        data ? { data } : undefined,
+    ) as Promise<AutoHealing.SuccessResponse>;
 }
 
 /**
  * 拒绝审批任务
  */
 export async function rejectTask(id: string, data?: AutoHealing.ApprovalDecisionRequest) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/approvals/${id}/reject`, {
-        method: 'POST',
-        data,
-    });
+    return postTenantHealingApprovalsIdReject(
+        { id },
+        data ? { data } : undefined,
+    ) as Promise<AutoHealing.SuccessResponse>;
 }
 
 /**

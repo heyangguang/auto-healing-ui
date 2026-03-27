@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo } from 'react';
 import {
     Modal, Input, Typography, Tag, Empty, Spin, Space, Row, Col,
     Select, Badge, Tooltip, Pagination,
@@ -10,6 +10,7 @@ import {
     LoadingOutlined,
 } from '@ant-design/icons';
 import { getFlow, getFlows } from '@/services/auto-healing/healing';
+import { useAsyncModalSelector } from '@/hooks/useAsyncModalSelector';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -18,8 +19,6 @@ dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
 const { Text } = Typography;
-
-// ==================== Types ====================
 interface FlowSelectorProps {
     open: boolean;
     value?: string;
@@ -28,8 +27,6 @@ interface FlowSelectorProps {
 }
 
 import { NODE_TYPE_COLORS } from '../nodeConfig';
-
-// ==================== Node Type Metadata ====================
 const NODE_TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
     execution: { label: '执行', icon: <ThunderboltOutlined />, color: NODE_TYPE_COLORS.execution },
     approval: { label: '审批', icon: <AuditOutlined />, color: NODE_TYPE_COLORS.approval },
@@ -53,117 +50,49 @@ const countNodes = (nodes: AutoHealing.FlowNode[]) => {
 };
 
 const PAGE_SIZE = 15;
-
-// ==================== Component ====================
+type FlowListParams = NonNullable<Parameters<typeof getFlows>[0]>;
 const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCancel }) => {
-    // Data
-    const [flows, setFlows] = useState<AutoHealing.HealingFlow[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(1);
-
-    // Filters
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string | undefined>();
-
-    // Selection
-    const [selectedId, setSelectedId] = useState<string | undefined>(value);
-    const [selectedFlow, setSelectedFlow] = useState<AutoHealing.HealingFlow | null>(null);
-
-    // Debounce ref
-    const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-    // ==================== Load (server-side) ====================
-    const loadFlows = useCallback(async (p: number, q: string, status?: string) => {
-        setLoading(true);
-        try {
-            const params: any = { page: p, page_size: PAGE_SIZE };
-            if (status === 'active') params.is_active = true;
-            else if (status === 'inactive') params.is_active = false;
+    const initialFilters = useMemo(() => ({
+        statusFilter: undefined as string | undefined,
+    }), []);
+    const {
+        items: flows,
+        loading,
+        total,
+        page,
+        search,
+        filters,
+        selectedId,
+        selectedItem: selectedFlow,
+        handleSearchChange,
+        handleFilterChange,
+        handlePageChange,
+        handleSelect,
+    } = useAsyncModalSelector<AutoHealing.HealingFlow, { statusFilter?: string }>({
+        open,
+        value,
+        initialFilters,
+        loadList: async (p, q, currentFilters) => {
+            const params: FlowListParams = { page: p, page_size: PAGE_SIZE };
+            if (currentFilters.statusFilter === 'active') params.is_active = true;
+            else if (currentFilters.statusFilter === 'inactive') params.is_active = false;
             if (q.trim()) params.name = q.trim();
             const res = await getFlows(params);
-            setFlows(res.data || []);
-            setTotal(res.total || 0);
-        } catch { /* */ } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Initial load & filter changes
-    useEffect(() => {
-        if (open) {
-            loadFlows(page, search, statusFilter);
-        } else {
-            // Reset on close
-            setSearch('');
-            setStatusFilter(undefined);
-            setPage(1);
-        }
-    }, [open, page, statusFilter]);
-
-    // Debounced search
-    const handleSearchChange = (val: string) => {
-        setSearch(val);
-        if (searchTimer.current) clearTimeout(searchTimer.current);
-        searchTimer.current = setTimeout(() => {
-            setPage(1);
-            loadFlows(1, val, statusFilter);
-        }, 300);
-    };
-
-    // Sync value prop
-    useEffect(() => {
-        setSelectedId(value);
-    }, [value]);
-
-    // Pre-select flow from value
-    useEffect(() => {
-        if (value && flows.length > 0) {
-            const found = flows.find(f => f.id === value);
-            if (found) {
-                setSelectedFlow(found);
-                setSelectedId(value);
-            }
-        }
-    }, [value, flows]);
-
-    useEffect(() => {
-        if (!open || !value || selectedFlow?.id === value) return;
-        getFlow(value)
-            .then((res) => {
-                const flow = res?.data;
-                if (flow?.id) {
-                    setSelectedFlow(flow);
-                    setSelectedId(flow.id);
-                }
-            })
-            .catch(() => {
-                // ignore stale selection
-            });
-    }, [open, value, selectedFlow?.id]);
-
-    // ==================== Handlers ====================
-    const handleSelect = (flow: AutoHealing.HealingFlow) => {
-        setSelectedId(flow.id);
-        setSelectedFlow(flow);
-    };
+            return { items: res.data || [], total: res.total || 0 };
+        },
+        loadDetail: async (id) => {
+            const res = await getFlow(id);
+            return res?.data || null;
+        },
+        getId: (item) => item.id,
+    });
+    const statusFilter = filters.statusFilter;
 
     const handleConfirm = () => {
         if (selectedId && selectedFlow) {
             onSelect(selectedId, selectedFlow);
         }
     };
-
-    const handleStatusChange = (val: string | undefined) => {
-        setStatusFilter(val);
-        setPage(1);
-    };
-
-    const handlePageChange = (p: number) => {
-        setPage(p);
-    };
-
-    // ==================== Render ====================
     return (
         <Modal
             title={
@@ -180,7 +109,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
             width={720}
             destroyOnHidden
         >
-            {/* ===== Search & Filter Bar ===== */}
             <Row gutter={12} style={{ marginBottom: 16 }}>
                 <Col span={14}>
                     <Input
@@ -195,7 +123,7 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                     <Select
                         placeholder="状态筛选"
                         value={statusFilter}
-                        onChange={handleStatusChange}
+                        onChange={(value) => handleFilterChange('statusFilter', value)}
                         allowClear
                         style={{ width: '100%' }}
                         options={[
@@ -206,7 +134,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                 </Col>
             </Row>
 
-            {/* ===== Count ===== */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                     <NodeIndexOutlined style={{ marginRight: 4 }} />自愈流程列表
@@ -216,7 +143,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                 </Text>
             </div>
 
-            {/* ===== Flow List ===== */}
             <div style={{ height: 380, overflow: 'auto' }}>
                 {loading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -251,7 +177,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                                     }}
                                 >
                                     <div style={{ width: '100%' }}>
-                                        {/* Row 1: Status + Name */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                                             {flow.is_active ? (
                                                 <Badge status="success" />
@@ -268,7 +193,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                                             )}
                                         </div>
 
-                                        {/* Row 2: Description */}
                                         {flow.description && (
                                             <div style={{ marginLeft: 14, marginBottom: 6 }}>
                                                 <Text type="secondary" style={{ fontSize: 12 }}>
@@ -277,7 +201,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                                             </div>
                                         )}
 
-                                        {/* Row 3: Node tags + time */}
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -334,7 +257,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                 )}
             </div>
 
-            {/* ===== Pagination ===== */}
             {total > PAGE_SIZE && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
                     <Pagination
@@ -349,7 +271,6 @@ const FlowSelector: React.FC<FlowSelectorProps> = ({ open, value, onSelect, onCa
                 </div>
             )}
 
-            {/* ===== Selected Hint ===== */}
             {selectedFlow && (
                 <div style={{
                     marginTop: 12,

@@ -3,13 +3,14 @@ import ReactDOM from 'react-dom';
 import { BellOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import { getSiteMessages, getUnreadCount, getSiteMessageCategories } from '@/services/auto-healing/siteMessage';
-import type { SiteMessageCategory } from '@/services/auto-healing/siteMessage';
+import type { SiteMessage, SiteMessageCategory } from '@/services/auto-healing/siteMessage';
 import { createAuthenticatedEventStream, type SSEConnection } from '@/services/auto-healing/sse';
 import { TokenManager } from '@/requestErrorConfig';
 import dayjs from 'dayjs';
 
 /** 降级轮询间隔 5 分钟（SSE 在线时兜底） */
 const POLL_INTERVAL = 5 * 60_000;
+const NOTIFICATION_PANEL_ID = 'notification-bell-panel';
 
 /** 分类颜色 - 使用后端英文 value */
 const DOT_COLORS: Record<string, string> = {
@@ -60,6 +61,12 @@ const S = {
         display: 'flex', gap: 12, padding: '12px 16px', borderBottom: '1px solid #f0f0f0',
         cursor: 'pointer', transition: 'background 0.2s',
     },
+    msgButton: {
+        width: '100%',
+        border: 0,
+        background: 'transparent',
+        textAlign: 'left' as const,
+    },
     dotWrap: { position: 'relative' as const, width: 8, height: 8, marginTop: 6, flexShrink: 0 },
     dot: (color: string) => ({
         position: 'absolute' as const, top: 0, left: 0,
@@ -80,7 +87,12 @@ const S = {
         cursor: 'pointer', fontSize: 13, color: '#0f62fe',
         transition: 'background 0.2s', background: '#fafafa',
         borderTop: '1px solid #f0f0f0',
-    }
+    },
+    footerButton: {
+        width: '100%',
+        border: 0,
+        background: '#fafafa',
+    },
 };
 
 /** 从 localStorage 获取当前租户 ID */
@@ -97,13 +109,12 @@ const getCurrentTenantId = (): string | null => {
 
 const NotificationBell: React.FC = () => {
     const [open, setOpen] = useState(false);
-    const [msgs, setMsgs] = useState<{ title: string; time: string; category: string; categoryLabel: string }[]>([]);
+    const [msgs, setMsgs] = useState<Array<Pick<SiteMessage, 'title' | 'created_at' | 'category'>>>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
     const [tenantId, setTenantId] = useState<string | null>(getCurrentTenantId);
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const triggerRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const [panelPos, setPanelPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
@@ -127,9 +138,9 @@ const NotificationBell: React.FC = () => {
     /* 加载分类映射 */
     useEffect(() => {
         getSiteMessageCategories()
-            .then((res) => {
+            .then((categories) => {
                 const map: Record<string, string> = {};
-                (res?.data || []).forEach((c: SiteMessageCategory) => {
+                categories.forEach((c: SiteMessageCategory) => {
                     map[c.value] = c.label;
                 });
                 setCategoryMap(map);
@@ -143,7 +154,7 @@ const NotificationBell: React.FC = () => {
     const refreshUnreadCount = useCallback(async () => {
         try {
             const res = await getUnreadCount({ skipTokenRefresh: true });
-            setUnreadCount(res?.data?.unread_count ?? 0);
+            setUnreadCount(res?.unread_count ?? 0);
         } catch { /* silent */ }
     }, []);
 
@@ -151,12 +162,11 @@ const NotificationBell: React.FC = () => {
     const refreshMessages = useCallback(async () => {
         try {
             const listRes = await getSiteMessages({ page: 1, page_size: 10, is_read: false }, { skipTokenRefresh: true });
-            const items = listRes?.data || [];
-            setMsgs(items.slice(0, 10).map((m: any) => ({
-                title: m.title || '站内信',
-                time: m.created_at || '',
-                category: m.category || '',
-                categoryLabel: '',
+            const items = listRes.data || [];
+            setMsgs(items.slice(0, 10).map((message) => ({
+                title: message.title || '站内信',
+                created_at: message.created_at || '',
+                category: message.category || '',
             })));
         } catch { /* silent */ }
     }, []);
@@ -233,6 +243,12 @@ const NotificationBell: React.FC = () => {
     }, []);
 
     const close = useCallback(() => setOpen(false), []);
+    const toggleOpen = useCallback(() => {
+        setOpen((value) => !value);
+        if (!open) {
+            void refreshAll();
+        }
+    }, [open, refreshAll]);
     const go = useCallback((path: string) => {
         close();
         startTransition(() => history.push(path));
@@ -247,30 +263,45 @@ const NotificationBell: React.FC = () => {
 
     return (
         <div
-            ref={containerRef}
             style={S.container}
             onMouseEnter={handleEnter}
             onMouseLeave={handleLeave}
         >
-            <div
+            <button
+                type="button"
                 ref={triggerRef}
                 style={{
                     ...S.trigger,
-                    background: open ? 'rgba(255,255,255,0.06)' : 'transparent'
+                    background: open ? 'rgba(255,255,255,0.06)' : 'transparent',
+                    border: 0,
                 }}
+                aria-label={unreadCount > 0 ? `未读消息 ${unreadCount} 条` : '未读消息'}
+                aria-haspopup="dialog"
+                aria-expanded={open}
+                aria-controls={open ? NOTIFICATION_PANEL_ID : undefined}
+                onClick={toggleOpen}
             >
                 <BellOutlined style={S.triggerIcon} />
                 {unreadCount > 0 && (
                     <span style={S.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
                 )}
-            </div>
+            </button>
 
             {open && ReactDOM.createPortal(
                 <div
+                    id={NOTIFICATION_PANEL_ID}
                     ref={panelRef}
                     style={{ ...S.panel, top: panelPos.top, right: panelPos.right }}
                     onMouseEnter={() => { if (hoverRef.current) clearTimeout(hoverRef.current); }}
                     onMouseLeave={handleLeave}
+                    role="dialog"
+                    aria-modal="false"
+                    aria-label="未读消息"
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                            close();
+                        }
+                    }}
                 >
                     {/* 标题 */}
                     <div style={S.header}>
@@ -278,19 +309,21 @@ const NotificationBell: React.FC = () => {
                     </div>
 
                     {/* 消息列表 */}
-                    <div style={S.body}>
+                    <div style={S.body} role="list">
                         {msgs.length === 0 ? (
                             <div style={S.empty}>暂无未读消息</div>
                         ) : (
                             msgs.map((m, i) => {
                                 const color = getDotColor(m.category);
                                 return (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={i}
-                                        style={S.msgItem}
+                                        style={{ ...S.msgItem, ...S.msgButton }}
                                         onClick={() => go('/system/messages')}
                                         onMouseEnter={e => { e.currentTarget.style.background = '#f5f5f5'; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                        aria-label={`查看消息 ${m.title}`}
                                     >
                                         <span style={S.dotWrap}>
                                             <span style={S.dot(color)} />
@@ -299,24 +332,26 @@ const NotificationBell: React.FC = () => {
                                         <div style={S.msgContent}>
                                             <div style={S.msgTitle}>{m.title}</div>
                                             <div style={S.msgTime}>
-                                                {categoryMap[m.category] || m.category} · {formatTime(m.time)}
+                                                {categoryMap[m.category] || m.category} · {formatTime(m.created_at)}
                                             </div>
                                         </div>
-                                    </div>
+                                    </button>
                                 );
                             })
                         )}
                     </div>
 
                     {/* 底部 */}
-                    <div
-                        style={S.footer}
+                    <button
+                        type="button"
+                        style={{ ...S.footer, ...S.footerButton }}
                         onClick={() => go('/system/messages')}
                         onMouseEnter={e => { e.currentTarget.style.background = '#f0f0f0'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = '#fafafa'; }}
+                        aria-label="查看全部站内消息"
                     >
                         查看全部 ↗
-                    </div>
+                    </button>
                 </div>,
                 document.body
             )}

@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useState } from 'react';
 import { history } from '@umijs/max';
 import {
-    Form, Input, Button, message, Spin, Row, Col, Typography, Tag, Space,
-    Modal, Empty, Skeleton, Select,
+    Button, Col, Form, Input, Row, Select, Space, Tag, Typography, message,
 } from 'antd';
 import {
-    SafetyCertificateOutlined, FileTextOutlined, ExperimentOutlined,
-    SaveOutlined, ThunderboltOutlined, SearchOutlined,
-    ExclamationCircleOutlined, CheckCircleOutlined, LoadingOutlined,
+    CheckCircleOutlined,
+    ExperimentOutlined,
+    FileTextOutlined,
+    SafetyCertificateOutlined,
+    SaveOutlined,
 } from '@ant-design/icons';
 import SubPageHeader from '@/components/SubPageHeader';
 import TaskTemplateSelector from '@/pages/healing/flows/editor/TaskTemplateSelector';
-import { getCommandBlacklist } from '@/services/auto-healing/commandBlacklist';
+import type { CommandBlacklistRule } from '@/services/auto-healing/commandBlacklist';
 import { createBlacklistExemption } from '@/services/auto-healing/blacklistExemption';
 import { extractErrorMsg } from '@/utils/errorMsg';
+import ExemptionRuleSelector from './ExemptionRuleSelector';
 import '../command-blacklist/BlacklistRuleForm.css';
 
 const { TextArea } = Input;
@@ -35,197 +37,8 @@ const VALIDITY_OPTIONS = [
     { value: 90, label: '90 天' },
 ];
 
-const PAGE_SIZE = 50;
-
-/* ============================== 黑名单规则选择器 ============================== */
-
-interface RuleSelectorProps {
-    open: boolean;
-    value?: string;
-    onSelect: (id: string, rule: any) => void;
-    onCancel: () => void;
-}
-
-const RuleSelector: React.FC<RuleSelectorProps> = ({ open, value, onSelect, onCancel }) => {
-    const [rules, setRules] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [search, setSearch] = useState('');
-    const [severityFilter, setSeverityFilter] = useState<string | undefined>();
-    const [selectedRule, setSelectedRule] = useState<any>(null);
-    const listRef = useRef<HTMLDivElement>(null);
-
-    const loadRules = useCallback(async (pageNum: number, reset: boolean) => {
-        if (loading && !reset) return;
-        setLoading(true);
-        try {
-            const params: any = {
-                page: pageNum,
-                page_size: PAGE_SIZE,
-                is_active: true,
-            };
-            if (search) params.name = search;
-            if (severityFilter) params.severity = severityFilter;
-            const res = await getCommandBlacklist(params);
-            const newRules = res?.data || [];
-            const t = Number(res?.total ?? 0);
-            if (reset) setRules(newRules);
-            else setRules(prev => [...prev, ...newRules]);
-            setTotal(t);
-            setPage(pageNum);
-            setHasMore(pageNum * PAGE_SIZE < t);
-
-            if (reset && value) {
-                const found = newRules.find((r: any) => r.id === value);
-                if (found) {
-                    setSelectedRule(found);
-                }
-            }
-        } catch {
-            // ignore
-        } finally {
-            setLoading(false);
-        }
-    }, [loading, search, severityFilter, value]);
-
-    useEffect(() => {
-        if (open) {
-            setRules([]);
-            setPage(1);
-            setHasMore(true);
-            setSearch('');
-            setSeverityFilter(undefined);
-            setSelectedRule(null);
-            loadRules(1, true);
-        }
-    }, [open]);
-
-    useEffect(() => {
-        if (open) {
-            const timer = setTimeout(() => loadRules(1, true), 300);
-            return () => clearTimeout(timer);
-        }
-        return undefined;
-    }, [search, severityFilter]);
-
-    const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
-        if (scrollHeight - scrollTop - clientHeight < 100 && !loading && hasMore) {
-            loadRules(page + 1, false);
-        }
-    }, [loading, hasMore, page, loadRules]);
-
-    return (
-        <Modal
-            title={<Space><SafetyCertificateOutlined /> 选择黑名单规则</Space>}
-            open={open}
-            onCancel={onCancel}
-            onOk={() => selectedRule && onSelect(selectedRule.id, selectedRule)}
-            okText="确定选择"
-            okButtonProps={{ disabled: !selectedRule }}
-            width={700}
-            destroyOnHidden
-        >
-            <Row gutter={12} style={{ marginBottom: 16 }}>
-                <Col span={14}>
-                    <Input
-                        placeholder="搜索规则名称"
-                        prefix={<SearchOutlined />}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        allowClear
-                    />
-                </Col>
-                <Col span={10}>
-                    <Select
-                        placeholder="严重级别"
-                        value={severityFilter}
-                        onChange={setSeverityFilter}
-                        allowClear
-                        style={{ width: '100%' }}
-                        options={[
-                            { label: '严重', value: 'critical' },
-                            { label: '高危', value: 'high' },
-                            { label: '中危', value: 'medium' },
-                        ]}
-                    />
-                </Col>
-            </Row>
-
-            <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>仅显示已启用的规则</Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>共 {total} 条</Text>
-            </div>
-
-            <div ref={listRef} style={{ height: 360, overflow: 'auto' }} onScroll={handleScroll}>
-                {rules.length === 0 && !loading ? (
-                    <Empty description="暂无匹配规则" style={{ marginTop: 80 }} />
-                ) : (
-                    <>
-                        {rules.map(rule => {
-                            const isSelected = selectedRule?.id === rule.id;
-                            return (
-                                <div
-                                    key={rule.id}
-                                    onClick={() => setSelectedRule(rule)}
-                                    style={{
-                                        cursor: 'pointer',
-                                        background: isSelected ? '#e6f7ff' : 'transparent',
-                                        borderLeft: isSelected ? '3px solid #1890ff' : '3px solid transparent',
-                                        padding: '10px 12px',
-                                        marginBottom: 4,
-                                        borderBottom: '1px solid #f0f0f0',
-                                        transition: 'all 0.15s',
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                        <Tag color={SEVERITY_COLORS[rule.severity]} style={{ margin: 0 }}>
-                                            {SEVERITY_LABELS[rule.severity] || rule.severity}
-                                        </Tag>
-                                        <Text strong style={{ fontSize: 13 }}>{rule.name}</Text>
-                                        <Tag style={{ fontSize: 10, margin: 0 }}>{rule.match_type}</Tag>
-                                    </div>
-                                    <div style={{ marginLeft: 4 }}>
-                                        <Text code style={{ fontSize: 11, color: '#595959' }}>{rule.pattern}</Text>
-                                    </div>
-                                    {rule.description && (
-                                        <div style={{ marginTop: 4, marginLeft: 4 }}>
-                                            <Text type="secondary" style={{ fontSize: 11 }}>{rule.description}</Text>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                        {loading && (
-                            <div style={{ textAlign: 'center', padding: 12 }}>
-                                <Space><LoadingOutlined /><Text type="secondary">加载中...</Text></Space>
-                            </div>
-                        )}
-                        {!hasMore && rules.length > 0 && (
-                            <div style={{ textAlign: 'center', padding: 8, color: '#ccc', fontSize: 12 }}>
-                                已加载全部 {rules.length} 条规则
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
-
-            {selectedRule && (
-                <div style={{
-                    marginTop: 16, padding: '8px 12px',
-                    background: '#e6f7ff', border: '1px solid #91d5ff',
-                }}>
-                    <Text strong>已选择：</Text> {selectedRule.name}
-                    <Text type="secondary" style={{ marginLeft: 16 }}>
-                        模式: <Text code style={{ fontSize: 11 }}>{selectedRule.pattern}</Text>
-                    </Text>
-                </div>
-            )}
-        </Modal>
-    );
-};
+const hasFormErrorFields = (error: unknown): error is { errorFields: unknown } =>
+    typeof error === 'object' && error !== null && 'errorFields' in error;
 
 /* ============================== 主表单组件 ============================== */
 
@@ -236,18 +49,18 @@ const ExemptionForm: React.FC = () => {
     // 选择器状态
     const [taskSelectorOpen, setTaskSelectorOpen] = useState(false);
     const [ruleSelectorOpen, setRuleSelectorOpen] = useState(false);
-    const [selectedTask, setSelectedTask] = useState<any>(null);
-    const [selectedRule, setSelectedRule] = useState<any>(null);
+    const [selectedTask, setSelectedTask] = useState<AutoHealing.ExecutionTask | null>(null);
+    const [selectedRule, setSelectedRule] = useState<CommandBlacklistRule | null>(null);
 
     // 任务模板选择回调
-    const handleTaskSelect = useCallback((id: string, template: any) => {
+    const handleTaskSelect = useCallback((id: string, template: AutoHealing.ExecutionTask) => {
         setSelectedTask(template);
         form.setFieldsValue({ task_id: id });
         setTaskSelectorOpen(false);
     }, [form]);
 
     // 规则选择回调
-    const handleRuleSelect = useCallback((id: string, rule: any) => {
+    const handleRuleSelect = useCallback((id: string, rule: CommandBlacklistRule) => {
         setSelectedRule(rule);
         form.setFieldsValue({ rule_id: id });
         setRuleSelectorOpen(false);
@@ -276,9 +89,9 @@ const ExemptionForm: React.FC = () => {
 
             message.success('豁免申请已提交，等待审批');
             history.push('/security/exemptions');
-        } catch (err: any) {
-            if (err?.errorFields) return;
-            /* 全局 errorHandler 已显示错误 */
+        } catch (err: unknown) {
+            if (hasFormErrorFields(err)) return;
+            message.error(extractErrorMsg(err as Parameters<typeof extractErrorMsg>[0], '提交豁免申请失败，请稍后重试'));
         } finally {
             setSubmitting(false);
         }
@@ -453,7 +266,7 @@ const ExemptionForm: React.FC = () => {
             />
 
             {/* ====== 黑名单规则选择器 ====== */}
-            <RuleSelector
+            <ExemptionRuleSelector
                 open={ruleSelectorOpen}
                 value={selectedRule?.id}
                 onSelect={handleRuleSelect}

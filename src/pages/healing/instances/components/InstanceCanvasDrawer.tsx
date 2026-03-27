@@ -76,7 +76,8 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
         {
             ready: !!instanceId && open,
             refreshDeps: [instanceId],
-            onSuccess: (data) => {
+            onSuccess: (response) => {
+                const data = response?.data || response;
                 if (data && data.flow_nodes && data.flow_edges) {
                     // 使用共享画布构建函数 — 与列表页/详情页逻辑完全一致
                     const { nodes: builtNodes, edges: builtEdges } = buildCanvasElements({
@@ -95,14 +96,17 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
         }
     );
 
-    const statusConfig = instance ? STATUS_CONFIG[instance.status] || STATUS_CONFIG.pending : STATUS_CONFIG.pending;
+    const instanceData = instance
+        ? (((instance as { data?: AutoHealing.FlowInstance }).data || instance) as AutoHealing.FlowInstance)
+        : null;
+    const statusConfig = instanceData ? STATUS_CONFIG[instanceData.status] || STATUS_CONFIG.pending : STATUS_CONFIG.pending;
 
     return (
         <Drawer
             title={
                 <Space>
-                    <span>{instance?.flow_name || '实例详情'}</span>
-                    {instance && (
+                    <span>{instanceData?.flow_name || '实例详情'}</span>
+                    {instanceData && (
                         <Tag color={statusConfig.color} style={{ border: 'none' }}>
                             <Space size={4}>
                                 {statusConfig.icon}
@@ -134,7 +138,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     <Spin size="large" />
                 </div>
-            ) : !instance ? (
+            ) : !instanceData ? (
                 <Empty description="未找到实例数据" style={{ marginTop: 100 }} />
             ) : (
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -142,20 +146,20 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
                     <div style={{ padding: '16px 24px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
                         <Descriptions size="small" column={2}>
                             <Descriptions.Item label="关联工单">
-                                {instance.incident ? (
-                                    <Text style={{ color: '#1890ff' }}>{instance.incident.title}</Text>
+                                {instanceData.incident ? (
+                                    <Text style={{ color: '#1890ff' }}>{instanceData.incident.title}</Text>
                                 ) : '-'}
                             </Descriptions.Item>
                             <Descriptions.Item label="触发规则">
-                                {instance.rule ? (
-                                    <Text style={{ color: '#1890ff' }}>{instance.rule.name}</Text>
+                                {instanceData.rule ? (
+                                    <Text style={{ color: '#1890ff' }}>{instanceData.rule.name}</Text>
                                 ) : '-'}
                             </Descriptions.Item>
                             <Descriptions.Item label="开始时间">
-                                {instance.started_at ? dayjs(instance.started_at).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                                {instanceData.started_at ? dayjs(instanceData.started_at).format('YYYY-MM-DD HH:mm:ss') : '-'}
                             </Descriptions.Item>
                             <Descriptions.Item label="当前节点">
-                                {instance.current_node_id || '-'}
+                                {instanceData.current_node_id || '-'}
                             </Descriptions.Item>
                         </Descriptions>
                     </div>

@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { unwrapData, unwrapItems } from './responseAdapters';
 
 /**
  * 工作台 API 服务层
@@ -94,52 +95,79 @@ export interface FavoriteItem {
     path: string;
 }
 
+type UserFavoriteRecord = {
+    menu_key: string;
+};
+
 // ==================== API 函数 ====================
 
 /** GET /api/v1/common/workbench/overview */
 export async function getWorkbenchOverview() {
-    return request<{ code: number; message: string; data: WorkbenchOverview }>(
+    return unwrapData(await request<{ code: number; message: string; data: WorkbenchOverview }>(
         '/api/v1/common/workbench/overview',
         { method: 'GET', skipErrorHandler: true },
-    );
+    ));
 }
 
 /** GET /api/v1/common/workbench/activities */
 export async function getWorkbenchActivities(limit: number = 10) {
-    return request<{ code: number; message: string; data: { items: ActivityItem[] } }>(
+    return unwrapItems<ActivityItem>(await request<{ code: number; message: string; data: { items: ActivityItem[] } }>(
         '/api/v1/common/workbench/activities',
         { method: 'GET', params: { limit }, skipErrorHandler: true },
-    );
+    ));
 }
 
 /** GET /api/v1/common/workbench/schedule-calendar */
 export async function getScheduleCalendar(year: number, month: number) {
-    return request<{ code: number; message: string; data: ScheduleCalendar }>(
+    return unwrapData(await request<{ code: number; message: string; data: ScheduleCalendar }>(
         '/api/v1/common/workbench/schedule-calendar',
         { method: 'GET', params: { year, month }, skipErrorHandler: true },
-    );
+    ));
 }
 
 /** GET /api/v1/common/workbench/announcements */
 export async function getWorkbenchAnnouncements(limit: number = 5) {
-    return request<{ code: number; message: string; data: { items: AnnouncementItem[] } }>(
+    return unwrapItems<AnnouncementItem>(await request<{ code: number; message: string; data: { items: AnnouncementItem[] } }>(
         '/api/v1/common/workbench/announcements',
         { method: 'GET', params: { limit }, skipErrorHandler: true },
-    );
+    ));
 }
 
 /** GET /api/v1/common/workbench/favorites */
 export async function getWorkbenchFavorites() {
-    return request<{ code: number; message: string; data: { items: FavoriteItem[] } }>(
+    return unwrapItems<FavoriteItem>(await request<{ code: number; message: string; data: { items: FavoriteItem[] } }>(
         '/api/v1/common/workbench/favorites',
         { method: 'GET', skipErrorHandler: true },
-    );
+    ));
 }
 
 /** PUT /api/v1/common/workbench/favorites */
 export async function updateWorkbenchFavorites(items: FavoriteItem[]) {
-    return request<{ code: number; message: string }>(
-        '/api/v1/common/workbench/favorites',
-        { method: 'PUT', data: { items } },
-    );
+    const currentFavorites = unwrapItems<UserFavoriteRecord>(await request<{
+        data?: UserFavoriteRecord[] | { items?: UserFavoriteRecord[] };
+        items?: UserFavoriteRecord[];
+    } | UserFavoriteRecord[]>(
+        '/api/v1/common/user/favorites',
+        { method: 'GET' },
+    ));
+    const currentKeys = new Set(currentFavorites.map((item) => item.menu_key));
+    const nextKeys = new Set(items.map((item) => item.key));
+    const additions = items.filter((item) => !currentKeys.has(item.key));
+    const removals = currentFavorites.filter((item) => !nextKeys.has(item.menu_key));
+
+    await Promise.all([
+        ...additions.map((item) => request('/api/v1/common/user/favorites', {
+            method: 'POST',
+            data: {
+                menu_key: item.key,
+                name: item.label,
+                path: item.path,
+            },
+        })),
+        ...removals.map((item) => request(`/api/v1/common/user/favorites/${item.menu_key}`, {
+            method: 'DELETE',
+        })),
+    ]);
+
+    return { message: '收藏已同步' };
 }

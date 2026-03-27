@@ -1,24 +1,36 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAccess } from '@umijs/max';
-import { Card, Input, InputNumber, Switch, Button, message, Spin, Typography, Space, Tag, Divider } from 'antd';
-import { SaveOutlined, SettingOutlined, EditOutlined, CloseOutlined } from '@ant-design/icons';
+import { message, Spin } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
 import { getPlatformSettings, updatePlatformSetting } from '@/services/auto-healing/platform/settings';
 import type { PlatformSettingModule } from '@/services/auto-healing/platform/settings';
+import PlatformSettingsModuleCard from './PlatformSettingsModuleCard';
+import {
+    buildModuleSettingChanges,
+    createModuleEditValues,
+    type PlatformSettingEditableValue,
+    type PlatformSettingEditValues,
+} from './platformSettingsUtils';
 
-const { Text } = Typography;
-
-const MODULE_LABELS: Record<string, string> = {
-    site: '站点配置',
-    site_message: '站内信设置',
-    security: '安全设置',
-    system: '系统设置',
-    email: '邮件服务',
+type SettingSaveError = {
+    key: string;
+    message: string;
 };
 
-const isSensitiveSettingKey = (key?: string) => {
-    const lower = (key || '').toLowerCase();
-    return lower.includes('password') || lower.includes('secret') || lower.includes('token') || lower.includes('api_key');
+const toSettingSaveErrorLabel = (error: SettingSaveError) => `${error.key}(${error.message})`;
+
+const resolveSettingSaveError = (
+    key: string,
+    result: PromiseSettledResult<Awaited<ReturnType<typeof updatePlatformSetting>>>,
+): SettingSaveError | null => {
+    if (result.status === 'rejected') {
+        return { key, message: '请求失败' };
+    }
+    if (result.value.success === false) {
+        return { key, message: result.value.message || '保存失败' };
+    }
+    return null;
 };
 
 const PlatformSettingsPage: React.FC = () => {
@@ -28,14 +40,14 @@ const PlatformSettingsPage: React.FC = () => {
 
     // 编辑态
     const [editingModule, setEditingModule] = useState<string | null>(null);
-    const [editValues, setEditValues] = useState<Record<string, any>>({});
+    const [editValues, setEditValues] = useState<PlatformSettingEditValues>({});
     const [saving, setSaving] = useState(false);
 
     const loadSettings = useCallback(async () => {
         setLoading(true);
         try {
             const res = await getPlatformSettings();
-            setModules(res?.data || []);
+            setModules(res);
         } catch {
             /* global error handler */
         } finally {
@@ -48,16 +60,9 @@ const PlatformSettingsPage: React.FC = () => {
     }, [loadSettings]);
 
     // 进入编辑模式
-    const enterEdit = (mod: PlatformSettingModule) => {
-        const values: Record<string, any> = {};
-        mod.settings.forEach(s => {
-            if (isSensitiveSettingKey(s.key)) values[s.key] = '';
-            else if (s.type === 'bool') values[s.key] = s.value === 'true';
-            else if (s.type === 'int') values[s.key] = Number(s.value) || 0;
-            else values[s.key] = s.value || '';
-        });
-        setEditValues(values);
-        setEditingModule(mod.module);
+    const enterEdit = (module: PlatformSettingModule) => {
+        setEditValues(createModuleEditValues(module));
+        setEditingModule(module.module);
     };
 
     // 取消编辑
@@ -66,18 +71,15 @@ const PlatformSettingsPage: React.FC = () => {
         setEditValues({});
     };
 
+    const handleEditValueChange = useCallback((key: string, value: PlatformSettingEditableValue) => {
+        setEditValues(prev => ({ ...prev, [key]: value }));
+    }, []);
+
     // 保存整个模块
-    const handleSaveModule = async (mod: PlatformSettingModule) => {
+    const handleSaveModule = async (module: PlatformSettingModule) => {
         setSaving(true);
         try {
-            const changes: { key: string; value: string }[] = [];
-            mod.settings.forEach(s => {
-                const newVal = String(editValues[s.key] ?? '');
-                if (isSensitiveSettingKey(s.key) && newVal === '') return;
-                if (newVal !== s.value) {
-                    changes.push({ key: s.key, value: newVal });
-                }
-            });
+            const changes = buildModuleSettingChanges(module, editValues);
 
             if (changes.length === 0) {
                 message.info('没有修改');
@@ -86,121 +88,34 @@ const PlatformSettingsPage: React.FC = () => {
             }
 
             const results = await Promise.allSettled(
-                changes.map((c) => updatePlatformSetting(c.key, c.value)),
+                changes.map((change) => updatePlatformSetting(change.key, change.value)),
             );
-            const failedKeys: string[] = [];
+            const failedItems: SettingSaveError[] = [];
             let okCount = 0;
             results.forEach((r, idx) => {
-                if (r.status === 'fulfilled') okCount += 1;
-                else failedKeys.push(changes[idx].key);
+                const failedItem = resolveSettingSaveError(changes[idx].key, r);
+                if (failedItem) {
+                    failedItems.push(failedItem);
+                    return;
+                }
+                okCount += 1;
             });
 
             // 无论是否部分成功，都刷新一次，以避免“部分保存成功但页面仍显示旧值”的错觉。
             await loadSettings();
 
-            if (failedKeys.length === 0) {
+            if (failedItems.length === 0) {
                 message.success(`已保存 ${okCount} 项设置`);
                 cancelEdit();
                 return;
             }
-            message.error(`已保存 ${okCount} 项，失败 ${failedKeys.length} 项：${failedKeys.slice(0, 6).join(', ')}${failedKeys.length > 6 ? '…' : ''}`);
+            const failedLabels = failedItems.slice(0, 6).map(toSettingSaveErrorLabel).join(', ');
+            message.error(`已保存 ${okCount} 项，失败 ${failedItems.length} 项：${failedLabels}${failedItems.length > 6 ? '…' : ''}`);
         } catch {
             /* global error handler */
         } finally {
             setSaving(false);
         }
-    };
-
-    // 渲染只读值
-    const renderReadOnly = (setting: any) => {
-        if (setting.type === 'bool') {
-            const val = setting.value === 'true';
-            return (
-                <Space>
-                    <Tag color={val ? 'green' : 'default'} style={{ margin: 0 }}>
-                        {val ? '已启用' : '已禁用'}
-                    </Tag>
-                </Space>
-            );
-        }
-        if (setting.type === 'int') {
-            return (
-                <Space>
-                    <span style={{ fontSize: 13, color: '#262626', fontVariantNumeric: 'tabular-nums' }}>
-                        {setting.value || setting.default_value || '0'}
-                    </span>
-                    {setting.default_value && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>默认值：{setting.default_value}</Text>
-                    )}
-                </Space>
-            );
-        }
-        // string
-        if (!setting.value) {
-            return <Text type="secondary" style={{ fontSize: 12, fontStyle: 'italic' }}>未设置</Text>;
-        }
-        if (isSensitiveSettingKey(setting.key)) {
-            return <span style={{ fontSize: 13, color: '#262626' }}>{'••••••••'}</span>;
-        }
-        return <span style={{ fontSize: 13, color: '#262626' }}>{setting.value}</span>;
-    };
-
-    // 渲染编辑控件
-    const renderEditInput = (setting: any) => {
-        const val = editValues[setting.key];
-        const onChange = (newVal: any) => {
-            setEditValues(prev => ({ ...prev, [setting.key]: newVal }));
-        };
-
-        if (setting.type === 'bool') {
-            return (
-                <Space>
-                    <Switch
-                        checked={val}
-                        onChange={onChange}
-                    />
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                        {val ? '已启用' : '已禁用'}
-                    </Text>
-                </Space>
-            );
-        }
-
-        if (setting.type === 'int') {
-            return (
-                <Space>
-                    <InputNumber
-                        value={val}
-                        min={0}
-                        style={{ width: 120 }}
-                        onChange={(v) => onChange(v ?? 0)}
-                    />
-                    {setting.default_value && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>默认值：{setting.default_value}</Text>
-                    )}
-                </Space>
-            );
-        }
-
-        // string — 密码用 Password
-        if (isSensitiveSettingKey(setting.key)) {
-            return (
-                <Input.Password
-                    value={val}
-                    placeholder="留空保持原值"
-                    style={{ width: 320 }}
-                    onChange={(e) => onChange(e.target.value)}
-                />
-            );
-        }
-        return (
-            <Input
-                value={val}
-                placeholder={setting.description || '请输入'}
-                style={{ width: 320 }}
-                onChange={(e) => onChange(e.target.value)}
-            />
-        );
     };
 
     const headerIcon = (
@@ -212,7 +127,7 @@ const PlatformSettingsPage: React.FC = () => {
     );
 
     return (
-        <StandardTable<any>
+        <StandardTable<PlatformSettingModule>
             tabs={[{ key: 'settings', label: '平台设置' }]}
             title="平台设置"
             description="配置平台级别的系统参数，包括站内信、安全策略、系统行为等全局设置。"
@@ -229,69 +144,20 @@ const PlatformSettingsPage: React.FC = () => {
                     {modules.map((mod, idx) => {
                         const isEditing = editingModule === mod.module;
                         return (
-                            <Card
+                            <PlatformSettingsModuleCard
                                 key={mod.module}
-                                title={
-                                    <Space>
-                                        <SettingOutlined />
-                                        {MODULE_LABELS[mod.module] || mod.module}
-                                        <Tag color="blue" style={{ fontSize: 11 }}>{mod.module}</Tag>
-                                    </Space>
-                                }
-                                extra={
-                                    isEditing ? (
-                                        <Space size={8}>
-                                            <Button
-                                                size="small"
-                                                icon={<CloseOutlined />}
-                                                onClick={cancelEdit}
-                                                disabled={saving}
-                                            >
-                                                取消
-                                            </Button>
-                                            <Button
-                                                type="primary" size="small"
-                                                icon={<SaveOutlined />}
-                                                loading={saving}
-                                                onClick={() => handleSaveModule(mod)}
-                                            >
-                                                保存
-                                            </Button>
-                                        </Space>
-                                    ) : (
-                                        <Button
-                                            type="link" size="small"
-                                            icon={<EditOutlined />}
-                                            disabled={!access.canManagePlatformSettings || editingModule !== null}
-                                            onClick={() => enterEdit(mod)}
-                                            style={{ padding: 0 }}
-                                        >
-                                            编辑
-                                        </Button>
-                                    )
-                                }
-                                style={{ marginBottom: idx < modules.length - 1 ? 16 : 0 }}
-                            >
-                                {mod.settings.map((setting, sIdx) => (
-                                    <div key={setting.key}>
-                                        {sIdx > 0 && <Divider style={{ margin: '16px 0' }} />}
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontWeight: 500, marginBottom: 4 }}>{setting.label}</div>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>{setting.description}</Text>
-                                                <div style={{ marginTop: 4 }}>
-                                                    <Text style={{ fontSize: 11, color: '#8c8c8c' }}>
-                                                        {setting.key}
-                                                    </Text>
-                                                </div>
-                                            </div>
-                                            <div style={{ flexShrink: 0, paddingTop: 2 }}>
-                                                {isEditing ? renderEditInput(setting) : renderReadOnly(setting)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </Card>
+                                module={mod}
+                                isEditing={isEditing}
+                                isSaving={saving}
+                                canManage={Boolean(access.canManagePlatformSettings)}
+                                hasActiveEditor={editingModule !== null}
+                                editValues={editValues}
+                                isLast={idx === modules.length - 1}
+                                onEnterEdit={enterEdit}
+                                onCancel={cancelEdit}
+                                onSave={handleSaveModule}
+                                onValueChange={handleEditValueChange}
+                            />
                         );
                     })}
                 </Spin>

@@ -1,20 +1,16 @@
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { Badge, Empty, Typography, Tooltip, Tag } from 'antd';
-import { useAccess, useRequest, history } from '@umijs/max';
+import { Badge, Empty, Typography, Tooltip } from 'antd';
+import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
-import { getPendingApprovals } from '@/services/auto-healing/healing';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
-    const { data: rawData, loading, refresh } = useRequest(() => getPendingApprovals({ page_size: 15 }), {
-        formatResult: (r: any) => r,
-        ready: !!access.canViewApprovals,
-    });
-    const data = rawData as any;
-    const items = data?.data?.items ?? data?.data ?? data?.items ?? [];
+    const { data, loading, refresh } = useDashboardSection('healing');
+    const items = Array.isArray(data?.pending_approval_list) ? data.pending_approval_list : [];
 
     return (
         <WidgetWrapper title="待审批列表" icon={<ClockCircleOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>

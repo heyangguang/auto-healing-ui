@@ -6,8 +6,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { getGitRepos } from '@/services/auto-healing/git-repos';
-import { fetchAllPages } from '@/utils/fetchAllPages';
+import { getCachedGitRepoInventory } from '@/utils/selectorInventoryCache';
 
 dayjs.extend(relativeTime);
 
@@ -17,10 +16,9 @@ interface PlaybookSelectorProps {
     value?: string;
     onChange?: (value: string) => void;
     playbooks: AutoHealing.Playbook[];
-    loading?: boolean;
 }
 
-const PlaybookSelector: React.FC<PlaybookSelectorProps> = ({ value, onChange, playbooks = [], loading = false }) => {
+const PlaybookSelector: React.FC<PlaybookSelectorProps> = ({ value, onChange, playbooks = [] }) => {
     const [open, setOpen] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [repoSearchText, setRepoSearchText] = useState('');
@@ -34,13 +32,15 @@ const PlaybookSelector: React.FC<PlaybookSelectorProps> = ({ value, onChange, pl
     useEffect(() => {
         if (open) {
             setLoadingRepos(true);
-            fetchAllPages<any>((page, pageSize) => getGitRepos({ page, page_size: pageSize })).then(items => {
+            getCachedGitRepoInventory().then(items => {
                 const map: Record<string, string> = {};
                 items.forEach((r: any) => {
                     map[r.id] = r.name;
                 });
                 setReposMap(map);
-            }).catch(console.error).finally(() => setLoadingRepos(false));
+            }).catch(() => {
+                // keep selector usable even when repo inventory lookup fails
+            }).finally(() => setLoadingRepos(false));
         }
     }, [open]);
 
@@ -258,7 +258,7 @@ const PlaybookSelector: React.FC<PlaybookSelectorProps> = ({ value, onChange, pl
 
                     {/* List Area */}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', background: '#fff' }}>
-                        <Spin spinning={loading}>
+                        <Spin spinning={loadingRepos}>
                             {filteredPlaybooks.length > 0 ? (
                                 <Space orientation="vertical" style={{ width: '100%' }} size={12}>
                                     {filteredPlaybooks.map(record => {

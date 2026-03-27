@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-    Card, Row, Col, Typography, Button, Tooltip, Progress,
+    Card, Row, Col, Typography, Button, Tooltip, Progress, message,
     Avatar, Tag, Badge, Spin, Empty, Space,
 } from 'antd';
 import {
@@ -34,7 +34,19 @@ import {
     PieChartOutlined,
 } from '@ant-design/icons';
 import { history } from '@umijs/max';
-import { getTenantStats, getTenantTrends } from '@/services/auto-healing/platform/tenants';
+import {
+    getTenantStats,
+    getTenantTrends,
+    type PlatformTenantStatsItem,
+    type PlatformTenantStatsSummary,
+} from '@/services/auto-healing/platform/tenants';
+import {
+    getCoverageSubtext,
+    getSafePercent,
+    getTenantInfraScore,
+    getTenantResourceScore,
+    toSafeCount,
+} from './tenantOverviewMetrics';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -46,21 +58,8 @@ dayjs.locale('zh-cn');
 const { Text } = Typography;
 
 /* ── Types ── */
-interface TenantStatsItem {
-    id: string; name: string; code: string; status: string; icon: string;
-    member_count: number; rule_count: number; instance_count: number;
-    template_count: number; audit_log_count: number; last_activity_at: string | null;
-    cmdb_count: number; git_count: number; playbook_count: number;
-    secret_count: number; plugin_count: number; incident_count: number;
-    flow_count: number; schedule_count: number;
-    notification_channel_count: number; notification_template_count: number;
-    healing_success_count: number; healing_total_count: number;
-    incident_covered_count: number;
-}
-interface TenantStatsSummary {
-    total_tenants: number; active_tenants: number; disabled_tenants: number;
-    total_users: number; total_rules: number; total_instances: number; total_templates: number;
-}
+type TenantStatsItem = PlatformTenantStatsItem;
+type TenantStatsSummary = PlatformTenantStatsSummary;
 
 
 
@@ -222,6 +221,7 @@ const ListRow: React.FC<{
 /* ══════════════════════ 主组件 ══════════════════════ */
 const TenantOverviewPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [tenants, setTenants] = useState<TenantStatsItem[]>([]);
     const [summary, setSummary] = useState<TenantStatsSummary>({
         total_tenants: 0, active_tenants: 0, disabled_tenants: 0,
@@ -230,45 +230,72 @@ const TenantOverviewPage: React.FC = () => {
     const [trendData, setTrendData] = useState<{
         dates: string[]; operations: number[]; audit_logs: number[]; task_executions: number[];
     }>({ dates: [], operations: [], audit_logs: [], task_executions: [] });
+    const statsRequestSeqRef = useRef(0);
 
     const fetchStats = useCallback(async () => {
+        const requestSeq = statsRequestSeqRef.current + 1;
+        statsRequestSeqRef.current = requestSeq;
         setLoading(true);
+        setLoadFailed(false);
         try {
             const [statsRes, trendsRes] = await Promise.all([
                 getTenantStats(),
                 getTenantTrends({ days: 7 }),
             ]);
-            const data = statsRes?.data || statsRes;
-            setTenants(data?.tenants || []);
-            setSummary(data?.summary || summary);
-            const td = trendsRes?.data || trendsRes;
-            setTrendData({
-                dates: td?.dates || [],
-                operations: td?.operations || [],
-                audit_logs: td?.audit_logs || [],
-                task_executions: td?.task_executions || [],
-            });
-        } catch { /* ignore */ } finally { setLoading(false); }
+            if (statsRequestSeqRef.current !== requestSeq) return;
+            setTenants(statsRes.tenants);
+            setSummary(statsRes.summary);
+            setTrendData(trendsRes);
+        } catch {
+            if (statsRequestSeqRef.current === requestSeq) {
+                setLoadFailed(true);
+                message.error('租户运营总览加载失败，请刷新重试');
+            }
+        } finally {
+            if (statsRequestSeqRef.current === requestSeq) {
+                setLoading(false);
+            }
+        }
     }, []);
 
     useEffect(() => { fetchStats(); }, []);
 
     const byResource = useMemo(() =>
-        [...tenants].sort((a, b) =>
-            (b.rule_count + b.instance_count + b.template_count) -
-            (a.rule_count + a.instance_count + a.template_count)
-        ), [tenants]);
+        [...tenants].sort((a, b) => getTenantResourceScore(b) - getTenantResourceScore(a)), [tenants]);
 
     const byAudit = useMemo(() =>
-        [...tenants].sort((a, b) => b.audit_log_count - a.audit_log_count), [tenants]);
+        [...tenants].sort((a, b) => toSafeCount(b.audit_log_count) - toSafeCount(a.audit_log_count)), [tenants]);
 
-    const totalAudit = useMemo(() => tenants.reduce((s, t) => s + t.audit_log_count, 0), [tenants]);
+    const totalAudit = useMemo(() => tenants.reduce((s, t) => s + toSafeCount(t.audit_log_count), 0), [tenants]);
+    const hasAnyData = useMemo(
+        () => tenants.length > 0
+            || summary.total_tenants > 0
+            || summary.total_users > 0
+            || summary.total_rules > 0
+            || summary.total_templates > 0
+            || trendData.dates.length > 0,
+        [summary, tenants, trendData.dates.length],
+    );
 
 
 
     return (
         <div className="tenant-overview-dashboard">
             <Spin spinning={loading}>
+                {loadFailed && !loading && !hasAnyData ? (
+                    <Card variant="borderless">
+                        <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description="租户运营总览加载失败，请刷新重试"
+                            style={{ padding: '56px 0' }}
+                        >
+                            <Button type="primary" icon={<ReloadOutlined />} onClick={fetchStats}>
+                                重新加载
+                            </Button>
+                        </Empty>
+                    </Card>
+                ) : (
+                    <>
 
                 {/* ══════ Header — 卡片 + 雅致深空装饰 ══════ */}
                 <div className="ov-header-card">
@@ -423,13 +450,13 @@ const TenantOverviewPage: React.FC = () => {
                             extra={<Tag>共 {summary.total_users} 人</Tag>}
                             styles={{ body: { padding: 0 } }} style={{ flex: 1 }}>
                             {tenants.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} /> :
-                                [...tenants].sort((a, b) => b.member_count - a.member_count).slice(0, 5).map(t => {
-                                    const max = Math.max(...tenants.map(x => x.member_count), 1);
+                                [...tenants].sort((a, b) => toSafeCount(b.member_count) - toSafeCount(a.member_count)).slice(0, 5).map(t => {
+                                    const max = Math.max(...tenants.map(x => toSafeCount(x.member_count)), 1);
                                     return (
                                         <ListRow key={t.id} name={t.name}
-                                            percent={Math.round((t.member_count / max) * 100)}
+                                            percent={getSafePercent(toSafeCount(t.member_count), max)}
                                             barColor="#1677ff"
-                                            value={<Text strong style={{ color: '#1677ff' }}>{t.member_count}</Text>}
+                                            value={<Text strong style={{ color: '#1677ff' }}>{toSafeCount(t.member_count)}</Text>}
                                         />
                                     );
                                 })
@@ -442,12 +469,12 @@ const TenantOverviewPage: React.FC = () => {
                             styles={{ body: { padding: 0 } }} style={{ flex: 1 }}>
                             {tenants.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} /> :
                                 byAudit.slice(0, 5).map(t => {
-                                    const max = Math.max(...tenants.map(x => x.audit_log_count), 1);
+                                    const max = Math.max(...tenants.map(x => toSafeCount(x.audit_log_count)), 1);
                                     return (
                                         <ListRow key={t.id} name={t.name}
-                                            percent={Math.round((t.audit_log_count / max) * 100)}
+                                            percent={getSafePercent(toSafeCount(t.audit_log_count), max)}
                                             barColor="#722ed1"
-                                            value={<Text strong style={{ color: '#722ed1' }}>{t.audit_log_count}</Text>}
+                                            value={<Text strong style={{ color: '#722ed1' }}>{toSafeCount(t.audit_log_count)}</Text>}
                                         />
                                     );
                                 })
@@ -469,15 +496,15 @@ const TenantOverviewPage: React.FC = () => {
                             {tenants.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} /> :
                                 byResource.slice(0, 5).map(t => {
                                     const total = summary.total_rules + summary.total_instances + summary.total_templates;
-                                    const cur = t.rule_count + t.instance_count + t.template_count;
-                                    const pct = total > 0 ? Math.round((cur / total) * 100) : 0;
+                                    const cur = getTenantResourceScore(t);
+                                    const pct = getSafePercent(cur, total);
                                     return (
                                         <ListRow key={t.id} name={t.name} percent={0} barColor="#fa8c16"
                                             barContent={
                                                 <ResourceBar items={[
-                                                    { label: '规则', value: t.rule_count, color: '#fa8c16' },
-                                                    { label: '实例', value: t.instance_count, color: '#13c2c2' },
-                                                    { label: '模板', value: t.template_count, color: '#eb2f96' },
+                                                    { label: '规则', value: toSafeCount(t.rule_count), color: '#fa8c16' },
+                                                    { label: '实例', value: toSafeCount(t.instance_count), color: '#13c2c2' },
+                                                    { label: '模板', value: toSafeCount(t.template_count), color: '#eb2f96' },
                                                 ]} />
                                             }
                                             value={<Text strong style={{ color: pct > 50 ? '#f5222d' : pct > 25 ? '#fa8c16' : '#8c8c8c' }}>{pct}%</Text>}
@@ -506,16 +533,16 @@ const TenantOverviewPage: React.FC = () => {
                             styles={{ body: { padding: 0 } }} style={{ flex: 1 }}>
                             {byResource.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} /> :
                                 byResource.slice(0, 5).map((t, idx) => {
-                                    const maxRes = Math.max(...byResource.map(x => x.rule_count + x.instance_count + x.template_count), 1);
+                                    const maxRes = Math.max(...byResource.map(getTenantResourceScore), 1);
                                     return (
                                         <RankItem key={t.id} rank={idx + 1}
                                             name={t.name} code={t.code} status={t.status} id={t.id}
-                                            value={t.rule_count + t.instance_count + t.template_count}
+                                            value={getTenantResourceScore(t)}
                                             maxValue={maxRes} color="#fa8c16"
                                             details={[
-                                                { label: '规则', value: t.rule_count, color: '#fa8c16' },
-                                                { label: '实例', value: t.instance_count, color: '#13c2c2' },
-                                                { label: '模板', value: t.template_count, color: '#eb2f96' },
+                                                { label: '规则', value: toSafeCount(t.rule_count), color: '#fa8c16' },
+                                                { label: '实例', value: toSafeCount(t.instance_count), color: '#13c2c2' },
+                                                { label: '模板', value: toSafeCount(t.template_count), color: '#eb2f96' },
                                             ]}
                                         />
                                     );
@@ -538,19 +565,18 @@ const TenantOverviewPage: React.FC = () => {
                             styles={{ body: { padding: 0 } }} style={{ flex: 1 }}>
                             {tenants.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} /> :
                                 [...tenants].sort((a, b) =>
-                                    ((b.cmdb_count || 0) + (b.secret_count || 0) + (b.plugin_count || 0)) -
-                                    ((a.cmdb_count || 0) + (a.secret_count || 0) + (a.plugin_count || 0))
+                                    getTenantInfraScore(b) - getTenantInfraScore(a)
                                 ).slice(0, 5).map((t, idx) => {
-                                    const score = (t.cmdb_count || 0) + (t.secret_count || 0) + (t.plugin_count || 0);
-                                    const maxI = Math.max(...tenants.map(x => (x.cmdb_count || 0) + (x.secret_count || 0) + (x.plugin_count || 0)), 1);
+                                    const score = getTenantInfraScore(t);
+                                    const maxI = Math.max(...tenants.map(getTenantInfraScore), 1);
                                     return (
                                         <RankItem key={t.id} rank={idx + 1}
                                             name={t.name} code={t.code} status={t.status} id={t.id}
                                             value={score} maxValue={maxI} color="#1677ff"
                                             details={[
-                                                { label: '主机', value: t.cmdb_count || 0, color: '#1677ff' },
-                                                { label: '凭据', value: t.secret_count || 0, color: '#fa8c16' },
-                                                { label: '插件', value: t.plugin_count || 0, color: '#13c2c2' },
+                                                { label: '主机', value: toSafeCount(t.cmdb_count), color: '#1677ff' },
+                                                { label: '凭据', value: toSafeCount(t.secret_count), color: '#fa8c16' },
+                                                { label: '插件', value: toSafeCount(t.plugin_count), color: '#13c2c2' },
                                             ]}
                                         />
                                     );
@@ -596,16 +622,16 @@ const TenantOverviewPage: React.FC = () => {
                             extra={<Text type="secondary" style={{ fontSize: 12 }}>已配置 / 总租户</Text>}
                             styles={{ body: { padding: '20px' } }} style={{ flex: 1 }}>
                             {(() => {
-                                const total = tenants.length || 1;
-                                const withRules = tenants.filter(t => t.rule_count > 0).length;
-                                const withTemplates = tenants.filter(t => t.template_count > 0).length;
+                                const total = tenants.length;
+                                const withRules = tenants.filter(t => toSafeCount(t.rule_count) > 0).length;
+                                const withTemplates = tenants.filter(t => toSafeCount(t.template_count) > 0).length;
                                 const withFlows = tenants.filter(t => (t.flow_count || 0) > 0).length;
                                 const withSchedules = tenants.filter(t => (t.schedule_count || 0) > 0).length;
                                 return <RingGrid items={[
-                                    { label: '规则', value: Math.round(withRules / total * 100), color: '#fa8c16', sub: `${withRules}/${total} 个租户已配` },
-                                    { label: '模板', value: Math.round(withTemplates / total * 100), color: '#eb2f96', sub: `${withTemplates}/${total} 个租户已配` },
-                                    { label: '流程', value: Math.round(withFlows / total * 100), color: '#722ed1', sub: `${withFlows}/${total} 个租户已配` },
-                                    { label: '定时', value: Math.round(withSchedules / total * 100), color: '#13c2c2', sub: `${withSchedules}/${total} 个租户已配` },
+                                    { label: '规则', value: getSafePercent(withRules, total), color: '#fa8c16', sub: getCoverageSubtext(withRules, total, '个租户已配') },
+                                    { label: '模板', value: getSafePercent(withTemplates, total), color: '#eb2f96', sub: getCoverageSubtext(withTemplates, total, '个租户已配') },
+                                    { label: '流程', value: getSafePercent(withFlows, total), color: '#722ed1', sub: getCoverageSubtext(withFlows, total, '个租户已配') },
+                                    { label: '定时', value: getSafePercent(withSchedules, total), color: '#13c2c2', sub: getCoverageSubtext(withSchedules, total, '个租户已配') },
                                 ]} />;
                             })()}
                         </Card>
@@ -616,16 +642,16 @@ const TenantOverviewPage: React.FC = () => {
                             extra={<Text type="secondary" style={{ fontSize: 12 }}>已配置 / 总租户</Text>}
                             styles={{ body: { padding: '20px' } }} style={{ flex: 1 }}>
                             {(() => {
-                                const total = tenants.length || 1;
+                                const total = tenants.length;
                                 const withChannel = tenants.filter(t => (t.notification_channel_count || 0) > 0).length;
                                 const withTemplate = tenants.filter(t => (t.notification_template_count || 0) > 0).length;
                                 const withCmdb = tenants.filter(t => (t.cmdb_count || 0) > 0).length;
                                 const withPlugin = tenants.filter(t => (t.plugin_count || 0) > 0).length;
                                 return <RingGrid items={[
-                                    { label: '通知渠道', value: Math.round(withChannel / total * 100), color: '#1677ff', sub: `${withChannel}/${total} 个租户已配` },
-                                    { label: '通知模板', value: Math.round(withTemplate / total * 100), color: '#13c2c2', sub: `${withTemplate}/${total} 个租户已配` },
-                                    { label: 'CMDB', value: Math.round(withCmdb / total * 100), color: '#fa8c16', sub: `${withCmdb}/${total} 个租户已配` },
-                                    { label: '插件', value: Math.round(withPlugin / total * 100), color: '#722ed1', sub: `${withPlugin}/${total} 个租户已配` },
+                                    { label: '通知渠道', value: getSafePercent(withChannel, total), color: '#1677ff', sub: getCoverageSubtext(withChannel, total, '个租户已配') },
+                                    { label: '通知模板', value: getSafePercent(withTemplate, total), color: '#13c2c2', sub: getCoverageSubtext(withTemplate, total, '个租户已配') },
+                                    { label: 'CMDB', value: getSafePercent(withCmdb, total), color: '#fa8c16', sub: getCoverageSubtext(withCmdb, total, '个租户已配') },
+                                    { label: '插件', value: getSafePercent(withPlugin, total), color: '#722ed1', sub: getCoverageSubtext(withPlugin, total, '个租户已配') },
                                 ]} />;
                             })()}
                         </Card>
@@ -636,21 +662,23 @@ const TenantOverviewPage: React.FC = () => {
                             extra={<Text type="secondary" style={{ fontSize: 12 }}>已具备 / 总租户</Text>}
                             styles={{ body: { padding: '20px' } }} style={{ flex: 1 }}>
                             {(() => {
-                                const total = tenants.length || 1;
-                                const withMembers = tenants.filter(t => t.member_count >= 2).length;
-                                const withAudit = tenants.filter(t => t.audit_log_count > 0).length;
+                                const total = tenants.length;
+                                const withMembers = tenants.filter(t => toSafeCount(t.member_count) >= 2).length;
+                                const withAudit = tenants.filter(t => toSafeCount(t.audit_log_count) > 0).length;
                                 const withSecret = tenants.filter(t => (t.secret_count || 0) > 0).length;
                                 const withGit = tenants.filter(t => (t.git_count || 0) > 0).length;
                                 return <RingGrid items={[
-                                    { label: '多成员', value: Math.round(withMembers / total * 100), color: '#1677ff', sub: `${withMembers}/${total} ≥2 成员` },
-                                    { label: '有审计', value: Math.round(withAudit / total * 100), color: '#722ed1', sub: `${withAudit}/${total} 有审计记录` },
-                                    { label: '有凭据', value: Math.round(withSecret / total * 100), color: '#fa8c16', sub: `${withSecret}/${total} 已配凭据` },
-                                    { label: '有仓库', value: Math.round(withGit / total * 100), color: '#52c41a', sub: `${withGit}/${total} 已配 Git` },
+                                    { label: '多成员', value: getSafePercent(withMembers, total), color: '#1677ff', sub: getCoverageSubtext(withMembers, total, '≥2 成员') },
+                                    { label: '有审计', value: getSafePercent(withAudit, total), color: '#722ed1', sub: getCoverageSubtext(withAudit, total, '有审计记录') },
+                                    { label: '有凭据', value: getSafePercent(withSecret, total), color: '#fa8c16', sub: getCoverageSubtext(withSecret, total, '已配凭据') },
+                                    { label: '有仓库', value: getSafePercent(withGit, total), color: '#52c41a', sub: getCoverageSubtext(withGit, total, '已配 Git') },
                                 ]} />;
                             })()}
                         </Card>
                     </Col>
                 </Row>
+                    </>
+                )}
 
 
             </Spin>

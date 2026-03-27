@@ -1,36 +1,33 @@
 import { ForkOutlined } from '@ant-design/icons';
 import { Badge, Typography, Empty, Button } from 'antd';
-import { useAccess, useRequest } from '@umijs/max';
+import { useAccess } from '@umijs/max';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import React from 'react';
-import { request, history } from '@umijs/max';
+import { history } from '@umijs/max';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
-import { fetchAllPages } from '@/utils/fetchAllPages';
 
-async function getGitRepos() {
-    return fetchAllPages<any>((page, pageSize) => request('/api/v1/tenant/git-repos', {
-        method: 'GET',
-        params: { page, page_size: pageSize },
-    }));
+dayjs.extend(relativeTime);
+
+function resolveRepoBadgeStatus(status?: string) {
+    if (status === 'error') {
+        return 'error';
+    }
+    if (status === 'ready' || status === 'active') {
+        return 'success';
+    }
+    if (status === 'syncing') {
+        return 'processing';
+    }
+    return 'default';
 }
 
 const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
-    const { data: rawData, loading, refresh } = useRequest(getGitRepos, {
-        ready: !!access.canViewRepositories,
-    });
-    const data = rawData as any;
-    let items: any[] = [];
-    if (Array.isArray(data)) {
-        items = data;
-    } else if (Array.isArray(data?.data)) {
-        items = data.data;
-    } else if (Array.isArray(data?.items)) {
-        items = data.items;
-    } else if (Array.isArray(data?.data?.items)) {
-        items = data.data.items;
-    }
+    const { data, loading, refresh } = useDashboardSection('git');
+    const items = Array.isArray(data?.repos) ? data.repos : [];
 
     return (
         <WidgetWrapper title="Git 仓库状态" icon={<ForkOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
@@ -48,7 +45,7 @@ const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                     {items.map((item: any, index: number) => (
                         <div key={item.id || index} style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                                <Badge status={item.status === 'error' ? 'error' : (item.sync_enabled ? 'processing' : 'default')} />
+                                <Badge status={resolveRepoBadgeStatus(item.status) as any} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                                         <Typography.Text ellipsis strong style={{ fontSize: 13, color: '#262626' }}>

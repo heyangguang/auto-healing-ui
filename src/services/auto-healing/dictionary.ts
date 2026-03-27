@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { unwrapItems } from './responseAdapters';
 
 /**
  * 字典项类型
@@ -20,28 +21,35 @@ export interface DictItem {
     is_active: boolean;
 }
 
+export interface DictionaryTypeSummary {
+    dict_type: string;
+    count: number;
+}
+
+type DictionaryItemsEnvelope = {
+    data?: Record<string, DictItem[]>;
+};
+
 /**
  * 批量查询字典
  * @param types 可选，按类型筛选（逗号分隔）
  */
 export async function getDictionaries(types?: string[]) {
-    return request<{
-        data: Record<string, DictItem[]>;
-        meta: { types_count: number; items_count: number };
-    }>('/api/v1/common/dictionaries', {
+    const response = await request<DictionaryItemsEnvelope>('/api/v1/common/dictionaries', {
         method: 'GET',
         params: types?.length ? { types: types.join(',') } : undefined,
     });
+    return response?.data || {};
 }
 
 /**
  * 查询可用字典类型列表
  */
 export async function getDictionaryTypes() {
-    return request<{
+    return unwrapItems(await request<{
         data: Array<{ dict_type: string; count: number }>;
         total: number;
     }>('/api/v1/common/dictionaries/types', {
         method: 'GET',
-    });
+    })) as DictionaryTypeSummary[];
 }

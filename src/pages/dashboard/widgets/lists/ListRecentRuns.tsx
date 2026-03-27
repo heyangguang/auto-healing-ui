@@ -1,20 +1,17 @@
 import { FileTextOutlined } from '@ant-design/icons';
 import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
-import { useAccess, useRequest, history } from '@umijs/max';
+import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
-import { getExecutionRuns } from '@/services/auto-healing/execution';
 import { RUN_STATUS_MAP } from '@/constants/executionDicts';
+import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
 const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
-    const { data: rawData, loading, refresh } = useRequest(() => getExecutionRuns({ page_size: 15 }), {
-        ready: !!access.canViewTaskDetail,
-    });
-    const data = rawData as any;
-    const items = data?.data ?? data?.items ?? [];
+    const { data, loading, refresh } = useDashboardSection('execution');
+    const items = Array.isArray(data?.recent_runs) ? data.recent_runs : [];
 
     return (
         <WidgetWrapper title="最近执行记录" icon={<FileTextOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
@@ -43,7 +40,6 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                         (Array.isArray(items) ? items : []).map((item: any, index: number) => {
                             const st = RUN_STATUS_MAP[item.status] || { color: 'default', text: item.status };
                             const triggeredBy = item.triggered_by || '-';
-                            const stats = item.stats || { ok: 0, failed: 0, changed: 0 };
 
                             return (
                                 <div
@@ -77,7 +73,7 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                                             {triggeredBy}
                                         </Typography.Text>
                                         <Typography.Text ellipsis type="secondary" style={{ fontSize: 10 }}>
-                                            OK:{stats.ok} Fail:{stats.failed}
+                                            {item.completed_at ? '已完成' : '进行中'}
                                         </Typography.Text>
                                     </div>
 

@@ -115,6 +115,9 @@
     cursor: pointer;
     margin-left: 4px;
     white-space: nowrap;
+    background: none;
+    border: none;
+    padding: 0;
 }
 
 .standard-table-clear-filters:hover {
@@ -178,6 +181,9 @@
     user-select: none;
     transition: color 0.2s;
     margin-right: 12px;
+    background: none;
+    border: none;
+    padding: 0;
 }
 
 .standard-table-advanced-toggle:hover {

@@ -1,36 +1,59 @@
 import { request } from '@umijs/max';
+import {
+    deleteTenantPluginsId,
+    getTenantPlugins,
+    getTenantPluginsId,
+    postTenantPlugins,
+    postTenantPluginsIdSync,
+    putTenantPluginsId,
+} from '@/services/generated/auto-healing/plugins';
+import { unwrapData } from './responseAdapters';
+
+export type PluginRecord = AutoHealing.Plugin & {
+    max_failures?: number;
+    updated_at?: string;
+};
+
+export type PluginListParams = {
+    description?: string;
+    description__exact?: string;
+    name?: string;
+    name__exact?: string;
+    page?: number;
+    page_size?: number;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+    status?: 'active' | 'inactive' | 'error';
+    type?: 'itsm' | 'cmdb';
+};
+
+export interface PluginStats {
+    active_count: number;
+    by_status: { active: number; error: number; inactive: number };
+    by_type: { cmdb: number; itsm: number };
+    error_count: number;
+    inactive_count: number;
+    sync_disabled: number;
+    sync_enabled: number;
+    total: number;
+}
+
+type PluginStatsEnvelope = {
+    data: PluginStats;
+};
 
 /**
  * 获取插件列表
  */
-export async function getPlugins(params?: {
-    page?: number;
-    page_size?: number;
-    type?: 'itsm' | 'cmdb';
-    status?: 'active' | 'inactive' | 'error';
-}) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.Plugin>>('/api/v1/tenant/plugins', {
-        method: 'GET',
-        params,
-    });
+export async function getPlugins(params?: PluginListParams) {
+    return getTenantPlugins(params as GeneratedAutoHealing.getTenantPluginsParams) as Promise<AutoHealing.PaginatedResponse<PluginRecord>>;
 }
 
 /**
  * 获取插件统计
  */
 export async function getPluginsStats() {
-    return request<{
-        data: {
-            total: number;
-            by_type: { itsm: number; cmdb: number };
-            by_status: { active: number; inactive: number; error: number };
-            sync_enabled: number;
-            sync_disabled: number;
-            active_count: number;
-            inactive_count: number;
-            error_count: number;
-        }
-    }>('/api/v1/tenant/plugins/stats', {
+    return request<PluginStatsEnvelope>('/api/v1/tenant/plugins/stats', {
         method: 'GET',
     });
 }
@@ -39,38 +62,28 @@ export async function getPluginsStats() {
  * 获取插件详情
  */
 export async function getPlugin(id: string) {
-    return request<AutoHealing.Plugin>(`/api/v1/tenant/plugins/${id}`, {
-        method: 'GET',
-    });
+    return unwrapData(await (getTenantPluginsId({ id }) as Promise<{ data: PluginRecord } | PluginRecord>));
 }
 
 /**
  * 创建插件
  */
 export async function createPlugin(data: AutoHealing.CreatePluginRequest) {
-    return request<AutoHealing.Plugin>('/api/v1/tenant/plugins', {
-        method: 'POST',
-        data,
-    });
+    return unwrapData(await (postTenantPlugins({ data }) as Promise<{ data: PluginRecord } | PluginRecord>));
 }
 
 /**
  * 更新插件
  */
 export async function updatePlugin(id: string, data: AutoHealing.UpdatePluginRequest) {
-    return request<AutoHealing.Plugin>(`/api/v1/tenant/plugins/${id}`, {
-        method: 'PUT',
-        data,
-    });
+    return unwrapData(await (putTenantPluginsId({ id }, { data }) as Promise<{ data: PluginRecord } | PluginRecord>));
 }
 
 /**
  * 删除插件
  */
 export async function deletePlugin(id: string) {
-    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/plugins/${id}`, {
-        method: 'DELETE',
-    });
+    return deleteTenantPluginsId({ id }) as Promise<AutoHealing.SuccessResponse>;
 }
 
 /**
@@ -86,9 +99,9 @@ export async function testPlugin(id: string) {
  * 触发手动同步
  */
 export async function syncPlugin(id: string) {
-    return request<AutoHealing.PluginSyncLog>(`/api/v1/tenant/plugins/${id}/sync`, {
-        method: 'POST',
-    });
+    return unwrapData(
+        await (postTenantPluginsIdSync({ id }) as Promise<{ data: AutoHealing.PluginSyncLog } | AutoHealing.PluginSyncLog>),
+    );
 }
 
 /**
@@ -121,4 +134,3 @@ export async function deactivatePlugin(id: string) {
         method: 'POST',
     });
 }
-

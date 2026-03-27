@@ -1,3 +1,4 @@
+import type { Edge, Node } from 'reactflow';
 import dagre from 'dagre';
 
 /**
@@ -9,8 +10,8 @@ import dagre from 'dagre';
  * @param forceLayout 是否强制重新布局所有节点（忽略已有位置）
  */
 export const getLayoutedElements = (
-    nodes: any[],
-    edges: any[],
+    nodes: Node[],
+    edges: Edge[],
     direction = 'TB',
     forceLayout = false,
 ) => {
@@ -40,11 +41,15 @@ export const getLayoutedElements = (
             !node.position || (node.position.x === 0 && node.position.y === 0);
 
         if (forceLayout || isMissingPosition) {
-            node.position = {
-                x: nodeWithPosition.x - 90,
-                y: nodeWithPosition.y - 30,
+            return {
+                ...node,
+                position: {
+                    x: nodeWithPosition.x - 90,
+                    y: nodeWithPosition.y - 30,
+                },
             };
         }
+
         return node;
     });
 
