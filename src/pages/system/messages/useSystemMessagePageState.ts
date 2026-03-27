@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { message } from 'antd';
 import {
   markAllAsRead,
@@ -13,6 +13,16 @@ function useSystemMessageViewState() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [currentMessage, setCurrentMessage] = useState<SiteMessage | null>(null);
   const { refreshTrigger, triggerRefresh } = useRefreshTrigger();
+
+  useEffect(() => {
+    const handleRefresh = () => triggerRefresh();
+    window.addEventListener('site-messages:new', handleRefresh);
+    window.addEventListener('site-messages:read', handleRefresh);
+    return () => {
+      window.removeEventListener('site-messages:new', handleRefresh);
+      window.removeEventListener('site-messages:read', handleRefresh);
+    };
+  }, [triggerRefresh]);
 
   return {
     selectedRowKeys,

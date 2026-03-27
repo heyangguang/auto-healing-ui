@@ -14,6 +14,11 @@ export type PendingWorkbenchState = {
     total: number;
 };
 
+export type WorkbenchLoadError = {
+    message: string;
+    section: string;
+};
+
 export interface MergedTask {
     count: number;
     displayTime: string;

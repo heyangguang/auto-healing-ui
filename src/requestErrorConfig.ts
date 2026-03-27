@@ -2,27 +2,23 @@
 import type { RequestConfig } from '@umijs/max';
 import { history, request } from '@umijs/max';
 import { message, notification } from 'antd';
-import { getTenantContextHeaders, hasActiveImpersonationSession } from '@/utils/tenantContext';
+import { getTenantContextHeaders } from '@/utils/tenantContext';
+import {
+  __TEST_ONLY__ as REQUEST_AUTH_TEST_ONLY,
+  ensureFreshToken,
+  getResponseHeaderValue,
+  refreshToken,
+  TokenManager,
+} from '@/utils/requestAuth';
 
 const loginPath = '/user/login';
+const LOGIN_EXPIRED_MESSAGE = '登录已过期，请重新登录';
 
-// Token 存储 key
-const TOKEN_KEY = 'auto_healing_token';
-const REFRESH_TOKEN_KEY = 'auto_healing_refresh_token';
-const REMEMBER_KEY = 'auto_healing_remember';
-
-type TenantSummary = { id: string };
-type TenantStorageState = {
-  currentTenantId?: string;
-  tenants?: TenantSummary[];
+type RequestOptionsWithFlags = RequestOptions & {
+  authRetryAttempted?: boolean;
+  skipTokenRefresh?: boolean;
+  suppressForbiddenError?: boolean;
 };
-type RefreshTokenResponse = {
-  access_token?: string;
-  refresh_token?: string;
-  tenants?: TenantSummary[];
-  current_tenant_id?: string;
-};
-type RequestOptionsWithFlags = RequestOptions & { skipTokenRefresh?: boolean };
 type ErrorPayload = {
   code?: string | number;
   message?: string;
@@ -60,204 +56,15 @@ type ErrorWithRequestContext = Error & {
   info?: BizError['info'];
 };
 
-// 获取当前存储引擎：记住登录 → localStorage，否则 → sessionStorage
-const getStorage = (): Storage => {
-  return localStorage.getItem(REMEMBER_KEY) === 'true' ? localStorage : sessionStorage;
-};
-
-const getStoredValue = (key: string): string | null => {
-  return getStorage().getItem(key) || localStorage.getItem(key) || sessionStorage.getItem(key);
-};
-
-// Token 管理工具
-export const TokenManager = {
-  getToken: () => getStoredValue(TOKEN_KEY),
-  getRefreshToken: () => getStoredValue(REFRESH_TOKEN_KEY),
-  setTokens: (accessToken: string, refreshToken?: string) => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-    const storage = getStorage();
-    storage.setItem(TOKEN_KEY, accessToken);
-    if (refreshToken) {
-      storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-    }
-    cachedTokenExpiry = null; // 清除缓存，强制重新解析
-  },
-  clearTokens: () => {
-    // 清除两个存储中的 token + 记住登录偏好
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(REMEMBER_KEY);
-    localStorage.removeItem('tenant-storage');
-    localStorage.removeItem('is-platform-admin');
-    localStorage.removeItem('impersonation-storage');
-    localStorage.removeItem('auto_healing_saved_login');
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-    cachedTokenExpiry = null;
-  },
-  // 设置"记住登录"偏好
-  setRememberMe: (remember: boolean) => {
-    if (remember) {
-      localStorage.setItem(REMEMBER_KEY, 'true');
-    } else {
-      localStorage.removeItem(REMEMBER_KEY);
-    }
-  },
-  getRememberMe: () => localStorage.getItem(REMEMBER_KEY) === 'true',
-};
-
-// ==================== 主动刷新 Token 机制 ====================
-
-// 解析 JWT 获取过期时间
-const parseJwtExpiry = (token: string): number | null => {
-  try {
-    const payloadBase64 = token.split('.')[1];
-    if (!payloadBase64) return null;
-    const normalizedPayload = payloadBase64
-      .replace(/-/g, '+')
-      .replace(/_/g, '/')
-      .padEnd(Math.ceil(payloadBase64.length / 4) * 4, '=');
-    const payload = JSON.parse(atob(normalizedPayload));
-    return payload.exp ? payload.exp * 1000 : null; // 转换为毫秒
-  } catch {
-    return null;
-  }
-};
-
-// 缓存 JWT 过期时间，避免每次请求重复解析
-let cachedTokenExpiry: { token: string; expiry: number | null } | null = null;
-
-// 检查 token 是否即将过期（提前 5 分钟刷新）
-const isTokenExpiringSoon = (token: string): boolean => {
-  let expiry: number | null;
-  if (cachedTokenExpiry && cachedTokenExpiry.token === token) {
-    expiry = cachedTokenExpiry.expiry;
-  } else {
-    expiry = parseJwtExpiry(token);
-    cachedTokenExpiry = { token, expiry };
-  }
-  if (!expiry) return true;
-  const bufferTime = 5 * 60 * 1000; // 5 分钟
-  return Date.now() >= expiry - bufferTime;
-};
-
-// 刷新 token 状态管理
-let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
-
-// 刷新 token
-const doRefreshToken = async (): Promise<string | null> => {
-  const refreshTokenValue = TokenManager.getRefreshToken();
-  if (!refreshTokenValue) {
-    return null;
-  }
-
-  try {
-    const response = await fetch('/api/v1/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshTokenValue }),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json() as RefreshTokenResponse;
-    if (data.access_token) {
-      TokenManager.setTokens(data.access_token, data.refresh_token);
-      console.log('[Auth] Token 已自动刷新');
-
-      // 🆕 更新租户信息：只更新列表，保留用户当前选择的租户
-      const isPlatformAdmin = localStorage.getItem('is-platform-admin') === 'true';
-      const isImpersonating = hasActiveImpersonationSession();
-      if (!isPlatformAdmin && data.tenants) {
-        const existingRaw = localStorage.getItem('tenant-storage');
-        let preservedTenantId = data.current_tenant_id; // 默认使用后端返回的
-        if (existingRaw) {
-          try {
-            const existing = JSON.parse(existingRaw) as TenantStorageState;
-            // 如果用户当前选择的租户在新列表中仍然存在，则保留
-            if (existing.currentTenantId && data.tenants.some((tenant) => tenant.id === existing.currentTenantId)) {
-              preservedTenantId = existing.currentTenantId;
-            }
-          } catch { /* ignore */ }
-        }
-        const tenantStorage = {
-          currentTenantId: preservedTenantId,
-          tenants: data.tenants,
-        };
-        localStorage.setItem('tenant-storage', JSON.stringify(tenantStorage));
-        console.log('[Auth] 租户列表已更新，当前租户:', preservedTenantId);
-      } else if (isPlatformAdmin && !isImpersonating) {
-        localStorage.removeItem('tenant-storage');
-      }
-
-      return data.access_token;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-// 确保同一时间只有一个刷新请求
-const refreshToken = async (): Promise<string | null> => {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise;
-  }
-
-  isRefreshing = true;
-  refreshPromise = doRefreshToken().finally(() => {
-    isRefreshing = false;
-    refreshPromise = null;
-  });
-
-  return refreshPromise;
-};
-
-// 主动检查并刷新 token（在每次请求前调用）
-const ensureFreshToken = async (): Promise<string | null> => {
-  const token = TokenManager.getToken();
-  if (!token) return null;
-
-  // 如果 token 即将过期，主动刷新
-  if (isTokenExpiringSoon(token)) {
-    console.log('[Auth] Token 即将过期，主动刷新...');
-    const newToken = await refreshToken();
-    return newToken || token;
-  }
-
-  return token;
-};
-
 // ==================== 错误处理配置 ====================
 
-enum ErrorShowType {
+export enum ErrorShowType {
   SILENT = 0,
   WARN_MESSAGE = 1,
   ERROR_MESSAGE = 2,
   NOTIFICATION = 3,
   REDIRECT = 9,
 }
-
-const getResponseHeaderValue = (
-  headers: Headers | Record<string, string | undefined> | { get?: (name: string) => string | null } | undefined,
-  headerName: string,
-) => {
-  if (!headers) return undefined;
-  if (headers instanceof Headers) {
-    return headers.get(headerName) ?? headers.get(headerName.toLowerCase()) ?? undefined;
-  }
-  if ('get' in headers && typeof headers.get === 'function') {
-    return headers.get(headerName) ?? headers.get(headerName.toLowerCase()) ?? undefined;
-  }
-  const recordHeaders = headers as Record<string, string | undefined>;
-  return recordHeaders[headerName] ?? recordHeaders[headerName.toLowerCase()];
-};
 
 export const errorConfig: RequestConfig = {
   errorConfig: {
@@ -304,28 +111,20 @@ export const errorConfig: RequestConfig = {
         const status = requestError.response.status;
         const data = requestError.response.data;
 
-        // 🆕 处理租户权限错误 (40300)
         if (data?.code === 40300) {
           const errorMsg = data?.message || '无权访问该租户';
-
-          // 平台管理员 Impersonation 相关错误 → 静默处理（路由守卫会重定向）
           if (errorMsg.includes('Impersonation')) {
-            console.log('[Request] 平台管理员未 Impersonation，已由路由守卫处理');
             return;
           }
 
           message.error(errorMsg);
-
-          // 如果用户未分配任何租户,跳转到提示页
           if (errorMsg.includes('未分配任何租户')) {
-            // 清除租户信息
             localStorage.removeItem('tenant-storage');
             history.push('/no-tenant');
           }
           return;
         }
 
-        // 401 未授权 - 尝试刷新 token 并重试
         if (status === 401) {
           const url = requestError.config?.url || '';
           if (history.location.pathname === loginPath || url.includes('/auth/')) {
@@ -333,35 +132,46 @@ export const errorConfig: RequestConfig = {
             return;
           }
 
-          // 尝试刷新 token
-        const newToken = await refreshToken();
-        if (newToken && requestError.config?.url) {
-          // 用新 token 重试请求
-          requestError.config.headers = {
-            ...(requestError.config.headers || {}),
-            Authorization: `Bearer ${newToken}`,
-          };
-          return request(requestError.config.url, requestError.config);
-        } else {
-            // 刷新失败，跳转登录
+          if (requestError.config?.authRetryAttempted) {
             TokenManager.clearTokens();
-            message.error('登录已过期，请重新登录');
+            message.error(LOGIN_EXPIRED_MESSAGE);
             history.push(loginPath);
+            return;
           }
+
+          const newToken = await refreshToken();
+          if (newToken && requestError.config?.url) {
+            const retryConfig: RequestOptionsWithFlags = {
+              ...requestError.config,
+              authRetryAttempted: true,
+              headers: {
+                ...(requestError.config.headers || {}),
+                Authorization: `Bearer ${newToken}`,
+              },
+              skipTokenRefresh: true,
+            };
+            return request(requestError.config.url, retryConfig);
+          }
+          TokenManager.clearTokens();
+          message.error(LOGIN_EXPIRED_MESSAGE);
+          history.push(loginPath);
           return;
         }
 
         if (status === 403) {
-          // 静默处理：权限不足由路由 access 和 UI 按钮 disabled 状态处理
-          // 避免工作台多个 API 同时 403 导致满屏弹窗
-          console.warn('[403] 没有权限访问:', requestError.config?.url);
+          if (requestError.config?.suppressForbiddenError) {
+            console.warn('[403] Suppressed forbidden response:', requestError.config?.url);
+            return;
+          }
+
+          const rawError = data?.error;
+          const errorMsg = (typeof rawError === 'string' ? rawError : rawError?.message)
+            || data?.message
+            || '没有权限访问该资源';
+          message.error(errorMsg);
           return;
         }
 
-        // 后端错误响应有两种格式：
-        // 1. {error: {code: "...", message: "..."}} — response.Error() 标准格式
-        // 2. {error: "错误信息"}                     — gin.H{} 简单格式
-        // 3. {message: "错误信息"}                   — 部分旧接口
         const rawError = data?.error;
         const errorMsg = (typeof rawError === 'string' ? rawError : rawError?.message)
           || data?.message
@@ -376,16 +186,13 @@ export const errorConfig: RequestConfig = {
     },
   },
 
-  // 请求拦截器 - 注入 JWT Token、X-Tenant-ID,并主动检查刷新
   requestInterceptors: [
     async (config: RequestOptions) => {
-      // 跳过认证相关接口
       const url = config.url || '';
       if (url.includes('/auth/login') || url.includes('/auth/refresh')) {
         return config;
       }
 
-      // 主动检查并刷新 token（轮询请求跳过刷新，避免后台请求续期）
       let token: string | null;
       if ((config as RequestOptionsWithFlags).skipTokenRefresh) {
         token = TokenManager.getToken();
@@ -398,7 +205,6 @@ export const errorConfig: RequestConfig = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // 🆕 检查是否为平台管理员（从 localStorage 读取标志）
       const isPlatformAdmin = localStorage.getItem('is-platform-admin') === 'true';
       Object.assign(headers, getTenantContextHeaders(url, isPlatformAdmin));
 
@@ -406,18 +212,12 @@ export const errorConfig: RequestConfig = {
     },
   ],
 
-  // 响应拦截器
   responseInterceptors: [
     (response) => {
-      // 🆕 检测后端 X-Refresh-Token 信号：JWT 中的 tenant_ids 已过时，需要刷新
-      // 场景：管理员将用户添加到新租户后，用户的旧 JWT 不包含该租户，
-      //       后端回退到数据库查询确认有权限后，通知前端刷新 token 以更新缓存
       const shouldRefresh = getResponseHeaderValue(response.headers, 'X-Refresh-Token');
       if (shouldRefresh === 'true') {
-        console.log('[Auth] 收到 X-Refresh-Token 信号，后台刷新 Token 更新租户缓存...');
-        // 异步刷新，不阻塞当前响应
         refreshToken().catch(() => {
-          console.warn('[Auth] 后台刷新 Token 失败，下次请求将重试');
+          /* noop */
         });
       }
       return response;
@@ -425,7 +225,9 @@ export const errorConfig: RequestConfig = {
   ],
 };
 
+export { TokenManager } from '@/utils/requestAuth';
+
 export const __TEST_ONLY__ = {
-  parseJwtExpiry,
-  isTokenExpiringSoon,
+  LOGIN_EXPIRED_MESSAGE,
+  ...REQUEST_AUTH_TEST_ONLY,
 };

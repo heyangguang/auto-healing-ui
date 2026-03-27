@@ -80,4 +80,15 @@ describe('NotificationBell', () => {
     fireEvent.click(screen.getByRole('button', { name: '查看全部站内消息' }));
     expect(history.push).toHaveBeenCalledWith('/system/messages');
   });
+
+  it('shows an explicit error state when unread/message loading fails', async () => {
+    (getUnreadCount as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+    (getSiteMessages as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+
+    render(React.createElement(NotificationBell));
+
+    fireEvent.click(await screen.findByRole('button', { name: '未读消息' }));
+
+    expect(await screen.findByText('站内信加载失败，请稍后重试')).toBeTruthy();
+  });
 });

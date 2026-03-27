@@ -2,6 +2,7 @@
  * Dashboard Builder - 状态管理与持久化
  * 管理 Workspace 的创建/删除/重命名，Widget 的添加/删除，布局的保存/恢复
  */
+import { getActiveImpersonationSession, getCurrentAuthScopeKey, loadTenantState } from '@/utils/tenantContext';
 
 // ==================== 类型定义 ====================
 
@@ -45,7 +46,7 @@ export interface DashboardState {
 
 // ==================== 常量 ====================
 
-const STORAGE_KEY = 'auto_healing_dashboard_v5';
+const STORAGE_KEY_PREFIX = 'auto_healing_dashboard_v5';
 
 // ==================== 默认布局 ====================
 
@@ -94,11 +95,27 @@ const DEFAULT_STATE: DashboardState = {
     activeWorkspaceId: 'default',
 };
 
+function getDashboardStorageKey() {
+    const impersonationSession = getActiveImpersonationSession();
+    const tenantId = loadTenantState().currentTenantId;
+    const userScope = getCurrentAuthScopeKey();
+
+    if (impersonationSession?.tenantId) {
+        return `${STORAGE_KEY_PREFIX}:${userScope}:impersonation:${impersonationSession.tenantId}`;
+    }
+
+    if (tenantId) {
+        return `${STORAGE_KEY_PREFIX}:${userScope}:tenant:${tenantId}`;
+    }
+
+    return `${STORAGE_KEY_PREFIX}:${userScope}:platform`;
+}
+
 // ==================== 持久化函数 ====================
 
 export function loadDashboardState(): DashboardState {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(getDashboardStorageKey());
         if (raw) {
             const parsed = JSON.parse(raw) as DashboardState;
             // 验证基本结构
@@ -123,7 +140,7 @@ export function saveDashboardState(state: DashboardState): void {
         if (!userState.workspaces.find(ws => ws.id === userState.activeWorkspaceId)) {
             userState.activeWorkspaceId = userState.workspaces[0]?.id || 'default';
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userState));
+        localStorage.setItem(getDashboardStorageKey(), JSON.stringify(userState));
     } catch (e) {
         console.warn('[Dashboard] Failed to save state:', e);
     }
@@ -134,6 +151,10 @@ export function saveDashboardState(state: DashboardState): void {
  */
 export function clearLegacyCache(): void {
     try {
+        const scopedKeys = Object.keys(localStorage).filter((key) => key.startsWith(STORAGE_KEY_PREFIX));
+        for (const key of scopedKeys) {
+            localStorage.removeItem(key);
+        }
         localStorage.removeItem('auto_healing_dashboard_v1');
         localStorage.removeItem('auto_healing_dashboard_v2');
         localStorage.removeItem('auto_healing_dashboard_v3');
@@ -156,3 +177,7 @@ export function generateWorkspaceId(): string {
 export function getDefaultWorkspace(): DashboardWorkspace {
     return { ...DEFAULT_WORKSPACE, widgets: [...DEFAULT_WORKSPACE.widgets], layouts: [...DEFAULT_WORKSPACE.layouts] };
 }
+
+export const __TEST_ONLY__ = {
+    getDashboardStorageKey,
+};

@@ -1,6 +1,8 @@
 import {
   applyImpersonationTableRequest,
   buildImpersonationListParams,
+  buildPlatformImpersonationParams,
+  buildTenantImpersonationHistoryParams,
   type ImpersonationTableRequestParams,
 } from './impersonationShared';
 import type { ImpersonationRequest } from '@/services/auto-healing/platform/impersonation';
@@ -56,6 +58,37 @@ describe('impersonationShared helpers', () => {
     })).toEqual({
       data: [mockItems[0]],
       total: 1,
+    });
+  });
+
+  it('drops unsupported tenant-history sorter/exact fields while preserving supported filters', () => {
+    expect(buildTenantImpersonationHistoryParams({
+      ...baseParams,
+      searchField: 'requester_name__exact',
+      searchValue: 'Alice',
+      advancedSearch: { reason__exact: '排障', status: 'pending' },
+      sorter: { field: 'created_at', order: 'descend' },
+    })).toEqual({
+      page: 1,
+      page_size: 10,
+      requester_name: 'Alice',
+      reason: '排障',
+      status: 'pending',
+    });
+  });
+
+  it('only sends requester-side filters that the platform request list really supports', () => {
+    expect(buildPlatformImpersonationParams({
+      ...baseParams,
+      searchField: 'tenant_name',
+      searchValue: 'Tenant A',
+      advancedSearch: { status: 'approved', requester_name: 'Alice' },
+      sorter: { field: 'created_at', order: 'descend' },
+    })).toEqual({
+      page: 1,
+      page_size: 10,
+      tenant_name: 'Tenant A',
+      status: 'approved',
     });
   });
 });

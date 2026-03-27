@@ -42,6 +42,6 @@ export function buildScheduleRequestData(options: {
             : (Object.keys(normalizedOverrideValues).length > 0 ? normalizedOverrideValues : undefined),
         secrets_source_ids: isEdit ? secretsSourceIds : (secretsSourceIds.length > 0 ? secretsSourceIds : undefined),
         skip_notification: isEdit ? skipNotification : (skipNotification || undefined),
-        max_failures: editingSchedule?.max_failures,
+        max_failures: typeof formValues.max_failures === 'number' ? formValues.max_failures : undefined,
     };
 }

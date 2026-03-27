@@ -74,6 +74,6 @@ describe('auto-healing auth service', () => {
       method: 'GET',
       params: { limit: 15 },
     });
-    expect(putAuthProfile).toHaveBeenCalledWith({ data: { display_name: 'Ops' } });
+    expect(putAuthProfile).toHaveBeenCalledWith({ display_name: 'Ops' });
   });
 });

@@ -161,8 +161,12 @@ export function useTenantMembersPageState(tenantId?: string) {
   );
   const memberUserIds = useMemo(() => new Set(members.map((member) => member.user_id)), [members]);
   const availableUsersForAdmin = useMemo(
-    () => simpleUsers.filter((user) => user.status === 'active' && !memberUserIds.has(user.id) && !user.is_platform_admin),
-    [memberUserIds, simpleUsers],
+    () => simpleUsers.filter((user) => (
+      user.status === 'active'
+      && !adminMemberIds.includes(user.id)
+      && !user.is_platform_admin
+    )),
+    [adminMemberIds, simpleUsers],
   );
   const pendingInvCount = useMemo(
     () => invitations.filter((invitation) => invitation.status === 'pending').length,
@@ -202,10 +206,14 @@ export function useTenantMembersPageState(tenantId?: string) {
     }
     setSubmitting(true);
     try {
-      await addTenantMember(tenantId, {
-        user_id: values.user_id,
-        role_id: adminRoleId,
-      });
+      if (memberUserIds.has(values.user_id)) {
+        await updateTenantMemberRole(tenantId, values.user_id, { role_id: adminRoleId });
+      } else {
+        await addTenantMember(tenantId, {
+          user_id: values.user_id,
+          role_id: adminRoleId,
+        });
+      }
       message.success('租户管理员设置成功');
       closeSetAdminModal();
       loadMembers();
@@ -216,7 +224,7 @@ export function useTenantMembersPageState(tenantId?: string) {
     } finally {
       setSubmitting(false);
     }
-  }, [adminRoleId, closeSetAdminModal, loadMembers, loadSimpleUsers, tenantId]);
+  }, [adminRoleId, closeSetAdminModal, loadMembers, loadSimpleUsers, memberUserIds, tenantId]);
 
   const handleInvite = useCallback(async (values: { email: string; role_id: string; send_email: boolean }) => {
     if (!tenantId) return;

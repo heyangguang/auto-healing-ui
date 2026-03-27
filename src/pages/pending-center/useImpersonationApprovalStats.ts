@@ -26,7 +26,7 @@ export default function useImpersonationApprovalStats(refreshTrigger: number) {
       }
       const pendingTotal = getImpersonationPendingStats(pendingItems);
       setStatsData({
-        total: Number(historyResponse.total ?? 0) + pendingTotal,
+        total: Number(historyResponse.total ?? 0),
         pending: pendingTotal,
       });
       setStatsError(null);

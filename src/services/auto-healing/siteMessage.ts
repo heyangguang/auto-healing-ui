@@ -6,7 +6,10 @@ import type { RequestOptions } from '@@/plugin-request/request';
 import { request } from '@umijs/max';
 import { normalizePaginatedResponse, unwrapData, unwrapItems } from './responseAdapters';
 
-type SiteMessageRequestOptions = RequestOptions & { skipTokenRefresh?: boolean };
+type SiteMessageRequestOptions = RequestOptions & {
+    skipTokenRefresh?: boolean;
+    suppressForbiddenError?: boolean;
+};
 
 // ==================== 类型定义 ====================
 
@@ -29,12 +32,20 @@ export interface UnreadCountPayload {
     unread_count: number;
 }
 
+export interface MarkAllReadPayload {
+    marked_count: number;
+}
+
 export interface SiteMessageQueryParams {
     page?: number;
     page_size?: number;
     keyword?: string;
     category?: string;
     is_read?: boolean;
+    date_from?: string;
+    date_to?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
 }
 
 // ==================== API ====================
@@ -65,7 +76,10 @@ export async function markAsRead(ids: string[]) {
 
 /** 标记所有消息为已读 */
 export async function markAllAsRead() {
-    return request<AutoHealing.SuccessResponse>('/api/v1/tenant/site-messages/read-all', { method: 'PUT' });
+    return unwrapData(await request<{ data: MarkAllReadPayload }>(
+        '/api/v1/tenant/site-messages/read-all',
+        { method: 'PUT' },
+    )) as MarkAllReadPayload;
 }
 
 /** 获取消息分类列表 */

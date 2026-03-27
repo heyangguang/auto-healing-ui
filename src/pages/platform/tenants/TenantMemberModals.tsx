@@ -85,7 +85,7 @@ export function SetTenantAdminModal({
       width={440}
     >
       <div style={{ marginBottom: 12, padding: '8px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 2, fontSize: 12, color: '#0050b3' }}>
-        从全量用户池中选择一个活跃用户，系统会以租户 admin 角色将其加入当前租户。
+        从全量用户池中选择一个活跃用户，系统会将其设为租户管理员；如果该用户已在租户内，会直接升级到 admin 角色。
       </div>
       <Form form={form} layout="vertical" onFinish={onSubmit} style={{ marginTop: 8 }}>
         <Form.Item name="user_id" label="选择用户" rules={[{ required: true, message: '请选择用户' }]}>

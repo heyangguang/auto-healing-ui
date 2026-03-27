@@ -3,6 +3,7 @@ import { getGitRepos } from '@/services/auto-healing/git-repos';
 import { getChannels, getTemplates } from '@/services/auto-healing/notification';
 import { getPlaybooks } from '@/services/auto-healing/playbooks';
 import { fetchAllPages } from './fetchAllPages';
+import { getTenantContextScopeKey } from './tenantContext';
 
 type CacheEntry<T> = {
   value?: T;
@@ -28,16 +29,27 @@ export const selectorInventoryKeys = {
 type SelectorInventoryKey =
   typeof selectorInventoryKeys[keyof typeof selectorInventoryKeys];
 
-const cache = new Map<SelectorInventoryKey, CacheEntry<unknown>>();
+const cache = new Map<string, CacheEntry<unknown>>();
+let currentScopeKey = 'anonymous:platform';
+
+function resolveScopedCacheKey(key: SelectorInventoryKey) {
+  const nextScopeKey = getTenantContextScopeKey();
+  if (nextScopeKey !== currentScopeKey) {
+    cache.clear();
+    currentScopeKey = nextScopeKey;
+  }
+  return `${nextScopeKey}:${key}`;
+}
 
 async function getCachedInventory<T>(
   key: SelectorInventoryKey,
   loader: () => Promise<T>,
   options?: CacheOptions,
 ): Promise<T> {
+  const scopedKey = resolveScopedCacheKey(key);
   const ttlMs = options?.ttlMs ?? DEFAULT_TTL_MS;
   const now = Date.now();
-  const existing = cache.get(key) as CacheEntry<T> | undefined;
+  const existing = cache.get(scopedKey) as CacheEntry<T> | undefined;
 
   if (!options?.forceRefresh) {
     if (existing?.value !== undefined && (existing.expiresAt ?? 0) > now) {
@@ -50,30 +62,31 @@ async function getCachedInventory<T>(
 
   const promise = loader()
     .then((value) => {
-      cache.set(key, {
+      cache.set(scopedKey, {
         value,
         expiresAt: Date.now() + ttlMs,
       });
       return value;
     })
     .catch((error) => {
-      const current = cache.get(key) as CacheEntry<T> | undefined;
+      const current = cache.get(scopedKey) as CacheEntry<T> | undefined;
       if (current?.promise === promise) {
-        cache.delete(key);
+        cache.delete(scopedKey);
       }
       throw error;
     });
 
-  cache.set(key, { promise });
+  cache.set(scopedKey, { promise });
   return promise;
 }
 
 export function clearSelectorInventoryCache() {
   cache.clear();
+  currentScopeKey = 'anonymous:platform';
 }
 
 export function invalidateSelectorInventory(key: SelectorInventoryKey) {
-  cache.delete(key);
+  cache.delete(resolveScopedCacheKey(key));
 }
 
 export function getCachedGitRepoInventory(options?: CacheOptions) {

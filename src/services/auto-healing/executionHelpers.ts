@@ -50,7 +50,7 @@ export function normalizeExecutionTask<T extends { target_hosts?: unknown }>(tas
 }
 
 export function toExecutionStatusQuery(status?: ExecutionStatusQuery) {
-    return status === 'partial' ? 'partial_success' : status;
+    return status;
 }
 
 export function normalizeExecutionRun<T extends {

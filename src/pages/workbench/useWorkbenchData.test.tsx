@@ -76,5 +76,8 @@ describe('useWorkbenchData', () => {
     });
 
     expect(result.current.favorites).toEqual([]);
+    expect(result.current.loadErrors).toEqual([
+      { section: 'favorites', message: '工作台收藏加载失败' },
+    ]);
   });
 });

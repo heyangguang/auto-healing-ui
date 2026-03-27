@@ -38,6 +38,26 @@ const searchFields: SearchField[] = [
     { key: 'name', label: '角色标识' },
 ];
 
+function getRoleKeywordFilter(params: RoleRequestParams) {
+    const quickSearchField = params.searchField;
+    const quickSearchValue = params.searchValue?.trim();
+    if (quickSearchValue && quickSearchField !== 'is_system') {
+        return quickSearchValue;
+    }
+
+    const nameFilter = params.advancedSearch?.name;
+    if (typeof nameFilter === 'string' && nameFilter.trim()) {
+        return nameFilter.trim();
+    }
+
+    const displayNameFilter = params.advancedSearch?.display_name;
+    if (typeof displayNameFilter === 'string' && displayNameFilter.trim()) {
+        return displayNameFilter.trim();
+    }
+
+    return undefined;
+}
+
 /* ========== 角色管理页面 ========== */
 const RolesPage: React.FC = () => {
     const access = useAccess();
@@ -254,7 +274,7 @@ const RolesPage: React.FC = () => {
 
     /* ========== 数据请求（前端搜索 + 假分页） ========== */
     const handleRequest = useCallback(async (params: RoleRequestParams) => {
-        const res = await getRoles();
+        const res = await getRoles({ name: getRoleKeywordFilter(params) });
         let items: AutoHealing.RoleWithStats[] = res || [];
 
         // 搜索过滤

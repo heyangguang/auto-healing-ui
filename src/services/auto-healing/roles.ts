@@ -1,6 +1,10 @@
 import { request } from '@umijs/max';
 import { normalizePaginatedResponse, unwrapData } from './responseAdapters';
 
+type RoleListParams = {
+    name?: string;
+};
+
 const normalizeRoleUsersPage = <T>(
     response: AutoHealing.PaginatedResponse<T>,
     requestedPageSize?: number,
@@ -12,18 +16,20 @@ const normalizeRoleUsersPage = <T>(
 /**
  * 获取租户级角色列表（排除平台专属角色）
  */
-export async function getRoles() {
+export async function getRoles(params?: RoleListParams) {
     return unwrapData(await request<{ data: AutoHealing.RoleWithStats[] }>('/api/v1/tenant/roles', {
         method: 'GET',
+        params,
     }));
 }
 
 /**
  * 获取平台级角色列表（包含所有角色）
  */
-export async function getPlatformRoles() {
+export async function getPlatformRoles(params?: RoleListParams) {
     return unwrapData(await request<{ data: AutoHealing.RoleWithStats[] }>('/api/v1/platform/roles', {
         method: 'GET',
+        params,
     }));
 }
 

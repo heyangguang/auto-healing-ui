@@ -52,10 +52,9 @@ jest.mock('@/components/StandardTable', () => {
       void props.request?.({
         page: 1,
         pageSize: 20,
-        searchField: 'requester_name',
-        searchValue: 'alice',
+        searchField: 'tenant_name',
+        searchValue: '租户 A',
         advancedSearch: { status: 'pending', tenant_name: '租户 A' },
-        sorter: { field: 'created_at', order: 'descend' },
       });
     }, [props.request]);
 
@@ -77,14 +76,14 @@ jest.mock('@/components/StandardTable', () => {
 
 describe('ImpersonationPage', () => {
   beforeEach(() => {
-    (listMyImpersonationRequests as jest.Mock).mockImplementation((params?: { status?: string; requester_name?: string }) => {
+    (listMyImpersonationRequests as jest.Mock).mockImplementation((params?: { status?: string; tenant_name?: string }) => {
       if (params?.status === 'pending') {
         return Promise.resolve({ data: [], total: 1 });
       }
       if (params?.status === 'active') {
         return Promise.resolve({ data: [], total: 2 });
       }
-      if (params?.requester_name === 'alice') {
+      if (params?.tenant_name === '租户 A') {
         return Promise.resolve({ data: [], total: 0 });
       }
       return Promise.resolve({ data: [], total: 3 });
@@ -109,11 +108,8 @@ describe('ImpersonationPage', () => {
       expect(listMyImpersonationRequests).toHaveBeenCalledWith({
         page: 1,
         page_size: 20,
-        requester_name: 'alice',
         tenant_name: '租户 A',
         status: 'pending',
-        sort_by: 'created_at',
-        sort_order: 'desc',
       });
     });
 

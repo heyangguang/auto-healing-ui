@@ -54,6 +54,21 @@ const searchFields: SearchField[] = [
     { key: 'name', label: '角色标识' },
 ];
 
+function applyPlatformRoleSearch(
+    roles: PlatformRoleRecord[],
+    value?: string,
+    field: 'display_name' | 'name' = 'display_name',
+) {
+    const keyword = value?.trim().toLowerCase();
+    if (!keyword) {
+        return roles;
+    }
+    return roles.filter((role) => {
+        const target = field === 'name' ? role.name : role.display_name || '';
+        return target.toLowerCase().includes(keyword);
+    });
+}
+
 const headerIcon = (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <circle cx="24" cy="20" r="8" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -100,25 +115,16 @@ const PlatformRolesPage: React.FC = () => {
         setLoading(true);
         setListLoadFailed(false);
         try {
-            const allRoles = await getPlatformRoles();
+            const keyword = value?.trim();
+            const allRoles = await getPlatformRoles(keyword ? { name: keyword } : undefined);
             if (listRequestSeqRef.current !== requestSeq) {
                 return;
             }
-            let list: PlatformRoleRecord[] = allRoles || [];
+            const list = applyPlatformRoleSearch(allRoles || [], value, field);
             setStats({
                 total: list.length,
                 system: list.filter(role => role.is_system).length,
             });
-
-            // 前端搜索
-            const sv = value?.trim().toLowerCase();
-            if (sv) {
-                if (field === 'display_name') {
-                    list = list.filter(r => (r.display_name || '').toLowerCase().includes(sv));
-                } else if (field === 'name') {
-                    list = list.filter(r => (r.name || '').toLowerCase().includes(sv));
-                }
-            }
 
             const tot = list.length;
             setTotal(tot);

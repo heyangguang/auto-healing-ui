@@ -40,10 +40,17 @@ declare namespace GeneratedAutoHealing {
   type ExecutionTask = {
     id?: string;
     name?: string;
-    playbook_template_id?: string;
-    target_hosts?: string[];
-    variables?: Record<string, any>;
+    description?: string;
+    playbook_id?: string;
+    target_hosts?: string;
+    extra_vars?: Record<string, any>;
+    executor_type?: "local" | "docker";
+    secrets_source_ids?: string[];
+    notification_config?: Record<string, any>;
+    needs_review?: boolean;
+    changed_variables?: Array<string | { name?: string; old?: string; new?: string }>;
     created_at?: string;
+    updated_at?: string;
   };
 
   type FlowInstance = {
@@ -63,13 +70,9 @@ declare namespace GeneratedAutoHealing {
   };
 
   type getPlatformUsersParams = {
-    ""?: any;
-    ""?: any;
   };
 
   type getTenantCmdbParams = {
-    ""?: any;
-    ""?: any;
     status?: "active" | "offline" | "maintenance";
     ip_address?: string;
   };
@@ -79,8 +82,6 @@ declare namespace GeneratedAutoHealing {
   };
 
   type getTenantExecutionRunsParams = {
-    ""?: any;
-    ""?: any;
     status?:
       | "pending"
       | "running"
@@ -91,8 +92,6 @@ declare namespace GeneratedAutoHealing {
   };
 
   type getTenantExecutionTasksParams = {
-    ""?: any;
-    ""?: any;
   };
 
   type getTenantHealingFlowsIdParams = {
@@ -100,8 +99,6 @@ declare namespace GeneratedAutoHealing {
   };
 
   type getTenantHealingFlowsParams = {
-    ""?: any;
-    ""?: any;
   };
 
   type getTenantHealingInstancesIdEventsParams = {
@@ -113,8 +110,6 @@ declare namespace GeneratedAutoHealing {
   };
 
   type getTenantHealingInstancesParams = {
-    ""?: any;
-    ""?: any;
     status?:
       | "pending"
       | "running"
@@ -129,13 +124,9 @@ declare namespace GeneratedAutoHealing {
   };
 
   type getTenantHealingRulesParams = {
-    ""?: any;
-    ""?: any;
   };
 
   type getTenantNotificationsParams = {
-    ""?: any;
-    ""?: any;
   };
 
   type getTenantPluginsIdParams = {
@@ -143,9 +134,6 @@ declare namespace GeneratedAutoHealing {
   };
 
   type getTenantPluginsParams = {
-    ""?: any;
-    ""?: any;
-    ""?: any;
   };
 
   type HealingFlow = {

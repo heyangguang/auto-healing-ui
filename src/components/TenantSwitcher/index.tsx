@@ -87,6 +87,8 @@ const TenantSwitcher: React.FC = () => {
     const [searchValue, setSearchValue] = useState('');
     const [searchResults, setSearchResults] = useState<TenantBrief[] | null>(null);
     const [searching, setSearching] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [open, setOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
     const searchSequenceRef = useRef(createRequestSequence());
@@ -119,6 +121,7 @@ const TenantSwitcher: React.FC = () => {
         request('/api/v1/common/user/tenants')
             .then((res: any) => {
                 if (res?.data && Array.isArray(res.data)) {
+                    setLoadError(null);
                     setTenants(res.data);
                     try {
                         const raw = localStorage.getItem('tenant-storage');
@@ -135,10 +138,8 @@ const TenantSwitcher: React.FC = () => {
                 }
             })
             .catch(() => {
-                try {
-                    const raw = localStorage.getItem('tenant-storage');
-                    if (raw) setTenants(JSON.parse(raw).tenants || []);
-                } catch { /* ignore */ }
+                setTenants([]);
+                setLoadError('租户列表加载失败，请刷新重试');
             });
     }, []);
 
@@ -162,17 +163,26 @@ const TenantSwitcher: React.FC = () => {
         if (!value.trim()) {
             searchSequenceRef.current.invalidate();
             setSearchResults(null);
+            setSearchError(null);
             setSearching(false);
             return;
         }
         const token = searchSequenceRef.current.next();
         setSearching(true);
+        setSearchError(null);
         request('/api/v1/common/user/tenants', { params: { name: value.trim() } })
             .then((res: any) => {
                 if (!searchSequenceRef.current.isCurrent(token)) return;
-                if (res?.data && Array.isArray(res.data)) setSearchResults(res.data);
+                if (res?.data && Array.isArray(res.data)) {
+                    setSearchResults(res.data);
+                    setSearchError(null);
+                }
             })
-            .catch(() => { /* ignore */ })
+            .catch(() => {
+                if (!searchSequenceRef.current.isCurrent(token)) return;
+                setSearchResults([]);
+                setSearchError('租户搜索失败，请重试');
+            })
             .finally(() => {
                 if (searchSequenceRef.current.isCurrent(token)) {
                     setSearching(false);
@@ -203,6 +213,7 @@ const TenantSwitcher: React.FC = () => {
     const curIcon = (cur?.icon && ICON_MAP[cur.icon]) ?? <BankOutlined />;
     const showSearch = tenants.length >= 5;
     const displayList = searchResults !== null ? searchResults : tenants;
+    const emptyMessage = searchError || loadError || (searching ? '搜索中...' : '无匹配租户');
 
     return (
         <div ref={containerRef} style={S.container}>
@@ -281,7 +292,7 @@ const TenantSwitcher: React.FC = () => {
                             );
                         })}
                         {displayList.length === 0 && (
-                            <div role="status" aria-live="polite" style={S.empty}>{searching ? '搜索中...' : '无匹配租户'}</div>
+                            <div role="status" aria-live="polite" style={S.empty}>{emptyMessage}</div>
                         )}
                     </div>
                 </div>,

@@ -68,6 +68,7 @@ jest.mock('./IncidentDetailDrawer', () => {
 
   return {
     IncidentDetailDrawer: ({
+      canResetScan,
       incident,
       onResetScan,
       open,
@@ -77,7 +78,7 @@ jest.mock('./IncidentDetailDrawer', () => {
       React.createElement('span', { 'data-testid': 'detail-title' }, incident.title),
       React.createElement(
         'button',
-        { type: 'button', onClick: () => onResetScan(incident) },
+        { type: 'button', disabled: !canResetScan, onClick: () => onResetScan(incident) },
         '抽屉重置扫描',
       ),
     ) : null),
@@ -115,7 +116,7 @@ describe('IncidentList integration', () => {
     });
 
     (useAccess as jest.Mock).mockReturnValue({
-      canTriggerHealing: true,
+      canSyncPlugin: true,
     });
     (getIncidents as jest.Mock).mockResolvedValue({
       data: [incident],
@@ -183,6 +184,21 @@ describe('IncidentList integration', () => {
     });
     await waitFor(() => {
       expect(screen.getByTestId('incident-stats-bar').textContent).toBe('8/6/2/3');
+    });
+  });
+
+  it('gates reset-scan actions on plugin sync permission', async () => {
+    (useAccess as jest.Mock).mockReturnValue({
+      canSyncPlugin: false,
+      canTriggerHealing: true,
+    });
+
+    render(React.createElement(IncidentList));
+
+    fireEvent.click(await screen.findByRole('button', { name: '打开-incident-1' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '抽屉重置扫描' }).hasAttribute('disabled')).toBe(true);
     });
   });
 });

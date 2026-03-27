@@ -52,9 +52,16 @@ export async function getAuthProfile(options?: { [key: string]: any }) {
 }
 
 /** Update user profile PUT /api/v1/auth/profile */
-export async function putAuthProfile(options?: { [key: string]: any }) {
+export async function putAuthProfile(
+  body: Record<string, any>,
+  options?: { [key: string]: any }
+) {
   return request<any>("/api/v1/auth/profile", {
     method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
     ...(options || {}),
   });
 }

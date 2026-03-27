@@ -106,7 +106,7 @@ export async function getProfile() {
  * 更新个人资料
  */
 export async function updateProfile(data: AutoHealing.UpdateProfileRequest) {
-    return putAuthProfile({ data }) as Promise<AutoHealing.SuccessResponse>;
+    return putAuthProfile(data) as Promise<AutoHealing.SuccessResponse>;
 }
 
 /**

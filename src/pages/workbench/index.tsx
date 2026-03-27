@@ -48,6 +48,7 @@ const WorkbenchPage: React.FC = () => {
         auditLogs,
         favorites,
         handleCalendarMonthChange,
+        loadErrors,
         loading,
         overview,
         pendingApprovals,
@@ -73,6 +74,22 @@ const WorkbenchPage: React.FC = () => {
     return (
         <div className={styles.page}>
             <div className={styles.container}>
+                {loadErrors.length > 0 && (
+                    <div
+                        role="alert"
+                        style={{
+                            marginBottom: 16,
+                            padding: '12px 16px',
+                            border: '1px solid #ffd591',
+                            borderRadius: 8,
+                            background: '#fff7e6',
+                            color: '#ad4e00',
+                            fontSize: 13,
+                        }}
+                    >
+                        {`部分工作台数据加载失败：${loadErrors.map((item) => item.message).join('、')}`}
+                    </div>
+                )}
                 <div className={styles.leftCol}>
                     <div id="tour-overview" className={styles.topRow}>
                         <WorkbenchSystemHealthCard

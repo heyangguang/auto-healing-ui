@@ -17,7 +17,7 @@ import {
 } from '@/constants/incidentDicts';
 
 type IncidentDetailDrawerProps = {
-  canTriggerHealing: boolean;
+  canResetScan: boolean;
   detailLoading: boolean;
   incident: AutoHealing.Incident | null;
   onClose: () => void;
@@ -89,7 +89,7 @@ function hasRawData(rawData: AutoHealing.Incident['raw_data']) {
 }
 
 export const IncidentDetailDrawer: React.FC<IncidentDetailDrawerProps> = ({
-  canTriggerHealing,
+  canResetScan,
   detailLoading,
   incident,
   onClose,
@@ -166,7 +166,7 @@ export const IncidentDetailDrawer: React.FC<IncidentDetailDrawerProps> = ({
               <Button
                 size="small"
                 icon={<UndoOutlined />}
-                disabled={!canTriggerHealing}
+                disabled={!canResetScan}
                 onClick={() => onResetScan(incident)}
               >
                 重置扫描

@@ -24,4 +24,12 @@ describe('fetchAllPages', () => {
       { id: 'y' },
     ]);
   });
+
+  it('throws when maxPages is reached before all data is loaded', async () => {
+    const pagedFetcher = jest
+      .fn()
+      .mockResolvedValue({ data: [{ id: 'a' }], total: 3 });
+
+    await expect(fetchAllPages(pagedFetcher, 1, 2)).rejects.toThrow('fetchAllPages exceeded maxPages=2');
+  });
 });

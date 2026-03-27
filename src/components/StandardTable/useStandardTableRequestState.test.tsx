@@ -74,4 +74,48 @@ describe('useStandardTableRequestState', () => {
       filters: [{ field: 'name', value: 'ops' }],
     });
   });
+
+  it('keeps only the latest request result when earlier requests resolve late', async () => {
+    let resolveFirstRequest: ((value: { data: Array<{ id: string }>; total: number }) => void) | undefined;
+    let resolveSecondRequest: ((value: { data: Array<{ id: string }>; total: number }) => void) | undefined;
+    const request = jest
+      .fn()
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveFirstRequest = resolve;
+      }))
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveSecondRequest = resolve;
+      }));
+
+    const { result } = renderHook(() =>
+      useStandardTableRequestState({
+        request,
+        defaultPageSize: 10,
+        prefsLoaded: false,
+        searchFilters: [],
+        showAdvanced: false,
+        advancedValues: {},
+        advancedMatchModes: {},
+      }),
+    );
+
+    await act(async () => {
+      void result.current.fetchData(1, 10);
+      void result.current.fetchData(2, 10);
+    });
+
+    await act(async () => {
+      resolveSecondRequest?.({ data: [{ id: 'latest' }], total: 1 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([{ id: 'latest' }]);
+    });
+
+    await act(async () => {
+      resolveFirstRequest?.({ data: [{ id: 'stale' }], total: 1 });
+    });
+
+    expect(result.current.data).toEqual([{ id: 'latest' }]);
+  });
 });

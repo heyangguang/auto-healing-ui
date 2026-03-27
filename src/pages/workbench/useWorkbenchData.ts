@@ -15,7 +15,7 @@ import {
 } from '@/services/auto-healing/workbench';
 import type { AuditLogRecord } from '@/pages/system/audit-logs/types';
 import type { PendingApprovalRecord, PendingTriggerRecord } from '@/pages/pending-center/types';
-import type { PendingWorkbenchItem, PendingWorkbenchState } from './workbenchTypes';
+import type { PendingWorkbenchItem, PendingWorkbenchState, WorkbenchLoadError } from './workbenchTypes';
 
 type UseWorkbenchDataOptions = {
   canViewAuditLogs: boolean;
@@ -37,10 +37,12 @@ export const useWorkbenchData = ({
   const [scheduleData, setScheduleData] = useState<Record<string, ScheduleTask[]>>({});
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [loadErrors, setLoadErrors] = useState<WorkbenchLoadError[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      const nextErrors: WorkbenchLoadError[] = [];
       const approvalsRequest = canViewApprovals
         ? getPendingApprovals({ page: 1, page_size: 5 })
         : Promise.resolve({ data: [], total: 0 });
@@ -68,19 +70,29 @@ export const useWorkbenchData = ({
 
       if (overviewRes.status === 'fulfilled' && overviewRes.value) {
         setOverview(overviewRes.value);
+      } else if (overviewRes.status === 'rejected') {
+        nextErrors.push({ section: 'overview', message: '工作台概览加载失败' });
       }
       if (calendarRes.status === 'fulfilled' && calendarRes.value?.dates) {
         setScheduleData(calendarRes.value.dates);
+      } else if (calendarRes.status === 'rejected') {
+        nextErrors.push({ section: 'schedule-calendar', message: '任务日历加载失败' });
       }
       if (announcementsRes.status === 'fulfilled' && Array.isArray(announcementsRes.value)) {
         setAnnouncements(announcementsRes.value);
+      } else if (announcementsRes.status === 'rejected') {
+        nextErrors.push({ section: 'announcements', message: '系统公告加载失败' });
       }
       if (favoritesRes.status === 'fulfilled' && Array.isArray(favoritesRes.value)) {
         setFavorites(favoritesRes.value);
+      } else if (favoritesRes.status === 'rejected') {
+        nextErrors.push({ section: 'favorites', message: '工作台收藏加载失败' });
       }
       if (auditRes.status === 'fulfilled' && auditRes.value?.data) {
         const logs = Array.isArray(auditRes.value.data) ? auditRes.value.data as AuditLogRecord[] : [];
         setAuditLogs(logs);
+      } else if (auditRes.status === 'rejected') {
+        nextErrors.push({ section: 'audit-logs', message: '审计动态加载失败' });
       }
 
       const triggers = triggersRes.status === 'fulfilled' && Array.isArray(triggersRes.value?.data)
@@ -89,6 +101,12 @@ export const useWorkbenchData = ({
       const approvals = approvalsRes.status === 'fulfilled' && Array.isArray(approvalsRes.value?.data)
         ? approvalsRes.value.data as PendingApprovalRecord[]
         : [];
+      if (triggersRes.status === 'rejected') {
+        nextErrors.push({ section: 'pending-triggers', message: '待处理触发器加载失败' });
+      }
+      if (approvalsRes.status === 'rejected') {
+        nextErrors.push({ section: 'pending-approvals', message: '待审批任务加载失败' });
+      }
       const mergedItems: PendingWorkbenchItem[] = [
         ...triggers.map((trigger) => ({ ...trigger, _pendingType: 'trigger' as const })),
         ...approvals.map((approval) => ({ ...approval, _pendingType: 'approval' as const })),
@@ -98,8 +116,10 @@ export const useWorkbenchData = ({
           + (approvalsRes.status === 'fulfilled' ? approvalsRes.value?.total ?? 0 : 0),
         items: mergedItems,
       });
+      setLoadErrors(nextErrors);
     } catch (error) {
       console.error('[Workbench] Load data failed:', error);
+      setLoadErrors([{ section: 'unknown', message: '工作台数据加载失败' }]);
     } finally {
       setLoading(false);
     }
@@ -120,7 +140,11 @@ export const useWorkbenchData = ({
         setScheduleData(response.dates);
       }
     } catch {
-      // keep existing calendar state visible
+      setLoadErrors((previous) => {
+        const nextErrors = previous.filter((item) => item.section !== 'schedule-calendar');
+        nextErrors.push({ section: 'schedule-calendar', message: '任务日历加载失败' });
+        return nextErrors;
+      });
     }
   }, [canViewTasks]);
 
@@ -129,6 +153,7 @@ export const useWorkbenchData = ({
     auditLogs,
     favorites,
     handleCalendarMonthChange,
+    loadErrors,
     loading,
     overview,
     pendingApprovals,

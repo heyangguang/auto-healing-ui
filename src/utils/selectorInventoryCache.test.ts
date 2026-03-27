@@ -92,4 +92,27 @@ describe('selectorInventoryCache', () => {
     expect(getGitRepos).toHaveBeenCalledTimes(1);
     expect(getChannels).toHaveBeenCalledTimes(1);
   });
+
+  it('isolates cached inventories across tenant contexts', async () => {
+    sessionStorage.setItem('auto_healing_token', `header.${Buffer.from(JSON.stringify({
+      sub: 'user-1',
+    })).toString('base64url')}.sig`);
+    localStorage.setItem('tenant-storage', JSON.stringify({ currentTenantId: 'tenant-a' }));
+
+    (getPlaybooks as jest.Mock)
+      .mockResolvedValueOnce({ data: [{ id: 'pb-a', name: 'Tenant A Playbook' }], total: 1 })
+      .mockResolvedValueOnce({ data: [{ id: 'pb-b', name: 'Tenant B Playbook' }], total: 1 });
+
+    await expect(getCachedPlaybookInventory()).resolves.toEqual([
+      { id: 'pb-a', name: 'Tenant A Playbook' },
+    ]);
+
+    localStorage.setItem('tenant-storage', JSON.stringify({ currentTenantId: 'tenant-b' }));
+
+    await expect(getCachedPlaybookInventory()).resolves.toEqual([
+      { id: 'pb-b', name: 'Tenant B Playbook' },
+    ]);
+
+    expect(getPlaybooks).toHaveBeenCalledTimes(2);
+  });
 });

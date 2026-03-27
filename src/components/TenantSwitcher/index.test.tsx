@@ -15,6 +15,7 @@ jest.mock('@umijs/max', () => ({
 
 describe('TenantSwitcher', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     localStorage.setItem('tenant-storage', JSON.stringify({ currentTenantId: 'tenant-1' }));
     (request as jest.Mock).mockImplementation((_url: string, options?: { params?: { name?: string } }) => {
       if (options?.params?.name) {
@@ -89,5 +90,56 @@ describe('TenantSwitcher', () => {
       expect(screen.queryByText('Tenant Alpha')).toBeNull();
     });
     expect(screen.getByText('Tenant Beta')).toBeTruthy();
+  });
+
+  it('shows an explicit error instead of falling back to stale cached tenants on initial load failure', async () => {
+    localStorage.setItem('tenant-storage', JSON.stringify({
+      currentTenantId: 'tenant-1',
+      tenants: [{ id: 'tenant-stale', name: 'Tenant Stale', code: 'STALE' }],
+    }));
+    (request as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+
+    render(React.createElement(TenantSwitcher));
+
+    fireEvent.click(await screen.findByRole('button', { name: '选择租户' }));
+
+    expect(await screen.findByText('租户列表加载失败，请刷新重试')).toBeTruthy();
+    expect(screen.queryByText('Tenant Stale')).toBeNull();
+  });
+
+  it('clears stale search results and shows an explicit search error on failure', async () => {
+    let rejectBeta!: (error: Error) => void;
+
+    (request as jest.Mock).mockImplementation((_url: string, options?: { params?: { name?: string } }) => {
+      if (options?.params?.name === 'alpha') {
+        return Promise.resolve({
+          data: [{ id: 'tenant-alpha', name: 'Tenant Alpha', code: 'ALPHA' }],
+        });
+      }
+      if (options?.params?.name === 'beta') {
+        return new Promise((_, reject) => {
+          rejectBeta = reject;
+        });
+      }
+      return Promise.resolve({
+        data: Array.from({ length: 6 }, (_, index) => ({
+          id: `tenant-${index + 1}`,
+          name: `Tenant ${index + 1}`,
+          code: `T${index + 1}`,
+        })),
+      });
+    });
+
+    render(React.createElement(TenantSwitcher));
+
+    fireEvent.click(await screen.findByRole('button', { name: '当前租户 Tenant 1，点击切换' }));
+    fireEvent.change(screen.getByLabelText('搜索租户'), { target: { value: 'alpha' } });
+    expect(await screen.findByText('Tenant Alpha')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('搜索租户'), { target: { value: 'beta' } });
+    rejectBeta(new Error('search failed'));
+
+    expect(await screen.findByText('租户搜索失败，请重试')).toBeTruthy();
+    expect(screen.queryByText('Tenant Alpha')).toBeNull();
   });
 });

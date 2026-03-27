@@ -5,7 +5,10 @@ import {
   listMyImpersonationRequests,
   type ImpersonationRequest,
 } from '@/services/auto-healing/platform/impersonation';
-import { buildImpersonationListParams, type ImpersonationTableRequestParams } from '@/pages/pending-center/impersonationShared';
+import {
+  buildPlatformImpersonationParams,
+  type ImpersonationTableRequestParams,
+} from '@/pages/pending-center/impersonationShared';
 import {
   createPlatformImpersonationColumns,
   platformImpersonationAdvancedSearchFields,
@@ -45,7 +48,7 @@ export default function ImpersonationRequestsTable({
     onCancel,
   }), [actionLoading, onCancel, onEnter, onExit, onTerminate]);
   const handleRequest = async (params: ImpersonationTableRequestParams) => {
-    const response = await listMyImpersonationRequests(buildImpersonationListParams(params));
+    const response = await listMyImpersonationRequests(buildPlatformImpersonationParams(params));
     return { data: response.data || [], total: Number(response.total ?? 0) };
   };
 

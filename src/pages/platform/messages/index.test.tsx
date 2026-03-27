@@ -4,6 +4,8 @@ import PlatformMessagesPage from './index';
 import {
   createSiteMessage,
   getSiteMessageCategories,
+  getSiteMessageSettings,
+  updateSiteMessageSettings,
 } from '@/services/auto-healing/platform/messages';
 import { fetchAllPages } from '@/utils/fetchAllPages';
 
@@ -15,12 +17,16 @@ const mockFormInstance = {
 jest.mock('@umijs/max', () => ({
   useAccess: () => ({
     canSendPlatformMessage: true,
+    canViewSiteMessageSettings: true,
+    canManageSiteMessageSettings: true,
   }),
 }));
 
 jest.mock('@/services/auto-healing/platform/messages', () => ({
   getSiteMessageCategories: jest.fn(),
   createSiteMessage: jest.fn(),
+  getSiteMessageSettings: jest.fn(),
+  updateSiteMessageSettings: jest.fn(),
 }));
 
 jest.mock('@/utils/fetchAllPages', () => ({
@@ -133,6 +139,14 @@ describe('PlatformMessagesPage', () => {
     (getSiteMessageCategories as jest.Mock).mockResolvedValue([
       { value: 'notice', label: '通知' },
     ]);
+    (getSiteMessageSettings as jest.Mock).mockResolvedValue({
+      retention_days: 90,
+      updated_at: '2026-03-27T10:00:00Z',
+    });
+    (updateSiteMessageSettings as jest.Mock).mockResolvedValue({
+      retention_days: 180,
+      updated_at: '2026-03-27T11:00:00Z',
+    });
     (fetchAllPages as jest.Mock).mockResolvedValue([
       { id: 'tenant-1', name: '租户 A' },
     ]);
@@ -155,5 +169,20 @@ describe('PlatformMessagesPage', () => {
       expect(screen.queryByText('选择租户')).toBeNull();
     });
     expect(mockFormInstance.resetFields).toHaveBeenCalled();
+  });
+
+  it('loads and updates site-message retention settings', async () => {
+    render(React.createElement(PlatformMessagesPage));
+
+    expect(await screen.findByDisplayValue('90')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('站内信保留天数'), {
+      target: { value: '180' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '保存策略' }));
+
+    await waitFor(() => {
+      expect(updateSiteMessageSettings).toHaveBeenCalledWith({ retention_days: 180 });
+    });
   });
 });

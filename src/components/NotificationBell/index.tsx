@@ -7,112 +7,16 @@ import type { SiteMessage, SiteMessageCategory } from '@/services/auto-healing/s
 import { createAuthenticatedEventStream, type SSEConnection } from '@/services/auto-healing/sse';
 import { TokenManager } from '@/requestErrorConfig';
 import dayjs from 'dayjs';
-
-/** 降级轮询间隔 5 分钟（SSE 在线时兜底） */
-const POLL_INTERVAL = 5 * 60_000;
-const NOTIFICATION_PANEL_ID = 'notification-bell-panel';
-
-/** 分类颜色 - 使用后端英文 value */
-const DOT_COLORS: Record<string, string> = {
-    system_update: '#1677ff',
-    product_news: '#1677ff',
-    service_notice: '#52c41a',
-    activity: '#faad14',
-    fault_alert: '#ff4d4f',
-    security: '#ff4d4f',
-};
-
-/* ── 内联样式常量 ── */
-const S = {
-    container: { position: 'relative' as const },
-    trigger: {
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '0 14px', height: 58,
-        transition: 'background 0.2s',
-        color: 'rgba(255,255,255,0.85)', userSelect: 'none' as const,
-        position: 'relative' as const,
-    },
-    triggerIcon: { fontSize: 16 },
-    badge: {
-        position: 'absolute' as const, top: 12, right: 6,
-        background: '#ff4d4f', color: '#fff', fontSize: 12,
-        lineHeight: '16px', padding: '0 5px', borderRadius: 8,
-        transform: 'scale(0.85)', transformOrigin: 'right top',
-        fontWeight: 'bold' as const,
-    },
-    panel: {
-        position: 'fixed' as const,
-        width: 250, background: '#fff',
-        borderRadius: '0 0 6px 6px',
-        boxShadow: '0 6px 16px rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12)',
-        zIndex: 2000, overflow: 'hidden' as const,
-        display: 'flex', flexDirection: 'column' as const,
-    },
-    header: {
-        padding: '12px 16px', borderBottom: '1px solid #f0f0f0',
-        fontSize: 14, fontWeight: 600, color: '#262626',
-        background: '#fafafa',
-    },
-    body: {
-        maxHeight: 202, overflowY: 'auto' as const,
-    },
-    empty: { padding: '32px 0', color: '#bfbfbf', textAlign: 'center' as const, fontSize: 13 },
-    msgItem: {
-        display: 'flex', gap: 12, padding: '12px 16px', borderBottom: '1px solid #f0f0f0',
-        cursor: 'pointer', transition: 'background 0.2s',
-    },
-    msgButton: {
-        width: '100%',
-        border: 0,
-        background: 'transparent',
-        textAlign: 'left' as const,
-    },
-    dotWrap: { position: 'relative' as const, width: 8, height: 8, marginTop: 6, flexShrink: 0 },
-    dot: (color: string) => ({
-        position: 'absolute' as const, top: 0, left: 0,
-        width: 8, height: 8, borderRadius: '50%', background: color, zIndex: 2
-    }),
-    dotGlow: (color: string) => ({
-        position: 'absolute' as const, top: -2, left: -2,
-        width: 12, height: 12, borderRadius: '50%', background: color, zIndex: 1, opacity: 0.2
-    }),
-    msgContent: { flex: 1, overflow: 'hidden' as const },
-    msgTitle: {
-        fontSize: 13, color: '#262626', marginBottom: 4, fontWeight: 500,
-        overflow: 'hidden' as const, textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const,
-    },
-    msgTime: { fontSize: 12, color: '#8c8c8c' },
-    footer: {
-        padding: '12px', textAlign: 'center' as const,
-        cursor: 'pointer', fontSize: 13, color: '#0f62fe',
-        transition: 'background 0.2s', background: '#fafafa',
-        borderTop: '1px solid #f0f0f0',
-    },
-    footerButton: {
-        width: '100%',
-        border: 0,
-        background: '#fafafa',
-    },
-};
-
-/** 从 localStorage 获取当前租户 ID */
-const getCurrentTenantId = (): string | null => {
-    try {
-        const raw = localStorage.getItem('tenant-storage');
-        if (raw) {
-            const { currentTenantId } = JSON.parse(raw);
-            return currentTenantId || null;
-        }
-    } catch { /* ignore */ }
-    return null;
-};
+import * as notificationBellShared from './notificationBellShared';
 
 const NotificationBell: React.FC = () => {
+    const S = notificationBellShared.bellStyles;
     const [open, setOpen] = useState(false);
     const [msgs, setMsgs] = useState<Array<Pick<SiteMessage, 'title' | 'created_at' | 'category'>>>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
-    const [tenantId, setTenantId] = useState<string | null>(getCurrentTenantId);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [tenantId, setTenantId] = useState<string | null>(notificationBellShared.getCurrentTenantId());
 
     const triggerRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -125,7 +29,7 @@ const NotificationBell: React.FC = () => {
     /* 监听 storage 变化（跨 tab 或同页面 reload 后租户变化） */
     useEffect(() => {
         const checkTenant = () => {
-            const newId = getCurrentTenantId();
+            const newId = notificationBellShared.getCurrentTenantId();
             setTenantId(prev => prev !== newId ? newId : prev);
         };
         // 监听 storage 事件（跨 tab）
@@ -148,32 +52,41 @@ const NotificationBell: React.FC = () => {
             .catch(() => { });
     }, []);
 
-    const getDotColor = (cat: string) => DOT_COLORS[cat] || '#1677ff';
+    const getDotColor = (cat: string) => notificationBellShared.getNotificationDotColor(cat);
 
     /** 获取未读数（后台轮询用，不刷新 token） */
     const refreshUnreadCount = useCallback(async () => {
         try {
-            const res = await getUnreadCount({ skipTokenRefresh: true });
+            const res = await getUnreadCount({ skipTokenRefresh: true, suppressForbiddenError: true });
             setUnreadCount(res?.unread_count ?? 0);
+            return true;
         } catch { /* silent */ }
+        return false;
     }, []);
 
     /** 获取消息列表（后台轮询用，不刷新 token） */
     const refreshMessages = useCallback(async () => {
         try {
-            const listRes = await getSiteMessages({ page: 1, page_size: 10, is_read: false }, { skipTokenRefresh: true });
+            const listRes = await getSiteMessages(
+                { page: 1, page_size: 10, is_read: false },
+                { skipTokenRefresh: true, suppressForbiddenError: true },
+            );
             const items = listRes.data || [];
             setMsgs(items.slice(0, 10).map((message) => ({
                 title: message.title || '站内信',
                 created_at: message.created_at || '',
                 category: message.category || '',
             })));
-        } catch { /* silent */ }
+            return true;
+        } catch {
+            return false;
+        }
     }, []);
 
     /** 完整刷新 */
     const refreshAll = useCallback(async () => {
-        await Promise.all([refreshUnreadCount(), refreshMessages()]);
+        const [unreadSuccess, messageSuccess] = await Promise.all([refreshUnreadCount(), refreshMessages()]);
+        setLoadError(unreadSuccess && messageSuccess ? null : '站内信加载失败，请稍后重试');
     }, [refreshUnreadCount, refreshMessages]);
 
     /* ======== SSE 连接（租户变化时重新建立） ======== */
@@ -203,7 +116,7 @@ const NotificationBell: React.FC = () => {
     /* ======== 初始加载 + 兜底轮询 + 本地事件（租户变化时重新执行） ======== */
     useEffect(() => {
         refreshAll();
-        timerRef.current = setInterval(refreshUnreadCount, POLL_INTERVAL);
+        timerRef.current = setInterval(refreshUnreadCount, notificationBellShared.POLL_INTERVAL);
 
         const onLocal = () => refreshAll();
         window.addEventListener('site-messages:read', onLocal);
@@ -278,7 +191,7 @@ const NotificationBell: React.FC = () => {
                 aria-label={unreadCount > 0 ? `未读消息 ${unreadCount} 条` : '未读消息'}
                 aria-haspopup="dialog"
                 aria-expanded={open}
-                aria-controls={open ? NOTIFICATION_PANEL_ID : undefined}
+                aria-controls={open ? notificationBellShared.NOTIFICATION_PANEL_ID : undefined}
                 onClick={toggleOpen}
             >
                 <BellOutlined style={S.triggerIcon} />
@@ -289,7 +202,7 @@ const NotificationBell: React.FC = () => {
 
             {open && ReactDOM.createPortal(
                 <div
-                    id={NOTIFICATION_PANEL_ID}
+                    id={notificationBellShared.NOTIFICATION_PANEL_ID}
                     ref={panelRef}
                     style={{ ...S.panel, top: panelPos.top, right: panelPos.right }}
                     onMouseEnter={() => { if (hoverRef.current) clearTimeout(hoverRef.current); }}
@@ -311,7 +224,7 @@ const NotificationBell: React.FC = () => {
                     {/* 消息列表 */}
                     <div style={S.body} role="list">
                         {msgs.length === 0 ? (
-                            <div style={S.empty}>暂无未读消息</div>
+                            <div style={S.empty}>{loadError || '暂无未读消息'}</div>
                         ) : (
                             msgs.map((m, i) => {
                                 const color = getDotColor(m.category);

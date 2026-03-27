@@ -116,6 +116,10 @@ function setImpersonationListParam(
   params: ImpersonationListParams,
   key: string,
   value: string | undefined,
+  options?: {
+    allowExact?: boolean;
+    allowedFields?: readonly ImpersonationSearchField[];
+  },
 ) {
   if (!value) {
     return;
@@ -126,13 +130,19 @@ function setImpersonationListParam(
     return;
   }
 
+  if (options?.allowedFields && !options.allowedFields.includes(normalized.field)) {
+    return;
+  }
+
+  const useExact = options?.allowExact ? normalized.exact : false;
+
   if (normalized.field === 'status') {
     params.status = value as ImpersonationStatus;
     return;
   }
 
   if (normalized.field === 'requester_name') {
-    if (normalized.exact) {
+    if (useExact) {
       params.requester_name__exact = value;
       return;
     }
@@ -141,7 +151,7 @@ function setImpersonationListParam(
   }
 
   if (normalized.field === 'tenant_name') {
-    if (normalized.exact) {
+    if (useExact) {
       params.tenant_name__exact = value;
       return;
     }
@@ -149,7 +159,7 @@ function setImpersonationListParam(
     return;
   }
 
-  if (normalized.exact) {
+  if (useExact) {
     params.reason__exact = value;
     return;
   }
@@ -223,20 +233,55 @@ function paginateImpersonationItems(
 export function buildImpersonationListParams(
   params: ImpersonationTableRequestParams,
 ): ImpersonationListParams {
+  return buildScopedImpersonationListParams(params, {
+    allowExact: true,
+    allowSorter: true,
+    allowedFields: SEARCH_FIELDS,
+  });
+}
+
+export function buildTenantImpersonationHistoryParams(
+  params: ImpersonationTableRequestParams,
+): ImpersonationListParams {
+  return buildScopedImpersonationListParams(params, {
+    allowExact: false,
+    allowSorter: false,
+    allowedFields: ['requester_name', 'reason', 'status'],
+  });
+}
+
+export function buildPlatformImpersonationParams(
+  params: ImpersonationTableRequestParams,
+): ImpersonationListParams {
+  return buildScopedImpersonationListParams(params, {
+    allowExact: true,
+    allowSorter: false,
+    allowedFields: ['tenant_name', 'reason', 'status'],
+  });
+}
+
+function buildScopedImpersonationListParams(
+  params: ImpersonationTableRequestParams,
+  options: {
+    allowExact: boolean;
+    allowSorter: boolean;
+    allowedFields: readonly ImpersonationSearchField[];
+  },
+) {
   const apiParams: ImpersonationListParams = {
     page: params.page,
     page_size: params.pageSize,
   };
 
   if (params.searchField && params.searchValue) {
-    setImpersonationListParam(apiParams, params.searchField, params.searchValue);
+    setImpersonationListParam(apiParams, params.searchField, params.searchValue, options);
   }
 
   Object.entries(params.advancedSearch || {}).forEach(([key, value]) => {
-    setImpersonationListParam(apiParams, key, value);
+    setImpersonationListParam(apiParams, key, value, options);
   });
 
-  if (params.sorter) {
+  if (options.allowSorter && params.sorter) {
     apiParams.sort_by = params.sorter.field;
     apiParams.sort_order = params.sorter.order === 'ascend' ? 'asc' : 'desc';
   }

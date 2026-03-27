@@ -119,7 +119,7 @@ describe('ImpersonationApprovalsPage', () => {
     render(React.createElement(ImpersonationApprovalsPage));
 
     await waitFor(() => {
-      expect(screen.getByText('9')).toBeTruthy();
+      expect(screen.getByText('8')).toBeTruthy();
       expect(screen.getByText('1')).toBeTruthy();
     });
 

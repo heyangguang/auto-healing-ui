@@ -48,5 +48,9 @@ export async function fetchAllPages<T>(
     page += 1;
   }
 
+  if (page > maxPages) {
+    throw new Error(`fetchAllPages exceeded maxPages=${maxPages}`);
+  }
+
   return items;
 }

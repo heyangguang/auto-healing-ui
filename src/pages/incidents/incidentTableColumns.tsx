@@ -25,13 +25,13 @@ import {
 const { Text } = Typography;
 
 type ColumnHandlers = {
-  canTriggerHealing: boolean;
+  canResetScan: boolean;
   onOpenDetail: (record: AutoHealing.Incident) => void;
   onResetScan: (record: AutoHealing.Incident) => void;
 };
 
 export function createIncidentColumns({
-  canTriggerHealing,
+  canResetScan,
   onOpenDetail,
   onResetScan,
 }: ColumnHandlers): StandardColumnDef<AutoHealing.Incident>[] {
@@ -218,7 +218,7 @@ export function createIncidentColumns({
                 event.stopPropagation();
                 onResetScan(record);
               }}
-              disabled={!canTriggerHealing}
+              disabled={!canResetScan}
             />
           </Tooltip>
         </Space>

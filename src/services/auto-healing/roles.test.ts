@@ -28,4 +28,22 @@ describe('auto-healing roles service', () => {
       page_size: 1,
     });
   });
+
+  it('passes backend name filters to role list endpoints', async () => {
+    (request as jest.Mock)
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [] });
+
+    await getRoles({ name: 'ops' });
+    await getPlatformRoles({ name: 'platform' });
+
+    expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tenant/roles', {
+      method: 'GET',
+      params: { name: 'ops' },
+    });
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/platform/roles', {
+      method: 'GET',
+      params: { name: 'platform' },
+    });
+  });
 });

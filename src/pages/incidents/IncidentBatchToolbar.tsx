@@ -3,14 +3,14 @@ import { UndoOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 
 type IncidentBatchToolbarProps = {
-  canTriggerHealing: boolean;
+  canResetScan: boolean;
   onClearSelection: () => void;
   onResetScan: () => void;
   selectedCount: number;
 };
 
 export const IncidentBatchToolbar: React.FC<IncidentBatchToolbarProps> = ({
-  canTriggerHealing,
+  canResetScan,
   onClearSelection,
   onResetScan,
   selectedCount,
@@ -27,7 +27,7 @@ export const IncidentBatchToolbar: React.FC<IncidentBatchToolbarProps> = ({
       <Button
         size="small"
         icon={<UndoOutlined />}
-        disabled={!canTriggerHealing}
+        disabled={!canResetScan}
         onClick={onResetScan}
       >
         重置扫描

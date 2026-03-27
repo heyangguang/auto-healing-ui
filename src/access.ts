@@ -1,87 +1,18 @@
-/**
- * @see https://umijs.org/docs/max/access#access
- * 基于后端 permissions 数组的细粒度权限控制
- *
- * 后端权限码格式：  resource:action 或 resource:sub:action
- *
- * 完整权限种子清单（来自 seed.go，共 84 个）：
- * ─────────────────────────────────────────────────────────
- * [user]        user:list | user:create | user:update | user:delete | user:reset_password
- * [role]        role:list | role:create | role:update | role:delete | role:assign
- * [plugin]      plugin:list | plugin:detail | plugin:create | plugin:update | plugin:delete | plugin:sync | plugin:test
- * [execution]   repository:list | repository:create | repository:update | repository:delete | repository:sync
- *               playbook:list | playbook:create | playbook:update | playbook:delete | playbook:execute
- *               task:list | task:detail | task:create | task:update | task:delete | task:cancel
- * [notification] channel:list | channel:create | channel:update | channel:delete
- *               template:list | template:create | template:update | template:delete
- *               notification:list | notification:send
- * [healing]     healing:flows:view | healing:flows:create | healing:flows:update | healing:flows:delete
- *               healing:rules:view | healing:rules:create | healing:rules:update | healing:rules:delete
- *               healing:instances:view
- *               healing:approvals:view | healing:approvals:approve
- *               healing:trigger:view | healing:trigger:execute
- * [workflow]    workflow:list | workflow:detail | workflow:create | workflow:update | workflow:delete | workflow:activate | workflow:run
- * [system]      audit:list | audit:export | system:settings
- * [dashboard]   dashboard:view | dashboard:config:manage | dashboard:workspace:manage
- * [site-message] site-message:list | site-message:create | site-message:settings:view | site-message:settings:manage
- * [platform]    platform:settings:manage | platform:tenants:manage | platform:tenants:list
- *               platform:users:list | platform:users:create | platform:users:update | platform:users:delete | platform:users:reset_password
- *               platform:roles:list | platform:roles:manage | platform:permissions:list
- *               platform:audit:list | platform:audit:export | platform:messages:send
- * [tenant]      tenant:impersonation:view | tenant:impersonation:approve
- */
+import { createPermissionHelpers, hasActiveImpersonationSession, resolvePlatformAdminFlag } from './accessHelpers';
+
 export default function access(
   initialState: { currentUser?: API.CurrentUser } | undefined,
 ) {
   const { currentUser } = initialState ?? {};
-
-  const hasActiveImpersonationSession = (() => {
-    try {
-      const impRaw = localStorage.getItem('impersonation-storage');
-      if (!impRaw) return false;
-      const imp = JSON.parse(impRaw);
-      if (!imp?.isImpersonating || !imp?.session?.expiresAt) return false;
-      const expiresAt = new Date(imp.session.expiresAt);
-      if (expiresAt > new Date()) return true;
-      localStorage.removeItem('impersonation-storage');
-    } catch {
-      // ignore malformed local cache
-    }
-    return false;
-  })();
-
   const permissions = currentUser?.permissions ?? [];
-
-  /**
-   * 检查用户是否拥有指定权限
-   * 支持：精确匹配、超级管理员通配符 "*"、模块级通配符 "plugin:*"
-   */
-  const hasPermission = (required: string): boolean => {
-    if (!permissions || permissions.length === 0) return false;
-    for (const p of permissions) {
-      if (p === '*') return true;
-      if (p === required) return true;
-      // 模块级通配符 (e.g., "plugin:*" 匹配 "plugin:create")
-      if (p.endsWith(':*')) {
-        const module = p.slice(0, -2);
-        if (required.startsWith(module + ':')) return true;
-      }
-    }
-    return false;
-  };
-
-  /**
-   * 检查用户是否拥有任一权限
-   */
-  const hasAnyPermission = (...requiredList: string[]): boolean => {
-    return requiredList.some((r) => hasPermission(r));
-  };
+  const impersonating = hasActiveImpersonationSession();
+  const { hasPermission, hasAnyPermission } = createPermissionHelpers(permissions);
 
   const canViewImpersonationApprovals = !currentUser?.is_platform_admin
-    && !hasActiveImpersonationSession
+    && !impersonating
     && hasPermission('tenant:impersonation:view');
   const canApproveImpersonation = !currentUser?.is_platform_admin
-    && !hasActiveImpersonationSession
+    && !impersonating
     && hasPermission('tenant:impersonation:approve');
   const canViewPendingCenter = hasAnyPermission(
     'healing:approvals:view',
@@ -97,27 +28,7 @@ export default function access(
     hasPermission,
     hasAnyPermission,
 
-    // 🆕 平台管理员 (多租户专用)
-    // 仅在 Impersonation 会话真正有效时（未过期）才视为租户用户
-    isPlatformAdmin: (() => {
-      if (currentUser?.is_platform_admin !== true) return false;
-      try {
-        const impRaw = localStorage.getItem('impersonation-storage');
-        if (impRaw) {
-          const imp = JSON.parse(impRaw);
-          // 必须同时满足: isImpersonating=true + session 存在 + 未过期
-          if (imp?.isImpersonating && imp?.session?.expiresAt) {
-            const expiresAt = new Date(imp.session.expiresAt);
-            if (expiresAt > new Date()) {
-              return false; // 有效的 impersonation 会话 → 显示租户菜单
-            }
-            // 已过期 → 清理残留数据
-            localStorage.removeItem('impersonation-storage');
-          }
-        }
-      } catch { /* ignore */ }
-      return true; // 非 impersonation → 显示平台菜单
-    })(),
+    isPlatformAdmin: resolvePlatformAdminFlag(currentUser),
 
     // ===============================
     // 平台管理 (platform:*)

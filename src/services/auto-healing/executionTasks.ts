@@ -17,6 +17,7 @@ import {
     requestUnwrappedData,
     toExecutionStatusQuery,
 } from './executionHelpers';
+import { unwrapData } from './responseAdapters';
 
 export async function getExecutionTaskStats() {
     return requestUnwrappedData<ExecutionTaskStatsSummary>(
@@ -100,10 +101,10 @@ export async function confirmExecutionTaskReview(id: string) {
 }
 
 export async function batchConfirmReview(params: { task_ids?: string[]; playbook_id?: string }) {
-    return request<{ confirmed_count: number; message: string }>('/api/v1/tenant/execution-tasks/batch-confirm-review', {
+    return unwrapData(await request<DataEnvelope<{ confirmed_count: number; message: string }>>('/api/v1/tenant/execution-tasks/batch-confirm-review', {
         method: 'POST',
         data: params,
-    });
+    }));
 }
 
 export async function getTaskRuns(id: string, params?: {

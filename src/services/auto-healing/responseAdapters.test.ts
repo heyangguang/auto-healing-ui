@@ -14,6 +14,7 @@ describe('responseAdapters', () => {
     expect(unwrapItems([{ id: 'a' }])).toEqual([{ id: 'a' }]);
     expect(unwrapItems({ data: [{ id: 'b' }] })).toEqual([{ id: 'b' }]);
     expect(unwrapItems({ data: { items: [{ id: 'c' }] } })).toEqual([{ id: 'c' }]);
+    expect(unwrapItems({ data: { data: [{ id: 'd' }] } } as any)).toEqual([{ id: 'd' }]);
   });
 
   it('normalizes paginated responses into one stable shape', () => {
@@ -26,6 +27,16 @@ describe('responseAdapters', () => {
       total: 12,
       page: 2,
       page_size: 20,
+    });
+    expect(
+      normalizePaginatedResponse({
+        data: { data: [{ id: 'row-2' }], total: 9, page: 3, page_size: 15 },
+      } as any),
+    ).toEqual({
+      data: [{ id: 'row-2' }],
+      total: 9,
+      page: 3,
+      page_size: 15,
     });
   });
 });

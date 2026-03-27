@@ -1,4 +1,5 @@
 import {
+  batchConfirmReview,
   createExecutionTask,
   createLogStream,
   executeTask,
@@ -95,7 +96,7 @@ describe('auto-healing execution service', () => {
       params: {
         page: 2,
         page_size: 50,
-        status: 'partial_success',
+        status: 'partial',
       },
     });
     expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tenant/execution-tasks', {
@@ -105,7 +106,7 @@ describe('auto-healing execution service', () => {
         page_size: 20,
         playbook_id: 'playbook-1',
         search: 'deploy',
-        last_run_status: 'partial_success',
+        last_run_status: 'partial',
       },
     });
     expect(request).toHaveBeenNthCalledWith(3, '/api/v1/tenant/execution-tasks/task-1', {
@@ -161,6 +162,22 @@ describe('auto-healing execution service', () => {
     expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tenant/execution-tasks/task-2/runs', {
       method: 'GET',
       params: { page: 1, page_size: 20 },
+    });
+  });
+
+  it('unwraps batch confirm review responses into stable data', async () => {
+    (request as jest.Mock).mockResolvedValueOnce({
+      data: { confirmed_count: 3, message: 'ok' },
+    });
+
+    await expect(batchConfirmReview({ playbook_id: 'playbook-1' })).resolves.toEqual({
+      confirmed_count: 3,
+      message: 'ok',
+    });
+
+    expect(request).toHaveBeenCalledWith('/api/v1/tenant/execution-tasks/batch-confirm-review', {
+      method: 'POST',
+      data: { playbook_id: 'playbook-1' },
     });
   });
 

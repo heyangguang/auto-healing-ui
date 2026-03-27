@@ -204,4 +204,18 @@ describe('SystemMessages', () => {
       );
     });
   });
+
+  it('refreshes the table when a local site-messages:new event is dispatched', async () => {
+    render(React.createElement(SystemMessages));
+
+    await waitFor(() => {
+      expect(getSiteMessages).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent(window, new Event('site-messages:new'));
+
+    await waitFor(() => {
+      expect(getSiteMessages).toHaveBeenCalledTimes(2);
+    });
+  });
 });

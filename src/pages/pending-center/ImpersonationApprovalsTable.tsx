@@ -6,7 +6,10 @@ import {
   type ImpersonationRequest,
 } from '@/services/auto-healing/platform/impersonation';
 import type { ImpersonationTableRequestParams } from './impersonationShared';
-import { applyImpersonationTableRequest, buildImpersonationListParams } from './impersonationShared';
+import {
+  applyImpersonationTableRequest,
+  buildTenantImpersonationHistoryParams,
+} from './impersonationShared';
 import {
   createImpersonationHistoryColumns,
   createImpersonationPendingColumns,
@@ -35,7 +38,7 @@ async function handlePendingRequest(params: ImpersonationTableRequestParams) {
 }
 
 async function handleHistoryRequest(params: ImpersonationTableRequestParams) {
-  const response = await listImpersonationHistory(buildImpersonationListParams(params));
+  const response = await listImpersonationHistory(buildTenantImpersonationHistoryParams(params));
   return { data: response.data || [], total: Number(response.total ?? 0) };
 }
 

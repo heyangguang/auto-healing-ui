@@ -33,7 +33,7 @@ describe('auto-healing cmdb service', () => {
       .mockResolvedValueOnce({ data: { items: [{ id: 'light-1' }], total: 1 } })
       .mockResolvedValueOnce({ data: { total: 2, success: 2, failed: 0 } })
       .mockResolvedValueOnce({ data: { total: 2, success: 1, failed: 1 } })
-      .mockResolvedValueOnce({ data: { items: [{ id: 'log-1' }], total: 1 } });
+      .mockResolvedValueOnce({ data: { data: [{ id: 'log-1' }], total: 1, page: 1, page_size: 20 } });
 
     await getCMDBItems({ page: 1, page_size: 20, status: 'active', ip_address: '10.0.0.1' });
     await expect(getCMDBItemIds()).resolves.toEqual([{ id: 'light-1' }]);
@@ -53,7 +53,7 @@ describe('auto-healing cmdb service', () => {
       data: [{ id: 'log-1' }],
       total: 1,
       page: 1,
-      page_size: 1,
+      page_size: 20,
     });
 
     expect(getTenantCmdb).toHaveBeenCalledWith({

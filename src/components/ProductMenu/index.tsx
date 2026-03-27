@@ -9,7 +9,6 @@ import {
 } from '@ant-design/icons';
 import { history, useAccess } from '@umijs/max';
 import { Drawer, message, Tooltip } from 'antd';
-import { createStyles } from 'antd-style';
 import { CATEGORIES, SERVICES, type ServiceItem } from '@/config/navData';
 import {
     getFavorites,
@@ -20,199 +19,11 @@ import {
     type RecentItem,
 } from '@/services/auto-healing/userNav';
 import { canAccessPath } from '@/utils/pathAccess';
+import type accessFactory from '@/access';
+import { resolveActiveCategoryId } from './productMenuState';
+import { useProductMenuStyles } from './productMenuStyles';
 
-/* ──── 样式 ──── */
-const useStyles = createStyles(({ token }) => ({
-    /* ── 左侧分类面板 ── */
-    leftPanel: {
-        width: 200,
-        minWidth: 200,
-        background: 'linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%)',
-        borderRight: '1px solid #f0f0f0',
-        paddingTop: 20,
-        flexShrink: 0,
-        display: 'flex',
-        flexDirection: 'column' as const,
-    },
-    catList: {
-        flex: 1,
-    },
-    guideBottom: {
-        borderTop: '1px solid #f0f0f0',
-        padding: '12px 0',
-    },
-    catItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '13px 24px',
-        cursor: 'pointer',
-        fontSize: 14,
-        color: '#595959',
-        transition: 'all 0.15s',
-        borderLeft: '3px solid transparent',
-        position: 'relative' as const,
-        '&:hover': {
-            color: token.colorPrimary,
-            background: 'rgba(24,144,255,0.04)',
-        },
-    },
-    catItemActive: {
-        color: token.colorPrimary,
-        fontWeight: 600,
-        background: '#fff',
-        borderLeft: `3px solid ${token.colorPrimary}`,
-    },
-    catIcon: {
-        fontSize: 16,
-        flexShrink: 0,
-    },
-
-    /* ── 右侧内容面板 ── */
-    rightPanel: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column' as const,
-        overflow: 'hidden',
-        background: '#fff',
-    },
-    header: {
-        padding: '20px 28px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 600,
-        color: '#262626',
-    },
-    closeBtn: {
-        width: 32,
-        height: 32,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        color: '#8c8c8c',
-        fontSize: 16,
-        transition: 'color 0.2s',
-        '&:hover': {
-            color: '#262626',
-        },
-    },
-
-    /* ── 收藏 & 最近 ── */
-    quickArea: {
-        padding: '16px 28px',
-        background: '#fafbfc',
-        borderBottom: '1px solid #f0f0f0',
-        borderTop: '1px solid #f0f0f0',
-        display: 'flex',
-        gap: 48,
-    },
-    quickSection: {
-        flex: 1,
-    },
-    quickLabel: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        fontSize: 13,
-        fontWeight: 600,
-        color: '#262626',
-        marginBottom: 10,
-    },
-    quickLabelIcon: {
-        fontSize: 14,
-    },
-    quickLinks: {
-        display: 'flex',
-        flexWrap: 'wrap' as const,
-        gap: 20,
-    },
-    quickLink: {
-        fontSize: 13,
-        color: '#595959',
-        cursor: 'pointer',
-        transition: 'color 0.15s',
-        '&:hover': {
-            color: token.colorPrimary,
-        },
-    },
-    emptyHint: {
-        fontSize: 12,
-        color: '#bfbfbf',
-    },
-
-    /* ── 服务区域 ── */
-    serviceArea: {
-        padding: '24px 28px',
-        flex: 1,
-        overflowY: 'auto' as const,
-    },
-    serviceTitle: {
-        fontSize: 16,
-        fontWeight: 600,
-        color: '#262626',
-        marginBottom: 24,
-    },
-    serviceGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '8px 24px',
-    },
-    serviceCard: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-        padding: '16px 16px',
-        cursor: 'pointer',
-        transition: 'all 0.15s',
-        position: 'relative' as const,
-        '&:hover': {
-            background: '#f5f9ff',
-        },
-        '&:hover .fav-star': {
-            opacity: 1,
-        },
-    },
-    serviceIcon: {
-        fontSize: 18,
-        color: token.colorPrimary,
-        marginTop: 2,
-        flexShrink: 0,
-    },
-    serviceName: {
-        fontSize: 14,
-        fontWeight: 500,
-        color: '#262626',
-        lineHeight: '22px',
-    },
-    serviceDesc: {
-        fontSize: 12,
-        color: '#8c8c8c',
-        lineHeight: '18px',
-        marginTop: 2,
-    },
-    favStar: {
-        position: 'absolute' as const,
-        right: 12,
-        top: 16,
-        fontSize: 14,
-        cursor: 'pointer',
-        opacity: 0,
-        transition: 'all 0.2s',
-        color: '#d9d9d9',
-        '&:hover': {
-            transform: 'scale(1.2)',
-        },
-    },
-    favStarActive: {
-        opacity: 1,
-        color: '#faad14',
-    },
-}));
+type AppAccess = ReturnType<typeof accessFactory>;
 
 /* ──── 组件 ──── */
 interface ProductMenuProps {
@@ -221,8 +32,8 @@ interface ProductMenuProps {
 }
 
 const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
-    const { styles, cx } = useStyles();
-    const access = useAccess() as unknown as Record<string, boolean>;
+    const { styles, cx } = useProductMenuStyles();
+    const access = useAccess() as AppAccess;
     const [activeCategory, setActiveCategory] = useState('healing');
 
     // API 数据
@@ -281,9 +92,18 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
 
     const hasServiceAccess = useCallback((svc: ServiceItem) => {
         if (svc.accesses?.length) {
-            return svc.accesses.every((key) => !key || Boolean((access as any)[key]));
+            return svc.accesses.every((key) => {
+                if (!key) {
+                    return true;
+                }
+                const accessValue = access[key as keyof AppAccess];
+                return typeof accessValue === 'boolean' ? accessValue : Boolean(accessValue);
+            });
         }
-        if (svc.access) return Boolean((access as any)[svc.access]);
+        if (svc.access) {
+            const accessValue = access[svc.access as keyof AppAccess];
+            return typeof accessValue === 'boolean' ? accessValue : Boolean(accessValue);
+        }
         return canAccessPath(svc.path, access);
     }, [access]);
 
@@ -300,6 +120,16 @@ const ProductMenu: React.FC<ProductMenuProps> = ({ open, onClose }) => {
     const filteredCategories = React.useMemo(() => {
         return CATEGORIES.filter(cat => cat.id === 'guide' || filteredServices[cat.id]?.length > 0);
     }, [filteredServices]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+        const nextCategoryId = resolveActiveCategoryId(filteredCategories, activeCategory);
+        if (nextCategoryId && nextCategoryId !== activeCategory) {
+            setActiveCategory(nextCategoryId);
+        }
+    }, [activeCategory, filteredCategories, open]);
 
     const activeCat = filteredCategories.find((c) => c.id === activeCategory);
     const services = filteredServices[activeCategory] || [];

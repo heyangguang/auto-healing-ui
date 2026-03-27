@@ -167,7 +167,6 @@ function createApprovedAtColumn(): StandardColumnDef<ImpersonationRequest> {
     columnTitle: '审批时间',
     dataIndex: 'approved_at',
     width: 150,
-    sorter: true,
     render: (_, record) => (
       record.approved_at
         ? dayjs(record.approved_at).format('YYYY-MM-DD HH:mm')
@@ -271,9 +270,6 @@ export function createImpersonationHistoryColumns(): StandardColumnDef<Impersona
     createStatusColumn(true),
     createApproverColumn(),
     createApprovedAtColumn(),
-    {
-      ...createCreatedAtColumn(),
-      sorter: true,
-    },
+    createCreatedAtColumn(),
   ];
 }

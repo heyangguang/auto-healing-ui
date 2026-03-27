@@ -1,4 +1,10 @@
-import { getTenantContextHeaders, hasActiveImpersonationSession, usesTenantContext } from './tenantContext';
+import {
+  getCurrentAuthScopeKey,
+  getTenantContextHeaders,
+  getTenantContextScopeKey,
+  hasActiveImpersonationSession,
+  usesTenantContext,
+} from './tenantContext';
 
 describe('tenantContext', () => {
   it('detects tenant-aware API routes', () => {
@@ -47,5 +53,29 @@ describe('tenantContext', () => {
     localStorage.setItem('tenant-storage', JSON.stringify({ currentTenantId: 'tenant-a' }));
 
     expect(getTenantContextHeaders('/api/v1/platform/users', false)).toEqual({});
+  });
+
+  it('builds auth and tenant scope keys from the current token and session context', () => {
+    sessionStorage.setItem('auto_healing_token', `header.${Buffer.from(JSON.stringify({
+      sub: 'user-1',
+      username: 'alice',
+    })).toString('base64url')}.sig`);
+    localStorage.setItem('tenant-storage', JSON.stringify({ currentTenantId: 'tenant-a' }));
+
+    expect(getCurrentAuthScopeKey()).toBe('user-1');
+    expect(getTenantContextScopeKey()).toBe('user-1:tenant:tenant-a');
+
+    localStorage.setItem('impersonation-storage', JSON.stringify({
+      isImpersonating: true,
+      session: {
+        requestId: 'req-1',
+        tenantId: 'tenant-b',
+        tenantName: 'Tenant B',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        startedAt: '2099-01-01T00:00:00.000Z',
+      },
+    }));
+
+    expect(getTenantContextScopeKey()).toBe('user-1:impersonation:tenant-b');
   });
 });

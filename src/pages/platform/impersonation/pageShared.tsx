@@ -26,7 +26,7 @@ import {
 const { Text } = Typography;
 
 export const platformImpersonationSearchFields: SearchField[] = [
-  { key: 'requester_name', label: '申请人' },
+  { key: 'tenant_name', label: '目标租户', placeholder: '搜索租户名称' },
 ];
 
 export const platformImpersonationAdvancedSearchFields: AdvancedSearchField[] = [
@@ -154,7 +154,6 @@ function createSessionExpiresColumn(): StandardColumnDef<ImpersonationRequest> {
     columnTitle: '会话到期',
     dataIndex: 'session_expires_at',
     width: 110,
-    sorter: true,
     render: (_, record) => {
       if (!record.session_expires_at) {
         return <Text type="secondary">—</Text>;
@@ -197,7 +196,6 @@ function createCreatedAtColumn(): StandardColumnDef<ImpersonationRequest> {
     columnTitle: '申请时间',
     dataIndex: 'created_at',
     width: 140,
-    sorter: true,
     render: (_, record) => (
       record.created_at ? dayjs(record.created_at).format('YYYY-MM-DD HH:mm') : '-'
     ),

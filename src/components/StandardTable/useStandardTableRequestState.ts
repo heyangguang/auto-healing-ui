@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createRequestSequence } from '@/utils/requestSequence';
 
 interface SearchFilterItem {
   field: string;
@@ -88,6 +89,7 @@ export function useStandardTableRequestState<T extends Record<string, any>>({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sorter, setSorter] = useState<{ field: string; order: 'ascend' | 'descend' } | undefined>();
+  const requestSequenceRef = useRef(createRequestSequence());
 
   const fetchData = useCallback(async (
     nextPage: number = page,
@@ -115,6 +117,7 @@ export function useStandardTableRequestState<T extends Record<string, any>>({
       return;
     }
 
+    const requestToken = requestSequenceRef.current.next();
     setLoading(true);
     try {
       const result = await request({
@@ -125,12 +128,17 @@ export function useStandardTableRequestState<T extends Record<string, any>>({
         advancedSearch: mergedAdvanced,
         sorter: nextSorter,
       });
+      if (!requestSequenceRef.current.isCurrent(requestToken)) {
+        return;
+      }
       setData(result.data);
       setTotal(result.total);
     } catch {
       // Error handling is delegated to the request layer.
     } finally {
-      setLoading(false);
+      if (requestSequenceRef.current.isCurrent(requestToken)) {
+        setLoading(false);
+      }
     }
   }, [
     page,
@@ -143,6 +151,10 @@ export function useStandardTableRequestState<T extends Record<string, any>>({
     advancedValues,
     advancedMatchModes,
   ]);
+
+  useEffect(() => () => {
+    requestSequenceRef.current.invalidate();
+  }, []);
 
   useEffect(() => {
     if (!prefsLoaded) {

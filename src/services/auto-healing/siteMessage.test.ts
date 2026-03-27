@@ -46,10 +46,10 @@ describe('auto-healing siteMessage service', () => {
   it('sends read actions to the expected endpoints', async () => {
     (request as jest.Mock)
       .mockResolvedValueOnce({ message: 'ok' })
-      .mockResolvedValueOnce({ message: 'ok' });
+      .mockResolvedValueOnce({ data: { marked_count: 5 } });
 
     await markAsRead(['msg-1', 'msg-2']);
-    await markAllAsRead();
+    await expect(markAllAsRead()).resolves.toEqual({ marked_count: 5 });
 
     expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tenant/site-messages/read', {
       method: 'PUT',
@@ -86,6 +86,42 @@ describe('auto-healing siteMessage service', () => {
     expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tenant/site-messages/unread-count', {
       method: 'GET',
       skipTokenRefresh: true,
+    });
+  });
+
+  it('passes all live backend site-message query params through to the tenant endpoint', async () => {
+    (request as jest.Mock).mockResolvedValueOnce({
+      data: [],
+      total: 0,
+      page: 1,
+      page_size: 20,
+    });
+
+    await getSiteMessages({
+      page: 1,
+      page_size: 20,
+      keyword: '升级',
+      category: 'system_update',
+      is_read: false,
+      date_from: '2026-03-01',
+      date_to: '2026-03-27',
+      sort: 'created_at',
+      order: 'desc',
+    });
+
+    expect(request).toHaveBeenCalledWith('/api/v1/tenant/site-messages', {
+      method: 'GET',
+      params: {
+        page: 1,
+        page_size: 20,
+        keyword: '升级',
+        category: 'system_update',
+        is_read: false,
+        date_from: '2026-03-01',
+        date_to: '2026-03-27',
+        sort: 'created_at',
+        order: 'desc',
+      },
     });
   });
 });

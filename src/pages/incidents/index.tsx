@@ -21,7 +21,7 @@ import './index.css';
 /* ========== 组件 ========== */
 const IncidentList: React.FC = () => {
     const access = useAccess();
-    const canTriggerHealing = Boolean(access.canTriggerHealing);
+    const canResetScan = Boolean(access.canSyncPlugin);
     const detailRequestSequenceRef = useRef(0);
     /* ---- 统计 ---- */
     const [stats, setStats] = useState<AutoHealing.IncidentStats | null>(null);
@@ -127,11 +127,11 @@ const IncidentList: React.FC = () => {
 
     const columns = useMemo(
         () => createIncidentColumns({
-            canTriggerHealing,
+            canResetScan,
             onOpenDetail: openDetail,
             onResetScan: handleResetScan,
         }),
-        [canTriggerHealing, openDetail, handleResetScan],
+        [canResetScan, openDetail, handleResetScan],
     );
 
     /* ========== 数据请求 ========== */
@@ -146,13 +146,13 @@ const IncidentList: React.FC = () => {
     const batchToolbar = useMemo(
         () => (
             <IncidentBatchToolbar
-                canTriggerHealing={canTriggerHealing}
+                canResetScan={canResetScan}
                 onClearSelection={() => setSelectedRowMap(new Map())}
                 onResetScan={handleBatchResetScan}
                 selectedCount={selectedRows.length}
             />
         ),
-        [canTriggerHealing, handleBatchResetScan, selectedRows.length],
+        [canResetScan, handleBatchResetScan, selectedRows.length],
     );
 
     return (
@@ -194,7 +194,7 @@ const IncidentList: React.FC = () => {
             />
 
             <IncidentDetailDrawer
-                canTriggerHealing={canTriggerHealing}
+                canResetScan={canResetScan}
                 detailLoading={detailLoading}
                 incident={currentRow}
                 onClose={() => {
