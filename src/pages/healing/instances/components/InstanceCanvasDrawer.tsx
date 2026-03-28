@@ -1,12 +1,13 @@
 import React from 'react';
 import { Drawer, Spin, Empty, Space, Tag, Typography, Button, Descriptions, } from 'antd';
-import { ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, PauseCircleOutlined, StopOutlined, FullscreenOutlined } from '@ant-design/icons';
+import { FullscreenOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import { useRequest } from '@umijs/max';
 import ReactFlow, { Background, Controls, useNodesState, useEdgesState, type ProOptions } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { getLayoutedElements } from '../utils/layoutUtils';
 import { buildCanvasElements } from '../utils/canvasBuilder';
+import { getInstanceStatusConfig } from '../instanceStatus';
 import AutoLayoutButton from './AutoLayoutButton';
 import { getHealingInstanceDetail } from '@/services/auto-healing/instances';
 import dayjs from 'dayjs';
@@ -37,16 +38,6 @@ const nodeTypes = {
 };
 
 const proOptions: ProOptions = { hideAttribution: true };
-
-// Status config
-const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactElement; label: string }> = {
-    pending: { color: '#d9d9d9', icon: <ClockCircleOutlined />, label: '等待中' },
-    running: { color: '#1890ff', icon: <LoadingOutlined spin />, label: '执行中' },
-    waiting_approval: { color: '#fa8c16', icon: <PauseCircleOutlined />, label: '待审批' },
-    completed: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '已完成' },
-    failed: { color: '#ff4d4f', icon: <CloseCircleOutlined />, label: '失败' },
-    cancelled: { color: '#8c8c8c', icon: <StopOutlined />, label: '已取消' },
-};
 
 interface InstanceCanvasDrawerProps {
     open: boolean;
@@ -98,7 +89,7 @@ const InstanceCanvasDrawer: React.FC<InstanceCanvasDrawerProps> = ({ open, insta
     const instanceData = instance
         ? (((instance as { data?: AutoHealing.FlowInstance }).data || instance) as AutoHealing.FlowInstance)
         : null;
-    const statusConfig = instanceData ? STATUS_CONFIG[instanceData.status] || STATUS_CONFIG.pending : STATUS_CONFIG.pending;
+    const statusConfig = getInstanceStatusConfig(instanceData?.status || 'pending');
 
     return (
         <Drawer

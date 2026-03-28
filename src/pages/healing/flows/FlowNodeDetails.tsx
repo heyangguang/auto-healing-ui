@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tag, Typography } from 'antd';
+import { getExecutorConfig } from '@/constants/executionDicts';
 import { FLOW_NODE_VISUALS, getFlowNodeIcon } from './flowNodeVisuals';
 
 const { Text } = Typography;
@@ -47,6 +48,7 @@ const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label,
 
 function renderExecutionDetails(config: FlowNodeConfigLike, onEditExecutionTemplate: (taskTemplateId: string) => void) {
   const taskTemplateId = config.task_template_id;
+  const executor = config.executor_type ? getExecutorConfig(config.executor_type) : null;
   if (!taskTemplateId) {
     return <DetailRow label="任务模板" value={<span style={{ color: '#faad14', fontSize: 11 }}>⚠ 未配置</span>} />;
   }
@@ -63,7 +65,7 @@ function renderExecutionDetails(config: FlowNodeConfigLike, onEditExecutionTempl
           <Tag color="error" style={{ margin: 0, fontSize: 10 }}>已删除</Tag>
         )}
       />
-      {config.executor_type && <DetailRow label="执行器类型" value={config.executor_type} />}
+      {executor && <DetailRow label="执行器类型" value={executor.label} />}
       {config.hosts_key && <DetailRow label="主机变量" value={<code>{config.hosts_key}</code>} />}
       {config.extra_vars && Object.keys(config.extra_vars).length > 0 && (
         <DetailRow

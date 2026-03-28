@@ -1,51 +1,4 @@
 declare namespace GeneratedAutoHealing {
-  type NotificationTemplateCreate = {
-    name: string;
-    description?: string;
-    event_type?:
-      | "incident_created"
-      | "incident_resolved"
-      | "approval_required"
-      | "execution_result"
-      | "custom";
-    supported_channels?: ("email" | "dingtalk" | "webhook")[];
-    subject_template?: string;
-    /** 支持 40 个变量:
-- 时间: timestamp, date, time
-- 执行: execution.run_id, status, exit_code, duration, stdout, stderr
-- 任务: task.id, name, target_hosts, host_count, executor_type
-- 仓库: repository.id, name, url, main_playbook, branch
-- 统计: stats.ok, changed, failed, unreachable, skipped, total, success_rate
-- 系统: system.name, version, env
-- 错误: error.message, error.host
- */
-    body_template: string;
-    format?: "text" | "markdown" | "html";
-    is_active?: boolean;
-  };
-
-  type NotificationTemplateUpdate = {
-    name?: string;
-    description?: string;
-    event_type?:
-      | "incident_created"
-      | "incident_resolved"
-      | "approval_required"
-      | "execution_result"
-      | "custom";
-    supported_channels?: ("email" | "dingtalk" | "webhook")[];
-    subject_template?: string;
-    body_template?: string;
-    format?: "text" | "markdown" | "html";
-    is_active?: boolean;
-  };
-
-  type NotificationTriggerConfig = {
-    enabled?: boolean;
-    channel_ids?: string[];
-    template_id?: string;
-  };
-
   type NotificationTypeCount = {
     type?: "webhook" | "dingtalk" | "email";
     count?: number;
@@ -101,7 +54,7 @@ declare namespace GeneratedAutoHealing {
     /** 入口文件路径 */
     file_path?: string;
     description?: string;
-    status?: "pending" | "ready" | "error";
+    status?: string;
     variables?: PlaybookVariable[];
     last_scan_at?: string;
     created_at?: string;
@@ -111,7 +64,7 @@ declare namespace GeneratedAutoHealing {
   type PlaybookScanLog = {
     id?: string;
     playbook_id?: string;
-    trigger_type?: "manual" | "auto" | "sync";
+    trigger_type?: string;
     /** 扫描的文件数 */
     files_scanned?: number;
     /** 发现的变量数 */
@@ -164,10 +117,10 @@ declare namespace GeneratedAutoHealing {
     id?: string;
     name?: string;
     /** 插件类型 */
-    type?: "itsm" | "cmdb";
+    type?: string;
     description?: string;
     version?: string;
-    status?: "active" | "inactive" | "error";
+    status?: string;
     /** 连接配置，包含：
 - url: API地址 (必填)
 - auth_type: 认证方式 basic/bearer/api_key (必填)
@@ -239,8 +192,8 @@ cmdb_mapping: { 标准字段: 外部字段 }
   type PluginSyncLog = {
     id?: string;
     plugin_id?: string;
-    sync_type?: "manual" | "scheduled";
-    status?: "running" | "success" | "failed";
+    sync_type?: string;
+    status?: string;
     records_fetched?: number;
     records_processed?: number;
     records_failed?: number;
@@ -252,6 +205,54 @@ cmdb_mapping: { 标准字段: 外部字段 }
   };
 
   type postPlatformImpersonationRequestsByIdCancelParams =           {
+                'id': string;
+          };
+
+  type postPlatformImpersonationRequestsByIdEnterParams =           {
+                'id': string;
+          };
+
+  type postPlatformImpersonationRequestsByIdExitParams =           {
+                'id': string;
+          };
+
+  type postPlatformImpersonationRequestsByIdTerminateParams =           {
+                'id': string;
+          };
+
+  type postPlatformTenantsByIdInvitationsParams =           {
+                'id': string;
+          };
+
+  type postPlatformTenantsByIdMembersParams =           {
+                'id': string;
+          };
+
+  type postPlatformUsersByIdResetPasswordParams =           {
+                'id': string;
+          };
+
+  type postTenantBlacklistExemptionsByIdApproveParams =           {
+                'id': string;
+          };
+
+  type postTenantBlacklistExemptionsByIdRejectParams =           {
+                'id': string;
+          };
+
+  type postTenantChannelsByIdTestParams =           {
+                'id': string;
+          };
+
+  type postTenantCmdbByIdMaintenanceParams =           {
+                'id': string;
+          };
+
+  type postTenantCmdbByIdResumeParams =           {
+                'id': string;
+          };
+
+  type postTenantCmdbByIdTestConnectionParams =           {
                 'id': string;
           };
 }

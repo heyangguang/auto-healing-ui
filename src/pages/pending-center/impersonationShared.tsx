@@ -8,6 +8,10 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import { Tag } from 'antd';
+import {
+  IMPERSONATION_STATUS_OPTIONS,
+  getImpersonationStatusMeta,
+} from '@/constants/accessDicts';
 import dayjs from 'dayjs';
 import type {
   ImpersonationListParams,
@@ -44,25 +48,20 @@ export interface ImpersonationTableRequestParams {
   sorter?: TableSorter;
 }
 
-export const impersonationStatusMap: Record<
-  ImpersonationStatus,
-  { color: string; label: string; icon: React.ReactNode }
-> = {
-  pending: { color: 'processing', label: '待审批', icon: <ClockCircleOutlined /> },
-  approved: { color: 'cyan', label: '已批准', icon: <CheckCircleOutlined /> },
-  rejected: { color: 'error', label: '已拒绝', icon: <CloseCircleOutlined /> },
-  active: { color: 'success', label: '会话中', icon: <EyeOutlined /> },
-  completed: { color: 'default', label: '已完成', icon: <CheckCircleOutlined /> },
-  expired: { color: 'warning', label: '已过期', icon: <StopOutlined /> },
-  cancelled: { color: 'default', label: '已撤销', icon: <MinusCircleOutlined /> },
+const STATUS_ICON_REGISTRY: Record<string, React.ReactNode> = {
+  pending: <ClockCircleOutlined />,
+  approved: <CheckCircleOutlined />,
+  rejected: <CloseCircleOutlined />,
+  active: <EyeOutlined />,
+  completed: <CheckCircleOutlined />,
+  expired: <StopOutlined />,
+  cancelled: <MinusCircleOutlined />,
 };
-export const impersonationStatusOptions = Object.entries(impersonationStatusMap).map(([value, meta]) => ({
-  label: meta.label,
-  value,
-}));
+
+export const impersonationStatusOptions = IMPERSONATION_STATUS_OPTIONS;
 export function renderImpersonationStatusTag(status: ImpersonationStatus) {
-  const meta = impersonationStatusMap[status];
-  return <Tag color={meta.color} icon={meta.icon} style={{ margin: 0 }}>{meta.label}</Tag>;
+  const meta = getImpersonationStatusMeta(status);
+  return <Tag color={meta.tagColor} icon={STATUS_ICON_REGISTRY[status]} style={{ margin: 0 }}>{meta.label}</Tag>;
 }
 export function formatImpersonationTime(value: string | null | undefined) {
   if (!value) {

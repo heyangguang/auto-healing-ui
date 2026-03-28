@@ -7,25 +7,31 @@ import {
   PauseCircleOutlined,
   StopOutlined,
 } from '@ant-design/icons';
+import { INSTANCE_STATUS_MAP } from '@/constants/instanceDicts';
 import { normalizeNodeState } from './utils/canvasBuilder';
 
-export const INSTANCE_STATUS_CONFIG: Record<string, { color: string; icon: React.ReactElement; label: string }> = {
-  pending: { color: '#d9d9d9', icon: <ClockCircleOutlined />, label: '等待中' },
-  running: { color: '#1890ff', icon: <LoadingOutlined spin />, label: '执行中' },
-  waiting_approval: { color: '#fa8c16', icon: <PauseCircleOutlined />, label: '待审批' },
-  completed: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '已完成' },
-  success: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '成功' },
-  approved: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '已通过' },
-  failed: { color: '#ff4d4f', icon: <CloseCircleOutlined />, label: '失败' },
-  rejected: { color: '#ff4d4f', icon: <CloseCircleOutlined />, label: '已拒绝' },
-  partial: { color: '#faad14', icon: <ClockCircleOutlined />, label: '部分成功' },
-  cancelled: { color: '#8c8c8c', icon: <StopOutlined />, label: '已取消' },
-  skipped: { color: '#d9d9d9', icon: <StopOutlined />, label: '已跳过' },
-  simulated: { color: '#13c2c2', icon: <CheckCircleOutlined />, label: '模拟通过' },
+const INSTANCE_STATUS_ICONS: Record<string, React.ReactElement> = {
+  pending: <ClockCircleOutlined />,
+  running: <LoadingOutlined spin />,
+  waiting_approval: <PauseCircleOutlined />,
+  completed: <CheckCircleOutlined />,
+  success: <CheckCircleOutlined />,
+  approved: <CheckCircleOutlined />,
+  failed: <CloseCircleOutlined />,
+  rejected: <CloseCircleOutlined />,
+  partial: <ClockCircleOutlined />,
+  cancelled: <StopOutlined />,
+  skipped: <StopOutlined />,
+  simulated: <CheckCircleOutlined />,
 };
 
 export function getInstanceStatusConfig(status: string) {
-  return INSTANCE_STATUS_CONFIG[status] || INSTANCE_STATUS_CONFIG.pending;
+  const info = INSTANCE_STATUS_MAP[status] || INSTANCE_STATUS_MAP.pending || { color: 'default', text: status || '未知' };
+  return {
+    color: info.color,
+    icon: INSTANCE_STATUS_ICONS[status] || INSTANCE_STATUS_ICONS.pending,
+    label: info.text,
+  };
 }
 
 export function hasFailedNodes(instance: AutoHealing.FlowInstance): boolean {

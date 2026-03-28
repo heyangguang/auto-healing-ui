@@ -1,10 +1,4 @@
 declare namespace GeneratedAutoHealing {
-  type FlowEdge = {
-    from?: string;
-    to?: string;
-    condition?: string;
-  };
-
   type FlowExecutionLog = {
     id?: string;
     flow_instance_id?: string;
@@ -20,7 +14,8 @@ declare namespace GeneratedAutoHealing {
       | "execution"
       | "notification"
       | "condition"
-      | "set_variable";
+      | "set_variable"
+      | "compute";
     /** 日志级别 */
     level?: "debug" | "info" | "warn" | "error";
     /** 日志消息 */
@@ -35,13 +30,7 @@ declare namespace GeneratedAutoHealing {
     flow_id?: string;
     rule_id?: string;
     incident_id?: string;
-    status?:
-      | "pending"
-      | "running"
-      | "waiting_approval"
-      | "completed"
-      | "failed"
-      | "cancelled";
+    status?: string;
     current_node_id?: string;
     error_message?: string;
     started_at?: string;
@@ -150,7 +139,7 @@ declare namespace GeneratedAutoHealing {
 
   type getPlatformUsersSimpleParams =           {
                 'name'?: string;
-                'status'?: "active" | "inactive";
+                'status'?: string;
           };
 
   type getTenantAuditLogsActionGroupingParams =           {
@@ -207,7 +196,7 @@ declare namespace GeneratedAutoHealing {
   type getTenantChannelsParams =           {
                 'page'?: number;
                 'page_size'?: number;
-                'type'?: "webhook" | "dingtalk" | "email";
+                'type'?: string;
           };
 
   type getTenantCmdbByIdMaintenanceLogsParams =           {
@@ -232,9 +221,9 @@ declare namespace GeneratedAutoHealing {
   type getTenantCmdbParams =           {
                 'page'?: number;
                 'page_size'?: number;
-                'type'?: "server" | "application" | "network" | "database";
-                'status'?: "active" | "maintenance";
-                'environment'?: "production" | "staging" | "development";
+                'type'?: string;
+                'status'?: string;
+                'environment'?: string;
                 'source_plugin_name'?: string;
           };
 
@@ -254,5 +243,17 @@ declare namespace GeneratedAutoHealing {
                 'scope'?: string;
                 'sort_by'?: string;
                 'sort_order'?: string;
+          };
+
+  type getTenantDashboardOverviewParams =           {
+                'sections': string;
+          };
+
+  type getTenantDashboardRolesByRoleIdWorkspacesParams =           {
+                'roleId': string;
+          };
+
+  type getTenantExecutionRunsByIdLogsParams =           {
+                'id': string;
           };
 }

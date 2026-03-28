@@ -2,10 +2,11 @@ import React, { useMemo } from 'react';
 import { CheckCircleOutlined, CloudOutlined, FileOutlined, GlobalOutlined, PlusOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAccess } from '@umijs/max';
 import StandardTable from '@/components/StandardTable';
+import { getSecretsSourceStatusMeta, getSecretsSourceTypeMeta } from '@/constants/secretsDicts';
 import SecretsSourceDetailDrawer from './SecretsSourceDetailDrawer';
 import SecretsSourceTestModals from './SecretsSourceTestModals';
 import { createSecretSourceColumns } from './secretSourceColumns';
-import { advancedSearchFields, headerIcon, searchFields } from './secretSourcePageConfig';
+import { buildAdvancedSearchFields, headerIcon, searchFields } from './secretSourcePageConfig';
 import { useSecretsSourceListModel } from './useSecretsSourceListModel';
 import './index.css';
 
@@ -48,22 +49,22 @@ const SecretsSourceList: React.FC = () => {
             <div className="secrets-stat-divider" />
             <div className="secrets-stat-item">
                 <CheckCircleOutlined className="secrets-stat-icon secrets-stat-icon-active" />
-                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.active}</div><div className="secrets-stat-label">已启用</div></div>
+                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.active}</div><div className="secrets-stat-label">{getSecretsSourceStatusMeta('active').label}</div></div>
             </div>
             <div className="secrets-stat-divider" />
             <div className="secrets-stat-item">
                 <FileOutlined className="secrets-stat-icon secrets-stat-icon-file" />
-                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.file}</div><div className="secrets-stat-label">本地文件</div></div>
+                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.file}</div><div className="secrets-stat-label">{getSecretsSourceTypeMeta('file').label}</div></div>
             </div>
             <div className="secrets-stat-divider" />
             <div className="secrets-stat-item">
                 <SafetyCertificateOutlined className="secrets-stat-icon secrets-stat-icon-vault" />
-                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.vault}</div><div className="secrets-stat-label">Vault</div></div>
+                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.vault}</div><div className="secrets-stat-label">{getSecretsSourceTypeMeta('vault').label}</div></div>
             </div>
             <div className="secrets-stat-divider" />
             <div className="secrets-stat-item">
                 <GlobalOutlined className="secrets-stat-icon secrets-stat-icon-webhook" />
-                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.webhook}</div><div className="secrets-stat-label">Webhook</div></div>
+                <div className="secrets-stat-content"><div className="secrets-stat-value">{model.stats.webhook}</div><div className="secrets-stat-label">{getSecretsSourceTypeMeta('webhook').label}</div></div>
             </div>
         </div>
     ), [model.stats]);
@@ -78,7 +79,7 @@ const SecretsSourceList: React.FC = () => {
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
                 searchFields={searchFields}
-                advancedSearchFields={advancedSearchFields}
+                advancedSearchFields={buildAdvancedSearchFields()}
                 primaryActionLabel="添加密钥源"
                 primaryActionIcon={<PlusOutlined />}
                 primaryActionDisabled={!access.canCreateSecretsSource}

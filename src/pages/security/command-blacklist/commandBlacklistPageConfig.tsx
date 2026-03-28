@@ -13,24 +13,54 @@ import {
     SecurityScanOutlined,
     WarningOutlined,
 } from '@ant-design/icons';
+import {
+    getBlacklistCategoryMeta,
+    getBlacklistMatchTypeMeta,
+    getBlacklistSeverityMeta,
+} from '@/constants/securityDicts';
 
-export const SEVERITY_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode; tagColor: string }> = {
-    critical: { label: '严重', color: '#ff4d4f', icon: <FireOutlined />, tagColor: 'red' },
-    high: { label: '高危', color: '#fa8c16', icon: <WarningOutlined />, tagColor: 'orange' },
-    medium: { label: '中危', color: '#fadb14', icon: <ExclamationCircleOutlined />, tagColor: 'gold' },
+const SEVERITY_ICON_REGISTRY: Record<string, React.ReactNode> = {
+    critical: <FireOutlined />,
+    high: <WarningOutlined />,
+    medium: <ExclamationCircleOutlined />,
 };
 
-export const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-    filesystem: { label: '文件系统', icon: <CodeOutlined />, color: '#1890ff' },
-    network: { label: '网络', icon: <CloudOutlined />, color: '#52c41a' },
-    system: { label: '系统', icon: <DesktopOutlined />, color: '#722ed1' },
-    database: { label: '数据库', icon: <DatabaseOutlined />, color: '#eb2f96' },
+const CATEGORY_ICON_REGISTRY: Record<string, React.ReactNode> = {
+    filesystem: <CodeOutlined />,
+    network: <CloudOutlined />,
+    system: <DesktopOutlined />,
+    database: <DatabaseOutlined />,
 };
 
-export const MATCH_TYPE_CONFIG: Record<string, { label: string; desc: string; icon: React.ReactNode }> = {
-    contains: { label: '包含匹配', desc: '检查行中是否包含该文本', icon: <SearchOutlined /> },
-    regex: { label: '正则匹配', desc: '使用正则表达式匹配', icon: <BugOutlined /> },
-    exact: { label: '精确匹配', desc: '行内容去空格后完全匹配', icon: <LockOutlined /> },
+const MATCH_TYPE_ICON_REGISTRY: Record<string, React.ReactNode> = {
+    contains: <SearchOutlined />,
+    regex: <BugOutlined />,
+    exact: <LockOutlined />,
+};
+
+export const getSeverityConfig = (key: string) => {
+    const meta = getBlacklistSeverityMeta(key);
+    return {
+        ...meta,
+        icon: SEVERITY_ICON_REGISTRY[key] || <ExclamationCircleOutlined />,
+    };
+};
+
+export const getCategoryConfig = (key: string) => {
+    const meta = getBlacklistCategoryMeta(key);
+    return {
+        ...meta,
+        icon: CATEGORY_ICON_REGISTRY[key] || <CodeOutlined />,
+    };
+};
+
+export const getMatchTypeConfig = (key: string) => {
+    const meta = getBlacklistMatchTypeMeta(key);
+    return {
+        ...meta,
+        desc: meta.desc || '',
+        icon: MATCH_TYPE_ICON_REGISTRY[key] || <SearchOutlined />,
+    };
 };
 
 export const headerIcon = (
@@ -53,45 +83,52 @@ export const searchFields = [
 ];
 
 export const buildStatsBar = (stats: { total: number; active: number; critical: number; high: number; medium: number }) => (
-    <div className="blacklist-stats-bar">
-        <div className="blacklist-stat-item">
-            <SecurityScanOutlined className="blacklist-stat-icon blacklist-stat-icon-total" />
-            <div className="blacklist-stat-content">
-                <div className="blacklist-stat-value">{stats.total}</div>
-                <div className="blacklist-stat-label">总规则数</div>
+    (() => {
+        const critical = getBlacklistSeverityMeta('critical');
+        const high = getBlacklistSeverityMeta('high');
+        const medium = getBlacklistSeverityMeta('medium');
+        return (
+            <div className="blacklist-stats-bar">
+                <div className="blacklist-stat-item">
+                    <SecurityScanOutlined className="blacklist-stat-icon blacklist-stat-icon-total" />
+                    <div className="blacklist-stat-content">
+                        <div className="blacklist-stat-value">{stats.total}</div>
+                        <div className="blacklist-stat-label">总规则数</div>
+                    </div>
+                </div>
+                <div className="blacklist-stat-divider" />
+                <div className="blacklist-stat-item">
+                    <CheckCircleOutlined className="blacklist-stat-icon blacklist-stat-icon-active" />
+                    <div className="blacklist-stat-content">
+                        <div className="blacklist-stat-value">{stats.active}</div>
+                        <div className="blacklist-stat-label">已启用</div>
+                    </div>
+                </div>
+                <div className="blacklist-stat-divider" />
+                <div className="blacklist-stat-item">
+                    <FireOutlined className="blacklist-stat-icon blacklist-stat-icon-critical" style={{ color: critical.color }} />
+                    <div className="blacklist-stat-content">
+                        <div className="blacklist-stat-value">{stats.critical}</div>
+                        <div className="blacklist-stat-label">{critical.label}</div>
+                    </div>
+                </div>
+                <div className="blacklist-stat-divider" />
+                <div className="blacklist-stat-item">
+                    <WarningOutlined className="blacklist-stat-icon blacklist-stat-icon-high" style={{ color: high.color }} />
+                    <div className="blacklist-stat-content">
+                        <div className="blacklist-stat-value">{stats.high}</div>
+                        <div className="blacklist-stat-label">{high.label}</div>
+                    </div>
+                </div>
+                <div className="blacklist-stat-divider" />
+                <div className="blacklist-stat-item">
+                    <ExclamationCircleOutlined className="blacklist-stat-icon blacklist-stat-icon-medium" style={{ color: medium.color }} />
+                    <div className="blacklist-stat-content">
+                        <div className="blacklist-stat-value">{stats.medium}</div>
+                        <div className="blacklist-stat-label">{medium.label}</div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div className="blacklist-stat-divider" />
-        <div className="blacklist-stat-item">
-            <CheckCircleOutlined className="blacklist-stat-icon blacklist-stat-icon-active" />
-            <div className="blacklist-stat-content">
-                <div className="blacklist-stat-value">{stats.active}</div>
-                <div className="blacklist-stat-label">已启用</div>
-            </div>
-        </div>
-        <div className="blacklist-stat-divider" />
-        <div className="blacklist-stat-item">
-            <FireOutlined className="blacklist-stat-icon blacklist-stat-icon-critical" />
-            <div className="blacklist-stat-content">
-                <div className="blacklist-stat-value">{stats.critical}</div>
-                <div className="blacklist-stat-label">严重</div>
-            </div>
-        </div>
-        <div className="blacklist-stat-divider" />
-        <div className="blacklist-stat-item">
-            <WarningOutlined className="blacklist-stat-icon blacklist-stat-icon-high" />
-            <div className="blacklist-stat-content">
-                <div className="blacklist-stat-value">{stats.high}</div>
-                <div className="blacklist-stat-label">高危</div>
-            </div>
-        </div>
-        <div className="blacklist-stat-divider" />
-        <div className="blacklist-stat-item">
-            <ExclamationCircleOutlined className="blacklist-stat-icon blacklist-stat-icon-medium" />
-            <div className="blacklist-stat-content">
-                <div className="blacklist-stat-value">{stats.medium}</div>
-                <div className="blacklist-stat-label">中危</div>
-            </div>
-        </div>
-    </div>
+        );
+    })()
 );

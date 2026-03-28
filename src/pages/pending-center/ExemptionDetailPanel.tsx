@@ -2,9 +2,9 @@ import React from 'react';
 import { Space, Tag, Typography } from 'antd';
 import type { ExemptionRecord } from '@/services/auto-healing/blacklistExemption';
 import {
-  exemptionSeverityColors,
-  exemptionStatusMap,
   formatExemptionTime,
+  getExemptionSeverityMeta,
+  getExemptionStatusMeta,
 } from './exemptionApprovalShared';
 
 const { Text } = Typography;
@@ -22,7 +22,7 @@ function getStatusStyles(status: ExemptionRecord['status']) {
 }
 
 function ExemptionStatusBanner({ detail }: ExemptionDetailPanelProps) {
-  const meta = exemptionStatusMap[detail.status] || { color: 'default', label: detail.status, icon: null };
+  const meta = getExemptionStatusMeta(detail.status);
   const styles = getStatusStyles(detail.status);
   return (
     <div style={{ padding: '14px 16px', background: styles.background, border: `1px solid ${styles.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -56,8 +56,8 @@ function ExemptionApplicationSection({ detail }: ExemptionDetailPanelProps) {
           <div style={labelStyle}>豁免规则</div>
           <Space size={6}>
             <Text style={valueStyle}>{detail.rule_name}</Text>
-            <Tag color={exemptionSeverityColors[detail.rule_severity]} style={{ margin: 0, fontSize: 11 }}>
-              {detail.rule_severity}
+            <Tag color={getExemptionSeverityMeta(detail.rule_severity).tagColor} style={{ margin: 0, fontSize: 11 }}>
+              {getExemptionSeverityMeta(detail.rule_severity).label}
             </Tag>
           </Space>
         </div>

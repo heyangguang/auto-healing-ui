@@ -1,5 +1,5 @@
 import type { AdvancedSearchField, SearchField } from '@/components/StandardTable';
-import { getRunStatusOptions } from '@/constants/executionDicts';
+import { getExecutorOptions, getRunStatusOptions } from '@/constants/executionDicts';
 import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 
 export type ExecutionTaskRecord = AutoHealing.ExecutionTask & {
@@ -78,10 +78,7 @@ export const templateSearchFields: SearchField[] = [
         key: '__enum__executor',
         label: '执行器类型',
         description: '筛选执行器类型',
-        options: [
-            { label: 'SSH / Local', value: 'local' },
-            { label: 'Docker', value: 'docker' },
-        ],
+        options: getExecutorOptions(),
     },
     {
         key: '__enum__needs_review',
@@ -101,10 +98,7 @@ export const templateAdvancedSearchFields: AdvancedSearchField[] = [
         key: 'executor_type',
         label: '执行器类型',
         type: 'select',
-        options: [
-            { label: 'SSH / Local', value: 'local' },
-            { label: 'Docker', value: 'docker' },
-        ],
+        options: getExecutorOptions(),
     },
     {
         key: 'needs_review',

@@ -24,6 +24,7 @@ import {
     Typography,
 } from 'antd';
 import type { StandardColumnDef } from '@/components/StandardTable';
+import { getExecutorConfig, getExecutorOptions } from '@/constants/executionDicts';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import { ExecutorIcon } from './TemplateIcons';
 import { type ExecutionTaskRecord, getChangedVariableName, getTaskHosts } from './templateListHelpers';
@@ -56,6 +57,7 @@ export function createTemplateColumns({
             sorter: true,
             width: 340,
             render: (_, record) => {
+                const executor = getExecutorConfig(record.executor_type);
                 const playbook = playbooks.find((item) => item.id === record.playbook_id);
                 const hosts = getTaskHosts(record);
                 const configuredCount = Object.keys(record.extra_vars || {}).length;
@@ -63,7 +65,7 @@ export function createTemplateColumns({
 
                 return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Tooltip title={record.executor_type === 'docker' ? 'Docker 容器执行' : '本地 / SSH 执行'}>
+                        <Tooltip title={`${executor.label} 执行`}>
                             <ExecutorIcon executorType={record.executor_type} />
                         </Tooltip>
                         <div style={{ minWidth: 0, flex: 1 }}>
@@ -107,11 +109,9 @@ export function createTemplateColumns({
             columnKey: 'executor',
             columnTitle: '执行环境',
             width: 150,
-            headerFilters: [
-                { label: 'SSH / Local', value: 'local' },
-                { label: 'Docker', value: 'docker' },
-            ],
+            headerFilters: getExecutorOptions().map(item => ({ label: item.label, value: item.value })),
             render: (_, record) => {
+                const executor = getExecutorConfig(record.executor_type);
                 const hosts = getTaskHosts(record);
                 const hasNotify = hasEffectiveNotificationConfig(record.notification_config);
                 const hasSecrets = (record.secrets_source_ids?.length ?? 0) > 0;
@@ -120,10 +120,10 @@ export function createTemplateColumns({
                     <Space orientation="vertical" size={0}>
                         <Tag
                             icon={record.executor_type === 'docker' ? <ContainerOutlined /> : <CodeOutlined />}
-                            color={record.executor_type === 'docker' ? 'blue' : 'purple'}
+                            color={executor.tagColor || executor.color}
                             style={{ fontSize: 12, margin: 0 }}
                         >
-                            {record.executor_type === 'docker' ? 'Docker 容器' : 'SSH / Local'}
+                            {executor.label}
                         </Tag>
                         <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {hosts.length > 0 && (

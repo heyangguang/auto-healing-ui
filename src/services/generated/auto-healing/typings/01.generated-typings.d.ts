@@ -3,7 +3,7 @@ declare namespace GeneratedAutoHealing {
     /** 主入口文件 */
     main_playbook: string;
     /** 配置模式 */
-    config_mode: "auto" | "enhanced";
+    config_mode: string;
     /** enhanced 模式下的变量定义 */
     variables?: PlaybookVariable[];
   };
@@ -20,7 +20,7 @@ declare namespace GeneratedAutoHealing {
     id?: string;
     flow_instance_id?: string;
     node_id?: string;
-    status?: "pending" | "approved" | "rejected" | "expired";
+    status?: string;
     timeout_at?: string;
     decided_by?: string;
     decided_at?: string;
@@ -58,8 +58,8 @@ declare namespace GeneratedAutoHealing {
     source_plugin_name?: string;
     external_id?: string;
     name?: string;
-    type?: "server" | "application" | "network" | "database";
-    status?: "active" | "offline" | "maintenance";
+    type?: string;
+    status?: string;
     ip_address?: string;
     hostname?: string;
     os?: string;
@@ -69,7 +69,7 @@ declare namespace GeneratedAutoHealing {
     disk?: string;
     location?: string;
     owner?: string;
-    environment?: "production" | "staging" | "development";
+    environment?: string;
     manufacturer?: string;
     model?: string;
     serial_number?: string;
@@ -131,9 +131,9 @@ declare namespace GeneratedAutoHealing {
     tenant_id?: string;
     name?: string;
     pattern?: string;
-    match_type?: "contains" | "regex" | "exact";
-    severity?: "critical" | "high" | "medium";
-    category?: "filesystem" | "network" | "system" | "database";
+    match_type?: string;
+    severity?: string;
+    category?: string;
     description?: string;
     is_active?: boolean;
     is_system?: boolean;
@@ -178,7 +178,7 @@ declare namespace GeneratedAutoHealing {
     /** 默认分支 */
     default_branch?: string;
     /** 认证类型 */
-    auth_type?: "none" | "token" | "password" | "ssh_key";
+    auth_type?: string;
     /** 认证配置，格式取决于 auth_type：
 - token: { "token": "xxx" }
 - password: { "username": "user", "password": "pass" }
@@ -193,9 +193,9 @@ declare namespace GeneratedAutoHealing {
 
   type CreateSecretsSourceRequest = {
     name: string;
-    type: "vault" | "file" | "webhook";
+    type: string;
     /** SSH 认证类型 */
-    auth_type: "ssh_key" | "password";
+    auth_type: string;
     config: FileConfig | VaultConfig | WebhookConfig;
     is_default?: boolean;
     priority?: number;

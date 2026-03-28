@@ -4,6 +4,7 @@ import {
     EditOutlined,
 } from '@ant-design/icons';
 import { Alert, Badge, Button, Drawer, Space, Spin } from 'antd';
+import { getSecretsSourceStatusMeta } from '@/constants/secretsDicts';
 import { getAuthTypeConfig, getSourceTypeConfig } from './secretSourcePageConfig';
 import SecretsSourceBasicInfoCard from './SecretsSourceBasicInfoCard';
 import SecretsSourceConnectionConfigCard from './SecretsSourceConnectionConfigCard';
@@ -30,6 +31,7 @@ export default function SecretsSourceDetailDrawer(props: SecretsSourceDetailDraw
 
     const typeConfig = getSourceTypeConfig(currentSource.type);
     const authConfig = getAuthTypeConfig(currentSource.auth_type);
+    const statusConfig = getSecretsSourceStatusMeta(currentSource.status);
 
     return (
         <Drawer
@@ -50,7 +52,7 @@ export default function SecretsSourceDetailDrawer(props: SecretsSourceDetailDraw
                             <div className="secrets-detail-title">{currentSource.name}</div>
                             <div className="secrets-detail-sub">{typeConfig.label}</div>
                         </div>
-                        <Badge status={currentSource.status === 'active' ? 'success' : 'default'} text={currentSource.status === 'active' ? '已启用' : '已禁用'} />
+                        <Badge status={statusConfig.badge} text={statusConfig.label} />
                     </div>
                     <Space size="small">
                         <Button size="small" icon={<ApiOutlined />} onClick={() => onOpenTestQuery(currentSource)} disabled={currentSource.status !== 'active' || !canTestSource}>

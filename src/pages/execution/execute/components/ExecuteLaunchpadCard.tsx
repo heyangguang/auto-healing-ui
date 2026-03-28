@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircleOutlined, ClockCircleOutlined, KeyOutlined, BellOutlined, ProjectOutlined, DesktopOutlined, SettingOutlined } from '@ant-design/icons';
 import { Col } from 'antd';
+import { getExecutorConfig } from '@/constants/executionDicts';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import { splitTargetHosts } from './HostList';
 
@@ -20,6 +21,7 @@ const ExecuteLaunchpadCard: React.FC<ExecuteLaunchpadCardProps> = ({
     const playbookKnownOffline = !!template.playbook && template.playbook.status !== 'ready';
     const disabled = !!template.needs_review || playbookKnownOffline;
     const isDocker = template.executor_type === 'docker';
+    const executor = getExecutorConfig(template.executor_type);
     const hasNotify = hasEffectiveNotificationConfig(template.notification_config as never);
 
     const cardClass = [
@@ -55,7 +57,7 @@ const ExecuteLaunchpadCard: React.FC<ExecuteLaunchpadCardProps> = ({
                             </svg>
                         )}
                     </div>
-                    <div className="launchpad-card-type-label">{isDocker ? 'DOCKER' : 'SSH'}</div>
+                    <div className="launchpad-card-type-label">{executor.label}</div>
                 </div>
 
                 <div className="launchpad-card-body">

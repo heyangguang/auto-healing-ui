@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { Button, Space, Tag } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import StandardTable, { type AdvancedSearchField, type StandardColumnDef } from '@/components/StandardTable';
+import { getApprovalStatusConfig } from '@/constants/instanceDicts';
 import { getPendingApprovals } from '@/services/auto-healing/healing';
 import type { PendingApprovalRecord } from './types';
 import {
@@ -53,12 +54,13 @@ function createFlowInstanceColumn(): StandardColumnDef<PendingApprovalRecord> {
 }
 
 function createStatusColumn(): StandardColumnDef<PendingApprovalRecord> {
+  const status = getApprovalStatusConfig('pending');
   return {
     columnKey: 'status',
     columnTitle: '状态',
     dataIndex: 'status',
     width: 100,
-    render: () => <Tag color="orange" icon={<ClockCircleOutlined />}>待审批</Tag>,
+    render: () => <Tag color={status.color} icon={<ClockCircleOutlined />}>{status.text}</Tag>,
   };
 }
 

@@ -14,6 +14,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import StandardTable from '@/components/StandardTable';
 import type { AdvancedSearchField, SearchField } from '@/components/StandardTable';
+import { USER_STATUS_MAP, USER_STATUS_OPTIONS } from '@/constants/commonDicts';
 import PlatformUserCard from './PlatformUserCard';
 import PlatformUserDetailDrawer from './PlatformUserDetailDrawer';
 import ResetPlatformPasswordModal from './ResetPlatformPasswordModal';
@@ -34,16 +35,12 @@ const searchFields: SearchField[] = [
   { key: 'display_name', label: '显示名' },
 ];
 
-const advancedSearchFields: AdvancedSearchField[] = [
+const buildAdvancedSearchFields = (): AdvancedSearchField[] => [
   {
     key: 'status',
     label: '状态',
     type: 'select',
-    options: [
-      { label: '活跃', value: 'active' },
-      { label: '锁定', value: 'locked' },
-      { label: '停用', value: 'inactive' },
-    ],
+    options: USER_STATUS_OPTIONS,
   },
   { key: 'email', label: '邮箱', type: 'input', placeholder: '搜索邮箱' },
   { key: 'created_at', label: '创建时间', type: 'dateRange' },
@@ -88,8 +85,8 @@ const PlatformUsersPage: React.FC = () => {
   const statsBar = useMemo(() => {
     const items = [
       { icon: <UserOutlined />, cls: 'total', val: stats.total, lbl: '全部' },
-      { icon: <CheckCircleOutlined />, cls: 'ready', val: stats.active, lbl: '启用' },
-      { icon: <UserOutlined />, cls: 'error', val: stats.inactive, lbl: '禁用' },
+      { icon: <CheckCircleOutlined />, cls: 'ready', val: stats.active, lbl: USER_STATUS_MAP.active?.label || 'active' },
+      { icon: <UserOutlined />, cls: 'error', val: stats.inactive, lbl: USER_STATUS_MAP.inactive?.label || USER_STATUS_MAP.disabled?.label || 'inactive' },
     ];
     return (
       <div className="git-stats-bar">
@@ -118,7 +115,7 @@ const PlatformUsersPage: React.FC = () => {
         headerIcon={headerIcon}
         headerExtra={statsBar}
         searchFields={searchFields}
-        advancedSearchFields={advancedSearchFields}
+        advancedSearchFields={buildAdvancedSearchFields()}
         onSearch={handleSearch}
         primaryActionLabel="新建用户"
         primaryActionIcon={<PlusOutlined />}

@@ -1,26 +1,4 @@
 declare namespace GeneratedAutoHealing {
-  type HealingRuleCreate = {
-    name: string;
-    description?: string;
-    priority?: number;
-    trigger_mode?: "auto" | "manual";
-    conditions?: RuleCondition[];
-    match_mode?: "all" | "any";
-    flow_id?: string;
-    is_active?: boolean;
-  };
-
-  type HealingRuleUpdate = {
-    name?: string;
-    description?: string;
-    priority?: number;
-    trigger_mode?: "auto" | "manual";
-    conditions?: RuleCondition[];
-    match_mode?: "all" | "any";
-    flow_id?: string;
-    is_active?: boolean;
-  };
-
   type HealingSchemaObject = {
     type?: string;
     description?: string;
@@ -70,17 +48,11 @@ declare namespace GeneratedAutoHealing {
     external_id?: string;
     title?: string;
     description?: string;
-    severity?: "critical" | "high" | "medium" | "low";
+    severity?: string;
     priority?: string;
-    status?: "open" | "in_progress" | "resolved" | "closed";
+    status?: string;
     category?: string;
-    healing_status?:
-      | "pending"
-      | "processing"
-      | "healed"
-      | "failed"
-      | "skipped"
-      | "dismissed";
+    healing_status?: string;
     affected_ci?: string;
     affected_service?: string;
     assignee?: string;
@@ -169,7 +141,7 @@ declare namespace GeneratedAutoHealing {
   type NotificationChannel = {
     id?: string;
     name?: string;
-    type?: "webhook" | "dingtalk" | "email";
+    type?: string;
     description?: string;
     retry_config?: { max_retries?: number; retry_intervals?: number[] };
     recipients?: string[];
@@ -182,7 +154,7 @@ declare namespace GeneratedAutoHealing {
 
   type NotificationChannelCreate = {
     name: string;
-    type: "webhook" | "dingtalk" | "email";
+    type: string;
     description?: string;
     config: Record<string, unknown>;
     retry_config?: Record<string, unknown>;
@@ -232,20 +204,52 @@ declare namespace GeneratedAutoHealing {
     id?: string;
     name?: string;
     description?: string;
-    event_type?:
-      | "incident_created"
-      | "incident_resolved"
-      | "approval_required"
-      | "execution_result"
-      | "custom";
-    supported_channels?: ("email" | "dingtalk" | "webhook")[];
+    event_type?: string;
+    supported_channels?: string[];
     subject_template?: string;
     body_template?: string;
-    format?: "text" | "markdown" | "html";
+    format?: string;
     /** 模板使用的 40 个变量列表 */
     available_variables?: string[];
     created_at?: string;
     updated_at?: string;
     is_active?: boolean;
+  };
+
+  type NotificationTemplateCreate = {
+    name: string;
+    description?: string;
+    event_type?: string;
+    supported_channels?: string[];
+    subject_template?: string;
+    /** 支持 40 个变量:
+- 时间: timestamp, date, time
+- 执行: execution.run_id, status, exit_code, duration, stdout, stderr
+- 任务: task.id, name, target_hosts, host_count, executor_type
+- 仓库: repository.id, name, url, main_playbook, branch
+- 统计: stats.ok, changed, failed, unreachable, skipped, total, success_rate
+- 系统: system.name, version, env
+- 错误: error.message, error.host
+ */
+    body_template: string;
+    format?: string;
+    is_active?: boolean;
+  };
+
+  type NotificationTemplateUpdate = {
+    name?: string;
+    description?: string;
+    event_type?: string;
+    supported_channels?: string[];
+    subject_template?: string;
+    body_template?: string;
+    format?: string;
+    is_active?: boolean;
+  };
+
+  type NotificationTriggerConfig = {
+    enabled?: boolean;
+    channel_ids?: string[];
+    template_id?: string;
   };
 }

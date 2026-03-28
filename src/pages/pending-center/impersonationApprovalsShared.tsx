@@ -19,6 +19,7 @@ import {
   impersonationStatusOptions,
   renderImpersonationStatusTag,
 } from './impersonationShared';
+import { getImpersonationStatusMeta } from '@/constants/accessDicts';
 
 const { Text } = Typography;
 
@@ -70,6 +71,7 @@ export function ImpersonationApprovalStatsBar({
   pending,
   errorMessage,
 }: ImpersonationApprovalStatsBarProps) {
+  const pendingStatus = getImpersonationStatusMeta('pending');
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '16px 24px', borderTop: '1px solid #f0f0f0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 20 }}>
@@ -81,10 +83,10 @@ export function ImpersonationApprovalStatsBar({
       </div>
       <div style={{ width: 1, height: 32, background: '#f0f0f0', flexShrink: 0 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px' }}>
-        <ClockCircleOutlined style={{ fontSize: 22, color: '#fa8c16', opacity: 0.75 }} />
+        <ClockCircleOutlined style={{ fontSize: 22, color: pendingStatus.color, opacity: 0.75 }} />
         <div>
           <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>{renderStatValue(pending)}</div>
-          <div style={{ fontSize: 12, color: '#8c8c8c' }}>待审批</div>
+          <div style={{ fontSize: 12, color: '#8c8c8c' }}>{pendingStatus.label}</div>
         </div>
       </div>
       {errorMessage ? <Text type="danger" style={{ marginLeft: 20, fontSize: 12 }}>{errorMessage}</Text> : null}

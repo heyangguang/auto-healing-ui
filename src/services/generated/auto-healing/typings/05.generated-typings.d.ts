@@ -1,23 +1,9 @@
 declare namespace GeneratedAutoHealing {
-  type getTenantPlaybooksByIdFilesParams =           {
-                'id': string;
-          };
-
-  type getTenantPlaybooksByIdParams =           {
-                'id': string;
-          };
-
-  type getTenantPlaybooksByIdScanLogsParams =           {
-                'id': string;
-                'page'?: number;
-                'page_size'?: number;
-          };
-
   type getTenantPlaybooksParams =           {
                 'page'?: number;
                 'page_size'?: number;
                 'repository_id'?: string;
-                'status'?: "pending" | "ready" | "error";
+                'status'?: string;
           };
 
   type getTenantPluginsByIdLogsParams =           {
@@ -33,8 +19,8 @@ declare namespace GeneratedAutoHealing {
   type getTenantPluginsParams =           {
                 'page'?: number;
                 'page_size'?: number;
-                'type'?: "itsm" | "cmdb";
-                'status'?: "active" | "inactive" | "error";
+                'type'?: string;
+                'status'?: string;
           };
 
   type getTenantRolesByIdParams =           {
@@ -53,8 +39,8 @@ declare namespace GeneratedAutoHealing {
           };
 
   type getTenantSecretsSourcesParams =           {
-                'type'?: "vault" | "file" | "webhook";
-                'status'?: "active" | "inactive";
+                'type'?: string;
+                'status'?: string;
                 'is_default'?: boolean;
           };
 
@@ -77,10 +63,10 @@ declare namespace GeneratedAutoHealing {
   type getTenantTemplatesParams =           {
                 'page'?: number;
                 'page_size'?: number;
-                'event_type'?: "incident_created" | "incident_resolved" | "approval_required" | "execution_result" | "custom";
+                'event_type'?: string;
                 'name'?: string;
-                'format'?: "text" | "markdown" | "html";
-                'supported_channel'?: "email" | "dingtalk" | "webhook";
+                'format'?: string;
+                'supported_channel'?: string;
                 'is_active'?: boolean;
                 'sort_by'?: "name" | "created_at" | "updated_at";
                 'sort_order'?: "asc" | "desc";
@@ -93,7 +79,7 @@ declare namespace GeneratedAutoHealing {
   type getTenantUsersParams =           {
                 'page'?: number;
                 'page_size'?: number;
-                'status'?: "active" | "inactive";
+                'status'?: string;
           };
 
   type getTenantUsersSimpleParams =           {
@@ -115,10 +101,10 @@ declare namespace GeneratedAutoHealing {
     name?: string;
     url?: string;
     default_branch?: string;
-    auth_type?: "none" | "token" | "password" | "ssh_key";
+    auth_type?: string;
     local_path?: string;
     last_sync_at?: string;
-    status?: "pending" | "ready" | "syncing" | "error";
+    status?: string;
     /** 错误信息（status=error 时） */
     error_message?: string;
     /** 最后同步的 commit ID */
@@ -151,10 +137,10 @@ declare namespace GeneratedAutoHealing {
     id?: string;
     repository_id?: string;
     /** 触发类型 */
-    trigger_type?: "manual" | "auto" | "create";
+    trigger_type?: string;
     /** 操作类型 */
     action?: "clone" | "pull";
-    status?: "success" | "failed";
+    status?: string;
     /** 成功时的 commit ID */
     commit_id?: string;
     branch?: string;
@@ -245,5 +231,27 @@ declare namespace GeneratedAutoHealing {
     is_active?: boolean;
     last_run_at?: string;
     created_at?: string;
+  };
+
+  type HealingRuleCreate = {
+    name: string;
+    description?: string;
+    priority?: number;
+    trigger_mode?: "auto" | "manual";
+    conditions?: RuleCondition[];
+    match_mode?: "all" | "any";
+    flow_id?: string;
+    is_active?: boolean;
+  };
+
+  type HealingRuleUpdate = {
+    name?: string;
+    description?: string;
+    priority?: number;
+    trigger_mode?: "auto" | "manual";
+    conditions?: RuleCondition[];
+    match_mode?: "all" | "any";
+    flow_id?: string;
+    is_active?: boolean;
   };
 }

@@ -3,7 +3,7 @@ import { Badge, Button, Descriptions, Divider, Drawer, Space, Tag, Typography } 
 import { EditOutlined, ExclamationCircleOutlined, LockOutlined, SecurityScanOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { CommandBlacklistRule } from '@/services/auto-healing/commandBlacklist';
-import { CATEGORY_CONFIG, MATCH_TYPE_CONFIG, SEVERITY_CONFIG } from './commandBlacklistPageConfig';
+import { getCategoryConfig, getMatchTypeConfig, getSeverityConfig } from './commandBlacklistPageConfig';
 
 const { Text } = Typography;
 
@@ -20,6 +20,10 @@ const CommandBlacklistDetailDrawer: React.FC<CommandBlacklistDetailDrawerProps> 
     onClose,
     onEdit,
 }) => {
+    const severityConfig = rule ? getSeverityConfig(rule.severity) : null;
+    const categoryConfig = rule ? getCategoryConfig(rule.category) : null;
+    const matchTypeConfig = rule ? getMatchTypeConfig(rule.match_type) : null;
+
     return (
         <Drawer
             title={
@@ -28,8 +32,8 @@ const CommandBlacklistDetailDrawer: React.FC<CommandBlacklistDetailDrawerProps> 
                     <span>规则详情</span>
                     {rule && (
                         <>
-                            <Tag color={SEVERITY_CONFIG[rule.severity]?.tagColor || 'default'} icon={SEVERITY_CONFIG[rule.severity]?.icon}>
-                                {SEVERITY_CONFIG[rule.severity]?.label || rule.severity}
+                            <Tag color={severityConfig?.tagColor || 'default'} icon={severityConfig?.icon}>
+                                {severityConfig?.label || rule.severity}
                             </Tag>
                             {rule.is_system && <Tag><LockOutlined /> 内置</Tag>}
                         </>
@@ -57,12 +61,12 @@ const CommandBlacklistDetailDrawer: React.FC<CommandBlacklistDetailDrawerProps> 
                             <Text style={{ fontWeight: 500 }}>{rule.name}</Text>
                         </Descriptions.Item>
                         <Descriptions.Item label="严重级别">
-                            <Tag color={SEVERITY_CONFIG[rule.severity]?.tagColor || 'default'} icon={SEVERITY_CONFIG[rule.severity]?.icon}>
-                                {SEVERITY_CONFIG[rule.severity]?.label || rule.severity}
+                            <Tag color={severityConfig?.tagColor || 'default'} icon={severityConfig?.icon}>
+                                {severityConfig?.label || rule.severity}
                             </Tag>
                         </Descriptions.Item>
                         <Descriptions.Item label="分类">
-                            {CATEGORY_CONFIG[rule.category]?.label || rule.category || '-'}
+                            {categoryConfig?.label || rule.category || '-'}
                         </Descriptions.Item>
                         <Descriptions.Item label="状态">
                             <Badge status={rule.is_active ? 'success' : 'default'} text={rule.is_active ? '启用' : '禁用'} />
@@ -76,9 +80,9 @@ const CommandBlacklistDetailDrawer: React.FC<CommandBlacklistDetailDrawerProps> 
 
                     <Descriptions title="匹配配置" column={1} bordered size="small">
                         <Descriptions.Item label="匹配类型">
-                            <Tag>{MATCH_TYPE_CONFIG[rule.match_type]?.label || rule.match_type}</Tag>
+                            <Tag>{matchTypeConfig?.label || rule.match_type}</Tag>
                             <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                                {MATCH_TYPE_CONFIG[rule.match_type]?.desc}
+                                {matchTypeConfig?.desc}
                             </Text>
                         </Descriptions.Item>
                     </Descriptions>

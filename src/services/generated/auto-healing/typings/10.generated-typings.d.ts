@@ -1,44 +1,4 @@
 declare namespace GeneratedAutoHealing {
-  type TriggerItem = {
-    id?: string;
-    title?: string;
-    severity?: string;
-    affected_ci?: string;
-    created_at?: string;
-  };
-
-  type UpdateGitRepoRequest = {
-    /** 默认分支 */
-    default_branch?: string;
-    /** 认证类型 */
-    auth_type?: "none" | "token" | "password" | "ssh_key";
-    /** 认证配置 */
-    auth_config?: Record<string, unknown>;
-    /** 是否启用定时同步 */
-    sync_enabled?: boolean;
-    /** 同步间隔，如 10s, 5m, 1h */
-    sync_interval?: string;
-  };
-
-  type User = {
-    id?: string;
-    username?: string;
-    email?: string;
-    display_name?: string;
-    status?: "active" | "inactive";
-    created_at?: string;
-    updated_at?: string;
-  };
-
-  type UserInfo = {
-    id?: string;
-    username?: string;
-    email?: string;
-    display_name?: string;
-    roles?: string[];
-    permissions?: string[];
-  };
-
   type UserProfile = {
     id?: string;
     username?: string;
@@ -54,6 +14,14 @@ declare namespace GeneratedAutoHealing {
     roles?: RoleDetail[];
     permissions?: string[];
     is_platform_admin?: boolean;
+  };
+
+  type UserSimple = {
+    id?: string;
+    username?: string;
+    email?: string;
+    display_name?: string;
+    status?: string;
   };
 
   type UsersSection = {

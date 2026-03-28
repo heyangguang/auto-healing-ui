@@ -10,6 +10,7 @@ import {
 import { Divider, Empty, Space, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
+import { getExecutorConfig } from '@/constants/executionDicts';
 import { DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import {
     formatVariableDisplayValue,
@@ -81,11 +82,12 @@ function PlaybookValue({ task }: { task: AutoHealing.ExecutionTask }) {
     );
 }
 function ExecutorTypeValue({ executorType }: { executorType?: AutoHealing.ExecutorType }) {
+    const executor = getExecutorConfig(executorType);
     const isDocker = executorType === 'docker';
     return (
         <Space size={6}>
             {isDocker ? <DockerExecIcon size={14} /> : <LocalExecIcon size={14} />}
-            <span>{isDocker ? '容器 (Docker)' : '本地进程 (SSH)'}</span>
+            <span>{executor.label}</span>
         </Space>
     );
 }

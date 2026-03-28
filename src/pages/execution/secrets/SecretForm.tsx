@@ -7,7 +7,7 @@ import SecretFormFileSection from './SecretFormFileSection';
 import SecretFormVaultSection from './SecretFormVaultSection';
 import SecretFormWebhookSection from './SecretFormWebhookSection';
 import {
-    AUTH_TYPES,
+    getAuthTypeFormOptions,
     getSecretFormInitialValues,
     hasFormErrorFields,
     type SecretFormValues,
@@ -60,7 +60,7 @@ const SecretFormPage: React.FC = () => {
                             </Col>
                             <Col span={6}>
                                 <Form.Item name="auth_type" label="凭据类型" tooltip="SSH 密钥：用于 SSH 私钥认证，适合 Linux/Unix 主机。密码认证：用于用户名+密码的方式连接目标主机" rules={[{ required: true }]}>
-                                    <Select options={AUTH_TYPES} disabled={state.isEdit} />
+                                    <Select options={getAuthTypeFormOptions()} disabled={state.isEdit} />
                                 </Form.Item>
                             </Col>
                             <Col span={6}>

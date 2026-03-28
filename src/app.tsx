@@ -49,7 +49,7 @@ export async function getInitialState(): Promise<{
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
-  // 注意: 字典缓存初始化延迟到确认用户身份后执行（平台管理员不需要）
+  // 注意: 字典缓存初始化延迟到确认用户身份后执行
 
   const fetchUserInfo = async () => {
     try {
@@ -104,9 +104,12 @@ export async function getInitialState(): Promise<{
   ) {
     const currentUser = await fetchUserInfo();
 
-    // 🆕 仅非平台管理员初始化字典缓存（字典API需要租户上下文）
-    if (currentUser && !currentUser.is_platform_admin) {
-      initDictCache().catch(err => console.warn('[App] 字典初始化失败:', err));
+    if (currentUser) {
+      try {
+        await initDictCache();
+      } catch (err) {
+        console.warn('[App] 字典初始化失败:', err);
+      }
     }
 
     // 🆕 平台管理员 + 非平台页面 + 非 Impersonation → 立即重定向（在渲染前！）

@@ -9,6 +9,7 @@ import {
     RightOutlined,
     StopOutlined,
 } from '@ant-design/icons';
+import { getExecutionTriggeredByConfig, getRunStatusConfig } from '@/constants/executionDicts';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -31,17 +32,24 @@ const ExecutionStream: React.FC<ExecutionStreamProps> = ({
     onLoadMore,
 }) => {
 
-    const getStatusConfig = (status: string) => {
+    const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'success': return { color: '#52c41a', icon: <CheckCircleOutlined />, border: '#52c41a', label: '成功' };
-            case 'partial': return { color: '#fa8c16', icon: <ClockCircleOutlined />, border: '#fa8c16', label: '部分成功' };
-            case 'failed': return { color: '#ff4d4f', icon: <CloseCircleOutlined />, border: '#ff4d4f', label: '失败' };
-            case 'running': return { color: '#1890ff', icon: <SyncOutlined spin />, border: '#1890ff', label: '执行中' };
-            case 'pending': return { color: '#722ed1', icon: <ClockCircleOutlined />, border: '#722ed1', label: '等待中' };
-            case 'timeout': return { color: '#eb2f96', icon: <ClockCircleOutlined />, border: '#eb2f96', label: '超时' };
-            case 'cancelled': return { color: '#8c8c8c', icon: <StopOutlined />, border: '#8c8c8c', label: '已取消' };
-            default: return { color: '#d9d9d9', icon: <ClockCircleOutlined />, border: '#d9d9d9', label: status };
+            case 'success': return <CheckCircleOutlined />;
+            case 'failed': return <CloseCircleOutlined />;
+            case 'running': return <SyncOutlined spin />;
+            case 'cancelled': return <StopOutlined />;
+            default: return <ClockCircleOutlined />;
         }
+    };
+
+    const getStatusConfig = (status: string) => {
+        const meta = getRunStatusConfig(status);
+        return {
+            color: meta.color,
+            icon: getStatusIcon(status),
+            border: meta.color,
+            label: meta.label,
+        };
     };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -94,6 +102,7 @@ const ExecutionStream: React.FC<ExecutionStreamProps> = ({
             >
                 {runs.map((item) => {
                     const statusConfig = getStatusConfig(item.status);
+                    const triggeredByConfig = getExecutionTriggeredByConfig(item.triggered_by);
 
                     return (
                         <div
@@ -134,7 +143,7 @@ const ExecutionStream: React.FC<ExecutionStreamProps> = ({
                                         </Space>
                                         <Space size={4}>
                                             {item.triggered_by?.includes('scheduler') ? <ClockCircleOutlined /> : <UserOutlined />}
-                                            <span>{item.triggered_by}</span>
+                                            <span>{triggeredByConfig.label}</span>
                                         </Space>
                                         <Space size={4}>
                                             <ClockCircleOutlined />

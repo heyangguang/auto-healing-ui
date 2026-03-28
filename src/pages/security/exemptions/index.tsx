@@ -11,14 +11,15 @@ import { getBlacklistExemptions, type ExemptionRecord } from '@/services/auto-he
 import dayjs from 'dayjs';
 import ExemptionDetailDrawer from './ExemptionDetailDrawer';
 import {
-    advancedSearchFields,
+    buildAdvancedSearchFields,
     buildStatsBar,
     formatTime,
+    getExemptionSeverityTagColor,
+    getExemptionStatusConfig,
     headerIcon,
     searchFields,
-    SEVERITY_COLORS,
-    STATUS_MAP,
 } from './exemptionListConfig';
+import { getBlacklistExemptionStatusOptions, getBlacklistSeverityMeta } from '@/constants/securityDicts';
 
 type ExemptionRequestParams = {
     page: number;
@@ -85,7 +86,7 @@ const ExemptionListPage: React.FC = () => {
         },
         {
             columnKey: 'rule_severity', columnTitle: '级别', dataIndex: 'rule_severity', width: 68,
-            render: (_, record) => <Tag color={SEVERITY_COLORS[record.rule_severity] || 'default'}>{record.rule_severity}</Tag>,
+            render: (_, record) => <Tag color={getExemptionSeverityTagColor(record.rule_severity)}>{getBlacklistSeverityMeta(record.rule_severity).label}</Tag>,
         },
         {
             columnKey: 'requester_name', columnTitle: '申请人', dataIndex: 'requester_name', width: 72, ellipsis: true,
@@ -93,17 +94,10 @@ const ExemptionListPage: React.FC = () => {
         {
             columnKey: 'status', columnTitle: '状态', dataIndex: 'status', width: 80,
             render: (_, record) => {
-                const statusConfig = STATUS_MAP[record.status];
-                return statusConfig
-                    ? <Tag color={statusConfig.color} icon={statusConfig.icon} style={{ margin: 0 }}>{statusConfig.label}</Tag>
-                    : <Tag>{record.status}</Tag>;
+                const statusConfig = getExemptionStatusConfig(record.status);
+                return <Tag color={statusConfig.tagColor} icon={statusConfig.icon} style={{ margin: 0 }}>{statusConfig.label}</Tag>;
             },
-            headerFilters: [
-                { label: '待审批', value: 'pending' },
-                { label: '已批准', value: 'approved' },
-                { label: '已拒绝', value: 'rejected' },
-                { label: '已过期', value: 'expired' },
-            ],
+            headerFilters: getBlacklistExemptionStatusOptions().map(item => ({ label: item.label, value: item.value })),
         },
         {
             columnKey: 'validity_days', columnTitle: '有效期', dataIndex: 'validity_days', width: 65,
@@ -181,7 +175,7 @@ const ExemptionListPage: React.FC = () => {
                 headerIcon={headerIcon}
                 headerExtra={statsBar}
                 searchFields={searchFields}
-                advancedSearchFields={advancedSearchFields}
+                advancedSearchFields={buildAdvancedSearchFields()}
                 columns={columns}
                 rowKey="id"
                 onRowClick={openDetail}

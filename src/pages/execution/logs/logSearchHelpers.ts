@@ -1,5 +1,9 @@
 import type { AdvancedSearchField, SearchField } from '@/components/StandardTable';
-import { RUN_STATUS_LABELS } from '@/constants/executionDicts';
+import {
+    getExecutionTriggeredByOptions,
+    getExecutorOptions,
+    getRunStatusOptions,
+} from '@/constants/executionDicts';
 import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 
 const BOOLEAN_SEARCH_OPTIONS = [
@@ -14,22 +18,13 @@ export const RUN_SEARCH_FIELDS: SearchField[] = [
         key: '__enum__run_status',
         label: '执行状态',
         description: '筛选单次执行记录的运行结果状态',
-        options: [
-            ...Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
-            { label: '超时', value: 'timeout' },
-            { label: '等待中', value: 'pending' },
-        ],
+        options: getRunStatusOptions(),
     },
     {
         key: '__enum__run_trigger',
         label: '触发方式',
         description: '筛选执行记录的触发来源（手动/调度/自愈）',
-        options: [
-            { label: '手动触发', value: 'manual' },
-            { label: 'Cron 调度', value: 'scheduler:cron' },
-            { label: '一次性调度', value: 'scheduler:once' },
-            { label: '自愈触发', value: 'healing' },
-        ],
+        options: getExecutionTriggeredByOptions(),
     },
 ];
 
@@ -39,20 +34,13 @@ export const TEMPLATE_SEARCH_FIELDS: SearchField[] = [
         key: '__enum__task_executor',
         label: '执行器类型',
         description: '筛选任务模板使用的执行引擎',
-        options: [
-            { label: 'Local Node (Shell/Ansible)', value: 'local' },
-            { label: 'Docker Container', value: 'docker' },
-        ],
+        options: getExecutorOptions(),
     },
     {
         key: '__enum__task_last_status',
         label: '模板最近状态',
         description: '按任务模板上次执行的结果筛选左侧导航器',
-        options: [
-            ...Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
-            { label: '超时', value: 'timeout' },
-            { label: '等待中', value: 'pending' },
-        ],
+        options: getRunStatusOptions(),
     },
 ];
 
@@ -68,10 +56,7 @@ export const TEMPLATE_ADVANCED_FIELDS: AdvancedSearchField[] = [
         label: '执行器类型',
         type: 'select',
         description: '按任务模板使用的执行引擎筛选',
-        options: [
-            { label: 'Local Node (Shell/Ansible)', value: 'local' },
-            { label: 'Docker Container', value: 'docker' },
-        ],
+        options: getExecutorOptions(),
     },
     { key: 'playbook_name', label: 'Playbook 名称', type: 'input', description: '按关联的 Playbook 名称搜索' },
     { key: 'repository_name', label: '仓库名称', type: 'input', description: '按关联的 Git 仓库名称搜索' },
@@ -95,11 +80,7 @@ export const TEMPLATE_ADVANCED_FIELDS: AdvancedSearchField[] = [
         label: '模板最近状态',
         type: 'select',
         description: '按任务模板上次执行的结果筛选左侧导航器',
-        options: [
-            ...Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value })),
-            { label: '超时', value: 'timeout' },
-            { label: '等待中', value: 'pending' },
-        ],
+        options: getRunStatusOptions(),
     },
 ];
 

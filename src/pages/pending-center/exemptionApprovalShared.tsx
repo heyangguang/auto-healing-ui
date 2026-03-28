@@ -10,28 +10,33 @@ import type {
   AdvancedSearchField,
   SearchField,
 } from '@/components/StandardTable';
+import {
+  getBlacklistExemptionStatusMeta,
+  getBlacklistExemptionStatusOptions,
+  getBlacklistSeverityMeta,
+} from '@/constants/securityDicts';
 import type { ExemptionRecord } from '@/services/auto-healing/blacklistExemption';
 import dayjs from 'dayjs';
 
 export const QUICK_STATUS_FILTER_KEY = '__enum__status';
-export const exemptionSeverityColors: Record<string, string> = {
-  critical: 'red',
-  high: 'orange',
-  medium: 'gold',
+const STATUS_ICON_REGISTRY: Record<string, React.ReactNode> = {
+  pending: <ClockCircleOutlined />,
+  approved: <CheckCircleOutlined />,
+  rejected: <CloseCircleOutlined />,
+  expired: <ExclamationCircleOutlined />,
 };
 
-export const exemptionStatusMap: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-  pending: { color: 'processing', label: '待审批', icon: <ClockCircleOutlined /> },
-  approved: { color: 'success', label: '已批准', icon: <CheckCircleOutlined /> },
-  rejected: { color: 'error', label: '已拒绝', icon: <CloseCircleOutlined /> },
-  expired: { color: 'warning', label: '已过期', icon: <ExclamationCircleOutlined /> },
-};
+export function getExemptionSeverityMeta(severity: string) {
+  return getBlacklistSeverityMeta(severity);
+}
 
-const _severityColors: Record<string, string> = {
-  critical: 'red',
-  high: 'orange',
-  medium: 'gold',
-};
+export function getExemptionStatusMeta(status: string) {
+  const meta = getBlacklistExemptionStatusMeta(status);
+  return {
+    ...meta,
+    icon: STATUS_ICON_REGISTRY[status] || null,
+  };
+}
 
 export const exemptionSearchFields: SearchField[] = [
   { key: 'task_name', label: '任务模板', placeholder: '搜索任务模板名称' },
@@ -39,7 +44,7 @@ export const exemptionSearchFields: SearchField[] = [
   {
     key: QUICK_STATUS_FILTER_KEY,
     label: '状态',
-    options: Object.entries(exemptionStatusMap).map(([value, meta]) => ({ label: meta.label, value })),
+    options: getBlacklistExemptionStatusOptions(),
   },
 ];
 
@@ -52,7 +57,7 @@ export const exemptionAdvancedSearchFields: AdvancedSearchField[] = [
     label: '状态',
     type: 'select',
     placeholder: '全部状态',
-    options: Object.entries(exemptionStatusMap).map(([value, meta]) => ({ label: meta.label, value })),
+    options: getBlacklistExemptionStatusOptions(),
   },
 ];
 
@@ -99,8 +104,8 @@ export const exemptionHeaderIcon = (
 );
 
 export function renderExemptionStatusTag(status: string) {
-  const meta = exemptionStatusMap[status] || { color: 'default', label: status, icon: null };
-  return <Tag color={meta.color} icon={meta.icon} style={{ margin: 0 }}>{meta.label}</Tag>;
+  const meta = getExemptionStatusMeta(status);
+  return <Tag color={meta.tagColor} icon={meta.icon} style={{ margin: 0 }}>{meta.label}</Tag>;
 }
 
 export function formatExemptionTime(value: string | null | undefined) {

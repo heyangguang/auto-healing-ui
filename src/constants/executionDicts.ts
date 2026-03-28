@@ -5,83 +5,154 @@
  */
 import { getDictItems, onDictRefresh } from '@/utils/dictCache';
 
-// ==================== 硬编码兜底 ====================
+type BadgeStatus = 'success' | 'error' | 'warning' | 'processing' | 'default';
 
-export interface ExecutorTypeConfig {
-    label: string;
-    color: string;
+export interface ExecutionDictMeta {
+  label: string;
+  color: string;
+  tagColor: string;
+  badge: BadgeStatus;
 }
+
+export interface ExecutorTypeConfig extends ExecutionDictMeta {}
+
+const DEFAULT_META: ExecutionDictMeta = {
+  label: '未知',
+  color: '#8c8c8c',
+  tagColor: 'default',
+  badge: 'default',
+};
 
 const FB_EXECUTOR: Record<string, ExecutorTypeConfig> = {
-    local: { label: '本地', color: '#52c41a' },
-    docker: { label: 'Docker', color: '#1677ff' },
-    ssh: { label: 'SSH', color: '#722ed1' },
+  local: { label: '本地执行', color: '#52c41a', tagColor: 'success', badge: 'success' },
+  docker: { label: 'Docker 容器', color: '#1677ff', tagColor: 'processing', badge: 'processing' },
+  ssh: { label: 'SSH', color: '#722ed1', tagColor: 'purple', badge: 'processing' },
 };
 
-const FB_RUN_COLORS: Record<string, string> = {
-    success: '#52c41a', failed: '#ff4d4f', running: '#1677ff',
-    partial: '#faad14', cancelled: '#d9d9d9',
+const FB_RUN_STATUS: Record<string, ExecutionDictMeta> = {
+  success: { label: '成功', color: '#52c41a', tagColor: 'success', badge: 'success' },
+  failed: { label: '失败', color: '#ff4d4f', tagColor: 'error', badge: 'error' },
+  running: { label: '运行中', color: '#1677ff', tagColor: 'processing', badge: 'processing' },
+  partial: { label: '部分成功', color: '#faad14', tagColor: 'warning', badge: 'warning' },
+  cancelled: { label: '已取消', color: '#8c8c8c', tagColor: 'default', badge: 'default' },
+  pending: { label: '等待中', color: '#722ed1', tagColor: 'processing', badge: 'processing' },
+  timeout: { label: '超时', color: '#eb2f96', tagColor: 'error', badge: 'error' },
 };
 
-const FB_RUN_LABELS: Record<string, string> = {
-    success: '成功', failed: '失败', running: '运行中',
-    partial: '部分成功', cancelled: '已取消',
+const FB_EXECUTION_TRIGGERED_BY: Record<string, ExecutionDictMeta> = {
+  manual: { label: '手动触发', color: '#1677ff', tagColor: 'processing', badge: 'processing' },
+  'scheduler:cron': { label: 'Cron 调度', color: '#722ed1', tagColor: 'purple', badge: 'processing' },
+  'scheduler:once': { label: '一次性调度', color: '#722ed1', tagColor: 'purple', badge: 'processing' },
+  healing: { label: '自愈触发', color: '#52c41a', tagColor: 'success', badge: 'success' },
 };
-
-const FB_RUN_MAP: Record<string, { color: string; text: string }> = {
-    success: { color: 'success', text: '成功' },
-    failed: { color: 'error', text: '失败' },
-    running: { color: 'processing', text: '运行中' },
-    partial: { color: 'warning', text: '部分成功' },
-    cancelled: { color: 'default', text: '取消' },
-};
-
-// ==================== 动态变量 ====================
 
 export let EXECUTOR_TYPE_CONFIG: Record<string, ExecutorTypeConfig> = { ...FB_EXECUTOR };
-export let RUN_STATUS_COLORS: Record<string, string> = { ...FB_RUN_COLORS };
-export let RUN_STATUS_LABELS: Record<string, string> = { ...FB_RUN_LABELS };
-export let RUN_STATUS_MAP: Record<string, { color: string; text: string }> = { ...FB_RUN_MAP };
+export let RUN_STATUS_CONFIG: Record<string, ExecutionDictMeta> = { ...FB_RUN_STATUS };
+export let EXECUTION_TRIGGERED_BY_CONFIG: Record<string, ExecutionDictMeta> = { ...FB_EXECUTION_TRIGGERED_BY };
 
-/**
- * 获取执行器类型配置（带后备值）
- */
-export function getExecutorConfig(type: string): ExecutorTypeConfig {
-    return EXECUTOR_TYPE_CONFIG[type] || { label: type || '未知', color: '#8c8c8c' };
+export let RUN_STATUS_COLORS: Record<string, string> = toColors(RUN_STATUS_CONFIG);
+export let RUN_STATUS_LABELS: Record<string, string> = toLabels(RUN_STATUS_CONFIG);
+export let RUN_STATUS_MAP: Record<string, { color: string; text: string }> = toTagMap(RUN_STATUS_CONFIG);
+
+function toLabels(map: Record<string, ExecutionDictMeta>) {
+  return Object.fromEntries(Object.entries(map).map(([key, meta]) => [key, meta.label]));
 }
 
-// ==================== 刷新逻辑 ====================
+function toColors(map: Record<string, ExecutionDictMeta>) {
+  return Object.fromEntries(Object.entries(map).map(([key, meta]) => [key, meta.color]));
+}
+
+function toTagMap(map: Record<string, ExecutionDictMeta>) {
+  return Object.fromEntries(Object.entries(map).map(([key, meta]) => [key, { color: meta.tagColor, text: meta.label }]));
+}
+
+function toMeta(item: { label: string; color?: string; tag_color?: string; badge?: string }) {
+  return {
+    label: item.label,
+    color: item.color || DEFAULT_META.color,
+    tagColor: item.tag_color || item.color || DEFAULT_META.tagColor,
+    badge: (item.badge || DEFAULT_META.badge) as BadgeStatus,
+  };
+}
+
+function refreshExecutorTypes() {
+  const items = getDictItems('executor_type');
+  if (!items?.length) {
+    EXECUTOR_TYPE_CONFIG = { ...FB_EXECUTOR };
+    return;
+  }
+  EXECUTOR_TYPE_CONFIG = {
+    ...FB_EXECUTOR,
+    ...Object.fromEntries(items.map(item => [item.dict_key, toMeta(item)])),
+  };
+}
+
+function refreshRunStatuses() {
+  const items = getDictItems('run_status');
+  RUN_STATUS_CONFIG = items?.length
+    ? { ...FB_RUN_STATUS, ...Object.fromEntries(items.map(item => [item.dict_key, toMeta(item)])) }
+    : { ...FB_RUN_STATUS };
+  RUN_STATUS_COLORS = toColors(RUN_STATUS_CONFIG);
+  RUN_STATUS_LABELS = toLabels(RUN_STATUS_CONFIG);
+  RUN_STATUS_MAP = toTagMap(RUN_STATUS_CONFIG);
+}
+
+function refreshTriggeredBy() {
+  const items = getDictItems('execution_triggered_by');
+  EXECUTION_TRIGGERED_BY_CONFIG = items?.length
+    ? { ...FB_EXECUTION_TRIGGERED_BY, ...Object.fromEntries(items.map(item => [item.dict_key, toMeta(item)])) }
+    : { ...FB_EXECUTION_TRIGGERED_BY };
+}
 
 function refresh() {
-    const executor = getDictItems('executor_type');
-    if (executor?.length) {
-        const map: Record<string, ExecutorTypeConfig> = {};
-        executor.forEach(i => { map[i.dict_key] = { label: i.label, color: i.color || '#8c8c8c' }; });
-        EXECUTOR_TYPE_CONFIG = { ...FB_EXECUTOR, ...map };
-    }
+  refreshExecutorTypes();
+  refreshRunStatuses();
+  refreshTriggeredBy();
+}
 
-    const run = getDictItems('run_status');
-    if (run?.length) {
-        const colors: Record<string, string> = {};
-        const labels: Record<string, string> = {};
-        const map: Record<string, { color: string; text: string }> = {};
-        run.forEach(i => {
-            colors[i.dict_key] = i.color || '#8c8c8c';
-            labels[i.dict_key] = i.label;
-            map[i.dict_key] = { color: i.tag_color || 'default', text: i.label };
-        });
-        RUN_STATUS_COLORS = { ...FB_RUN_COLORS, ...colors };
-        RUN_STATUS_LABELS = { ...FB_RUN_LABELS, ...labels };
-        RUN_STATUS_MAP = { ...FB_RUN_MAP, ...map };
-    }
+function fallbackMeta(key?: string): ExecutionDictMeta {
+  return {
+    ...DEFAULT_META,
+    label: key || DEFAULT_META.label,
+  };
+}
+
+function toOptions(map: Record<string, ExecutionDictMeta>) {
+  return Object.entries(map).map(([value, meta]) => ({ label: meta.label, value }));
+}
+
+export function getExecutorConfig(type?: string): ExecutorTypeConfig {
+  if (!type) {
+    return fallbackMeta() as ExecutorTypeConfig;
+  }
+  return EXECUTOR_TYPE_CONFIG[type] || (fallbackMeta(type) as ExecutorTypeConfig);
+}
+
+export function getRunStatusConfig(status?: string): ExecutionDictMeta {
+  if (!status) {
+    return fallbackMeta();
+  }
+  return RUN_STATUS_CONFIG[status] || fallbackMeta(status);
+}
+
+export function getExecutionTriggeredByConfig(value?: string): ExecutionDictMeta {
+  if (!value) {
+    return fallbackMeta();
+  }
+  return EXECUTION_TRIGGERED_BY_CONFIG[value] || fallbackMeta(value);
+}
+
+export function getExecutorOptions() {
+  return toOptions(EXECUTOR_TYPE_CONFIG);
+}
+
+export function getRunStatusOptions() {
+  return toOptions(RUN_STATUS_CONFIG);
+}
+
+export function getExecutionTriggeredByOptions() {
+  return toOptions(EXECUTION_TRIGGERED_BY_CONFIG);
 }
 
 onDictRefresh(refresh);
 refresh();
-
-/* ========== Select Options 辅助 ========== */
-
-/** 运行状态下拉选项 */
-export function getRunStatusOptions() {
-    return Object.entries(RUN_STATUS_LABELS).map(([value, label]) => ({ label, value }));
-}

@@ -1,9 +1,10 @@
 import React from 'react';
+import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, EyeOutlined, MinusCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { Descriptions, Typography } from 'antd';
+import { getImpersonationStatusMeta } from '@/constants/accessDicts';
 import type { ImpersonationRequest } from '@/services/auto-healing/platform/impersonation';
 import {
   formatImpersonationTime,
-  impersonationStatusMap,
   renderImpersonationStatusTag,
 } from './impersonationShared';
 
@@ -12,6 +13,16 @@ const { Text } = Typography;
 export interface ImpersonationApprovalDetailPanelProps {
   detail: ImpersonationRequest;
 }
+
+const STATUS_ICON_REGISTRY = {
+  pending: <ClockCircleOutlined />,
+  approved: <CheckCircleOutlined />,
+  rejected: <CloseCircleOutlined />,
+  active: <EyeOutlined />,
+  completed: <CheckCircleOutlined />,
+  expired: <StopOutlined />,
+  cancelled: <MinusCircleOutlined />,
+} as const;
 
 function getBannerStyles(status: ImpersonationRequest['status']) {
   return {
@@ -22,11 +33,11 @@ function getBannerStyles(status: ImpersonationRequest['status']) {
 }
 
 function ImpersonationApprovalBanner({ detail }: ImpersonationApprovalDetailPanelProps) {
-  const meta = impersonationStatusMap[detail.status];
+  const meta = getImpersonationStatusMeta(detail.status);
   const styles = getBannerStyles(detail.status);
   return (
     <div style={{ padding: '12px 16px', marginBottom: 16, background: styles.background, border: `1px solid ${styles.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-      {meta.icon}
+      {STATUS_ICON_REGISTRY[detail.status]}
       <Text strong style={{ color: styles.color }}>{meta.label}</Text>
     </div>
   );

@@ -3,7 +3,7 @@ import { Col, Form, Input, Row } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 import type { CommandBlacklistRule } from '@/services/auto-healing/commandBlacklist';
-import { MATCH_TYPE_OPTIONS } from './blacklistRuleFormOptions';
+import { getMatchTypeFormOptions } from './blacklistRuleFormOptions';
 
 const { TextArea } = Input;
 
@@ -50,7 +50,7 @@ const BlacklistRuleMatchConfigSection: React.FC<Props> = ({
 
         <Form.Item label="匹配类型" required extra="选择规则的匹配策略，不同类型适用于不同场景">
             <div className="blacklist-match-type-cards">
-                {MATCH_TYPE_OPTIONS.map((option) => (
+                {getMatchTypeFormOptions().map((option) => (
                     <div
                         key={option.value}
                         className={`blacklist-match-type-card ${selectedMatchType === option.value ? 'active' : ''} ${isSystem ? 'disabled' : ''}`}

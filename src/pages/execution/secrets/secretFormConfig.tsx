@@ -1,5 +1,6 @@
 import React from 'react';
 import { FileOutlined, GlobalOutlined, KeyOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { getSecretsAuthTypeMeta, getSecretsSourceTypeMeta } from '@/constants/secretsDicts';
 import type {
     SecretFormValues,
     SecretsSourceConfig,
@@ -19,16 +20,16 @@ export type {
 } from './secretFormTypes';
 export { buildSecretsSourcePayload } from './secretFormPayload';
 
-export const SOURCE_TYPES = [
-    { value: 'file', label: '本地密钥文件', icon: <FileOutlined />, supportPassword: false },
-    { value: 'vault', label: 'HashiCorp Vault', icon: <SafetyCertificateOutlined />, supportPassword: true },
-    { value: 'webhook', label: 'Webhook', icon: <GlobalOutlined />, supportPassword: true },
-];
+const SOURCE_TYPE_VISUALS = {
+    file: { icon: <FileOutlined />, supportPassword: false },
+    vault: { icon: <SafetyCertificateOutlined />, supportPassword: true },
+    webhook: { icon: <GlobalOutlined />, supportPassword: true },
+} as const;
 
-export const AUTH_TYPES = [
-    { value: 'ssh_key', label: 'SSH 密钥', icon: <KeyOutlined /> },
-    { value: 'password', label: '密码认证', icon: <LockOutlined /> },
-];
+const AUTH_TYPE_VISUALS = {
+    ssh_key: { icon: <KeyOutlined /> },
+    password: { icon: <LockOutlined /> },
+} as const;
 
 export const VAULT_AUTH_TYPES = [
     { value: 'token', label: 'Token' },
@@ -41,6 +42,18 @@ export const WEBHOOK_AUTH_TYPES = [
     { value: 'bearer', label: 'Bearer Token' },
     { value: 'api_key', label: 'API Key' },
 ];
+
+export function getAuthTypeFormOptions() {
+    return Object.entries(AUTH_TYPE_VISUALS).map(([value, visual]) => ({
+        value,
+        label: (
+            <span>
+                {visual.icon}
+                <span style={{ marginLeft: 6 }}>{getSecretsAuthTypeMeta(value).label}</span>
+            </span>
+        ),
+    }));
+}
 
 export function hasFormErrorFields(error: unknown): error is { errorFields: unknown[] } {
     return typeof error === 'object' && error !== null && 'errorFields' in error;
@@ -74,7 +87,18 @@ export function getSecretFormInitialValues(): Partial<SecretFormValues> {
 }
 
 export function getAvailableSourceTypes(authType: string) {
-    return SOURCE_TYPES.filter((item) => authType === 'ssh_key' || item.supportPassword);
+    return Object.entries(SOURCE_TYPE_VISUALS)
+        .filter(([, visual]) => authType === 'ssh_key' || visual.supportPassword)
+        .map(([value, visual]) => ({
+            value,
+            label: (
+                <span>
+                    {visual.icon}
+                    <span style={{ marginLeft: 6 }}>{getSecretsSourceTypeMeta(value).label}</span>
+                </span>
+            ),
+            supportPassword: visual.supportPassword,
+        }));
 }
 
 export function mapSecretsSourceToFormValues(source: SecretsSourceRecord): Partial<SecretFormValues> {

@@ -11,6 +11,8 @@ import {
     CREDENTIAL_TYPE_OPTIONS,
     SECRETS_SOURCE_OPTIONS,
     SECRETS_STATUS_OPTIONS,
+    getSecretsAuthTypeMeta,
+    getSecretsSourceTypeMeta,
 } from '@/constants/secretsDicts';
 
 export type SecretsStatsSummary = {
@@ -21,22 +23,22 @@ export type SecretsStatsSummary = {
     webhook: number;
 };
 
-export const SOURCE_TYPES = [
-    { value: 'file', label: '本地密钥文件', icon: <FileOutlined />, color: '#1890ff', bgColor: '#e6f7ff', desc: '从本地密钥文件读取凭据（仅支持SSH Key）', supportPassword: false },
-    { value: 'vault', label: 'HashiCorp Vault', icon: <SafetyCertificateOutlined />, color: '#722ed1', bgColor: '#f9f0ff', desc: '从 Vault 安全存储获取凭据', supportPassword: true },
-    { value: 'webhook', label: 'Webhook', icon: <GlobalOutlined />, color: '#52c41a', bgColor: '#f6ffed', desc: '通过外部 HTTP 服务获取凭据', supportPassword: true },
-];
+const SOURCE_VISUALS = {
+    file: { icon: <FileOutlined />, bgColor: '#e6f7ff', desc: '从本地密钥文件读取凭据（仅支持SSH Key）', supportPassword: false },
+    vault: { icon: <SafetyCertificateOutlined />, bgColor: '#f9f0ff', desc: '从 Vault 安全存储获取凭据', supportPassword: true },
+    webhook: { icon: <GlobalOutlined />, bgColor: '#f6ffed', desc: '通过外部 HTTP 服务获取凭据', supportPassword: true },
+} as const;
 
-export const AUTH_TYPES = [
-    { value: 'ssh_key', label: 'SSH 密钥', icon: <KeyOutlined />, color: '#1890ff' },
-    { value: 'password', label: '密码认证', icon: <LockOutlined />, color: '#fa8c16' },
-];
+const AUTH_VISUALS = {
+    ssh_key: { icon: <KeyOutlined /> },
+    password: { icon: <LockOutlined /> },
+} as const;
 
 export const searchFields: SearchField[] = [
     { key: 'name', label: '密钥源名称', description: '按密钥源名称模糊搜索' },
 ];
 
-export const advancedSearchFields: AdvancedSearchField[] = [
+export const buildAdvancedSearchFields = (): AdvancedSearchField[] => [
     { key: 'name', label: '密钥源名称', type: 'input', placeholder: '密钥源名称' },
     { key: 'type', label: '密钥源类型', type: 'select', placeholder: '全部类型', options: SECRETS_SOURCE_OPTIONS },
     { key: 'auth_type', label: '认证方式', type: 'select', placeholder: '全部认证', options: CREDENTIAL_TYPE_OPTIONS },
@@ -54,11 +56,23 @@ export const headerIcon = (
 );
 
 export function getSourceTypeConfig(type: string) {
-    return SOURCE_TYPES.find((item) => item.value === type) || SOURCE_TYPES[0];
+    const meta = getSecretsSourceTypeMeta(type);
+    const visual = SOURCE_VISUALS[type as keyof typeof SOURCE_VISUALS] || SOURCE_VISUALS.file;
+    return {
+        ...meta,
+        ...visual,
+        value: type,
+    };
 }
 
 export function getAuthTypeConfig(authType: string) {
-    return AUTH_TYPES.find((item) => item.value === authType) || AUTH_TYPES[0];
+    const meta = getSecretsAuthTypeMeta(authType);
+    const visual = AUTH_VISUALS[authType as keyof typeof AUTH_VISUALS] || AUTH_VISUALS.ssh_key;
+    return {
+        ...meta,
+        ...visual,
+        value: authType,
+    };
 }
 
 export function sortSecretsSources(items: AutoHealing.SecretsSource[]) {

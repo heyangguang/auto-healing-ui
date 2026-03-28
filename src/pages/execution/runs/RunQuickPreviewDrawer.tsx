@@ -11,6 +11,7 @@ import {
     ThunderboltOutlined,
 } from '@ant-design/icons';
 import { Button, Drawer, Space, Tag, Typography } from 'antd';
+import { getExecutorConfig } from '@/constants/executionDicts';
 import { getEnabledNotificationTriggers, hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import dayjs from 'dayjs';
 import { Field, getNotificationTriggerLabel, SectionTitle } from './runDetailShared';
@@ -41,6 +42,7 @@ const RunQuickPreviewDrawer: React.FC<RunQuickPreviewDrawerProps> = ({
     const task = run?.task;
     const playbook = run?.task?.playbook;
     const taskHosts = splitHosts(task?.target_hosts);
+    const executorConfig = getExecutorConfig(task?.executor_type);
 
     return (
         <Drawer
@@ -73,8 +75,8 @@ const RunQuickPreviewDrawer: React.FC<RunQuickPreviewDrawerProps> = ({
                             <Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>#{run.task_id?.substring(0, 8)}</Text>
                         </Field>
                         <Field label="执行器">
-                            <Tag icon={<ThunderboltOutlined />} color={task.executor_type === 'docker' ? 'blue' : 'default'} style={{ margin: 0, fontSize: 11 }}>
-                                {task.executor_type || 'local'}
+                            <Tag icon={<ThunderboltOutlined />} color={executorConfig.tagColor || executorConfig.color} style={{ margin: 0, fontSize: 11 }}>
+                                {executorConfig.label}
                             </Tag>
                         </Field>
                         <Field label="创建时间">{dayjs(task.created_at).format('YYYY-MM-DD HH:mm:ss')}</Field>

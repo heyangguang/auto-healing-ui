@@ -2,8 +2,8 @@ import React from 'react';
 import { Col, Form, Input, Row, Select } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
 import {
-    CATEGORY_OPTIONS,
-    SEVERITY_OPTIONS,
+    getCategoryFormOptions,
+    getSeverityFormOptions,
 } from './blacklistRuleFormOptions';
 
 const { TextArea } = Input;
@@ -36,12 +36,12 @@ const BlacklistRuleBasicInfoSection: React.FC<Props> = ({ isSystem }) => (
                     label="严重级别"
                     rules={[{ required: true, message: '请选择严重级别' }]}
                 >
-                    <Select options={SEVERITY_OPTIONS} placeholder="选择级别" disabled={isSystem} />
+                    <Select options={getSeverityFormOptions()} placeholder="选择级别" disabled={isSystem} />
                 </Form.Item>
             </Col>
             <Col span={6}>
                 <Form.Item name="category" label="分类">
-                    <Select options={CATEGORY_OPTIONS} placeholder="选择分类" allowClear disabled={isSystem} />
+                    <Select options={getCategoryFormOptions()} placeholder="选择分类" allowClear disabled={isSystem} />
                 </Form.Item>
             </Col>
         </Row>

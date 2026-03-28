@@ -35,7 +35,7 @@ export async function postTenantPlaybooks(
     /** 入口文件相对路径，如 site.yml */
     file_path: string;
     /** 扫描模式（创建时必须指定，之后不可更改） */
-    config_mode: "auto" | "enhanced";
+    config_mode: string;
     /** 描述 */
     description?: string;
   },

@@ -911,10 +911,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "inactive"
-              ]
+              "x-dict-type": "user_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -935,8 +933,7 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "additionalProperties": true
+                        "$ref": "#/components/schemas/UserSimple"
                       }
                     }
                   }
@@ -2082,10 +2079,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "inactive"
-              ]
+              "x-dict-type": "user_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -2227,10 +2222,8 @@
                   },
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "active",
-                      "inactive"
-                    ]
+                    "x-dict-type": "user_status",
+                    "x-dict-mode": "exact"
                   }
                 }
               }
@@ -2638,7 +2631,9 @@
             "name": "status",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "impersonation_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -2796,7 +2791,9 @@
             "name": "status",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "user_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -2816,8 +2813,7 @@
                         "data": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/components/schemas/UserSimple"
                           }
                         }
                       }
@@ -3070,10 +3066,8 @@
             "description": "执行器类型筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "local",
-                "docker"
-              ]
+              "x-dict-type": "executor_type",
+              "x-dict-mode": "subset"
             }
           },
           {
@@ -3144,14 +3138,8 @@
             "description": "按最后执行状态筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "running",
-                "success",
-                "failed",
-                "cancelled",
-                "timeout"
-              ]
+              "x-dict-type": "run_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -3489,6 +3477,8 @@
                 "properties": {
                   "triggered_by": {
                     "type": "string",
+                    "x-dict-type": "execution_triggered_by",
+                    "x-dict-mode": "exact",
                     "description": "触发者"
                   },
                   "secrets_source_id": {
@@ -4835,14 +4825,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "running",
-                "waiting_approval",
-                "completed",
-                "failed",
-                "cancelled"
-              ]
+              "x-dict-type": "instance_status",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -4931,10 +4915,8 @@
             "description": "按节点审批结果筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "approved",
-                "rejected"
-              ]
+              "x-dict-type": "approval_status",
+              "x-dict-mode": "subset"
             }
           },
           {
@@ -5742,7 +5724,9 @@
             "name": "schedule_type",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "schedule_type",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -6155,11 +6139,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "webhook",
-                "dingtalk",
-                "email"
-              ]
+              "x-dict-type": "notification_channel_type",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -6329,13 +6310,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "incident_created",
-                "incident_resolved",
-                "approval_required",
-                "execution_result",
-                "custom"
-              ]
+              "x-dict-type": "notification_event_type",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -6350,11 +6326,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "text",
-                "markdown",
-                "html"
-              ]
+              "x-dict-type": "notification_format",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -6362,11 +6335,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "email",
-                "dingtalk",
-                "webhook"
-              ]
+              "x-dict-type": "notification_channel_type",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -6661,11 +6631,8 @@
                   },
                   "format": {
                     "type": "string",
-                    "enum": [
-                      "text",
-                      "markdown",
-                      "html"
-                    ],
+                    "x-dict-type": "notification_format",
+                    "x-dict-mode": "exact",
                     "description": "未使用模板时的消息格式，默认 text"
                   }
                 }
@@ -6733,13 +6700,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "sent",
-                "delivered",
-                "failed",
-                "bounced"
-              ]
+              "x-dict-type": "notification_log_status",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -6753,7 +6715,9 @@
             "name": "triggered_by",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "execution_triggered_by",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -7143,7 +7107,9 @@
             "name": "category",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "site_message_category",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -7420,10 +7386,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "itsm",
-                "cmdb"
-              ]
+              "x-dict-type": "plugin_type",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -7431,11 +7395,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "inactive",
-                "error"
-              ]
+              "x-dict-type": "plugin_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -7491,10 +7452,8 @@
                   },
                   "type": {
                     "type": "string",
-                    "enum": [
-                      "itsm",
-                      "cmdb"
-                    ],
+                    "x-dict-type": "plugin_type",
+                    "x-dict-mode": "exact",
                     "example": "itsm"
                   },
                   "description": {
@@ -8125,12 +8084,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "open",
-                "in_progress",
-                "resolved",
-                "closed"
-              ]
+              "x-dict-type": "incident_status",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -8139,14 +8094,8 @@
             "description": "按自愈状态筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "processing",
-                "healed",
-                "failed",
-                "skipped",
-                "dismissed"
-              ]
+              "x-dict-type": "healing_status",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -8154,12 +8103,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "critical",
-                "high",
-                "medium",
-                "low"
-              ]
+              "x-dict-type": "incident_severity",
+              "x-dict-mode": "subset"
             }
           },
           {
@@ -8403,14 +8348,8 @@
                   "healing_status": {
                     "type": "string",
                     "description": "按自愈状态筛选",
-                    "enum": [
-                      "pending",
-                      "processing",
-                      "healed",
-                      "failed",
-                      "skipped",
-                      "dismissed"
-                    ]
+                    "x-dict-type": "healing_status",
+                    "x-dict-mode": "exact"
                   }
                 }
               },
@@ -8478,12 +8417,8 @@
             "description": "类型筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "server",
-                "application",
-                "network",
-                "database"
-              ]
+              "x-dict-type": "cmdb_type",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -8492,10 +8427,8 @@
             "description": "状态筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "maintenance"
-              ]
+              "x-dict-type": "cmdb_status",
+              "x-dict-mode": "subset"
             }
           },
           {
@@ -8504,11 +8437,8 @@
             "description": "环境筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "production",
-                "staging",
-                "development"
-              ]
+              "x-dict-type": "cmdb_environment",
+              "x-dict-mode": "subset"
             }
           },
           {
@@ -9012,11 +8942,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "vault",
-                "file",
-                "webhook"
-              ]
+              "x-dict-type": "secrets_source_type",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -9024,10 +8951,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "inactive"
-              ]
+              "x-dict-type": "secrets_source_status",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -9170,7 +9095,9 @@
                     "type": "object"
                   },
                   "status": {
-                    "type": "string"
+                    "type": "string",
+                    "x-dict-type": "secrets_source_status",
+                    "x-dict-mode": "exact"
                   }
                 }
               }
@@ -9372,12 +9299,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "ready",
-                "syncing",
-                "error"
-              ]
+              "x-dict-type": "git_repo_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -9560,12 +9483,8 @@
                   },
                   "auth_type": {
                     "type": "string",
-                    "enum": [
-                      "none",
-                      "token",
-                      "password",
-                      "ssh_key"
-                    ]
+                    "x-dict-type": "git_auth_type",
+                    "x-dict-mode": "exact"
                   },
                   "auth_config": {
                     "type": "object",
@@ -9796,11 +9715,8 @@
             "description": "按状态筛选",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "ready",
-                "error"
-              ]
+              "x-dict-type": "playbook_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -9851,10 +9767,8 @@
                   },
                   "config_mode": {
                     "type": "string",
-                    "enum": [
-                      "auto",
-                      "enhanced"
-                    ],
+                    "x-dict-type": "playbook_config_mode",
+                    "x-dict-mode": "exact",
                     "description": "扫描模式（创建时必须指定，之后不可更改）"
                   },
                   "description": {
@@ -10252,21 +10166,27 @@
             "name": "type",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "cmdb_type",
+              "x-dict-mode": "exact"
             }
           },
           {
             "name": "status",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "cmdb_status",
+              "x-dict-mode": "subset"
             }
           },
           {
             "name": "environment",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "cmdb_environment",
+              "x-dict-mode": "subset"
             }
           },
           {
@@ -10338,10 +10258,8 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "error"
-              ]
+              "x-dict-type": "git_repo_status",
+              "x-dict-mode": "exact"
             }
           }
         ],
@@ -10546,7 +10464,9 @@
             "name": "action",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "audit_action",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -10766,7 +10686,9 @@
             "name": "status",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "blacklist_exemption_status",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -10866,7 +10788,9 @@
                     "type": "string"
                   },
                   "rule_severity": {
-                    "type": "string"
+                    "type": "string",
+                    "x-dict-type": "command_blacklist_severity",
+                    "x-dict-mode": "exact"
                   },
                   "rule_pattern": {
                     "type": "string"
@@ -11014,7 +10938,9 @@
             "name": "severity",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "command_blacklist_severity",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -11028,7 +10954,9 @@
             "name": "match_type",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "x-dict-type": "command_blacklist_match_type",
+              "x-dict-mode": "exact"
             }
           },
           {
@@ -11241,7 +11169,9 @@
                     "type": "string"
                   },
                   "match_type": {
-                    "type": "string"
+                    "type": "string",
+                    "x-dict-type": "command_blacklist_match_type",
+                    "x-dict-mode": "exact"
                   },
                   "files": {
                     "type": "array",
@@ -11699,6 +11629,11 @@
           },
           "is_system": {
             "type": "boolean"
+          },
+          "scope": {
+            "type": "string",
+            "x-dict-type": "role_scope",
+            "x-dict-mode": "exact"
           }
         }
       },
@@ -11725,7 +11660,9 @@
             "type": "string"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "x-dict-type": "user_status",
+            "x-dict-mode": "exact"
           },
           "last_login_at": {
             "type": "string",
@@ -11820,10 +11757,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "inactive"
-            ]
+            "x-dict-type": "user_status",
+            "x-dict-mode": "exact"
           },
           "created_at": {
             "type": "string",
@@ -11832,6 +11767,29 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "UserSimple": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "x-dict-type": "user_status",
+            "x-dict-mode": "exact"
           }
         }
       },
@@ -11854,6 +11812,11 @@
           "is_system": {
             "type": "boolean"
           },
+          "scope": {
+            "type": "string",
+            "x-dict-type": "role_scope",
+            "x-dict-mode": "exact"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -11874,7 +11837,9 @@
             "type": "string"
           },
           "module": {
-            "type": "string"
+            "type": "string",
+            "x-dict-type": "permission_module",
+            "x-dict-mode": "exact"
           },
           "resource": {
             "type": "string"
@@ -12050,10 +12015,8 @@
           },
           "executor_type": {
             "type": "string",
-            "enum": [
-              "local",
-              "docker"
-            ]
+            "x-dict-type": "executor_type",
+            "x-dict-mode": "subset"
           },
           "description": {
             "type": "string",
@@ -12155,6 +12118,11 @@
             "format": "uuid",
             "description": "关联的任务模板 ID"
           },
+          "schedule_type": {
+            "type": "string",
+            "x-dict-type": "schedule_type",
+            "x-dict-mode": "exact"
+          },
           "schedule_expr": {
             "type": "string",
             "description": "Cron 表达式"
@@ -12172,6 +12140,11 @@
           "enabled": {
             "type": "boolean",
             "description": "是否启用"
+          },
+          "status": {
+            "type": "string",
+            "x-dict-type": "schedule_status",
+            "x-dict-mode": "exact"
           },
           "description": {
             "type": "string",
@@ -12224,14 +12197,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "success",
-              "failed",
-              "cancelled",
-              "timeout"
-            ]
+            "x-dict-type": "run_status",
+            "x-dict-mode": "exact"
           },
           "exit_code": {
             "type": "integer",
@@ -12258,7 +12225,9 @@
             }
           },
           "triggered_by": {
-            "type": "string"
+            "type": "string",
+            "x-dict-type": "execution_triggered_by",
+            "x-dict-mode": "exact"
           },
           "started_at": {
             "type": "string",
@@ -12292,6 +12261,8 @@
           },
           "log_level": {
             "type": "string",
+            "x-dict-type": "log_level",
+            "x-dict-mode": "exact",
             "enum": [
               "debug",
               "info",
@@ -12301,6 +12272,8 @@
           },
           "stage": {
             "type": "string",
+            "x-dict-type": "execution_stage",
+            "x-dict-mode": "exact",
             "enum": [
               "prepare",
               "execute",
@@ -12802,14 +12775,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "waiting_approval",
-              "completed",
-              "failed",
-              "cancelled"
-            ]
+            "x-dict-type": "instance_status",
+            "x-dict-mode": "exact"
           },
           "current_node_id": {
             "type": "string"
@@ -12851,12 +12818,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "approved",
-              "rejected",
-              "expired"
-            ]
+            "x-dict-type": "approval_status",
+            "x-dict-mode": "exact"
           },
           "timeout_at": {
             "type": "string",
@@ -12901,6 +12864,8 @@
           },
           "node_type": {
             "type": "string",
+            "x-dict-type": "node_type",
+            "x-dict-mode": "exact",
             "enum": [
               "start",
               "end",
@@ -12910,12 +12875,15 @@
               "execution",
               "notification",
               "condition",
-              "set_variable"
+              "set_variable",
+              "compute"
             ],
             "description": "节点类型"
           },
           "level": {
             "type": "string",
+            "x-dict-type": "log_level",
+            "x-dict-mode": "exact",
             "enum": [
               "debug",
               "info",
@@ -13999,11 +13967,8 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "webhook",
-              "dingtalk",
-              "email"
-            ]
+            "x-dict-type": "notification_channel_type",
+            "x-dict-mode": "exact"
           },
           "description": {
             "type": "string"
@@ -14061,11 +14026,8 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "webhook",
-              "dingtalk",
-              "email"
-            ]
+            "x-dict-type": "notification_channel_type",
+            "x-dict-mode": "exact"
           },
           "description": {
             "type": "string"
@@ -14140,23 +14102,15 @@
           },
           "event_type": {
             "type": "string",
-            "enum": [
-              "incident_created",
-              "incident_resolved",
-              "approval_required",
-              "execution_result",
-              "custom"
-            ]
+            "x-dict-type": "notification_event_type",
+            "x-dict-mode": "exact"
           },
           "supported_channels": {
             "type": "array",
+            "x-dict-type": "notification_channel_type",
+            "x-dict-mode": "exact",
             "items": {
-              "type": "string",
-              "enum": [
-                "email",
-                "dingtalk",
-                "webhook"
-              ]
+              "type": "string"
             }
           },
           "subject_template": {
@@ -14167,11 +14121,8 @@
           },
           "format": {
             "type": "string",
-            "enum": [
-              "text",
-              "markdown",
-              "html"
-            ]
+            "x-dict-type": "notification_format",
+            "x-dict-mode": "exact"
           },
           "available_variables": {
             "type": "array",
@@ -14208,23 +14159,15 @@
           },
           "event_type": {
             "type": "string",
-            "enum": [
-              "incident_created",
-              "incident_resolved",
-              "approval_required",
-              "execution_result",
-              "custom"
-            ]
+            "x-dict-type": "notification_event_type",
+            "x-dict-mode": "exact"
           },
           "supported_channels": {
             "type": "array",
+            "x-dict-type": "notification_channel_type",
+            "x-dict-mode": "exact",
             "items": {
-              "type": "string",
-              "enum": [
-                "email",
-                "dingtalk",
-                "webhook"
-              ]
+              "type": "string"
             }
           },
           "subject_template": {
@@ -14236,11 +14179,8 @@
           },
           "format": {
             "type": "string",
-            "enum": [
-              "text",
-              "markdown",
-              "html"
-            ]
+            "x-dict-type": "notification_format",
+            "x-dict-mode": "exact"
           },
           "is_active": {
             "type": "boolean"
@@ -14258,23 +14198,15 @@
           },
           "event_type": {
             "type": "string",
-            "enum": [
-              "incident_created",
-              "incident_resolved",
-              "approval_required",
-              "execution_result",
-              "custom"
-            ]
+            "x-dict-type": "notification_event_type",
+            "x-dict-mode": "exact"
           },
           "supported_channels": {
             "type": "array",
+            "x-dict-type": "notification_channel_type",
+            "x-dict-mode": "exact",
             "items": {
-              "type": "string",
-              "enum": [
-                "email",
-                "dingtalk",
-                "webhook"
-              ]
+              "type": "string"
             }
           },
           "subject_template": {
@@ -14285,11 +14217,8 @@
           },
           "format": {
             "type": "string",
-            "enum": [
-              "text",
-              "markdown",
-              "html"
-            ]
+            "x-dict-type": "notification_format",
+            "x-dict-mode": "exact"
           },
           "is_active": {
             "type": "boolean"
@@ -14344,6 +14273,8 @@
           },
           "status": {
             "type": "string",
+            "x-dict-type": "notification_log_status",
+            "x-dict-mode": "exact",
             "enum": [
               "pending",
               "sent",
@@ -14472,15 +14403,8 @@
           },
           "category": {
             "type": "string",
-            "enum": [
-              "system_update",
-              "fault_alert",
-              "service_notice",
-              "product_news",
-              "activity",
-              "security",
-              "announcement"
-            ]
+            "x-dict-type": "site_message_category",
+            "x-dict-mode": "exact"
           },
           "title": {
             "type": "string"
@@ -14526,10 +14450,8 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "itsm",
-              "cmdb"
-            ],
+            "x-dict-type": "plugin_type",
+            "x-dict-mode": "exact",
             "description": "插件类型"
           },
           "description": {
@@ -14540,11 +14462,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "inactive",
-              "error"
-            ]
+            "x-dict-type": "plugin_status",
+            "x-dict-mode": "exact"
           },
           "config": {
             "type": "object",
@@ -14647,18 +14566,13 @@
           },
           "sync_type": {
             "type": "string",
-            "enum": [
-              "manual",
-              "scheduled"
-            ]
+            "x-dict-type": "plugin_sync_type",
+            "x-dict-mode": "subset"
           },
           "status": {
             "type": "string",
-            "enum": [
-              "running",
-              "success",
-              "failed"
-            ]
+            "x-dict-type": "plugin_sync_status",
+            "x-dict-mode": "exact"
           },
           "records_fetched": {
             "type": "integer"
@@ -14724,38 +14638,26 @@
           },
           "severity": {
             "type": "string",
-            "enum": [
-              "critical",
-              "high",
-              "medium",
-              "low"
-            ]
+            "x-dict-type": "incident_severity",
+            "x-dict-mode": "subset"
           },
           "priority": {
             "type": "string"
           },
           "status": {
             "type": "string",
-            "enum": [
-              "open",
-              "in_progress",
-              "resolved",
-              "closed"
-            ]
+            "x-dict-type": "incident_status",
+            "x-dict-mode": "exact"
           },
           "category": {
-            "type": "string"
+            "type": "string",
+            "x-dict-type": "incident_category",
+            "x-dict-mode": "open"
           },
           "healing_status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "processing",
-              "healed",
-              "failed",
-              "skipped",
-              "dismissed"
-            ]
+            "x-dict-type": "healing_status",
+            "x-dict-mode": "exact"
           },
           "affected_ci": {
             "type": "string"
@@ -14829,20 +14731,13 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "server",
-              "application",
-              "network",
-              "database"
-            ]
+            "x-dict-type": "cmdb_type",
+            "x-dict-mode": "exact"
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "offline",
-              "maintenance"
-            ]
+            "x-dict-type": "cmdb_status",
+            "x-dict-mode": "exact"
           },
           "ip_address": {
             "type": "string"
@@ -14873,11 +14768,8 @@
           },
           "environment": {
             "type": "string",
-            "enum": [
-              "production",
-              "staging",
-              "development"
-            ]
+            "x-dict-type": "cmdb_environment",
+            "x-dict-mode": "subset"
           },
           "manufacturer": {
             "type": "string"
@@ -15099,18 +14991,13 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "vault",
-              "file",
-              "webhook"
-            ]
+            "x-dict-type": "secrets_source_type",
+            "x-dict-mode": "exact"
           },
           "auth_type": {
             "type": "string",
-            "enum": [
-              "ssh_key",
-              "password"
-            ],
+            "x-dict-type": "secrets_auth_type",
+            "x-dict-mode": "exact",
             "description": "SSH 认证类型（file 类型只支持 ssh_key）"
           },
           "config": {
@@ -15127,10 +15014,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "inactive"
-            ]
+            "x-dict-type": "secrets_source_status",
+            "x-dict-mode": "exact"
           },
           "created_at": {
             "type": "string",
@@ -15152,18 +15037,13 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "vault",
-              "file",
-              "webhook"
-            ]
+            "x-dict-type": "secrets_source_type",
+            "x-dict-mode": "exact"
           },
           "auth_type": {
             "type": "string",
-            "enum": [
-              "ssh_key",
-              "password"
-            ],
+            "x-dict-type": "secrets_auth_type",
+            "x-dict-mode": "exact",
             "description": "SSH 认证类型"
           },
           "config": {
@@ -15427,12 +15307,8 @@
           },
           "auth_type": {
             "type": "string",
-            "enum": [
-              "none",
-              "token",
-              "password",
-              "ssh_key"
-            ]
+            "x-dict-type": "git_auth_type",
+            "x-dict-mode": "exact"
           },
           "local_path": {
             "type": "string"
@@ -15443,12 +15319,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "ready",
-              "syncing",
-              "error"
-            ]
+            "x-dict-type": "git_repo_status",
+            "x-dict-mode": "exact"
           },
           "error_message": {
             "type": "string",
@@ -15526,11 +15398,8 @@
           },
           "trigger_type": {
             "type": "string",
-            "enum": [
-              "manual",
-              "auto",
-              "create"
-            ],
+            "x-dict-type": "git_sync_trigger_type",
+            "x-dict-mode": "subset",
             "description": "触发类型"
           },
           "action": {
@@ -15543,10 +15412,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "success",
-              "failed"
-            ]
+            "x-dict-type": "git_sync_status",
+            "x-dict-mode": "exact"
           },
           "commit_id": {
             "type": "string",
@@ -15591,12 +15458,8 @@
           },
           "auth_type": {
             "type": "string",
-            "enum": [
-              "none",
-              "token",
-              "password",
-              "ssh_key"
-            ],
+            "x-dict-type": "git_auth_type",
+            "x-dict-mode": "exact",
             "description": "认证类型",
             "default": "none"
           },
@@ -15626,12 +15489,8 @@
           },
           "auth_type": {
             "type": "string",
-            "enum": [
-              "none",
-              "token",
-              "password",
-              "ssh_key"
-            ],
+            "x-dict-type": "git_auth_type",
+            "x-dict-mode": "exact",
             "description": "认证类型"
           },
           "auth_config": {
@@ -15745,11 +15604,8 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "ready",
-              "error"
-            ]
+            "x-dict-type": "playbook_status",
+            "x-dict-mode": "exact"
           },
           "variables": {
             "type": "array",
@@ -15785,11 +15641,8 @@
           },
           "trigger_type": {
             "type": "string",
-            "enum": [
-              "manual",
-              "auto",
-              "sync"
-            ]
+            "x-dict-type": "playbook_scan_trigger_type",
+            "x-dict-mode": "subset"
           },
           "files_scanned": {
             "type": "integer",
@@ -15862,10 +15715,8 @@
           },
           "config_mode": {
             "type": "string",
-            "enum": [
-              "auto",
-              "enhanced"
-            ],
+            "x-dict-type": "playbook_config_mode",
+            "x-dict-mode": "exact",
             "description": "配置模式"
           },
           "variables": {
@@ -15897,28 +15748,18 @@
           },
           "match_type": {
             "type": "string",
-            "enum": [
-              "contains",
-              "regex",
-              "exact"
-            ]
+            "x-dict-type": "command_blacklist_match_type",
+            "x-dict-mode": "exact"
           },
           "severity": {
             "type": "string",
-            "enum": [
-              "critical",
-              "high",
-              "medium"
-            ]
+            "x-dict-type": "command_blacklist_severity",
+            "x-dict-mode": "exact"
           },
           "category": {
             "type": "string",
-            "enum": [
-              "filesystem",
-              "network",
-              "system",
-              "database"
-            ]
+            "x-dict-type": "command_blacklist_category",
+            "x-dict-mode": "exact"
           },
           "description": {
             "type": "string"

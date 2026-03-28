@@ -17,6 +17,7 @@ import {
     SearchOutlined,
     ThunderboltOutlined,
 } from '@ant-design/icons';
+import { getExecutorConfig, getExecutorOptions } from '@/constants/executionDicts';
 
 const { Text } = Typography;
 
@@ -73,10 +74,7 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
                         style={{ width: 120 }}
                         value={filterExecutor || undefined}
                         onChange={(value) => onFilterExecutorChange(value || '')}
-                        options={[
-                            { label: 'SSH/Local', value: 'local' },
-                            { label: 'Docker', value: 'docker' },
-                        ]}
+                        options={getExecutorOptions()}
                     />
                     <Select
                         placeholder="通知"
@@ -113,6 +111,7 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
             ) : (
                 <Row gutter={[12, 12]}>
                     {paginatedTemplates.map((template) => {
+                        const executor = getExecutorConfig(template.executor_type);
                         const playbookKnownOffline = !!template.playbook && template.playbook.status !== 'ready';
                         return (
                             <Col key={template.id} xs={24} sm={12} md={8} lg={6}>
@@ -134,7 +133,7 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
                                             size={28}
                                             style={{
                                                 background: template.executor_type === 'docker' ? '#e6f7ff' : '#f6ffed',
-                                                color: template.executor_type === 'docker' ? '#1890ff' : '#52c41a',
+                                                color: executor.color,
                                                 flexShrink: 0,
                                             }}
                                             icon={template.executor_type === 'docker' ? <ThunderboltOutlined /> : <CodeOutlined />}
@@ -150,7 +149,7 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
                                     </Text>
                                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                         <Tag style={{ fontSize: 10, margin: 0 }}>
-                                            {template.executor_type === 'docker' ? 'Docker' : 'SSH/Local'}
+                                            {executor.label}
                                         </Tag>
                                         {template.needs_review ? (
                                             <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>

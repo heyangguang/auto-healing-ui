@@ -13,6 +13,7 @@ import {
     UserOutlined,
 } from '@ant-design/icons';
 import { Alert, Space, Statistic, Tag, Tooltip, Typography } from 'antd';
+import { getExecutionTriggeredByConfig, getExecutorConfig } from '@/constants/executionDicts';
 import { hasEffectiveNotificationConfig } from '@/utils/notificationConfig';
 import dayjs from 'dayjs';
 import { Field, SectionTitle } from './runDetailShared';
@@ -44,6 +45,8 @@ const RunDetailSidebar: React.FC<RunDetailSidebarProps> = ({
 }) => {
     const stats = run?.stats || { ok: 0, changed: 0, failed: 0, unreachable: 0, skipped: 0 };
     const runtimeHosts = splitHosts(run?.runtime_target_hosts);
+    const triggeredBy = getExecutionTriggeredByConfig(run?.triggered_by);
+    const executor = getExecutorConfig(run?.task?.executor_type);
 
     return (
         <div style={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
@@ -67,7 +70,7 @@ const RunDetailSidebar: React.FC<RunDetailSidebarProps> = ({
                     </Tooltip>
                 </Field>
                 <Field label="触发方式">
-                    <Tag icon={<UserOutlined />} style={{ margin: 0 }}>{run?.triggered_by || 'System'}</Tag>
+                    <Tag icon={<UserOutlined />} color={triggeredBy.tagColor || triggeredBy.color} style={{ margin: 0 }}>{triggeredBy.label}</Tag>
                 </Field>
                 <Field label="开始时间">{run?.started_at ? dayjs(run.started_at).format('YYYY-MM-DD HH:mm:ss') : '-'}</Field>
                 <Field label="结束时间">{run?.completed_at ? dayjs(run.completed_at).format('YYYY-MM-DD HH:mm:ss') : '-'}</Field>
@@ -97,10 +100,10 @@ const RunDetailSidebar: React.FC<RunDetailSidebarProps> = ({
                 <Field label="执行器">
                     <Tag
                         icon={<ThunderboltOutlined />}
-                        color={run?.task?.executor_type === 'docker' ? 'blue' : 'default'}
+                        color={executor.tagColor || executor.color}
                         style={{ margin: 0, fontSize: 11 }}
                     >
-                        {run?.task?.executor_type || 'local'}
+                        {executor.label}
                     </Tag>
                 </Field>
                 <Field label="通知">

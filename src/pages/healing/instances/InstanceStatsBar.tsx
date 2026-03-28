@@ -6,6 +6,7 @@ import {
   LoadingOutlined,
   PauseCircleOutlined,
 } from '@ant-design/icons';
+import { INSTANCE_STATUS_LABELS } from '@/constants/instanceDicts';
 
 type InstanceStatsBarProps = {
   stats: {
@@ -26,10 +27,10 @@ export const InstanceStatsBar: React.FC<InstanceStatsBarProps> = ({ stats }) => 
 
   const items = [
     { icon: <HistoryOutlined />, cls: 'total', val: stats.total, lbl: '总实例' },
-    { icon: <CheckCircleOutlined />, cls: 'ready', val: statusMap.completed || 0, lbl: '已完成' },
-    { icon: <LoadingOutlined />, cls: 'pending', val: statusMap.running || 0, lbl: '执行中' },
-    { icon: <PauseCircleOutlined />, cls: 'warning', val: statusMap.waiting_approval || 0, lbl: '待审批' },
-    { icon: <CloseCircleOutlined />, cls: 'error', val: statusMap.failed || 0, lbl: '失败' },
+    { icon: <CheckCircleOutlined />, cls: 'ready', val: statusMap.completed || 0, lbl: INSTANCE_STATUS_LABELS.completed || 'completed' },
+    { icon: <LoadingOutlined />, cls: 'pending', val: statusMap.running || 0, lbl: INSTANCE_STATUS_LABELS.running || 'running' },
+    { icon: <PauseCircleOutlined />, cls: 'warning', val: statusMap.waiting_approval || 0, lbl: INSTANCE_STATUS_LABELS.waiting_approval || 'waiting_approval' },
+    { icon: <CloseCircleOutlined />, cls: 'error', val: statusMap.failed || 0, lbl: INSTANCE_STATUS_LABELS.failed || 'failed' },
   ];
 
   return (

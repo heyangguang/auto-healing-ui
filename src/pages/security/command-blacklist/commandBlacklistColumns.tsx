@@ -7,11 +7,15 @@ import {
 import { Badge, Button, Popconfirm, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import type { StandardColumnDef } from '@/components/StandardTable';
+import {
+    getBlacklistCategoryOptions,
+    getBlacklistSeverityOptions,
+} from '@/constants/securityDicts';
 import type { CommandBlacklistRule } from '@/services/auto-healing/commandBlacklist';
 import {
-    CATEGORY_CONFIG,
-    MATCH_TYPE_CONFIG,
-    SEVERITY_CONFIG,
+    getCategoryConfig,
+    getMatchTypeConfig,
+    getSeverityConfig,
 } from './commandBlacklistPageConfig';
 
 const { Text } = Typography;
@@ -57,7 +61,7 @@ const renderName = (
 );
 
 const renderPattern = (rule: CommandBlacklistRule) => {
-    const matchConfig = MATCH_TYPE_CONFIG[rule.match_type] || MATCH_TYPE_CONFIG.contains;
+    const matchConfig = getMatchTypeConfig(rule.match_type);
 
     return (
         <div className="blacklist-pattern-cell">
@@ -72,7 +76,7 @@ const renderPattern = (rule: CommandBlacklistRule) => {
 };
 
 const renderSeverity = (rule: CommandBlacklistRule) => {
-    const config = SEVERITY_CONFIG[rule.severity] || SEVERITY_CONFIG.medium;
+    const config = getSeverityConfig(rule.severity);
 
     return (
         <Tag
@@ -87,7 +91,7 @@ const renderSeverity = (rule: CommandBlacklistRule) => {
 };
 
 const renderCategory = (rule: CommandBlacklistRule) => {
-    const config = CATEGORY_CONFIG[rule.category];
+    const config = getCategoryConfig(rule.category);
     return config ? (
         <Text style={{ fontSize: 13 }}>{config.label}</Text>
     ) : (
@@ -162,11 +166,7 @@ export const buildCommandBlacklistColumns = (
         dataIndex: 'severity',
         width: 90,
         sorter: true,
-        headerFilters: [
-            { value: 'critical', label: '严重' },
-            { value: 'high', label: '高危' },
-            { value: 'medium', label: '中危' },
-        ],
+        headerFilters: getBlacklistSeverityOptions().map(item => ({ value: item.value, label: item.label })),
         render: (_, record) => renderSeverity(record),
     },
     {
@@ -175,12 +175,7 @@ export const buildCommandBlacklistColumns = (
         dataIndex: 'category',
         width: 110,
         sorter: true,
-        headerFilters: [
-            { value: 'filesystem', label: '文件系统' },
-            { value: 'network', label: '网络' },
-            { value: 'system', label: '系统' },
-            { value: 'database', label: '数据库' },
-        ],
+        headerFilters: getBlacklistCategoryOptions().map(item => ({ value: item.value, label: item.label })),
         render: (_, record) => renderCategory(record),
     },
     {

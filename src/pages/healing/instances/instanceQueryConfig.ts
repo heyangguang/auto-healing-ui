@@ -1,5 +1,5 @@
 import type { AdvancedSearchField, SearchField } from '@/components/StandardTable';
-import { getInstanceStatusOptions } from '@/constants/instanceDicts';
+import { getApprovalStatusOptions, getInstanceStatusOptions } from '@/constants/instanceDicts';
 import type { HealingInstanceQueryParams } from '@/services/auto-healing/instances';
 import { toDayRangeEndISO, toDayRangeStartISO } from '@/utils/dateRange';
 
@@ -46,10 +46,7 @@ export const searchFields: SearchField[] = [
     key: '__enum__approval_status',
     label: '审批结果',
     description: '筛选包含特定审批结果的实例',
-    options: [
-      { label: '审批通过', value: 'approved' },
-      { label: '审批拒绝', value: 'rejected' },
-    ],
+    options: getApprovalStatusOptions(),
   },
 ];
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Drawer, Space, Typography, Tag, Button } from 'antd';
 import { ReloadOutlined, ExpandOutlined } from '@ant-design/icons';
 import { getExecutionRun, getExecutionLogs, createLogStream } from '@/services/auto-healing/execution';
-import { RUN_STATUS_LABELS } from '@/constants/executionDicts';
+import { getRunStatusConfig } from '@/constants/executionDicts';
 import LogConsole, { type LogEntry, toLogEntries, toLogEntry } from '@/components/execution/LogConsole';
 import dayjs from 'dayjs';
 import { createRequestSequence } from '@/utils/requestSequence';
@@ -174,21 +174,14 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
 
     const activeRun = run?.id === runId ? run : undefined;
     const activeLogs = activeRun ? logs : [];
+    const activeRunStatus = getRunStatusConfig(activeRun?.status);
 
     const Title = (
         <Space size={16}>
             <Text style={{ fontFamily: 'Fira Code' }}>#{runId?.slice(0, 8)}</Text>
             {activeRun && (
-                <Tag color={
-                    activeRun.status === 'running' ? '#1890ff' :
-                        activeRun.status === 'success' ? '#52c41a' :
-                            activeRun.status === 'partial' ? '#fa8c16' :
-                                activeRun.status === 'timeout' ? '#eb2f96' :
-                                    activeRun.status === 'cancelled' ? '#8c8c8c' :
-                                        activeRun.status === 'pending' ? '#722ed1' :
-                                            '#ff4d4f'
-                }>
-                    {RUN_STATUS_LABELS[activeRun.status] || activeRun.status.toUpperCase()}
+                <Tag color={activeRunStatus.tagColor || activeRunStatus.color}>
+                    {activeRunStatus.label}
                 </Tag>
             )}
             <Text type="secondary" style={{ fontSize: 13 }}>

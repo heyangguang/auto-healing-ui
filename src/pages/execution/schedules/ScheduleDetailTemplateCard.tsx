@@ -1,6 +1,7 @@
 import React from 'react';
 import { RocketOutlined } from '@ant-design/icons';
 import { Space, Tag, Typography } from 'antd';
+import { getExecutorConfig } from '@/constants/executionDicts';
 
 const { Text } = Typography;
 
@@ -18,6 +19,7 @@ const ScheduleDetailTemplateCard: React.FC<ScheduleDetailTemplateCardProps> = ({
     if (!template) {
         return <Text type="secondary" style={{ fontSize: 12 }}>模板已删除或不可用</Text>;
     }
+    const executor = getExecutorConfig(template.executor_type);
 
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
@@ -32,7 +34,7 @@ const ScheduleDetailTemplateCard: React.FC<ScheduleDetailTemplateCardProps> = ({
             </div>
             <div>
                 <div style={fieldLabelStyle}>执行器类型</div>
-                <div style={fieldValueStyle}>{template.executor_type === 'docker' ? 'Docker' : 'SSH/Local'}</div>
+                <div style={fieldValueStyle}>{executor.label}</div>
             </div>
             <div>
                 <div style={fieldLabelStyle}>Playbook</div>

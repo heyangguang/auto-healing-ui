@@ -1,16 +1,4 @@
 declare namespace GeneratedAutoHealing {
-  type getTenantDashboardOverviewParams =           {
-                'sections': string;
-          };
-
-  type getTenantDashboardRolesByRoleIdWorkspacesParams =           {
-                'roleId': string;
-          };
-
-  type getTenantExecutionRunsByIdLogsParams =           {
-                'id': string;
-          };
-
   type getTenantExecutionRunsByIdParams =           {
                 'id': string;
           };
@@ -76,7 +64,7 @@ declare namespace GeneratedAutoHealing {
                 'page'?: number;
                 'page_size'?: number;
                 'search'?: string;
-                'executor_type'?: "local" | "docker";
+                'executor_type'?: string;
                 'status'?: "pending_review" | "ready";
                 'playbook_id'?: string;
                 'target_hosts'?: string;
@@ -84,7 +72,7 @@ declare namespace GeneratedAutoHealing {
                 'repository_name'?: string;
                 'has_runs'?: boolean;
                 'min_run_count'?: number;
-                'last_run_status'?: "pending" | "running" | "success" | "failed" | "cancelled" | "timeout";
+                'last_run_status'?: string;
           };
 
   type getTenantGitReposByIdCommitsParams =           {
@@ -108,7 +96,7 @@ declare namespace GeneratedAutoHealing {
           };
 
   type getTenantGitReposParams =           {
-                'status'?: "pending" | "ready" | "syncing" | "error";
+                'status'?: string;
           };
 
   type getTenantHealingApprovalsByIdParams =           {
@@ -151,7 +139,7 @@ declare namespace GeneratedAutoHealing {
   type getTenantHealingInstancesParams =           {
                 'page'?: number;
                 'page_size'?: number;
-                'status'?: "pending" | "running" | "waiting_approval" | "completed" | "failed" | "cancelled";
+                'status'?: string;
                 'flow_id'?: string;
                 'rule_id'?: string;
                 'incident_id'?: string;
@@ -162,7 +150,7 @@ declare namespace GeneratedAutoHealing {
                 'current_node_id'?: string;
                 'error_message'?: string;
                 'has_error'?: boolean;
-                'approval_status'?: "approved" | "rejected";
+                'approval_status'?: string;
                 'created_from'?: string;
                 'created_to'?: string;
                 'started_from'?: string;
@@ -225,9 +213,9 @@ declare namespace GeneratedAutoHealing {
                 'source_plugin_name'?: string;
                 'search'?: string;
                 'external_id'?: string;
-                'status'?: "open" | "in_progress" | "resolved" | "closed";
-                'healing_status'?: "pending" | "processing" | "healed" | "failed" | "skipped" | "dismissed";
-                'severity'?: "critical" | "high" | "medium" | "low";
+                'status'?: string;
+                'healing_status'?: string;
+                'severity'?: string;
                 'has_plugin'?: boolean;
                 'sort_by'?: "created_at" | "severity";
                 'sort_order'?: "asc" | "desc";
@@ -240,7 +228,7 @@ declare namespace GeneratedAutoHealing {
   type getTenantNotificationsParams =           {
                 'page'?: number;
                 'page_size'?: number;
-                'status'?: "pending" | "sent" | "delivered" | "failed" | "bounced";
+                'status'?: string;
                 'task_name'?: string;
                 'triggered_by'?: string;
                 'subject'?: string;
@@ -252,5 +240,19 @@ declare namespace GeneratedAutoHealing {
                 'created_before'?: string;
                 'sort_by'?: "created_at" | "status" | "subject" | "sent_at";
                 'sort_order'?: "asc" | "desc";
+          };
+
+  type getTenantPlaybooksByIdFilesParams =           {
+                'id': string;
+          };
+
+  type getTenantPlaybooksByIdParams =           {
+                'id': string;
+          };
+
+  type getTenantPlaybooksByIdScanLogsParams =           {
+                'id': string;
+                'page'?: number;
+                'page_size'?: number;
           };
 }

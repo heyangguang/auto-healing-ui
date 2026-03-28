@@ -85,13 +85,7 @@ declare namespace GeneratedAutoHealing {
   type ExecutionRun = {
     id?: string;
     task_id?: string;
-    status?:
-      | "pending"
-      | "running"
-      | "success"
-      | "failed"
-      | "cancelled"
-      | "timeout";
+    status?: string;
     exit_code?: number;
     stats?: {
       ok?: number;
@@ -155,6 +149,7 @@ declare namespace GeneratedAutoHealing {
     name?: string;
     /** 关联的任务模板 ID */
     task_id?: string;
+    schedule_type?: string;
     /** Cron 表达式 */
     schedule_expr?: string;
     /** 是否循环执行 */
@@ -163,6 +158,7 @@ declare namespace GeneratedAutoHealing {
     next_run_at?: string;
     /** 是否启用 */
     enabled?: boolean;
+    status?: string;
     /** 描述 */
     description?: string;
     /** 覆盖目标主机（逗号分隔） */
@@ -205,7 +201,7 @@ declare namespace GeneratedAutoHealing {
     target_hosts?: string;
     /** 变量值 */
     extra_vars?: Record<string, unknown>;
-    executor_type?: "local" | "docker";
+    executor_type?: string;
     /** 任务描述 */
     description?: string;
     /** 关联的密钥源 ID 列表 */
@@ -252,5 +248,11 @@ declare namespace GeneratedAutoHealing {
   type FilterOption = {
     label?: string;
     value?: string;
+  };
+
+  type FlowEdge = {
+    from?: string;
+    to?: string;
+    condition?: string;
   };
 }

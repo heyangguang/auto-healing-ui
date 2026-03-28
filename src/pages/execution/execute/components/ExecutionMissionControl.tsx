@@ -1,6 +1,7 @@
 import React from 'react';
 import { Col, Row, Tag } from 'antd';
 import SubPageHeader from '@/components/SubPageHeader';
+import { getExecutorConfig } from '@/constants/executionDicts';
 import ExecutionMissionControlFooter from './ExecutionMissionControlFooter';
 import ExecutionMissionControlMainHeader from './ExecutionMissionControlMainHeader';
 import ExecutionMissionControlSecretsCard from './ExecutionMissionControlSecretsCard';
@@ -48,6 +49,7 @@ const ExecutionMissionControl: React.FC<ExecutionMissionControlProps> = ({
     const totalSecretsCount = templateSecretsCount + additionalSecretIds.length;
     const totalHostsCount = templateHostsCount + additionalHosts.length;
     const timeoutConfigs = getTimeoutConfigs(selectedTemplate.notification_config);
+    const executorConfig = getExecutorConfig(selectedTemplate.executor_type);
     const showNotificationDisplay = shouldShowNotificationDisplay(
         selectedTemplate.notification_config,
         hasNotificationConfig,
@@ -66,8 +68,8 @@ const ExecutionMissionControl: React.FC<ExecutionMissionControlProps> = ({
             <SubPageHeader
                 title={selectedTemplate.name || '未命名任务'}
                 titleExtra={
-                    <Tag color={selectedTemplate.executor_type === 'docker' ? 'blue' : 'purple'}>
-                        {selectedTemplate.executor_type === 'docker' ? 'Docker' : 'SSH'}
+                    <Tag color={executorConfig.tagColor || executorConfig.color}>
+                        {executorConfig.label}
                     </Tag>
                 }
                 onBack={onBack}

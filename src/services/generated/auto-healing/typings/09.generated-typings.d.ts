@@ -1,52 +1,4 @@
 declare namespace GeneratedAutoHealing {
-  type putTenantPlaybooksByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantPlaybooksByIdVariablesParams =           {
-                'id': string;
-          };
-
-  type putTenantPluginsByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantRolesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantRolesByIdPermissionsParams =           {
-                'id': string;
-          };
-
-  type putTenantSecretsSourcesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantTemplatesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantUsersByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantUsersByIdRolesParams =           {
-                'id': string;
-          };
-
-  type RankItem = {
-    name?: string;
-    count?: number;
-  };
-
-  type RecentItem = {
-    id?: string;
-    title?: string;
-    status?: string;
-    created_at?: string;
-  };
-
   type ResourceCount = {
     total?: number;
     enabled?: number;
@@ -74,6 +26,7 @@ declare namespace GeneratedAutoHealing {
     display_name?: string;
     description?: string;
     is_system?: boolean;
+    scope?: string;
     created_at?: string;
   };
 
@@ -82,6 +35,7 @@ declare namespace GeneratedAutoHealing {
     name?: string;
     display_name?: string;
     is_system?: boolean;
+    scope?: string;
   };
 
   type RuleCondition = {
@@ -165,16 +119,16 @@ declare namespace GeneratedAutoHealing {
   type SecretsSource = {
     id?: string;
     name?: string;
-    type?: "vault" | "file" | "webhook";
+    type?: string;
     /** SSH 认证类型（file 类型只支持 ssh_key） */
-    auth_type?: "ssh_key" | "password";
+    auth_type?: string;
     /** 配置详情（根据 type 不同结构不同） */
     config?: Record<string, unknown>;
     /** 是否默认密钥源 */
     is_default?: boolean;
     /** 优先级（数字越小越优先） */
     priority?: number;
-    status?: "active" | "inactive";
+    status?: string;
     created_at?: string;
   };
 
@@ -182,14 +136,7 @@ declare namespace GeneratedAutoHealing {
     id?: string;
     tenant_id?: string;
     target_tenant_id?: string;
-    category?:
-      | "system_update"
-      | "fault_alert"
-      | "service_notice"
-      | "product_news"
-      | "activity"
-      | "security"
-      | "announcement";
+    category?: string;
     title?: string;
     content?: string;
     created_at?: string;
@@ -253,5 +200,45 @@ declare namespace GeneratedAutoHealing {
   type TrendPoint = {
     date?: string;
     count?: number;
+  };
+
+  type TriggerItem = {
+    id?: string;
+    title?: string;
+    severity?: string;
+    affected_ci?: string;
+    created_at?: string;
+  };
+
+  type UpdateGitRepoRequest = {
+    /** 默认分支 */
+    default_branch?: string;
+    /** 认证类型 */
+    auth_type?: string;
+    /** 认证配置 */
+    auth_config?: Record<string, unknown>;
+    /** 是否启用定时同步 */
+    sync_enabled?: boolean;
+    /** 同步间隔，如 10s, 5m, 1h */
+    sync_interval?: string;
+  };
+
+  type User = {
+    id?: string;
+    username?: string;
+    email?: string;
+    display_name?: string;
+    status?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  type UserInfo = {
+    id?: string;
+    username?: string;
+    email?: string;
+    display_name?: string;
+    roles?: string[];
+    permissions?: string[];
   };
 }

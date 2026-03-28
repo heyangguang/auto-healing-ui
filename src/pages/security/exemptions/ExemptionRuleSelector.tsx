@@ -1,24 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Col, Empty, Input, Modal, Row, Select, Space, Tag, Typography, message } from 'antd';
 import { LoadingOutlined, SafetyCertificateOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+    getBlacklistMatchTypeMeta,
+    getBlacklistSeverityMeta,
+    getBlacklistSeverityOptions,
+} from '@/constants/securityDicts';
 import { getCommandBlacklist, type CommandBlacklistRule } from '@/services/auto-healing/commandBlacklist';
 import { createRequestSequence } from '@/utils/requestSequence';
 
 const { Text } = Typography;
 
 const PAGE_SIZE = 50;
-
-const SEVERITY_COLORS: Record<CommandBlacklistRule['severity'], string> = {
-    critical: 'red',
-    high: 'orange',
-    medium: 'gold',
-};
-
-const SEVERITY_LABELS: Record<CommandBlacklistRule['severity'], string> = {
-    critical: '严重',
-    high: '高危',
-    medium: '中危',
-};
 
 type RuleQueryParams = {
     page: number;
@@ -182,11 +175,7 @@ const ExemptionRuleSelector: React.FC<ExemptionRuleSelectorProps> = ({ open, val
                         onChange={setSeverityFilter}
                         allowClear
                         style={{ width: '100%' }}
-                        options={[
-                            { label: '严重', value: 'critical' },
-                            { label: '高危', value: 'high' },
-                            { label: '中危', value: 'medium' },
-                        ]}
+                        options={getBlacklistSeverityOptions()}
                     />
                 </Col>
             </Row>
@@ -227,11 +216,11 @@ const ExemptionRuleSelector: React.FC<ExemptionRuleSelectorProps> = ({ open, val
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                        <Tag color={SEVERITY_COLORS[rule.severity]} style={{ margin: 0 }}>
-                                            {SEVERITY_LABELS[rule.severity]}
+                                        <Tag color={getBlacklistSeverityMeta(rule.severity).tagColor} style={{ margin: 0 }}>
+                                            {getBlacklistSeverityMeta(rule.severity).label}
                                         </Tag>
                                         <Text strong style={{ fontSize: 13 }}>{rule.name}</Text>
-                                        <Tag style={{ fontSize: 10, margin: 0 }}>{rule.match_type}</Tag>
+                                        <Tag style={{ fontSize: 10, margin: 0 }}>{getBlacklistMatchTypeMeta(rule.match_type).label}</Tag>
                                     </div>
                                     <div style={{ marginLeft: 4 }}>
                                         <Text code style={{ fontSize: 11, color: '#595959' }}>{rule.pattern}</Text>

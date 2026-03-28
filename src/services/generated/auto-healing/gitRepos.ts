@@ -231,7 +231,7 @@ export async function postTenantGitReposValidate(
   body: {
     /** Git 仓库 URL */
     url: string;
-    auth_type?: "none" | "token" | "password" | "ssh_key";
+    auth_type?: string;
     /** 认证配置 */
     auth_config?: Record<string, unknown>;
   },

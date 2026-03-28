@@ -22,6 +22,7 @@ import {
 } from 'antd';
 import React from 'react';
 import dayjs from 'dayjs';
+import { getExecutorConfig } from '@/constants/executionDicts';
 import { DockerExecIcon, LocalExecIcon } from './TemplateIcons';
 import {
     type ExecutionTaskRecord,
@@ -67,6 +68,7 @@ const TemplateDetailSummaryCards: React.FC<TemplateDetailSummaryCardsProps> = ({
     const playbook = template.playbook;
     const vars = (template.extra_vars || {}) as Record<string, unknown>;
     const hosts = getTaskHosts(template);
+    const executor = getExecutorConfig(template.executor_type);
     const filteredHosts = hosts.filter((host) => host.toLowerCase().includes(hostSearch.toLowerCase()));
     const notificationConfig = template.notification_config;
     const triggers = [
@@ -97,7 +99,7 @@ const TemplateDetailSummaryCards: React.FC<TemplateDetailSummaryCardsProps> = ({
                         <div style={fieldValueStyle}>
                             <Space size={6}>
                                 {template.executor_type === 'docker' ? <DockerExecIcon size={14} /> : <LocalExecIcon size={14} />}
-                                <span>{template.executor_type === 'docker' ? '容器 (Docker)' : '本地进程 (SSH)'}</span>
+                                <span>{executor.label}</span>
                             </Space>
                         </div>
                     </div>

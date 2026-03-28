@@ -14,6 +14,7 @@ import {
     CREDENTIAL_TYPE_OPTIONS,
     SECRETS_SOURCE_OPTIONS,
     SECRETS_STATUS_OPTIONS,
+    getSecretsSourceStatusMeta,
 } from '@/constants/secretsDicts';
 import type { SecretsStatsSummary } from './secretSourcePageConfig';
 import { getAuthTypeConfig, getSourceTypeConfig } from './secretSourcePageConfig';
@@ -152,9 +153,10 @@ export function createSecretSourceColumns(options: SecretSourceColumnsOptions): 
             width: 80,
             sorter: true,
             headerFilters: SECRETS_STATUS_OPTIONS,
-            render: (_: unknown, record: AutoHealing.SecretsSource) => (
-                <Badge status={record.status === 'active' ? 'success' : 'default'} text={record.status === 'active' ? '启用' : '禁用'} />
-            ),
+            render: (_: unknown, record: AutoHealing.SecretsSource) => {
+                const status = getSecretsSourceStatusMeta(record.status);
+                return <Badge status={status.badge} text={status.label} />;
+            },
         },
         {
             columnKey: 'created_at',

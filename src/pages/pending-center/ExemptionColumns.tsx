@@ -4,9 +4,9 @@ import { Button, Popconfirm, Space, Tag, Typography } from 'antd';
 import type { StandardColumnDef } from '@/components/StandardTable';
 import type { ExemptionRecord } from '@/services/auto-healing/blacklistExemption';
 import {
-  exemptionSeverityColors,
-  exemptionStatusMap,
   formatExemptionTime,
+  getExemptionSeverityMeta,
+  getExemptionStatusMeta,
   renderExemptionStatusTag,
 } from './exemptionApprovalShared';
 
@@ -25,6 +25,7 @@ export function ExemptionStatsBar({
   pending: number | null;
   errorMessage?: string | null;
 }) {
+  const pendingStatus = getExemptionStatusMeta('pending');
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '16px 24px', borderTop: '1px solid #f0f0f0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 20 }}>
@@ -36,10 +37,10 @@ export function ExemptionStatsBar({
       </div>
       <div style={{ width: 1, height: 32, background: '#f0f0f0', flexShrink: 0 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px' }}>
-        <ClockCircleOutlined style={{ fontSize: 22, color: '#fa8c16', opacity: 0.75 }} />
+        <ClockCircleOutlined style={{ fontSize: 22, color: pendingStatus.color, opacity: 0.75 }} />
         <div>
           <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>{renderStatValue(pending)}</div>
-          <div style={{ fontSize: 12, color: '#8c8c8c' }}>待审批</div>
+          <div style={{ fontSize: 12, color: '#8c8c8c' }}>{pendingStatus.label}</div>
         </div>
       </div>
       {errorMessage ? <Text type="danger" style={{ marginLeft: 20, fontSize: 12 }}>{errorMessage}</Text> : null}
@@ -59,9 +60,10 @@ type PendingActionCellOptions = ExemptionColumnsOptions & {
 };
 
 function renderSeverityTag(severity: string) {
+  const meta = getExemptionSeverityMeta(severity);
   return (
-    <Tag color={exemptionSeverityColors[severity] || 'default'} style={{ margin: 0 }}>
-      {severity}
+    <Tag color={meta.tagColor} style={{ margin: 0 }}>
+      {meta.label}
     </Tag>
   );
 }
@@ -163,7 +165,10 @@ export function createExemptionHistoryColumns(): StandardColumnDef<ExemptionReco
       columnTitle: '状态',
       dataIndex: 'status',
       width: 80,
-      headerFilters: Object.entries(exemptionStatusMap).map(([value, meta]) => ({ label: meta.label, value })),
+      headerFilters: ['pending', 'approved', 'rejected', 'expired'].map((value) => {
+        const meta = getExemptionStatusMeta(value);
+        return { label: meta.label, value };
+      }),
       render: (_, record) => renderExemptionStatusTag(record.status),
     },
     {

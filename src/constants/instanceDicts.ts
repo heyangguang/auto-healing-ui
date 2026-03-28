@@ -31,11 +31,18 @@ const FB_MAP: Record<string, { color: string; text: string; bg?: string }> = {
     waiting_approval: { color: 'warning', text: '待审批', bg: '#fffbe6' },
 };
 
+const FB_APPROVAL_MAP: Record<string, { color: string; text: string }> = {
+    pending: { color: 'warning', text: '待审批' },
+    approved: { color: 'success', text: '已批准' },
+    rejected: { color: 'error', text: '已拒绝' },
+};
+
 // ==================== 动态变量 ====================
 
 export let INSTANCE_STATUS_COLORS: Record<string, string> = { ...FB_COLORS };
 export let INSTANCE_STATUS_LABELS: Record<string, string> = { ...FB_LABELS };
 export let INSTANCE_STATUS_MAP: Record<string, { color: string; text: string; bg?: string }> = { ...FB_MAP };
+export let APPROVAL_STATUS_MAP: Record<string, { color: string; text: string }> = { ...FB_APPROVAL_MAP };
 
 // ==================== 刷新逻辑 ====================
 
@@ -64,9 +71,12 @@ function refresh() {
     }
     const approvalStatus = getDictItems('approval_status');
     if (approvalStatus?.length) {
+        const approvalMap: Record<string, { color: string; text: string }> = {};
         approvalStatus.forEach(i => {
             INSTANCE_STATUS_LABELS[i.dict_key] = INSTANCE_STATUS_LABELS[i.dict_key] || i.label;
+            approvalMap[i.dict_key] = { color: i.tag_color || 'default', text: i.label };
         });
+        APPROVAL_STATUS_MAP = { ...FB_APPROVAL_MAP, ...approvalMap };
     }
 }
 
@@ -78,4 +88,15 @@ refresh();
 /** 实例状态下拉选项（主要用于筛选器） */
 export function getInstanceStatusOptions() {
     return Object.entries(INSTANCE_STATUS_MAP).map(([value, cfg]) => ({ label: cfg.text, value }));
+}
+
+export function getApprovalStatusOptions() {
+    return Object.entries(APPROVAL_STATUS_MAP).map(([value, cfg]) => ({ label: cfg.text, value }));
+}
+
+export function getApprovalStatusConfig(status?: string) {
+    if (!status) {
+        return APPROVAL_STATUS_MAP.pending || { color: 'default', text: '未知' };
+    }
+    return APPROVAL_STATUS_MAP[status] || { color: 'default', text: status };
 }

@@ -13,6 +13,11 @@ import {
 } from '@ant-design/icons';
 import { message } from 'antd';
 import type { AdvancedSearchField } from '@/components/StandardTable';
+import { NOTIF_LOG_STATUS_MAP } from '@/constants/commonDicts';
+import {
+    getExecutionTriggeredByConfig,
+    getExecutionTriggeredByOptions,
+} from '@/constants/executionDicts';
 import { getChannelTypeConfig } from '@/constants/notificationDicts';
 import {
     getNotificationStats,
@@ -31,19 +36,19 @@ export const RECORDS_HEADER_ICON = (
     </svg>
 );
 
-const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; label: string; tagColor: 'success' | 'error' | 'warning' | 'default' }> = {
-    sent: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '已发送', tagColor: 'success' },
-    delivered: { color: '#52c41a', icon: <CheckCircleOutlined />, label: '已送达', tagColor: 'success' },
-    pending: { color: '#faad14', icon: <ClockCircleOutlined />, label: '待发送', tagColor: 'warning' },
-    failed: { color: '#ff4d4f', icon: <CloseCircleOutlined />, label: '失败', tagColor: 'error' },
-    bounced: { color: '#ff4d4f', icon: <ExclamationCircleOutlined />, label: '退信', tagColor: 'error' },
+const STATUS_ICON_REGISTRY: Record<string, React.ReactNode> = {
+    sent: <CheckCircleOutlined />,
+    delivered: <CheckCircleOutlined />,
+    pending: <ClockCircleOutlined />,
+    failed: <CloseCircleOutlined />,
+    bounced: <ExclamationCircleOutlined />,
 };
 
-const TRIGGERED_BY_CONFIG: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    manual: { icon: <PlayCircleOutlined />, label: '手动执行', color: 'blue' },
-    'scheduler:cron': { icon: <CalendarOutlined />, label: '定时调度', color: 'purple' },
-    'scheduler:once': { icon: <ClockCircleOutlined />, label: '单次调度', color: 'cyan' },
-    healing: { icon: <RobotOutlined />, label: '自愈触发', color: 'orange' },
+const TRIGGER_ICON_REGISTRY: Record<string, React.ReactNode> = {
+    manual: <PlayCircleOutlined />,
+    'scheduler:cron': <CalendarOutlined />,
+    'scheduler:once': <ClockCircleOutlined />,
+    healing: <RobotOutlined />,
 };
 
 export type NotificationRecord = NotificationRecordResponse;
@@ -84,9 +89,23 @@ export type NotificationRecordsQuery = {
 };
 
 export const getTypeConfig = (type: string) => getChannelTypeConfig(type);
-export const getStatusConfig = (status: string) => STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-export const getTriggeredByConfig = (triggeredBy?: string) =>
-    TRIGGERED_BY_CONFIG[triggeredBy || ''] || { label: triggeredBy || '-', color: 'default', icon: <HistoryOutlined /> };
+export const getStatusConfig = (status: string) => {
+    const meta = NOTIF_LOG_STATUS_MAP[status] || { color: 'default', text: status || '-' };
+    return {
+        color: meta.color,
+        icon: STATUS_ICON_REGISTRY[status] || <HistoryOutlined />,
+        label: meta.text,
+        tagColor: meta.color as 'success' | 'error' | 'warning' | 'default',
+    };
+};
+export const getTriggeredByConfig = (triggeredBy?: string) => {
+    const meta = getExecutionTriggeredByConfig(triggeredBy);
+    return {
+        color: meta.tagColor || meta.color,
+        icon: TRIGGER_ICON_REGISTRY[triggeredBy || ''] || <HistoryOutlined />,
+        label: meta.label,
+    };
+};
 
 const getStatusCount = (stats: NotificationStatsSummary, status: string) =>
     stats.logs_by_status.find((item) => item.status === status)?.count || 0;
@@ -192,24 +211,13 @@ export const buildRecordAdvancedSearchFields = (
     { key: 'task_name', label: '任务名称', type: 'input', placeholder: '模糊搜索任务模板名称' },
     {
         key: 'status', label: '发送状态', type: 'select', placeholder: '全部状态',
-        options: [
-            { label: '已发送', value: 'sent' },
-            { label: '已送达', value: 'delivered' },
-            { label: '失败', value: 'failed' },
-            { label: '退信', value: 'bounced' },
-            { label: '待发送', value: 'pending' },
-        ],
+        options: Object.entries(NOTIF_LOG_STATUS_MAP).map(([value, meta]) => ({ label: meta.text, value })),
     },
     { key: 'channel_id', label: '通知渠道', type: 'select', placeholder: '全部渠道', options: channels.map((item) => ({ label: item.name, value: item.id })) },
     { key: 'template_id', label: '通知模板', type: 'select', placeholder: '全部模板', options: templates.map((item) => ({ label: item.name, value: item.id })) },
     {
         key: 'triggered_by', label: '触发类型', type: 'select', placeholder: '全部类型',
-        options: [
-            { label: '手动执行', value: 'manual' },
-            { label: '定时调度', value: 'scheduler:cron' },
-            { label: '单次调度', value: 'scheduler:once' },
-            { label: '自愈触发', value: 'healing' },
-        ],
+        options: getExecutionTriggeredByOptions(),
     },
     { key: 'created_at', label: '创建时间', type: 'dateRange' },
 ];

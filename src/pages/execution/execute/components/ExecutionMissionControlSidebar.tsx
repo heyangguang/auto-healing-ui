@@ -10,6 +10,7 @@ import {
     RocketOutlined,
 } from '@ant-design/icons';
 import NotificationConfigDisplay from '@/components/NotificationSelector/NotificationConfigDisplay';
+import { getExecutorConfig } from '@/constants/executionDicts';
 import { resolveDisplayName } from './executionMissionControlHelpers';
 import type { NotificationTargetConfig } from './executionMissionControlTypes';
 
@@ -82,14 +83,17 @@ const MissionSummaryRow: React.FC<{
     </div>
 );
 
-const MissionExecutorRow: React.FC<{ executorType?: string }> = ({ executorType }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <Space size={4} className="text-secondary">
-            <RocketOutlined /> 执行方式
-        </Space>
-        <Tag style={{ margin: 0 }}>{executorType?.toUpperCase()}</Tag>
-    </div>
-);
+const MissionExecutorRow: React.FC<{ executorType?: string }> = ({ executorType }) => {
+    const executor = getExecutorConfig(executorType);
+    return (
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Space size={4} className="text-secondary">
+                <RocketOutlined /> 执行方式
+            </Space>
+            <Tag color={executor.tagColor || executor.color} style={{ margin: 0 }}>{executor.label}</Tag>
+        </div>
+    );
+};
 
 const TimeoutStrategyItem: React.FC<{
     channels: AutoHealing.NotificationChannel[];

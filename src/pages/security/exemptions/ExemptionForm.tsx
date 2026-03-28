@@ -14,20 +14,13 @@ import SubPageHeader from '@/components/SubPageHeader';
 import TaskTemplateSelector from '@/pages/healing/flows/editor/TaskTemplateSelector';
 import type { CommandBlacklistRule } from '@/services/auto-healing/commandBlacklist';
 import { createBlacklistExemption } from '@/services/auto-healing/blacklistExemption';
+import { getBlacklistMatchTypeMeta, getBlacklistSeverityMeta } from '@/constants/securityDicts';
 import { extractErrorMsg } from '@/utils/errorMsg';
 import ExemptionRuleSelector from './ExemptionRuleSelector';
 import '../command-blacklist/BlacklistRuleForm.css';
 
 const { TextArea } = Input;
 const { Text } = Typography;
-
-const SEVERITY_COLORS: Record<string, string> = {
-    critical: 'red', high: 'orange', medium: 'gold',
-};
-
-const SEVERITY_LABELS: Record<string, string> = {
-    critical: '严重', high: '高危', medium: '中危',
-};
 
 const VALIDITY_OPTIONS = [
     { value: 7, label: '7 天' },
@@ -200,11 +193,11 @@ const ExemptionForm: React.FC = () => {
                             {selectedRule ? (
                                 <Space direction="vertical" size={4} style={{ width: '100%' }}>
                                     <Space>
-                                        <Tag color={SEVERITY_COLORS[selectedRule.severity]} style={{ margin: 0 }}>
-                                            {SEVERITY_LABELS[selectedRule.severity] || selectedRule.severity}
+                                        <Tag color={getBlacklistSeverityMeta(selectedRule.severity).tagColor} style={{ margin: 0 }}>
+                                            {getBlacklistSeverityMeta(selectedRule.severity).label}
                                         </Tag>
                                         <Text strong>{selectedRule.name}</Text>
-                                        <Tag style={{ margin: 0, fontSize: 10 }}>{selectedRule.match_type}</Tag>
+                                        <Tag style={{ margin: 0, fontSize: 10 }}>{getBlacklistMatchTypeMeta(selectedRule.match_type).label}</Tag>
                                     </Space>
                                     <Text code style={{ fontSize: 12 }}>{selectedRule.pattern}</Text>
                                     {selectedRule.description && (

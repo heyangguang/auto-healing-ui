@@ -1,7 +1,7 @@
 import React from 'react';
 import { ClockCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { Descriptions, Tag, Typography } from 'antd';
-import { CATEGORY_LABELS } from '@/constants/incidentDicts';
+import { CATEGORY_LABELS, INCIDENT_HEALING_MAP } from '@/constants/incidentDicts';
 import type { PendingTriggerRecord } from './types';
 import { formatTriggerTime, getTriggerSeverityTag } from './triggerShared';
 
@@ -12,6 +12,7 @@ export interface TriggerDetailPanelProps {
 }
 
 function TriggerStatusBanner({ detail }: TriggerDetailPanelProps) {
+  const healingStatus = INCIDENT_HEALING_MAP[detail.healing_status] || { color: '#faad14', text: detail.healing_status || '-' };
   const isDismissed = detail.healing_status === 'dismissed';
   return (
     <div style={{
@@ -23,9 +24,9 @@ function TriggerStatusBanner({ detail }: TriggerDetailPanelProps) {
       alignItems: 'center',
       gap: 8,
     }}>
-      {isDismissed ? <StopOutlined style={{ color: '#8c8c8c' }} /> : <ClockCircleOutlined style={{ color: '#faad14' }} />}
-      <Text strong style={{ color: isDismissed ? '#8c8c8c' : '#d48806' }}>
-        {isDismissed ? '已忽略' : '待触发'}
+      {isDismissed ? <StopOutlined style={{ color: healingStatus.color }} /> : <ClockCircleOutlined style={{ color: healingStatus.color }} />}
+      <Text strong style={{ color: healingStatus.color }}>
+        {healingStatus.text}
       </Text>
       <div style={{ marginLeft: 'auto' }}>
         {getTriggerSeverityTag(detail.severity)}
@@ -35,6 +36,7 @@ function TriggerStatusBanner({ detail }: TriggerDetailPanelProps) {
 }
 
 function TriggerBasicSection({ detail }: TriggerDetailPanelProps) {
+  const healingStatus = INCIDENT_HEALING_MAP[detail.healing_status] || { color: 'default', text: detail.healing_status || '-' };
   const isDismissed = detail.healing_status === 'dismissed';
   return (
     <Descriptions column={2} size="small" labelStyle={{ color: '#8c8c8c', width: 90 }} style={{ marginBottom: 16 }}>
@@ -57,8 +59,8 @@ function TriggerBasicSection({ detail }: TriggerDetailPanelProps) {
         <Tag color="blue">{detail.status || '-'}</Tag>
       </Descriptions.Item>
       <Descriptions.Item label="自愈状态">
-        <Tag color={isDismissed ? 'default' : 'orange'}>
-          {isDismissed ? '已忽略' : (detail.healing_status || '-')}
+        <Tag color={healingStatus.badge || (isDismissed ? 'default' : 'warning')}>
+          {healingStatus.text}
         </Tag>
       </Descriptions.Item>
     </Descriptions>

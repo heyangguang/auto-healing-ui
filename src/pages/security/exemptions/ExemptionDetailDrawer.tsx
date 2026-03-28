@@ -1,7 +1,8 @@
 import React from 'react';
 import { Drawer, Space, Tag, Typography } from 'antd';
 import type { ExemptionRecord } from '@/services/auto-healing/blacklistExemption';
-import { formatTime, SEVERITY_COLORS, STATUS_MAP } from './exemptionListConfig';
+import { getBlacklistSeverityMeta } from '@/constants/securityDicts';
+import { formatTime, getExemptionSeverityTagColor, getExemptionStatusConfig } from './exemptionListConfig';
 
 const { Text } = Typography;
 
@@ -20,16 +21,7 @@ const ExemptionDetailDrawer: React.FC<ExemptionDetailDrawerProps> = ({ detail, o
             width={560}
         >
             {detail && (() => {
-                const statusConfig = STATUS_MAP[detail.status] || { color: 'default', label: detail.status, icon: null };
-                const statusBg = detail.status === 'approved' ? '#f6ffed'
-                    : detail.status === 'rejected' ? '#fff1f0'
-                        : detail.status === 'expired' ? '#fffbe6' : '#e6f7ff';
-                const statusBorder = detail.status === 'approved' ? '#b7eb8f'
-                    : detail.status === 'rejected' ? '#ffa39e'
-                        : detail.status === 'expired' ? '#ffe58f' : '#91caff';
-                const statusColor = detail.status === 'approved' ? '#389e0d'
-                    : detail.status === 'rejected' ? '#cf1322'
-                        : detail.status === 'expired' ? '#d46b08' : '#1677ff';
+                const statusConfig = getExemptionStatusConfig(detail.status);
                 const labelStyle: React.CSSProperties = { fontSize: 12, color: '#8c8c8c', marginBottom: 4 };
                 const valueStyle: React.CSSProperties = { fontSize: 13, color: '#262626' };
 
@@ -38,16 +30,16 @@ const ExemptionDetailDrawer: React.FC<ExemptionDetailDrawerProps> = ({ detail, o
                         <div
                             style={{
                                 padding: '14px 16px',
-                                background: statusBg,
-                                border: `1px solid ${statusBorder}`,
+                                background: '#f8fafc',
+                                border: '1px solid #e8e8e8',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 10,
                             }}
                         >
-                            <span style={{ fontSize: 18, color: statusColor }}>{statusConfig.icon}</span>
+                            <span style={{ fontSize: 18, color: statusConfig.color }}>{statusConfig.icon}</span>
                             <div>
-                                <Text strong style={{ fontSize: 15, color: statusColor }}>{statusConfig.label}</Text>
+                                <Tag color={statusConfig.tagColor} style={{ margin: 0 }}>{statusConfig.label}</Tag>
                                 {detail.expires_at && detail.status === 'approved' && (
                                     <Text type="secondary" style={{ fontSize: 12, marginLeft: 12 }}>
                                         到期 {formatTime(detail.expires_at)}
@@ -69,8 +61,8 @@ const ExemptionDetailDrawer: React.FC<ExemptionDetailDrawerProps> = ({ detail, o
                                     <div style={labelStyle}>豁免规则</div>
                                     <Space size={6}>
                                         <Text style={valueStyle}>{detail.rule_name}</Text>
-                                        <Tag color={SEVERITY_COLORS[detail.rule_severity]} style={{ margin: 0, fontSize: 11 }}>
-                                            {detail.rule_severity}
+                                        <Tag color={getExemptionSeverityTagColor(detail.rule_severity)} style={{ margin: 0, fontSize: 11 }}>
+                                            {getBlacklistSeverityMeta(detail.rule_severity).label}
                                         </Tag>
                                     </Space>
                                 </div>

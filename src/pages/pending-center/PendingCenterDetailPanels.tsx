@@ -1,7 +1,8 @@
 import React from 'react';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { Descriptions, Tag, Typography } from 'antd';
-import { CATEGORY_LABELS } from '@/constants/incidentDicts';
+import { getApprovalStatusConfig } from '@/constants/instanceDicts';
+import { CATEGORY_LABELS, INCIDENT_HEALING_MAP } from '@/constants/incidentDicts';
 import type { PendingApprovalRecord, PendingTriggerRecord } from './types';
 import { formatPendingCenterTime, getSeverityTag } from './shared';
 
@@ -23,10 +24,11 @@ function PendingRecordFooter({ id }: { id: string }) {
 }
 
 function PendingApprovalBanner() {
+  const status = getApprovalStatusConfig('pending');
   return (
     <div style={{ padding: '12px 16px', marginBottom: 16, background: '#fff7e6', border: '1px solid #ffd591', display: 'flex', alignItems: 'center', gap: 8 }}>
       <ClockCircleOutlined style={{ color: '#fa8c16' }} />
-      <Text strong style={{ color: '#d46b08' }}>待审批</Text>
+      <Text strong style={{ color: '#d46b08' }}>{status.text}</Text>
     </div>
   );
 }
@@ -35,6 +37,7 @@ function PendingApprovalSummary({
   detail,
   resolveApprovers,
 }: PendingApprovalDetailPanelProps) {
+  const status = getApprovalStatusConfig('pending');
   return (
     <Descriptions column={2} size="small" labelStyle={{ color: '#8c8c8c', width: 90 }} style={{ marginBottom: 16 }}>
       <Descriptions.Item label="节点名称" span={2}>
@@ -44,7 +47,7 @@ function PendingApprovalSummary({
         <Text code>{detail.flow_instance_id || '-'}</Text>
       </Descriptions.Item>
       <Descriptions.Item label="状态">
-        <Tag color="orange" icon={<ClockCircleOutlined />}>待审批</Tag>
+        <Tag color={status.color} icon={<ClockCircleOutlined />}>{status.text}</Tag>
       </Descriptions.Item>
       <Descriptions.Item label="审批人">{resolveApprovers(detail)}</Descriptions.Item>
       <Descriptions.Item label="创建时间">{formatPendingCenterTime(detail.created_at)}</Descriptions.Item>
@@ -71,16 +74,18 @@ export interface PendingTriggerDetailPanelProps {
 }
 
 function PendingTriggerBanner({ detail }: PendingTriggerDetailPanelProps) {
+  const healingStatus = INCIDENT_HEALING_MAP[detail.healing_status] || { color: '#faad14', text: detail.healing_status || '-' };
   return (
     <div style={{ padding: '12px 16px', marginBottom: 16, background: '#fffbe6', border: '1px solid #ffe58f', display: 'flex', alignItems: 'center', gap: 8 }}>
-      <ClockCircleOutlined style={{ color: '#faad14' }} />
-      <Text strong style={{ color: '#d48806' }}>待触发</Text>
+      <ClockCircleOutlined style={{ color: healingStatus.color }} />
+      <Text strong style={{ color: healingStatus.color }}>{healingStatus.text}</Text>
       <div style={{ marginLeft: 'auto' }}>{getSeverityTag(detail.severity)}</div>
     </div>
   );
 }
 
 function PendingTriggerBasicInfo({ detail }: PendingTriggerDetailPanelProps) {
+  const healingStatus = INCIDENT_HEALING_MAP[detail.healing_status] || { badge: 'default' as const, text: detail.healing_status || '-' };
   return (
     <Descriptions column={2} size="small" labelStyle={{ color: '#8c8c8c', width: 90 }} style={{ marginBottom: 16 }}>
       <Descriptions.Item label="工单标题" span={2}>
@@ -98,7 +103,7 @@ function PendingTriggerBasicInfo({ detail }: PendingTriggerDetailPanelProps) {
         <Tag color="blue">{detail.status || '-'}</Tag>
       </Descriptions.Item>
       <Descriptions.Item label="自愈状态">
-        <Tag color="orange">{detail.healing_status || '-'}</Tag>
+        <Tag color={healingStatus.badge}>{healingStatus.text}</Tag>
       </Descriptions.Item>
     </Descriptions>
   );
