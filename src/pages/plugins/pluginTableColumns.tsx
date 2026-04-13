@@ -66,7 +66,9 @@ export function buildPluginColumns({
                 const typeConfig = getPluginTypeConfig(record.type);
                 return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 18 }}>{typeConfig.icon}</span>
+                        <span className="plugin-type-icon plugin-type-icon-table" style={{ color: typeConfig.color }}>
+                            {typeConfig.icon}
+                        </span>
                         <div>
                             <a
                                 style={{ fontWeight: 500, color: '#1677ff', cursor: 'pointer' }}
@@ -221,8 +223,18 @@ export function PluginStatsBar({ stats }: { stats: { active: number; cmdb: numbe
         { icon: <CheckCircleOutlined />, key: 'active', label: PLUGIN_STATUS_LABELS.active || '活跃', value: stats.active },
         { icon: <ExclamationCircleOutlined />, key: 'inactive', label: PLUGIN_STATUS_LABELS.inactive || '停用', value: stats.inactive },
         { icon: <CloseCircleOutlined />, key: 'error', label: PLUGIN_STATUS_LABELS.error || '异常', value: stats.error },
-        { icon: <span style={{ fontSize: 18 }}>🎫</span>, key: 'itsm', label: 'ITSM', value: stats.itsm },
-        { icon: <span style={{ fontSize: 18 }}>🗄️</span>, key: 'cmdb', label: 'CMDB', value: stats.cmdb },
+        {
+            icon: <span className="plugin-type-icon plugin-type-icon-stat" style={{ color: '#1890ff' }}>{getPluginTypeConfig('itsm').icon}</span>,
+            key: 'itsm',
+            label: 'ITSM',
+            value: stats.itsm,
+        },
+        {
+            icon: <span className="plugin-type-icon plugin-type-icon-stat" style={{ color: '#52c41a' }}>{getPluginTypeConfig('cmdb').icon}</span>,
+            key: 'cmdb',
+            label: 'CMDB',
+            value: stats.cmdb,
+        },
     ];
 
     return (

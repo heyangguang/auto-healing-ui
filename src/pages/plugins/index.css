@@ -32,6 +32,36 @@
     opacity: 0.75;
 }
 
+.plugin-type-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.plugin-type-icon svg {
+    display: block;
+}
+
+.plugin-type-icon-table {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.plugin-type-icon-stat {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.plugin-type-icon-detail {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
 .plugins-stat-icon-total {
     color: #1677ff;
 }

@@ -6,14 +6,38 @@ import type { PluginFilterOperator } from './pluginFormHelpers';
 export type PluginTypeConfig = {
     bgColor: string;
     color: string;
-    icon: string;
+    icon: React.ReactNode;
     label: string;
     value: 'itsm' | 'cmdb';
 };
 
+const pluginIconStyle: React.CSSProperties = {
+    display: 'block',
+    width: '1em',
+    height: '1em',
+};
+
+const ITSMPluginIcon = (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style={pluginIconStyle}>
+        <rect x="4.5" y="4.5" width="15" height="15" rx="3.2" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8.5 9h7M8.5 12h7M8.5 15h4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="16.75" cy="15.25" r="2" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+);
+
+const CMDBPluginIcon = (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style={pluginIconStyle}>
+        <rect x="4.5" y="4.5" width="15" height="15" rx="3.2" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8 9h8M8 12h8M8 15h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="9" cy="9" r="0.9" fill="currentColor" />
+        <circle cx="9" cy="12" r="0.9" fill="currentColor" />
+        <circle cx="9" cy="15" r="0.9" fill="currentColor" />
+    </svg>
+);
+
 export const PLUGIN_TYPES: PluginTypeConfig[] = [
-    { value: 'itsm', label: 'ITSM - 工单系统', icon: '🎫', color: '#1890ff', bgColor: '#e6f7ff' },
-    { value: 'cmdb', label: 'CMDB - 配置管理', icon: '🗄️', color: '#52c41a', bgColor: '#f6ffed' },
+    { value: 'itsm', label: 'ITSM - 工单系统', icon: ITSMPluginIcon, color: '#1890ff', bgColor: '#e6f7ff' },
+    { value: 'cmdb', label: 'CMDB - 配置管理', icon: CMDBPluginIcon, color: '#52c41a', bgColor: '#f6ffed' },
 ];
 
 export const AUTH_TYPES = [

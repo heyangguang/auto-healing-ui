@@ -78,12 +78,14 @@ export default function PluginDetailDrawer({
             size={640}
             open={open}
             onClose={onClose}
-            styles={{ header: { display: 'none' }, body: { padding: 0 } }}
-            destroyOnHidden
+                styles={{ header: { display: 'none' }, body: { padding: 0 } }}
+                destroyOnHidden
         >
             <div className="plugins-detail-header">
                 <div className="plugins-detail-header-top">
-                    <div className="plugins-detail-header-icon" style={{ background: typeConfig.bgColor, color: typeConfig.color }}>{typeConfig.icon}</div>
+                    <div className="plugins-detail-header-icon" style={{ background: typeConfig.bgColor, color: typeConfig.color }}>
+                        <span className="plugin-type-icon plugin-type-icon-detail">{typeConfig.icon}</span>
+                    </div>
                     <div className="plugins-detail-header-info">
                         <div className="plugins-detail-title">{currentPlugin.name}</div>
                         <div className="plugins-detail-sub">{typeConfig.label}</div>
