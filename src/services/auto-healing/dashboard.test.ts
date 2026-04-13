@@ -9,9 +9,9 @@ describe('auto-healing dashboard service', () => {
   it('delegates dashboard overview to the generated dashboard client', async () => {
     await getDashboardOverview(['overview', 'incidents']);
 
-    expect(getTenantDashboardOverview).toHaveBeenCalledWith({
-      params: { sections: 'overview,incidents' },
-      skipErrorHandler: true,
-    });
+    expect(getTenantDashboardOverview).toHaveBeenCalledWith(
+      { sections: 'overview,incidents' },
+      { skipErrorHandler: true },
+    );
   });
 });

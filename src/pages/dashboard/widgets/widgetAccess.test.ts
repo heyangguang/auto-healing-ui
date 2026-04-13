@@ -4,7 +4,6 @@ jest.mock('@/utils/pathAccess', () => ({
 
 import { canAccessPath } from '@/utils/pathAccess';
 import { canAccessDashboardWidget } from './widgetAccess';
-import type { WidgetDefinition } from './widgetRegistry';
 
 describe('dashboard widget access', () => {
   beforeEach(() => {
@@ -16,10 +15,11 @@ describe('dashboard widget access', () => {
       id: 'stat-pending-items',
       name: '待办事项',
       description: '',
-      category: 'stat',
+      category: 'stat' as const,
       icon: null,
       defaultLayout: { w: 1, h: 1, minW: 1, minH: 1 },
-    } as WidgetDefinition;
+      component: () => null,
+    };
 
     expect(canAccessDashboardWidget(definition, { canViewApprovals: true, canViewPendingTrigger: true })).toBe(true);
     expect(canAccessDashboardWidget(definition, { canViewApprovals: true, canViewPendingTrigger: false })).toBe(false);
@@ -32,11 +32,12 @@ describe('dashboard widget access', () => {
       id: 'stat-plugin-count',
       name: '插件数量',
       description: '',
-      category: 'stat',
-      section: 'plugins',
+      category: 'stat' as const,
+      section: 'plugins' as const,
       icon: null,
       defaultLayout: { w: 1, h: 1, minW: 1, minH: 1 },
-    } as WidgetDefinition;
+      component: () => null,
+    };
 
     expect(canAccessDashboardWidget(definition, {})).toBe(true);
     expect(canAccessPath).toHaveBeenCalledWith('/resources/plugins', {});

@@ -37,10 +37,10 @@ const ScheduleForm: React.FC = () => {
 
     if (controller.step === 'select') {
         return (
-            <div className="template-form-page">
-                <SubPageHeader
-                    title="创建定时调度"
-                    titleExtra={<span style={{ color: '#8c8c8c', fontSize: 13 }}>第 1 步：选择任务模板</span>}
+        <div className="template-form-page">
+            <SubPageHeader
+                title="创建定时调度"
+                titleExtra={<span style={{ color: '#8c8c8c', fontSize: 13 }}>第 1 步：选择任务模板</span>}
                     onBack={() => history.push('/execution/schedules')}
                 />
                 <ScheduleTemplateSelection

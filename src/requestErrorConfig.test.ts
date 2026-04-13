@@ -21,6 +21,8 @@ const { history: mockedHistory, request } = require('@umijs/max');
 const { message } = require('antd');
 
 describe('requestErrorConfig helpers', () => {
+  const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
@@ -116,5 +118,9 @@ describe('requestErrorConfig helpers', () => {
     });
 
     expect(message.error).not.toHaveBeenCalled();
+  });
+
+  afterAll(() => {
+    consoleWarnSpy.mockRestore();
   });
 });

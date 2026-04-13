@@ -33,9 +33,9 @@ describe('auto-healing git-repos service', () => {
     await syncGitRepo('repo-1');
 
     expect(getTenantGitRepos).toHaveBeenCalledWith({
-      params: { page: 1, page_size: 20, status: 'ready' },
+      page: 1, page_size: 20, status: 'ready',
     });
-    expect(postTenantGitRepos).toHaveBeenCalledWith({ data: {} });
+    expect(postTenantGitRepos).toHaveBeenCalledWith({});
     expect(postTenantGitReposIdSync).toHaveBeenCalledWith({ id: 'repo-1' });
   });
 

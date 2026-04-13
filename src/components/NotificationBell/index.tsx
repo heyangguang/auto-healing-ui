@@ -185,7 +185,7 @@ const NotificationBell: React.FC = () => {
                 ref={triggerRef}
                 style={{
                     ...S.trigger,
-                    background: open ? 'rgba(255,255,255,0.06)' : 'transparent',
+                    backgroundColor: open ? 'rgba(255,255,255,0.06)' : 'transparent',
                     border: 0,
                 }}
                 aria-label={unreadCount > 0 ? `未读消息 ${unreadCount} 条` : '未读消息'}
@@ -235,8 +235,8 @@ const NotificationBell: React.FC = () => {
                                                 type="button"
                                                 style={{ ...S.msgItem, ...S.msgButton }}
                                                 onClick={() => go('/system/messages')}
-                                                onMouseEnter={e => { e.currentTarget.style.background = '#f5f5f5'; }}
-                                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                                                 aria-label={`查看消息 ${m.title}`}
                                             >
                                                 <span style={S.dotWrap}>
@@ -262,8 +262,8 @@ const NotificationBell: React.FC = () => {
                         type="button"
                         style={{ ...S.footer, ...S.footerButton }}
                         onClick={() => go('/system/messages')}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f0f0f0'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#fafafa'; }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f0f0f0'; }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fafafa'; }}
                         aria-label="查看全部站内消息"
                     >
                         查看全部 ↗

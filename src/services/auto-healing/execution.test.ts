@@ -36,6 +36,9 @@ jest.mock('./sse', () => ({
 }));
 
 describe('auto-healing execution service', () => {
+  const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
   beforeEach(() => {
     jest.resetAllMocks();
   });
@@ -323,5 +326,10 @@ describe('auto-healing execution service', () => {
 
     stop();
     expect(close).toHaveBeenCalledTimes(2);
+  });
+
+  afterAll(() => {
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 });

@@ -14,6 +14,25 @@ import { getPlatformUsersSimple } from '@/services/auto-healing/platform/users';
 import { getSystemTenantRoles } from '@/services/auto-healing/roles';
 import { useTenantMembersPageState } from './useTenantMembersPageState';
 
+const mockTenantFormInstance = {
+  resetFields: jest.fn(),
+  setFieldValue: jest.fn(),
+  setFieldsValue: jest.fn(),
+  submit: jest.fn(),
+};
+
+jest.mock('antd', () => {
+  const actual = jest.requireActual('antd');
+  const ReactLib = require('react');
+  const Form = (props: any) => ReactLib.createElement('form', null, props.children);
+  Form.Item = (props: any) => ReactLib.createElement('div', null, props.children);
+  Form.useForm = () => [mockTenantFormInstance];
+  return {
+    ...actual,
+    Form,
+  };
+});
+
 jest.mock('@umijs/max', () => ({
   history: { push: jest.fn() },
   useAccess: jest.fn(),

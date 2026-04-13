@@ -2,6 +2,23 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import GuideDrawer from './GuideDrawer';
 
+jest.mock('antd', () => {
+  const actual = jest.requireActual('antd');
+  const ReactLib = require('react');
+  return {
+    ...actual,
+    Steps: ({ items = [], current = 0, onChange }: { items?: Array<{ title: string }>; current?: number; onChange?: (step: number) => void }) => ReactLib.createElement(
+      'div',
+      null,
+      ...items.map((item, index) => ReactLib.createElement(
+        'button',
+        { key: `${item.title}-${index}`, type: 'button', onClick: () => onChange?.(index), 'data-current': String(index === current) },
+        item.title,
+      )),
+    ),
+  };
+});
+
 jest.mock('@umijs/max', () => ({
   history: { push: jest.fn() },
   useAccess: jest.fn(() => ({})),

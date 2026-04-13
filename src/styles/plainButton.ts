@@ -2,7 +2,7 @@ export const plainButtonReset = {
     appearance: 'none' as const,
     WebkitAppearance: 'none' as const,
     MozAppearance: 'none' as const,
-    background: 'transparent',
+    backgroundColor: 'transparent',
     backgroundImage: 'none',
     border: 'none',
     borderRadius: 0,

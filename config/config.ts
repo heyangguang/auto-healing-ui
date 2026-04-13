@@ -25,6 +25,7 @@ export default defineConfig({
   hash: true,
 
   publicPath: PUBLIC_PATH,
+  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',
 
   /**
    * @name 兼容性设置

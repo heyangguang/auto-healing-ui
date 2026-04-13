@@ -118,6 +118,26 @@ jest.mock('@/utils/fetchAllPages', () => ({
 
 import { fetchAllPages } from '@/utils/fetchAllPages';
 
+const mockScheduleFormInstance = {
+  resetFields: jest.fn(),
+  setFieldsValue: jest.fn(),
+  setFieldValue: jest.fn(),
+  validateFields: jest.fn().mockResolvedValue({}),
+  submit: jest.fn(),
+};
+
+jest.mock('antd', () => {
+  const actual = jest.requireActual('antd');
+  const ReactLib = require('react');
+  const Form = (props: any) => ReactLib.createElement('form', null, props.children);
+  Form.Item = (props: any) => ReactLib.createElement('div', null, props.children);
+  Form.useForm = () => [mockScheduleFormInstance];
+  return {
+    ...actual,
+    Form,
+  };
+});
+
 type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T) => void;

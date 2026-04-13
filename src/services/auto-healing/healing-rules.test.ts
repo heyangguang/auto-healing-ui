@@ -30,10 +30,7 @@ describe('auto-healing healing-rules service', () => {
       page_size: 20,
       is_active: true,
     }, undefined);
-    expect(postTenantHealingRules).toHaveBeenCalledWith({
-      data: {},
-      headers: { 'Content-Type': 'application/json' },
-    });
+    expect(postTenantHealingRules).toHaveBeenCalledWith({}, undefined);
     expect(getTenantHealingRulesId).toHaveBeenCalledWith({ id: 'rule-1' }, undefined);
     expect(postTenantHealingRulesIdActivate).toHaveBeenCalledWith({ id: 'rule-1' }, undefined);
   });
