@@ -121,4 +121,14 @@ describe('auto-healing playbooks service', () => {
       by_config_mode: [{ config_mode: 'simple', count: 3 }],
     });
   });
+
+  it('normalizes playbook file responses when backend returns a raw file array', async () => {
+    (request as jest.Mock).mockResolvedValueOnce({
+      data: [{ path: 'playbooks/site.yml', type: 'entry' }],
+    });
+
+    await expect(getPlaybookFiles('playbook-1')).resolves.toEqual({
+      data: { files: [{ path: 'playbooks/site.yml', type: 'entry' }] },
+    });
+  });
 });

@@ -79,9 +79,22 @@ export function usePlaybookVariableAutosave(options: PlaybookVariableAutosaveOpt
             try {
                 const response = await updatePlaybookVariables(playbookId, { variables });
                 if (autoSaveRequestIdRef.current !== requestId) return;
-                setSelectedPlaybook?.((current) => current?.id === playbookId ? response.data : current);
-                setEditedVariables(response.data.variables || []);
-                mergePlaybookInInventory?.(response.data);
+                setSelectedPlaybook?.((current) => {
+                    if (current?.id !== playbookId) {
+                        return current;
+                    }
+                    return {
+                        ...current,
+                        ...response.data,
+                        variables: response.data.variables || current.variables || [],
+                    };
+                });
+                setEditedVariables(response.data.variables || variables);
+                mergePlaybookInInventory?.({
+                    ...selectedPlaybook,
+                    ...response.data,
+                    variables: response.data.variables || selectedPlaybook?.variables || variables,
+                } as AutoHealing.Playbook);
                 message.success('已自动保存');
                 await syncPlaybookAfterSave({
                     detailRequestId,

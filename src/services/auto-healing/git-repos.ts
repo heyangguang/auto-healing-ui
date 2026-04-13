@@ -4,7 +4,15 @@ import {
     postTenantGitRepos,
     postTenantGitReposIdSync,
 } from '@/services/generated/auto-healing/gitPlaybooks';
+import {
+    normalizeGitRepoFileContentPayload,
+    normalizeGitRepoFileTreePayload,
+} from './gitRepoFileAdapters';
 import { normalizePaginatedResponse, unwrapData } from './responseAdapters';
+export type {
+    GitRepoFileNode,
+    GitRepoFilesResponse,
+} from './gitRepoFileAdapters';
 
 type RequestOptions = {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -19,19 +27,6 @@ export interface GitRepositoryRecord extends AutoHealing.GitRepository {
 export interface GitRepoValidationResult {
     branches: string[];
     default_branch: string;
-}
-
-export interface GitRepoFileNode {
-    path: string;
-    name: string;
-    type: 'directory' | 'file';
-    children?: GitRepoFileNode[];
-}
-
-export interface GitRepoFilesResponse {
-    files?: GitRepoFileNode[];
-    path?: string;
-    content?: string;
 }
 
 export interface GitCommitRecord {
@@ -171,10 +166,18 @@ export async function syncGitRepo(id: string) {
  * GET /api/v1/tenant/git-repos/{id}/files
  */
 export async function getFiles(id: string, path?: string) {
-    return requestUnwrapped<GitRepoFilesResponse>(`/api/v1/tenant/git-repos/${id}/files`, {
-            method: 'GET',
-            params: path ? { path } : undefined,
-        });
+    const response = await requestUnwrapped<unknown>(`/api/v1/tenant/git-repos/${id}/files`, {
+        method: 'GET',
+        params: path ? { path } : undefined,
+    });
+
+    if (path) {
+        return normalizeGitRepoFileContentPayload(response, path);
+    }
+
+    return {
+        files: normalizeGitRepoFileTreePayload(response),
+    };
 }
 
 /**

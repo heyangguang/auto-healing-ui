@@ -22,6 +22,10 @@ type RequestOptions = {
     params?: Record<string, unknown>;
 };
 
+type PlaybookFilesPayload = {
+    files?: AutoHealing.PlaybookFile[];
+} | AutoHealing.PlaybookFile[];
+
 async function requestWrappedData<T>(url: string, options: RequestOptions) {
     const response = await request<{ data?: T } | T>(url, options);
     return { data: unwrapData(response) as T };
@@ -29,6 +33,13 @@ async function requestWrappedData<T>(url: string, options: RequestOptions) {
 
 async function wrapGeneratedData<T>(promise: Promise<{ data?: T } | T>) {
     return { data: unwrapData(await promise) as T };
+}
+
+function normalizePlaybookFilesPayload(payload: PlaybookFilesPayload | undefined) {
+    if (Array.isArray(payload)) {
+        return payload;
+    }
+    return payload?.files || [];
 }
 
 /**
@@ -162,9 +173,14 @@ export async function setPlaybookOffline(id: string) {
  * GET /api/v1/tenant/playbooks/{id}/files
  */
 export async function getPlaybookFiles(id: string) {
-    return requestWrappedData<{ files: AutoHealing.PlaybookFile[] }>(`/api/v1/tenant/playbooks/${id}/files`, {
+    const response = await requestWrappedData<PlaybookFilesPayload>(`/api/v1/tenant/playbooks/${id}/files`, {
         method: 'GET',
     });
+    return {
+        data: {
+            files: normalizePlaybookFilesPayload(response.data),
+        },
+    };
 }
 
 /**

@@ -29,7 +29,7 @@ const getFileIconColor = (type: AutoHealing.PlaybookFile['type']) => (
 function renderEmptyFileTree() {
     return (
         <div style={{ padding: 24, textAlign: 'center' }}>
-            <Text type="secondary">请先扫描变量</Text>
+            <Text type="secondary">暂无文件信息</Text>
         </div>
     );
 }

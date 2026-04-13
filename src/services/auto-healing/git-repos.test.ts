@@ -27,6 +27,10 @@ jest.mock('@/services/generated/auto-healing/gitPlaybooks', () => ({
 }));
 
 describe('auto-healing git-repos service', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('delegates stable git repository wrappers to the generated git/playbook client', async () => {
     await getGitRepos({ page: 1, page_size: 20, status: 'ready' });
     await createGitRepo({} as AutoHealing.CreateGitRepoRequest);
@@ -44,6 +48,7 @@ describe('auto-healing git-repos service', () => {
       .mockResolvedValueOnce({ data: { branches: ['main'], default_branch: 'main' } })
       .mockResolvedValueOnce({ data: { id: 'repo-1', name: 'infra', status: 'ready' } })
       .mockResolvedValueOnce({ data: { files: [{ path: 'playbooks/site.yml', name: 'site.yml', type: 'file' }], path: '', content: '' } })
+      .mockResolvedValueOnce({ data: { path: 'playbooks/site.yml', content: '- hosts: all' } })
       .mockResolvedValueOnce({ data: [{ commit_id: 'abc123', full_id: 'abc123def456', message: 'init', author: 'ops', author_email: 'ops@example.com', date: '2026-03-26T00:00:00Z' }] })
       .mockResolvedValueOnce({ data: [{ id: 'log-1', status: 'success', created_at: '2026-03-26T00:00:00Z' }], total: 1, page: 1, page_size: 10 })
       .mockResolvedValueOnce({ data: { total: 3, by_status: [{ status: 'ready', count: 2 }] } });
@@ -55,8 +60,10 @@ describe('auto-healing git-repos service', () => {
     await expect(getGitRepo('repo-1')).resolves.toEqual({ id: 'repo-1', name: 'infra', status: 'ready' });
     await expect(getFiles('repo-1')).resolves.toEqual({
       files: [{ path: 'playbooks/site.yml', name: 'site.yml', type: 'file' }],
-      path: '',
-      content: '',
+    });
+    await expect(getFiles('repo-1', 'playbooks/site.yml')).resolves.toEqual({
+      content: '- hosts: all',
+      path: 'playbooks/site.yml',
     });
     await expect(getCommits('repo-1')).resolves.toEqual([
       {
@@ -81,6 +88,52 @@ describe('auto-healing git-repos service', () => {
     expect(request).toHaveBeenCalledWith('/api/v1/tenant/git-repos/repo-1/commits', {
       method: 'GET',
       params: { limit: 10 },
+    });
+  });
+
+  it('normalizes git file responses when backend returns a raw file tree array', async () => {
+    (request as jest.Mock).mockResolvedValueOnce({
+      data: [
+        {
+          path: 'playbooks/site.yml',
+          name: 'site.yml',
+          type: 'file',
+        },
+      ],
+    });
+
+    await expect(getFiles('repo-1')).resolves.toEqual({
+      files: [{ path: 'playbooks/site.yml', name: 'site.yml', type: 'file' }],
+    });
+  });
+
+  it('builds a tree when backend returns a raw path list', async () => {
+    (request as jest.Mock).mockResolvedValueOnce({
+      data: [
+        'playbooks/site.yml',
+        'playbooks/tasks/main.yml',
+      ],
+    });
+
+    await expect(getFiles('repo-1')).resolves.toEqual({
+      files: [
+        {
+          children: [
+            {
+              children: [
+                { name: 'main.yml', path: 'playbooks/tasks/main.yml', type: 'file' },
+              ],
+              name: 'tasks',
+              path: 'playbooks/tasks',
+              type: 'directory',
+            },
+            { name: 'site.yml', path: 'playbooks/site.yml', type: 'file' },
+          ],
+          name: 'playbooks',
+          path: 'playbooks',
+          type: 'directory',
+        },
+      ],
     });
   });
 });

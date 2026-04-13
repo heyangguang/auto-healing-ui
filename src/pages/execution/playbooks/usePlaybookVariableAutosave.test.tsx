@@ -35,6 +35,11 @@ const normalizedVariable = {
   default: 'normalized',
 } as AutoHealing.PlaybookVariable;
 
+const partialPlaybookResponse = {
+  id: 'playbook-1',
+  variables: [normalizedVariable],
+} as Partial<AutoHealing.Playbook>;
+
 const persistedVariable = {
   ...variable,
   default: 'persisted',
@@ -87,6 +92,8 @@ describe('usePlaybookVariableAutosave', () => {
       React.createElement('div', { 'data-testid': 'edited-count' }, String(editedVariables.length)),
       React.createElement('div', { 'data-testid': 'edited-default' }, String(editedVariables[0]?.default || '')),
       React.createElement('div', { 'data-testid': 'selected-default' }, String(selected?.variables?.[0]?.default || '')),
+      React.createElement('div', { 'data-testid': 'selected-name' }, String(selected?.name || '')),
+      React.createElement('div', { 'data-testid': 'selected-status' }, String(selected?.status || '')),
     );
   }
 
@@ -175,6 +182,36 @@ describe('usePlaybookVariableAutosave', () => {
     await waitFor(() => {
       expect(screen.getByTestId('edited-default').textContent).toBe('normalized');
       expect(screen.getByTestId('selected-default').textContent).toBe('normalized');
+    });
+  });
+
+  it('keeps the existing playbook detail fields when autosave returns a partial playbook payload', async () => {
+    const mergePlaybookInInventory = jest.fn();
+    (updatePlaybookVariables as jest.Mock).mockResolvedValue({
+      data: partialPlaybookResponse,
+    });
+    const loadPlaybooks = jest.fn().mockResolvedValue(undefined);
+    const refreshSelectedPlaybook = jest.fn().mockResolvedValue({
+      ...selectedPlaybook,
+      variables: [normalizedVariable],
+    });
+
+    render(React.createElement(Harness, { loadPlaybooks, mergePlaybookInInventory, refreshSelectedPlaybook }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('autosave'));
+      jest.advanceTimersByTime(500);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-name').textContent).toBe('deploy');
+      expect(screen.getByTestId('selected-status').textContent).toBe('ready');
+      expect(screen.getByTestId('selected-default').textContent).toBe('normalized');
+      expect(mergePlaybookInInventory).toHaveBeenCalledWith({
+        ...selectedPlaybook,
+        ...partialPlaybookResponse,
+        variables: [normalizedVariable],
+      });
     });
   });
 });
