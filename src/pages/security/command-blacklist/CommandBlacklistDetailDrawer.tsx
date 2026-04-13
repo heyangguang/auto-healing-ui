@@ -42,7 +42,7 @@ const CommandBlacklistDetailDrawer: React.FC<CommandBlacklistDetailDrawerProps> 
             }
             open={!!rule}
             onClose={onClose}
-            width={560}
+            size={560}
             extra={rule && !rule.is_system && (
                 <Button
                     type="primary"

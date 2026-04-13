@@ -4,8 +4,8 @@
  */
 import { PieChartOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
-import { Empty } from 'antd';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
@@ -86,7 +86,7 @@ const DashboardPieChart: React.FC<DashboardPieChartProps> = ({ section, field, t
                     />
                 ) : (
                     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                        <DashboardEmptyState minHeight="100%" />
                     </div>
                 )}
             </div>

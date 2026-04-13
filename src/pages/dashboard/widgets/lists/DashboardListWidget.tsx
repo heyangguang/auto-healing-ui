@@ -3,10 +3,11 @@
  * 用于展示来自 Dashboard section 的列表数据
  */
 import { UnorderedListOutlined } from '@ant-design/icons';
-import { Badge, Empty, Tag, Typography } from 'antd';
+import { Badge, Tag, Typography } from 'antd';
 import type { BadgeProps } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 
@@ -64,7 +65,7 @@ const DashboardListWidget: React.FC<DashboardListWidgetProps> = ({ section, fiel
         <WidgetWrapper title={title} icon={icon || <UnorderedListOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
             <div style={{ height: '100%', overflowY: 'auto', display: items.length === 0 ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center' }}>
                 {items.length === 0 ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                    <DashboardEmptyState />
                 ) : (
                     items.map((item, index) => {
                         const displayTitle = item.title || item.name || item.username || item.subject || item.playbook_name || item.plugin_name || item.repo_name || item.flow_name || item.task_name || item.cmdb_item_name || item.display_name || item.id?.slice?.(0, 8) || '-';

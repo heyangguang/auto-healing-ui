@@ -1,8 +1,9 @@
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { Badge, Empty, Typography, Tooltip } from 'antd';
+import { Badge, Typography, Tooltip } from 'antd';
 import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
@@ -42,7 +43,7 @@ const ListPendingApprovals: React.FC<WidgetComponentProps> = ({ isEditing, onRem
                 <div style={{ flex: 1, overflow: 'auto' }}>
                     {(!Array.isArray(items) || items.length === 0) ? (
                         <div style={{ padding: '24px 0' }}>
-                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                            <DashboardEmptyState />
                         </div>
                     ) : (
                         items.map((item: PendingApprovalItem, index: number) => {

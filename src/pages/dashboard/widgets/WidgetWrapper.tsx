@@ -10,14 +10,16 @@
  */
 import { CloseOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button, Card, Tooltip, Typography } from 'antd';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
+const MIN_REFRESH_INDICATOR_MS = 300;
 
 interface WidgetWrapperProps {
     title: string;
     icon?: React.ReactNode;
     children: React.ReactNode;
     loading?: boolean;
-    onRefresh?: () => void;
+    onRefresh?: () => void | Promise<unknown>;
     onRemove?: () => void;
     isEditing?: boolean;
     extra?: React.ReactNode;
@@ -35,6 +37,37 @@ const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
     extra,
     noPadding = false,
 }) => {
+    const [refreshing, setRefreshing] = useState(false);
+    const refreshTimerRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (refreshTimerRef.current != null) {
+                window.clearTimeout(refreshTimerRef.current);
+            }
+        };
+    }, []);
+
+    const handleRefresh = async (event: React.MouseEvent<HTMLElement>) => {
+        event.stopPropagation();
+        if (!onRefresh || refreshing) {
+            return;
+        }
+
+        setRefreshing(true);
+        const startTime = Date.now();
+        try {
+            await Promise.resolve(onRefresh());
+        } finally {
+            const elapsed = Date.now() - startTime;
+            const waitTime = Math.max(MIN_REFRESH_INDICATOR_MS - elapsed, 0);
+            refreshTimerRef.current = window.setTimeout(() => {
+                setRefreshing(false);
+                refreshTimerRef.current = null;
+            }, waitTime);
+        }
+    };
+
     return (
         <Card
             size="small"
@@ -72,8 +105,14 @@ const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
                 <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     {extra}
                     {onRefresh && (
-                        <Tooltip title="刷新">
-                            <Button type="text" size="small" icon={<ReloadOutlined />} onClick={(e) => { e.stopPropagation(); onRefresh(); }} style={{ fontSize: 12 }} />
+                        <Tooltip title={refreshing ? '刷新中' : '刷新'}>
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={refreshing ? <LoadingOutlined spin /> : <ReloadOutlined />}
+                                onClick={handleRefresh}
+                                style={{ fontSize: 12 }}
+                            />
                         </Tooltip>
                     )}
                     {isEditing && onRemove && (
@@ -91,17 +130,19 @@ const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
                 </div>
             }
         >
-            {/* 内容区 — children 直接作为 flex 子元素，没有任何中间 Spin 节点 */}
-            <div style={{
-                position: 'absolute',
-                inset: 0,
-                padding: noPadding ? 0 : '8px 10px',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-            }}>
-                {children}
-            </div>
+            {/* 内容区 — 初始 loading 时不渲染 children，避免空态与 loading 遮罩同时出现 */}
+            {!loading && (
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    padding: noPadding ? 0 : '8px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                }}>
+                    {children}
+                </div>
+            )}
 
             {/* Loading 遮罩层 — 独立的 absolute 层，不包裹 children */}
             {loading && (
@@ -115,6 +156,36 @@ const WidgetWrapper: React.FC<WidgetWrapperProps> = ({
                     zIndex: 10,
                 }}>
                     <LoadingOutlined style={{ fontSize: 24, color: '#1677ff' }} />
+                </div>
+            )}
+
+            {/* 手动刷新反馈 — 数据区短暂显示刷新层，让用户感知这次刷新确实发生了 */}
+            {!loading && refreshing && (
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(255, 255, 255, 0.48)',
+                    backdropFilter: 'blur(1px)',
+                    zIndex: 8,
+                    pointerEvents: 'none',
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '6px 10px',
+                        background: 'rgba(255,255,255,0.92)',
+                        border: '1px solid #e6f4ff',
+                        boxShadow: '0 2px 8px rgba(22,119,255,0.08)',
+                        color: '#1677ff',
+                        fontSize: 12,
+                    }}>
+                        <LoadingOutlined spin />
+                        <span>刷新中</span>
+                    </div>
                 </div>
             )}
         </Card>

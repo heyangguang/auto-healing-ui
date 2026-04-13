@@ -54,7 +54,7 @@ const RoleDetailDrawer: React.FC<RoleDetailDrawerProps> = ({
         <Drawer
             open={open}
             onClose={onClose}
-            width={520}
+            size={520}
             title={null}
             closable={false}
             styles={{ body: { padding: 0, background: '#fafafa' }, header: { display: 'none' } }}

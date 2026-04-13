@@ -2,6 +2,7 @@ import { PieChartOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import React from 'react';
 import { INCIDENT_CHART_COLORS } from '@/constants/incidentDicts';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { buildIncidentStatusChartData } from '../dashboardOverviewHelpers';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
@@ -22,7 +23,7 @@ const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
     return (
         <WidgetWrapper title="工单状态分布" icon={<PieChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
             <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 && (
+                {width > 0 && height > 0 && chartData.length > 0 ? (
                     <Pie
                         width={width}
                         height={height}
@@ -62,6 +63,10 @@ const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                             },
                         ]}
                     />
+                ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <DashboardEmptyState minHeight="100%" />
+                    </div>
                 )}
             </div>
         </WidgetWrapper>

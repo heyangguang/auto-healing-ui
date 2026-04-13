@@ -1,9 +1,10 @@
 import { ScheduleOutlined } from '@ant-design/icons';
-import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Tag, Typography, Tooltip } from 'antd';
 import { useAccess, useRequest, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { getExecutionSchedules } from '@/services/auto-healing/execution';
+import DashboardEmptyState from '../DashboardEmptyState';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 
@@ -24,17 +25,21 @@ type ScheduleResponse = {
     items?: ScheduleItem[];
 };
 
+const SCHEDULE_LOADING_DELAY_MS = 200;
+
 const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const access = useAccess();
     const canViewSchedules = !!access.canViewTasks;
     const { data: rawData, loading, refresh } = useRequest(() => getExecutionSchedules({ page_size: 15 }), {
         ready: canViewSchedules,
+        loadingDelay: SCHEDULE_LOADING_DELAY_MS,
     });
     const data = rawData as ScheduleResponse | undefined;
     const items = data?.data ?? data?.items ?? [];
+    const showLoading = loading && rawData == null;
 
     return (
-        <WidgetWrapper title="定时任务" icon={<ScheduleOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
+        <WidgetWrapper title="定时任务" icon={<ScheduleOutlined />} loading={showLoading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
             <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <div style={{
                     display: 'grid',
@@ -56,11 +61,11 @@ const ListSchedules: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) 
                 <div style={{ flex: 1, overflow: 'auto' }}>
                     {!canViewSchedules ? (
                         <div style={{ padding: '24px 0' }}>
-                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无权限查看定时任务" />
+                            <DashboardEmptyState description="无权限查看定时任务" />
                         </div>
                     ) : (!Array.isArray(items) || items.length === 0) ? (
                         <div style={{ padding: '24px 0' }}>
-                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                            <DashboardEmptyState />
                         </div>
                     ) : (
                         items.map((item, index) => {

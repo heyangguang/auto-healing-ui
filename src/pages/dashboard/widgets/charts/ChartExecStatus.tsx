@@ -2,6 +2,7 @@ import { ExperimentOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/plots';
 import React from 'react';
 import { RUN_STATUS_COLORS } from '@/constants/executionDicts';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { buildExecutionStatusChartData } from '../dashboardOverviewHelpers';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
@@ -17,7 +18,7 @@ const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
     return (
         <WidgetWrapper title="执行状态分布" icon={<ExperimentOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
             <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 && (
+                {width > 0 && height > 0 && chartData.length > 0 ? (
                     <Column
                         width={width}
                         height={height}
@@ -45,6 +46,10 @@ const ChartExecStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
                         }}
                         tooltip={{ title: false }}
                     />
+                ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <DashboardEmptyState minHeight="100%" />
+                    </div>
                 )}
             </div>
         </WidgetWrapper>

@@ -1,10 +1,11 @@
 import { FileTextOutlined } from '@ant-design/icons';
-import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Tag, Typography, Tooltip } from 'antd';
 import type { BadgeProps } from 'antd';
 import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { RUN_STATUS_MAP } from '@/constants/executionDicts';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
@@ -53,7 +54,7 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
 
                 <div style={{ flex: 1, overflow: 'auto' }}>
                     {(Array.isArray(items) ? items : []).length === 0 ? (
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                        <DashboardEmptyState />
                     ) : (
                         (Array.isArray(items) ? items : []).map((item: RunItem, index: number) => {
                             const status = item.status ?? '';

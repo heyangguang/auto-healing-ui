@@ -9,6 +9,8 @@ import { TokenManager } from '@/requestErrorConfig';
 import dayjs from 'dayjs';
 import * as notificationBellShared from './notificationBellShared';
 
+const NON_REFRESH_SSE_EVENTS = new Set(['heartbeat', 'keepalive', 'ping']);
+
 const NotificationBell: React.FC = () => {
     const S = notificationBellShared.bellStyles;
     const [open, setOpen] = useState(false);
@@ -58,10 +60,11 @@ const NotificationBell: React.FC = () => {
     const refreshUnreadCount = useCallback(async () => {
         try {
             const res = await getUnreadCount({ skipTokenRefresh: true, suppressForbiddenError: true });
-            setUnreadCount(res?.unread_count ?? 0);
-            return true;
+            const nextUnreadCount = Math.max(Number(res?.unread_count ?? 0), 0);
+            setUnreadCount(nextUnreadCount);
+            return nextUnreadCount;
         } catch { /* silent */ }
-        return false;
+        return null;
     }, []);
 
     /** 获取消息列表（后台轮询用，不刷新 token） */
@@ -78,17 +81,31 @@ const NotificationBell: React.FC = () => {
                 created_at: message.created_at || '',
                 category: message.category || '',
             })));
-            return true;
+            return {
+                ok: true,
+                unreadFallback: Math.max(Number(listRes.total ?? items.length ?? 0), 0),
+            };
         } catch {
-            return false;
+            return { ok: false, unreadFallback: null };
         }
     }, []);
 
     /** 完整刷新 */
     const refreshAll = useCallback(async () => {
-        const [unreadSuccess, messageSuccess] = await Promise.all([refreshUnreadCount(), refreshMessages()]);
-        setLoadError(unreadSuccess && messageSuccess ? null : '站内信加载失败，请稍后重试');
+        const [unreadCountResult, messageResult] = await Promise.all([refreshUnreadCount(), refreshMessages()]);
+        if ((unreadCountResult == null || unreadCountResult === 0) && messageResult.unreadFallback != null) {
+            setUnreadCount(messageResult.unreadFallback);
+        }
+        setLoadError(unreadCountResult != null && messageResult.ok ? null : '站内信加载失败，请稍后重试');
     }, [refreshUnreadCount, refreshMessages]);
+
+    const refreshRealtimeState = useCallback(async () => {
+        if (open) {
+            await refreshAll();
+            return;
+        }
+        await refreshUnreadCount();
+    }, [open, refreshAll, refreshUnreadCount]);
 
     /* ======== SSE 连接（租户变化时重新建立） ======== */
     useEffect(() => {
@@ -99,8 +116,8 @@ const NotificationBell: React.FC = () => {
             resolveSSEStreamUrl('/api/v1/tenant/site-messages/events'),
             {
                 onEvent: (event) => {
-                    if (event === 'init' || event === 'new_message') {
-                        refreshAll();
+                    if (!NON_REFRESH_SSE_EVENTS.has(event)) {
+                        void refreshRealtimeState();
                     }
                 },
             },
@@ -111,14 +128,16 @@ const NotificationBell: React.FC = () => {
             connection.close();
             esRef.current = null;
         };
-    }, [tenantId, refreshAll]);
+    }, [tenantId, refreshRealtimeState]);
 
     /* ======== 初始加载 + 兜底轮询 + 本地事件（租户变化时重新执行） ======== */
     useEffect(() => {
-        refreshAll();
-        timerRef.current = setInterval(refreshUnreadCount, notificationBellShared.POLL_INTERVAL);
+        void refreshAll();
+        timerRef.current = setInterval(() => {
+            void refreshUnreadCount();
+        }, notificationBellShared.POLL_INTERVAL);
 
-        const onLocal = () => refreshAll();
+        const onLocal = () => { void refreshRealtimeState(); };
         window.addEventListener('site-messages:read', onLocal);
         window.addEventListener('site-messages:new', onLocal);
 
@@ -127,7 +146,7 @@ const NotificationBell: React.FC = () => {
             window.removeEventListener('site-messages:read', onLocal);
             window.removeEventListener('site-messages:new', onLocal);
         };
-    }, [refreshAll, refreshUnreadCount, tenantId]);
+    }, [refreshAll, refreshRealtimeState, refreshUnreadCount, tenantId]);
 
     /* 位置计算 */
     useEffect(() => {
@@ -218,15 +237,19 @@ const NotificationBell: React.FC = () => {
                 >
                     {/* 标题 */}
                     <div style={S.header}>
-                        未读消息（{unreadCount}）
+                        <span>未读消息</span>
+                        <span style={S.headerCount}>({unreadCount})</span>
                     </div>
 
                     {/* 消息列表 */}
                     <div style={S.body}>
                         {msgs.length === 0 ? (
-                            <div style={S.empty}>{loadError || '暂无未读消息'}</div>
+                            <div style={S.empty}>
+                                <div style={S.emptyTitle}>{loadError || '暂无未读消息'}</div>
+                                {!loadError && <div style={S.emptyDesc}>新消息到达后会在这里显示</div>}
+                            </div>
                         ) : (
-                            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                            <ul style={S.list}>
                                 {msgs.map((m) => {
                                     const color = getDotColor(m.category);
                                     return (
@@ -235,18 +258,23 @@ const NotificationBell: React.FC = () => {
                                                 type="button"
                                                 style={{ ...S.msgItem, ...S.msgButton }}
                                                 onClick={() => go('/system/messages')}
-                                                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
-                                                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                onMouseEnter={(event) => {
+                                                    event.currentTarget.style.backgroundColor = '#fafafa';
+                                                }}
+                                                onMouseLeave={(event) => {
+                                                    event.currentTarget.style.backgroundColor = '#fff';
+                                                }}
                                                 aria-label={`查看消息 ${m.title}`}
                                             >
                                                 <span style={S.dotWrap}>
                                                     <span style={S.dot(color)} />
-                                                    <span style={S.dotGlow(color)} />
                                                 </span>
                                                 <div style={S.msgContent}>
                                                     <div style={S.msgTitle}>{m.title}</div>
-                                                    <div style={S.msgTime}>
-                                                        {categoryMap[m.category] || m.category} · {formatTime(m.created_at)}
+                                                    <div style={S.msgMeta}>
+                                                        <span style={S.msgCategory}>{categoryMap[m.category] || m.category}</span>
+                                                        <span style={S.msgMetaDivider}>•</span>
+                                                        <span style={S.msgTime}>{formatTime(m.created_at)}</span>
                                                     </div>
                                                 </div>
                                             </button>
@@ -266,7 +294,7 @@ const NotificationBell: React.FC = () => {
                         onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#fafafa'; }}
                         aria-label="查看全部站内消息"
                     >
-                        查看全部 ↗
+                        查看全部消息
                     </button>
                 </div>,
                 document.body

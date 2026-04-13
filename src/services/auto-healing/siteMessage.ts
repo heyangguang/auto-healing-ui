@@ -60,10 +60,15 @@ export async function getSiteMessages(params?: SiteMessageQueryParams, options?:
 
 /** 获取未读消息数 */
 export async function getUnreadCount(options?: SiteMessageRequestOptions) {
-    return unwrapData(await request<{ data: UnreadCountPayload }>(
+    const response = await request<{ data: UnreadCountPayload | number } | UnreadCountPayload | number>(
         '/api/v1/tenant/site-messages/unread-count',
         { method: 'GET', ...options },
-    )) as UnreadCountPayload;
+    );
+    const data = unwrapData(response);
+    if (typeof data === 'number') {
+        return { unread_count: data };
+    }
+    return data as UnreadCountPayload;
 }
 
 /** 标记消息为已读 */

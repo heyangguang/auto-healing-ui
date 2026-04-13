@@ -1,10 +1,11 @@
 import { NodeIndexOutlined } from '@ant-design/icons';
-import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Tag, Typography, Tooltip } from 'antd';
 import type { BadgeProps } from 'antd';
 import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
 import { INSTANCE_STATUS_MAP } from '@/constants/instanceDicts';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
@@ -56,7 +57,7 @@ const ListRecentInstances: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                 <div style={{ flex: 1, overflow: 'auto' }}>
                     {(!Array.isArray(items) || items.length === 0) ? (
                         <div style={{ padding: '24px 0' }}>
-                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                            <DashboardEmptyState />
                         </div>
                     ) : (
                         items.map((item: RecentInstanceItem, index: number) => {

@@ -1,6 +1,7 @@
 import { BarChartOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/plots';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
@@ -38,7 +39,7 @@ const ChartCMDBEnv: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) =
     return (
         <WidgetWrapper title="CMDB 环境分布" icon={<BarChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
             <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 && (
+                {width > 0 && height > 0 && chartData.length > 0 ? (
                     <Column
                         width={width}
                         height={height}
@@ -66,8 +67,12 @@ const ChartCMDBEnv: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) =
                         }}
                         tooltip={{ title: false }}
                     />
-                )}
-            </div>
+                    ) : (
+                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <DashboardEmptyState minHeight="100%" />
+                        </div>
+                    )}
+                </div>
         </WidgetWrapper>
     );
 };

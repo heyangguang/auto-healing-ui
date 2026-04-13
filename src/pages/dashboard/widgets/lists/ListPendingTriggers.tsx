@@ -1,8 +1,9 @@
 import { RocketOutlined } from '@ant-design/icons';
-import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Tag, Typography, Tooltip } from 'antd';
 import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
@@ -53,7 +54,7 @@ const ListPendingTriggers: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
 
                 <div style={{ flex: 1, overflow: 'auto' }}>
                     {items.slice(0, 15).length === 0 ? (
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                        <DashboardEmptyState />
                     ) : (
                         items.slice(0, 15).map((item: PendingTriggerItem, index: number) => {
                             const title = item.title || item.external_id || item.id?.slice(0, 8);

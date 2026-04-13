@@ -1,8 +1,9 @@
 import { BellOutlined } from '@ant-design/icons';
-import { Badge, Empty, Tag, Typography, Tooltip } from 'antd';
+import { Badge, Tag, Typography, Tooltip } from 'antd';
 import type { BadgeProps } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { NOTIF_LOG_STATUS_MAP } from '@/constants/commonDicts';
@@ -34,7 +35,7 @@ const ListRecentNotifications: React.FC<WidgetComponentProps> = ({ isEditing, on
             <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {items.length === 0 ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />
+                        <DashboardEmptyState />
                     </div>
                 ) : (
                     <>

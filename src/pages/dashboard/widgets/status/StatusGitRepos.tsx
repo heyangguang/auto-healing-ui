@@ -1,11 +1,12 @@
 import { ForkOutlined } from '@ant-design/icons';
-import { Badge, Typography, Empty, Button } from 'antd';
+import { Badge, Typography, Button } from 'antd';
 import type { BadgeProps } from 'antd';
 import { useAccess } from '@umijs/max';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import React from 'react';
 import { history } from '@umijs/max';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
@@ -43,12 +44,10 @@ const StatusGitRepos: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
         <WidgetWrapper title="Git 仓库状态" icon={<ForkOutlined />} loading={loading} onRefresh={refresh} noPadding isEditing={isEditing} onRemove={onRemove}>
             {(!items || items.length === 0) ? (
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-                    <Empty
-                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        description="暂无数据"
-                    >
+                    <DashboardEmptyState description="暂无数据" minHeight={90} />
+                    <div style={{ marginTop: 12 }}>
                         <Button type="primary" size="small" disabled={!access.canViewRepositories} onClick={() => history.push('/execution/git-repos')}>去配置</Button>
-                    </Empty>
+                    </div>
                 </div>
             ) : (
                 <div style={{ height: '100%', overflowY: 'auto' }}>

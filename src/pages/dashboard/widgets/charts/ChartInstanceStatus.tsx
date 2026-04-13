@@ -2,6 +2,7 @@ import { FundOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import React from 'react';
 import { INSTANCE_STATUS_COLORS } from '@/constants/instanceDicts';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { buildInstanceStatusChartData } from '../dashboardOverviewHelpers';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
@@ -21,7 +22,7 @@ const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
     return (
         <WidgetWrapper title="实例状态分布" icon={<FundOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
             <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 && (
+                {width > 0 && height > 0 && chartData.length > 0 ? (
                     <Pie
                         width={width}
                         height={height}
@@ -60,6 +61,10 @@ const ChartInstanceStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                             },
                         ]}
                     />
+                ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <DashboardEmptyState minHeight="100%" />
+                    </div>
                 )}
             </div>
         </WidgetWrapper>

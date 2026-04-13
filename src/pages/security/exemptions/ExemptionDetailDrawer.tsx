@@ -18,7 +18,7 @@ const ExemptionDetailDrawer: React.FC<ExemptionDetailDrawerProps> = ({ detail, o
             title="豁免详情"
             open={open}
             onClose={onClose}
-            width={560}
+            size={560}
         >
             {detail && (() => {
                 const statusConfig = getExemptionStatusConfig(detail.status);

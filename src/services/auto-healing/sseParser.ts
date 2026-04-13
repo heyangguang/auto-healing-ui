@@ -20,11 +20,12 @@ export function createSSEEventParser(callbacks: {
     let currentDataLines: string[] = [];
 
     const flushEvent = () => {
-        if (!currentEvent) {
+        if (!currentEvent && currentDataLines.length === 0) {
             currentDataLines = [];
             return;
         }
 
+        const eventName = currentEvent || 'message';
         const rawData = currentDataLines.join('\n');
         let payload: unknown = rawData;
         if (rawData) {
@@ -35,7 +36,7 @@ export function createSSEEventParser(callbacks: {
             }
         }
 
-        callbacks.onEvent(currentEvent, payload);
+        callbacks.onEvent(eventName, payload);
         currentEvent = '';
         currentDataLines = [];
     };

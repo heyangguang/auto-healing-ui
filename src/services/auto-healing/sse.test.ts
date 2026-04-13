@@ -24,6 +24,17 @@ describe('sse helpers', () => {
     expect(onEvent).toHaveBeenCalledWith('message', 'first line\nsecond line');
   });
 
+  it('treats payload-only server events as default message events', () => {
+    const onEvent = jest.fn();
+    const parser = __TEST_ONLY__.createSSEEventParser({ onEvent });
+
+    parser.push('data: {"data":{"id":"msg-1"}}\n\n');
+
+    expect(onEvent).toHaveBeenCalledWith('message', {
+      data: { id: 'msg-1' },
+    });
+  });
+
   it('falls back to relative api paths when SSE base points to loopback from a remote browser host', () => {
     expect(
       __TEST_ONLY__.resolveSSEStreamUrl('/api/v1/tenant/execution-runs/run-1/stream', {

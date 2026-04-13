@@ -1,5 +1,9 @@
 import { useRequest } from '@umijs/max';
+import { useEffect, useState } from 'react';
 import { getDashboardOverview } from '@/services/auto-healing/dashboard';
+
+const resolvedSectionKeys = new Set<string>();
+const DASHBOARD_LOADING_DELAY_MS = 200;
 
 const getTenantCacheScope = () => {
     try {
@@ -192,16 +196,19 @@ export type DashboardSectionKey = keyof DashboardSectionMap;
  */
 export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
     const tenantCacheScope = getTenantCacheScope();
+    const sectionCacheKey = `dashboard-section-${tenantCacheScope}-${section}`;
+    const [hasResolvedOnce, setHasResolvedOnce] = useState(() => resolvedSectionKeys.has(sectionCacheKey));
     type DashboardOverviewResult = Record<string, unknown> & {
         data?: Record<string, unknown>;
     };
     const { data: rawData, loading, refresh } = useRequest(
         () => getDashboardOverview([section], { skipTokenRefresh: true }),
         {
-            cacheKey: `dashboard-section-${tenantCacheScope}-${section}`,
+            cacheKey: sectionCacheKey,
             staleTime: 30000,     // 30s 内使用缓存，不重新请求
             refreshDeps: [section, tenantCacheScope],
             pollingInterval: 60000, // 60s 自动刷新
+            loadingDelay: DASHBOARD_LOADING_DELAY_MS,
             formatResult: (res: DashboardOverviewResult) => res,
         }
     );
@@ -213,9 +220,22 @@ export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
         ?? (rawData?.[section] as DashboardSectionMap[S] | undefined)
         ?? null;
 
+    useEffect(() => {
+        if (rawData != null) {
+            resolvedSectionKeys.add(sectionCacheKey);
+            setHasResolvedOnce(true);
+        }
+    }, [rawData, sectionCacheKey]);
+
+    const initialLoading = loading && rawData == null && !hasResolvedOnce;
+
     return {
         data,
-        loading,
+        loading: initialLoading,
         refresh,
     };
 }
+
+export const __TEST_ONLY__ = {
+    clearResolvedSectionKeys: () => resolvedSectionKeys.clear(),
+};

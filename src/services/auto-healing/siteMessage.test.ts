@@ -43,6 +43,14 @@ describe('auto-healing siteMessage service', () => {
     ]);
   });
 
+  it('normalizes integer unread-count payloads from the live backend contract', async () => {
+    (request as jest.Mock).mockResolvedValueOnce({
+      data: 7,
+    });
+
+    await expect(getUnreadCount()).resolves.toEqual({ unread_count: 7 });
+  });
+
   it('sends read actions to the expected endpoints', async () => {
     (request as jest.Mock)
       .mockResolvedValueOnce({ message: 'ok' })

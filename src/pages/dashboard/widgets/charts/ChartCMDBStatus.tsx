@@ -1,6 +1,7 @@
 import { CloudServerOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
@@ -32,7 +33,7 @@ const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
     return (
         <WidgetWrapper title="CMDB 状态分布" icon={<CloudServerOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
             <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 && (
+                {width > 0 && height > 0 && chartData.length > 0 ? (
                     <Pie
                         width={width}
                         height={height}
@@ -72,6 +73,10 @@ const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
                             },
                         ]}
                     />
+                ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <DashboardEmptyState minHeight="100%" />
+                    </div>
                 )}
             </div>
         </WidgetWrapper>

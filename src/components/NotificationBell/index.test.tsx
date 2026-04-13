@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import NotificationBell from './index';
 import { history } from '@umijs/max';
 import {
@@ -34,6 +34,8 @@ jest.mock('@/requestErrorConfig', () => ({
 }));
 
 describe('NotificationBell', () => {
+  let streamHandlers: { onEvent?: (event: string, payload?: unknown) => void } = {};
+
   beforeEach(() => {
     (getSiteMessageCategories as jest.Mock).mockResolvedValue([
       { value: 'security', label: '安全' },
@@ -52,8 +54,11 @@ describe('NotificationBell', () => {
       ],
       total: 1,
     });
-    (createAuthenticatedEventStream as jest.Mock).mockReturnValue({
-      close: jest.fn(),
+    (createAuthenticatedEventStream as jest.Mock).mockImplementation((_url, handlers) => {
+      streamHandlers = handlers ?? {};
+      return {
+        close: jest.fn(),
+      };
     });
     (TokenManager.getToken as jest.Mock).mockReturnValue('token');
   });
@@ -63,7 +68,9 @@ describe('NotificationBell', () => {
   });
 
   it('uses a button trigger and renders actionable message entries', async () => {
-    render(React.createElement(NotificationBell));
+    await act(async () => {
+      render(React.createElement(NotificationBell));
+    });
 
     const trigger = await screen.findByRole('button', { name: '未读消息 3 条' });
     expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
@@ -86,10 +93,30 @@ describe('NotificationBell', () => {
     (getUnreadCount as jest.Mock).mockRejectedValueOnce(new Error('boom'));
     (getSiteMessages as jest.Mock).mockRejectedValueOnce(new Error('boom'));
 
-    render(React.createElement(NotificationBell));
+    await act(async () => {
+      render(React.createElement(NotificationBell));
+    });
 
     fireEvent.click(await screen.findByRole('button', { name: '未读消息' }));
 
     expect(await screen.findByText('站内信加载失败，请稍后重试')).toBeTruthy();
+  });
+
+  it('refreshes only unread count when the bell is closed and the SSE stream pushes a default message event', async () => {
+    await act(async () => {
+      render(React.createElement(NotificationBell));
+    });
+
+    await waitFor(() => {
+      expect(getUnreadCount).toHaveBeenCalledTimes(1);
+      expect(getSiteMessages).toHaveBeenCalledTimes(1);
+    });
+
+    streamHandlers.onEvent?.('message', { data: { id: 'msg-2' } });
+
+    await waitFor(() => {
+      expect(getUnreadCount).toHaveBeenCalledTimes(2);
+      expect(getSiteMessages).toHaveBeenCalledTimes(1);
+    });
   });
 });

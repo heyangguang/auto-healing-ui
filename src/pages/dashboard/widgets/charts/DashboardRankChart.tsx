@@ -5,6 +5,7 @@
 import { OrderedListOutlined } from '@ant-design/icons';
 import { Bar } from '@ant-design/plots';
 import React from 'react';
+import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
@@ -38,7 +39,7 @@ const DashboardRankChart: React.FC<DashboardRankChartProps> = ({ section, field,
     return (
         <WidgetWrapper title={title} icon={icon || <OrderedListOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
             <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 && (
+                {width > 0 && height > 0 && chartData.length > 0 ? (
                     <Bar
                         width={width}
                         height={height}
@@ -64,6 +65,10 @@ const DashboardRankChart: React.FC<DashboardRankChartProps> = ({ section, field,
                         }}
                         tooltip={{ title: false }}
                     />
+                ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <DashboardEmptyState minHeight="100%" />
+                    </div>
                 )}
             </div>
         </WidgetWrapper>
