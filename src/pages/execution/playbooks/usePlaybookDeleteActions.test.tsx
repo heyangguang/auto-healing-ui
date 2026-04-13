@@ -4,6 +4,7 @@ import { message } from 'antd';
 import { usePlaybookDeleteActions } from './usePlaybookDeleteActions';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
 import { deletePlaybook } from '@/services/auto-healing/playbooks';
+import { invalidatePlaybookInventoryCache } from './playbookInventoryCache';
 
 jest.mock('@/services/auto-healing/execution', () => ({
   getExecutionTasks: jest.fn(),
@@ -11,6 +12,10 @@ jest.mock('@/services/auto-healing/execution', () => ({
 
 jest.mock('@/services/auto-healing/playbooks', () => ({
   deletePlaybook: jest.fn(),
+}));
+
+jest.mock('./playbookInventoryCache', () => ({
+  invalidatePlaybookInventoryCache: jest.fn(),
 }));
 
 const playbook = {
@@ -90,6 +95,7 @@ describe('usePlaybookDeleteActions', () => {
     });
 
     await waitFor(() => {
+      expect(invalidatePlaybookInventoryCache).toHaveBeenCalled();
       expect(message.success).toHaveBeenCalledWith('删除成功');
       expect(message.error).toHaveBeenCalledWith('刷新列表失败');
       expect(message.error).not.toHaveBeenCalledWith('删除 Playbook 失败');

@@ -1,6 +1,7 @@
 import { message } from 'antd';
 import { useCallback, useEffect, useRef } from 'react';
 import { updatePlaybookVariables } from '@/services/auto-healing/playbooks';
+import { invalidatePlaybookInventoryCache } from './playbookInventoryCache';
 import type { PlaybookVariableAutosaveOptions } from './playbookMutationActionTypes';
 
 export function usePlaybookVariableAutosave(options: PlaybookVariableAutosaveOptions) {
@@ -40,6 +41,8 @@ export function usePlaybookVariableAutosave(options: PlaybookVariableAutosaveOpt
         if (autoSaveRequestIdRef.current !== requestId || detailRequestIdRef.current !== detailRequestId) {
             return false;
         }
+
+        invalidatePlaybookInventoryCache();
 
         try {
             await loadPlaybooks();

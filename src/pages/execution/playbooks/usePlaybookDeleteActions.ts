@@ -2,6 +2,7 @@ import { message } from 'antd';
 import { useCallback, useState } from 'react';
 import { getExecutionTasks } from '@/services/auto-healing/execution';
 import { deletePlaybook } from '@/services/auto-healing/playbooks';
+import { invalidatePlaybookInventoryCache } from './playbookInventoryCache';
 import type { PlaybookDeleteActionOptions } from './playbookMutationActionTypes';
 
 export function usePlaybookDeleteActions(options: PlaybookDeleteActionOptions) {
@@ -64,6 +65,7 @@ export function usePlaybookDeleteActions(options: PlaybookDeleteActionOptions) {
         try {
             await deletePlaybook(deleteTarget.id);
             message.success('删除成功');
+            invalidatePlaybookInventoryCache();
             const deletedTargetId = deleteTarget.id;
             removePlaybookFromInventory?.(deleteTarget);
             resetDeletedPlaybookState(deletedTargetId);

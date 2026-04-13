@@ -3,9 +3,14 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { message } from 'antd';
 import { usePlaybookLifecycleActions } from './usePlaybookLifecycleActions';
 import { getPlaybookFiles, scanPlaybook, setPlaybookReady, updatePlaybook } from '@/services/auto-healing/playbooks';
+import { invalidatePlaybookInventoryCache } from './playbookInventoryCache';
 
 jest.mock('@/utils/fetchAllPages', () => ({
   fetchAllPages: jest.fn(),
+}));
+
+jest.mock('./playbookInventoryCache', () => ({
+  invalidatePlaybookInventoryCache: jest.fn(),
 }));
 
 jest.mock('@/services/auto-healing/playbooks', () => ({
@@ -98,6 +103,7 @@ describe('usePlaybookLifecycleActions', () => {
         requestId: 1,
         syncEditedVariables: undefined,
       });
+      expect(invalidatePlaybookInventoryCache).toHaveBeenCalled();
       expect(message.success).toHaveBeenCalledWith('已设为就绪状态');
       expect(message.error).toHaveBeenCalledWith('刷新列表失败');
     });

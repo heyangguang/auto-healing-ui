@@ -9,6 +9,7 @@ import {
     updatePlaybook,
 } from '@/services/auto-healing/playbooks';
 import { fetchAllPages } from '@/utils/fetchAllPages';
+import { invalidatePlaybookInventoryCache } from './playbookInventoryCache';
 import type { PlaybookLifecycleActionOptions } from './playbookMutationActionTypes';
 
 export function usePlaybookLifecycleActions(options: PlaybookLifecycleActionOptions) {
@@ -36,6 +37,8 @@ export function usePlaybookLifecycleActions(options: PlaybookLifecycleActionOpti
         syncEditedVariables?: boolean;
     }) => {
         const { detailRequestId, playbookId, syncEditedVariables } = options;
+
+        invalidatePlaybookInventoryCache();
 
         try {
             await loadPlaybooks();

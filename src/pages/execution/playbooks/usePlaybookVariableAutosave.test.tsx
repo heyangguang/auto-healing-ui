@@ -3,9 +3,14 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { message } from 'antd';
 import { usePlaybookVariableAutosave } from './usePlaybookVariableAutosave';
 import { updatePlaybookVariables } from '@/services/auto-healing/playbooks';
+import { invalidatePlaybookInventoryCache } from './playbookInventoryCache';
 
 jest.mock('@/services/auto-healing/playbooks', () => ({
   updatePlaybookVariables: jest.fn(),
+}));
+
+jest.mock('./playbookInventoryCache', () => ({
+  invalidatePlaybookInventoryCache: jest.fn(),
 }));
 
 const selectedPlaybook = {
@@ -204,6 +209,7 @@ describe('usePlaybookVariableAutosave', () => {
     });
 
     await waitFor(() => {
+      expect(invalidatePlaybookInventoryCache).toHaveBeenCalled();
       expect(screen.getByTestId('selected-name').textContent).toBe('deploy');
       expect(screen.getByTestId('selected-status').textContent).toBe('ready');
       expect(screen.getByTestId('selected-default').textContent).toBe('normalized');
