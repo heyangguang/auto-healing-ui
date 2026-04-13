@@ -1,0 +1,126 @@
+.pb-overview-panel {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.pb-overview-stack,
+.pb-overview-info-column,
+.pb-overview-assets-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.pb-overview-section-card {
+    min-width: 0;
+}
+
+.pb-overview-field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+}
+
+.pb-overview-field {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.pb-overview-field-full {
+    grid-column: 1 / -1;
+}
+
+.pb-overview-field-label {
+    color: #8c8c8c;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+.pb-overview-field-value {
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.pb-overview-code-text,
+.pb-overview-link-text {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.pb-overview-status-tags {
+    width: 100%;
+}
+
+.pb-detail-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.pb-detail-header-meta {
+    min-width: 0;
+    flex: 1 1 320px;
+}
+
+.pb-detail-header-title {
+    font-size: 18px;
+}
+
+.pb-detail-header-file {
+    margin-top: 4px;
+    color: #8c8c8c;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.pb-detail-header-actions {
+    justify-content: flex-end;
+}
+
+@media (max-width: 1200px) {
+    .pb-overview-panel {
+        padding: 20px;
+    }
+
+    .pb-overview-field-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pb-overview-field-full {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 992px) {
+    .pb-overview-panel {
+        padding: 16px;
+    }
+
+    .pb-detail-header {
+        padding: 16px;
+    }
+
+    .pb-detail-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .pb-overview-field {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}

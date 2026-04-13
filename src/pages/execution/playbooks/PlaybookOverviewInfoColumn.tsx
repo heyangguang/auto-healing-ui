@@ -1,6 +1,7 @@
 import React from 'react';
 import { BranchesOutlined } from '@ant-design/icons';
-import { Card, Descriptions, Space, Tag, Typography } from 'antd';
+import { Card, Space, Tag, Typography } from 'antd';
+import PlaybookOverviewFieldGrid, { type PlaybookOverviewField } from './PlaybookOverviewFieldGrid';
 import type { PlaybookStatusSummary } from './playbookTypes';
 
 const { Text } = Typography;
@@ -18,38 +19,86 @@ type PlaybookOverviewInfoColumnProps = {
     statusInfo: PlaybookStatusSummary;
 };
 
+function buildPlaybookOverviewFields(
+    playbook: AutoHealing.Playbook,
+    statusInfo: PlaybookStatusSummary,
+): PlaybookOverviewField[] {
+    return [
+        { key: 'name', label: '名称', value: playbook.name },
+        {
+            key: 'status',
+            label: '状态',
+            value: (
+                <Space size={[8, 8]} wrap className="pb-overview-status-tags">
+                    <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
+                    <Tag color={playbook.config_mode === 'enhanced' ? 'purple' : 'blue'}>
+                        {playbook.config_mode === 'enhanced' ? '增强模式' : '自动模式'}
+                    </Tag>
+                </Space>
+            ),
+        },
+        {
+            key: 'filePath',
+            label: '入口文件',
+            value: <Text code copyable className="pb-overview-code-text">{playbook.file_path}</Text>,
+            fullWidth: true,
+        },
+        {
+            key: 'description',
+            label: '描述',
+            value: playbook.description || <Text type="secondary">-</Text>,
+            fullWidth: true,
+        },
+        {
+            key: 'createdAt',
+            label: '创建时间',
+            value: new Date(playbook.created_at).toLocaleString(),
+        },
+        {
+            key: 'updatedAt',
+            label: '更新时间',
+            value: new Date(playbook.updated_at || playbook.created_at).toLocaleString(),
+        },
+        {
+            key: 'scannedAt',
+            label: '扫描时间',
+            value: playbook.last_scanned_at ? new Date(playbook.last_scanned_at).toLocaleString() : <Text type="secondary">尚未扫描</Text>,
+            fullWidth: true,
+        },
+    ];
+}
+
+function buildRepoOverviewFields(repo: AutoHealing.GitRepository): PlaybookOverviewField[] {
+    return [
+        { key: 'repoName', label: '仓库', value: repo.name },
+        {
+            key: 'defaultBranch',
+            label: '分支',
+            value: <Tag icon={<BranchesOutlined />}>{repo.default_branch}</Tag>,
+        },
+        {
+            key: 'repoUrl',
+            label: '地址',
+            value: <Text copyable className="pb-overview-link-text">{repo.url}</Text>,
+            fullWidth: true,
+        },
+    ];
+}
+
 export default function PlaybookOverviewInfoColumn(props: PlaybookOverviewInfoColumnProps) {
     const { getProviderInfo, playbook, repo, statusInfo } = props;
+    const detailFields = buildPlaybookOverviewFields(playbook, statusInfo);
+    const repoFields = repo ? buildRepoOverviewFields(repo) : [];
 
     return (
-        <>
-            <Card title="详细信息" size="small" style={{ marginBottom: 16 }}>
-                <Descriptions column={2} size="small" labelStyle={{ width: 80, color: '#8c8c8c' }}>
-                    <Descriptions.Item label="名称">{playbook.name}</Descriptions.Item>
-                    <Descriptions.Item label="状态">
-                        <Space size={8}>
-                            <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
-                            <Tag color={playbook.config_mode === 'enhanced' ? 'purple' : 'blue'}>
-                                {playbook.config_mode === 'enhanced' ? '增强模式' : '自动模式'}
-                            </Tag>
-                        </Space>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="入口文件" span={2}>
-                        <Text code copyable style={{ fontSize: 12, wordBreak: 'break-all' }}>{playbook.file_path}</Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="描述" span={2}>
-                        {playbook.description || <Text type="secondary">-</Text>}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="创建时间">{new Date(playbook.created_at).toLocaleString()}</Descriptions.Item>
-                    <Descriptions.Item label="更新时间">{new Date(playbook.updated_at || playbook.created_at).toLocaleString()}</Descriptions.Item>
-                    <Descriptions.Item label="扫描时间" span={2}>
-                        {playbook.last_scanned_at ? new Date(playbook.last_scanned_at).toLocaleString() : <Text type="secondary">尚未扫描</Text>}
-                    </Descriptions.Item>
-                </Descriptions>
+        <div className="pb-overview-info-column">
+            <Card title="详细信息" size="small" className="pb-overview-section-card">
+                <PlaybookOverviewFieldGrid fields={detailFields} />
             </Card>
 
             <Card
                 size="small"
+                className="pb-overview-section-card"
                 title={repo ? (
                     <Space size={6}>
                         <span style={{ color: getProviderInfo(repo.url).color, display: 'flex', alignItems: 'center' }}>
@@ -62,17 +111,9 @@ export default function PlaybookOverviewInfoColumn(props: PlaybookOverviewInfoCo
                 {!repo ? (
                     <Text type="secondary">仓库信息不可用</Text>
                 ) : (
-                    <Descriptions column={2} size="small" labelStyle={{ width: 80, color: '#8c8c8c' }}>
-                        <Descriptions.Item label="仓库">{repo.name}</Descriptions.Item>
-                        <Descriptions.Item label="分支">
-                            <Tag icon={<BranchesOutlined />}>{repo.default_branch}</Tag>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="地址" span={2}>
-                            <Text copyable style={{ fontSize: 11, wordBreak: 'break-all' }}>{repo.url}</Text>
-                        </Descriptions.Item>
-                    </Descriptions>
+                    <PlaybookOverviewFieldGrid fields={repoFields} />
                 )}
             </Card>
-        </>
+        </div>
     );
 }

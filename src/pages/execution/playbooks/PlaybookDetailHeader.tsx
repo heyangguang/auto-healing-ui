@@ -42,27 +42,21 @@ const PlaybookDetailHeader: React.FC<PlaybookDetailHeaderProps> = ({
     statusInfo,
 }) => (
     <div
-        style={{
-            padding: '16px 24px',
-            borderBottom: '1px solid #f0f0f0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-        }}
+        className="pb-detail-header"
     >
-        <div>
-            <Space size={12}>
+        <div className="pb-detail-header-meta">
+            <Space size={12} wrap>
                 <CodeOutlined style={{ fontSize: 24, color: '#1890ff' }} />
                 <div>
-                    <Text strong style={{ fontSize: 18 }}>{playbook.name}</Text>
+                    <Text strong className="pb-detail-header-title">{playbook.name}</Text>
                     <Tag color={statusInfo.color} style={{ marginLeft: 12 }}>{statusInfo.text}</Tag>
                 </div>
             </Space>
-            <div style={{ marginTop: 4, color: '#8c8c8c', fontSize: 13 }}>
+            <div className="pb-detail-header-file">
                 <FileTextOutlined style={{ marginRight: 4 }} /> {playbook.file_path}
             </div>
         </div>
-        <Space>
+        <Space wrap className="pb-detail-header-actions">
             <Button
                 icon={<SyncOutlined spin={scanning === playbook.id} />}
                 onClick={onScan}

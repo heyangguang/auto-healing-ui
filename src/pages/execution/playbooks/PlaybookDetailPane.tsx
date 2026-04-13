@@ -59,7 +59,7 @@ function buildTabItems(props: PlaybookDetailPaneProps) {
             key: 'overview',
             label: '概览',
             children: selectedPlaybook && statusInfo
-                ? <PlaybookOverviewPanel playbook={selectedPlaybook} playbookFiles={playbookFiles} repos={repos} scanLogs={scanLogs} statusInfo={statusInfo} getProviderInfo={getProviderInfo} />
+                ? <PlaybookOverviewPanel playbook={selectedPlaybook} repos={repos} scanLogs={scanLogs} statusInfo={statusInfo} getProviderInfo={getProviderInfo} />
                 : null,
         },
         {

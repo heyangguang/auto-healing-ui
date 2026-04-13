@@ -8,6 +8,7 @@ import PlaybookWorkspace from './PlaybookWorkspace';
 import { playbookAdvancedSearchFields, playbookHeaderIcon, playbookSearchFields } from './playbookShellConfig';
 import { usePlaybookListModel } from './usePlaybookListModel';
 import './index.css';
+import './playbookOverview.css';
 
 const PlaybookList: React.FC = () => {
     const access = useAccess();

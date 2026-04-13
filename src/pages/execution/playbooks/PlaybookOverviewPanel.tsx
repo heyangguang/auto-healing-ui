@@ -1,5 +1,5 @@
 import React from 'react';
-import { Col, Row, Tag, Typography } from 'antd';
+import { Tag, Typography } from 'antd';
 import type { PlaybookStatusSummary } from './playbookTypes';
 import PlaybookOverviewAssetsColumn from './PlaybookOverviewAssetsColumn';
 import PlaybookOverviewInfoColumn from './PlaybookOverviewInfoColumn';
@@ -16,7 +16,6 @@ type ProviderInfo = {
 type PlaybookOverviewPanelProps = {
     getProviderInfo: (url: string) => ProviderInfo;
     playbook: AutoHealing.Playbook;
-    playbookFiles: AutoHealing.PlaybookFile[];
     repos: AutoHealing.GitRepository[];
     scanLogs: AutoHealing.PlaybookScanLog[];
     statusInfo: PlaybookStatusSummary;
@@ -45,20 +44,16 @@ function PlaybookOverviewSummaryTags(props: { playbook: AutoHealing.Playbook; sc
 }
 
 export default function PlaybookOverviewPanel(props: PlaybookOverviewPanelProps) {
-    const { getProviderInfo, playbook, playbookFiles, repos, scanLogs, statusInfo } = props;
+    const { getProviderInfo, playbook, repos, scanLogs, statusInfo } = props;
     const repo = repos.find((item) => item.id === playbook.repository_id);
 
     return (
-        <div style={{ padding: 24, overflowY: 'auto' }}>
+        <div className="pb-overview-panel">
             <PlaybookOverviewSummaryTags playbook={playbook} scanLogs={scanLogs} />
-            <Row gutter={16}>
-                <Col span={12}>
-                    <PlaybookOverviewInfoColumn getProviderInfo={getProviderInfo} playbook={playbook} repo={repo || undefined} statusInfo={statusInfo} />
-                </Col>
-                <Col span={12}>
-                    <PlaybookOverviewAssetsColumn playbook={playbook} playbookFiles={playbookFiles} />
-                </Col>
-            </Row>
+            <div className="pb-overview-stack">
+                <PlaybookOverviewInfoColumn getProviderInfo={getProviderInfo} playbook={playbook} repo={repo || undefined} statusInfo={statusInfo} />
+                <PlaybookOverviewAssetsColumn playbook={playbook} />
+            </div>
             <PlaybookStatusAlert playbook={playbook} />
         </div>
     );
