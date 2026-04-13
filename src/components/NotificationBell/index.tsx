@@ -4,7 +4,7 @@ import { BellOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import { getSiteMessages, getUnreadCount, getSiteMessageCategories } from '@/services/auto-healing/siteMessage';
 import type { SiteMessage, SiteMessageCategory } from '@/services/auto-healing/siteMessage';
-import { createAuthenticatedEventStream, type SSEConnection } from '@/services/auto-healing/sse';
+import { createAuthenticatedEventStream, resolveSSEStreamUrl, type SSEConnection } from '@/services/auto-healing/sse';
 import { TokenManager } from '@/requestErrorConfig';
 import dayjs from 'dayjs';
 import * as notificationBellShared from './notificationBellShared';
@@ -95,9 +95,8 @@ const NotificationBell: React.FC = () => {
         const token = TokenManager.getToken();
         if (!token) return;
 
-        const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
         const connection = createAuthenticatedEventStream(
-            `${sseBase}/api/v1/tenant/site-messages/events`,
+            resolveSSEStreamUrl('/api/v1/tenant/site-messages/events'),
             {
                 onEvent: (event) => {
                     if (event === 'init' || event === 'new_message') {

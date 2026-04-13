@@ -32,6 +32,7 @@ jest.mock('@/services/generated/auto-healing/execution', () => ({
 
 jest.mock('./sse', () => ({
   createAuthenticatedEventStream: jest.fn(),
+  resolveSSEStreamUrl: (url: string) => url,
 }));
 
 describe('auto-healing execution service', () => {
@@ -299,7 +300,9 @@ describe('auto-healing execution service', () => {
   it('normalizes SSE done events before forwarding them to consumers', () => {
     const close = jest.fn();
     let handlers: Record<string, (...args: any[]) => void> = {};
-    (createAuthenticatedEventStream as jest.Mock).mockImplementation((_url, nextHandlers) => {
+    let capturedUrl = '';
+    (createAuthenticatedEventStream as jest.Mock).mockImplementation((url, nextHandlers) => {
+      capturedUrl = url;
       handlers = nextHandlers;
       return { close };
     });
@@ -308,6 +311,7 @@ describe('auto-healing execution service', () => {
     const onDone = jest.fn();
     const stop = createLogStream('run-1', onLog, onDone);
 
+    expect(capturedUrl).toBe('/api/v1/tenant/execution-runs/run-1/stream');
     handlers.onEvent?.('done', { status: 'partial_success', exit_code: 0, stats: { ok: 1 } });
 
     expect(onDone).toHaveBeenCalledWith({

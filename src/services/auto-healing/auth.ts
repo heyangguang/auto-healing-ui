@@ -58,7 +58,9 @@ export interface RegisterByInvitationResult {
  * 用户登录
  */
 export async function login(data: AutoHealing.LoginRequest) {
-    return postAuthLogin(data, { skipErrorHandler: true }) as Promise<AutoHealing.LoginResponse>;
+    return unwrapData(
+        await (postAuthLogin(data, { skipErrorHandler: true }) as Promise<{ data?: AutoHealing.LoginResponse } | AutoHealing.LoginResponse>),
+    );
 }
 
 /**
@@ -76,7 +78,9 @@ export async function logout(data?: { refresh_token?: string }) {
  * 刷新 Token
  */
 export async function refreshToken(data: AutoHealing.RefreshTokenRequest) {
-    return postAuthRefresh(data) as Promise<AutoHealing.RefreshTokenResponse>;
+    return unwrapData(
+        await (postAuthRefresh(data) as Promise<{ data?: AutoHealing.RefreshTokenResponse } | AutoHealing.RefreshTokenResponse>),
+    );
 }
 
 /**

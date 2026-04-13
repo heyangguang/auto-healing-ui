@@ -23,5 +23,22 @@ describe('sse helpers', () => {
 
     expect(onEvent).toHaveBeenCalledWith('message', 'first line\nsecond line');
   });
-});
 
+  it('falls back to relative api paths when SSE base points to loopback from a remote browser host', () => {
+    expect(
+      __TEST_ONLY__.resolveSSEStreamUrl('/api/v1/tenant/execution-runs/run-1/stream', {
+        configuredBase: 'http://localhost:8080',
+        browserHostname: 'demo.example.com',
+      }),
+    ).toBe('/api/v1/tenant/execution-runs/run-1/stream');
+  });
+
+  it('keeps explicit non-loopback SSE bases when they are intentionally configured', () => {
+    expect(
+      __TEST_ONLY__.resolveSSEStreamUrl('/api/v1/tenant/site-messages/events', {
+        configuredBase: 'https://api.example.com',
+        browserHostname: 'demo.example.com',
+      }),
+    ).toBe('https://api.example.com/api/v1/tenant/site-messages/events');
+  });
+});

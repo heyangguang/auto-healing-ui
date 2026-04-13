@@ -33,14 +33,38 @@ jest.mock('@/services/generated/auto-healing/authentication', () => ({
 
 describe('auto-healing auth service', () => {
   it('delegates stable endpoints to the generated authentication client', async () => {
+    (postAuthLogin as jest.Mock).mockResolvedValue({
+      data: {
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+        user: { id: 'user-1', username: 'ops' },
+        tenants: [{ id: 'tenant-1', name: 'Tenant A', code: 'tenant-a' }],
+        current_tenant_id: 'tenant-1',
+      },
+    });
+    (postAuthRefresh as jest.Mock).mockResolvedValue({
+      data: {
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token',
+      },
+    });
     (getAuthMe as jest.Mock).mockResolvedValue({ data: { id: 'user-2', username: 'ops' } });
     (getAuthProfile as jest.Mock).mockResolvedValue({ data: { id: 'user-1' } });
     (request as jest.Mock)
       .mockResolvedValueOnce({ data: { items: [{ id: 'login-1' }], total: 1 } })
       .mockResolvedValueOnce({ data: { items: [{ id: 'activity-1' }], total: 1 } });
 
-    await login({ username: 'ops', password: 'secret' });
-    await refreshToken({ refresh_token: 'refresh-token' });
+    await expect(login({ username: 'ops', password: 'secret' })).resolves.toEqual({
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      user: { id: 'user-1', username: 'ops' },
+      tenants: [{ id: 'tenant-1', name: 'Tenant A', code: 'tenant-a' }],
+      current_tenant_id: 'tenant-1',
+    });
+    await expect(refreshToken({ refresh_token: 'refresh-token' })).resolves.toEqual({
+      access_token: 'new-access-token',
+      refresh_token: 'new-refresh-token',
+    });
     await expect(getCurrentUser({ skipErrorHandler: true })).resolves.toEqual({ id: 'user-2', username: 'ops' });
     await changePassword({ old_password: 'old', new_password: 'new' });
     await expect(getProfile()).resolves.toEqual({ id: 'user-1' });

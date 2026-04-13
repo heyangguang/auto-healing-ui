@@ -24,6 +24,7 @@ jest.mock('@/services/auto-healing/siteMessage', () => ({
 
 jest.mock('@/services/auto-healing/sse', () => ({
   createAuthenticatedEventStream: jest.fn(),
+  resolveSSEStreamUrl: (url: string) => url,
 }));
 
 jest.mock('@/requestErrorConfig', () => ({

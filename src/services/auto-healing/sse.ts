@@ -52,6 +52,66 @@ const isAbortError = (value: unknown) => getErrorName(value) === 'AbortError';
 
 const normalizeError = (value: unknown) => (value instanceof Error ? value : new Error(String(value)));
 
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', '[::1]', 'localhost']);
+
+const trimTrailingSlashes = (value: string) => value.replace(/\/+$/, '');
+
+const normalizeSSEPath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
+
+const isAbsoluteHttpUrl = (value: string) => /^https?:\/\//i.test(value);
+
+const isLoopbackHost = (hostname: string) => LOOPBACK_HOSTS.has(hostname.toLowerCase());
+
+const shouldBypassConfiguredSSEBase = (base: string) => {
+    if (!isAbsoluteHttpUrl(base) || typeof window === 'undefined') {
+        return false;
+    }
+    try {
+        const configuredUrl = new URL(base);
+        return isLoopbackHost(configuredUrl.hostname) && !isLoopbackHost(window.location.hostname);
+    } catch {
+        return false;
+    }
+};
+
+const toTenantContextUrl = (url: string) => {
+    if (typeof window === 'undefined') {
+        return url;
+    }
+    try {
+        const resolved = new URL(url, window.location.origin);
+        return `${resolved.pathname}${resolved.search}`;
+    } catch {
+        return url;
+    }
+};
+
+type SSEResolveContext = {
+    browserHostname?: string;
+    configuredBase?: string;
+};
+
+export const resolveSSEStreamUrl = (path: string, context: SSEResolveContext = {}) => {
+    const normalizedPath = normalizeSSEPath(path);
+    const configuredBase = trimTrailingSlashes(context.configuredBase ?? process.env.SSE_API_BASE ?? '');
+    const browserHostname = context.browserHostname ?? (typeof window === 'undefined' ? '' : window.location.hostname);
+    if (!configuredBase) {
+        return normalizedPath;
+    }
+    if (isAbsoluteHttpUrl(configuredBase) && isLoopbackHost(browserHostname) === false) {
+        try {
+            if (isLoopbackHost(new URL(configuredBase).hostname)) {
+                return normalizedPath;
+            }
+        } catch {
+            return normalizedPath;
+        }
+    } else if (shouldBypassConfiguredSSEBase(configuredBase)) {
+        return normalizedPath;
+    }
+    return `${configuredBase}${normalizedPath}`;
+};
+
 export const createAuthenticatedEventStream = (
     url: string,
     callbacks: AuthenticatedSSECallbacks,
@@ -65,7 +125,10 @@ export const createAuthenticatedEventStream = (
     if (token) {
         headers.Authorization = `Bearer ${token}`;
     }
-    Object.assign(headers, getTenantContextHeaders(url, localStorage.getItem('is-platform-admin') === 'true'));
+    Object.assign(
+        headers,
+        getTenantContextHeaders(toTenantContextUrl(url), localStorage.getItem('is-platform-admin') === 'true'),
+    );
 
     void (async () => {
         try {
@@ -187,9 +250,8 @@ export const createInstanceEventStream = (
     instanceId: string,
     callbacks: DryRunSSECallbacks
 ): SSEConnection => {
-    const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
     const connection = createAuthenticatedEventStream(
-        `${sseBase}/api/v1/tenant/healing/instances/${instanceId}/events`,
+        resolveSSEStreamUrl(`/api/v1/tenant/healing/instances/${instanceId}/events`),
         {
             onEvent: (event, payload) => {
                 const data = sseParser.unwrapSSEPayload(payload);
@@ -234,4 +296,5 @@ export const createInstanceEventStream = (
 export const __TEST_ONLY__ = {
     createSSEEventParser: sseParser.createSSEEventParser,
     dispatchDryRunStreamEvent: sseParser.dispatchDryRunStreamEvent,
+    resolveSSEStreamUrl,
 };

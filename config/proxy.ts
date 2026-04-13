@@ -3,23 +3,17 @@
  * @see 在生产环境 代理是无法生效的，所以这里没有生产环境的配置
  * @doc https://umijs.org/docs/guides/proxy
  */
+const proxyTarget = process.env.API_PROXY_TARGET || 'http://127.0.0.1:8080';
+
+const proxyConfig = {
+  '/api/': {
+    target: proxyTarget,
+    changeOrigin: true,
+  },
+};
+
 export default {
-  dev: {
-    '/api/': {
-      target: 'http://192.168.31.66:8080',
-      changeOrigin: true,
-    },
-  },
-  test: {
-    '/api/': {
-      target: 'http://192.168.31.66:8080',
-      changeOrigin: true,
-    },
-  },
-  pre: {
-    '/api/': {
-      target: 'http://192.168.31.66:8080',
-      changeOrigin: true,
-    },
-  },
+  dev: proxyConfig,
+  test: proxyConfig,
+  pre: proxyConfig,
 };

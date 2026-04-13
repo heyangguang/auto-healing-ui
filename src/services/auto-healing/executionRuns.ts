@@ -1,5 +1,5 @@
 import { request } from '@umijs/max';
-import { createAuthenticatedEventStream } from './sse';
+import { createAuthenticatedEventStream, resolveSSEStreamUrl } from './sse';
 import * as sseParser from './sseParser';
 import type {
     ExecutionStatusQuery,
@@ -132,9 +132,8 @@ export function createLogStream(
     onDone: (result: { status: string; exit_code: number; stats?: AutoHealing.ExecutionRun['stats'] }) => void,
     onError?: (error: unknown) => void,
 ): () => void {
-    const sseBase = (process.env.SSE_API_BASE || '').replace(/\/+$/, '');
     const connection = createAuthenticatedEventStream(
-        `${sseBase}/api/v1/tenant/execution-runs/${id}/stream`,
+        resolveSSEStreamUrl(`/api/v1/tenant/execution-runs/${id}/stream`),
         {
             onOpen: () => {
                 console.log('[SSE] Connection opened');
