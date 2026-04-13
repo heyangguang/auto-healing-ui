@@ -33,7 +33,7 @@ const FB_TENANT_RESOURCE: Record<string, string> = {
 };
 
 const FB_PLATFORM_RESOURCE: Record<string, string> = {
-    auth: '认证', 'auth-profile': '个人资料', 'auth-logout': '登出',
+    auth: '认证', 'auth-profile': '个人资料', 'auth-logout': '登出', 'auth-register': '注册',
     'execution-tasks': '执行任务', 'healing-approvals': '自愈审批',
     'healing-flows': '自愈流程', 'healing-rules': '自愈规则',
     impersonation: '临时提权', incidents: '事件管理',
@@ -54,7 +54,7 @@ const FB_ACTION_LABELS: Record<string, string> = {
     assign_role: '分配角色', batch_create: '批量创建', confirm_review: '确认复核',
     create: '创建', deactivate: '停用', delete: '删除', disable: '禁用',
     dismiss: '驳回', enable: '启用', execute: '执行', login: '登录',
-    logout: '登出', impersonation_enter: '提权进入', impersonation_exit: '提权退出',
+    logout: '登出', register: '注册', impersonation_enter: '提权进入', impersonation_exit: '提权退出',
     impersonation_terminate: '提权终止',
     maintenance: '维护', preview: '预览', ready: '就绪',
     reject: '审批拒绝', reset_password: '重置密码', reset_scan: '重置扫描',
@@ -67,7 +67,7 @@ const FB_ACTION_COLORS: Record<string, string> = {
     assign_role: 'magenta', batch_create: 'lime', confirm_review: 'cyan',
     create: 'green', deactivate: 'orange', delete: 'red', disable: 'orange',
     dismiss: 'volcano', enable: 'green', execute: 'geekblue', login: 'purple',
-    logout: 'purple', impersonation_enter: 'purple', impersonation_exit: 'default',
+    logout: 'purple', register: 'cyan', impersonation_enter: 'purple', impersonation_exit: 'default',
     impersonation_terminate: 'red',
     maintenance: 'orange', preview: 'default', ready: 'cyan',
     reject: 'red', reset_password: 'orange', reset_scan: 'gold',
@@ -83,7 +83,7 @@ const FB_ACTION_VERBS: Record<string, { verb: string; color: string }> = {
     delete: { verb: '删除了', color: '#f5222d' }, disable: { verb: '禁用了', color: '#fa8c16' },
     dismiss: { verb: '驳回了', color: '#fa541c' }, enable: { verb: '启用了', color: '#52c41a' },
     execute: { verb: '执行了', color: '#fa8c16' }, login: { verb: '登录了', color: '#722ed1' },
-    logout: { verb: '登出了', color: '#722ed1' },
+    logout: { verb: '登出了', color: '#722ed1' }, register: { verb: '注册了', color: '#13c2c2' },
     impersonation_enter: { verb: '提权进入了', color: '#722ed1' },
     impersonation_exit: { verb: '提权退出了', color: '#722ed1' },
     impersonation_terminate: { verb: '终止了提权', color: '#f5222d' },

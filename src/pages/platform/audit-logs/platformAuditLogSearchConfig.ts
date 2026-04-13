@@ -1,8 +1,8 @@
 import type { AdvancedSearchField, SearchField } from '@/components/StandardTable';
 import { ACTION_LABELS, PLATFORM_RESOURCE_LABELS as RESOURCE_LABELS } from '@/constants/auditDicts';
 
-const LOGIN_ACTIONS = ['login', 'logout', 'impersonation_enter', 'impersonation_exit'];
-const LOGIN_RESOURCES = ['auth', 'auth-logout', 'impersonation'];
+const LOGIN_ACTIONS = ['login', 'logout', 'register', 'impersonation_enter', 'impersonation_exit'];
+const LOGIN_RESOURCES = ['auth', 'auth-logout', 'auth-register', 'impersonation'];
 
 export const operationSearchFields: SearchField[] = [
   { key: 'search', label: '全局搜索' },

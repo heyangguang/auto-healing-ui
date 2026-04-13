@@ -16,8 +16,6 @@ import {
   createAuditLogColumns,
 } from './auditLogTableConfig';
 import {
-  loginAdvancedSearchFields,
-  loginSearchFields,
   operationAdvancedSearchFields,
   operationSearchFields,
 } from './auditLogSearchConfig';
@@ -41,11 +39,10 @@ const headerIcon = (
   </svg>
 );
 
-const { loginColumns, operationColumns } = createAuditLogColumns();
+const { operationColumns } = createAuditLogColumns();
 
 const AuditLogsPage: React.FC = () => {
   const access = useAccess();
-  const [activeTab, setActiveTab] = useState<AuditCategory>('operation');
   const [stats, setStats] = useState<AuditStatsSummary | null>(null);
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [statsLoadFailed, setStatsLoadFailed] = useState(false);
@@ -107,19 +104,14 @@ const AuditLogsPage: React.FC = () => {
 
   const handleRequest = useCallback(
     async (params: AuditRequestParams) => {
-      const response = await getAuditLogs(buildAuditListParams(params, activeTab));
+      const response = await getAuditLogs(buildAuditListParams(params, 'operation'));
       return {
         data: (response.data || []) as AuditLogRecord[],
         total: response.total ?? 0,
       };
     },
-    [activeTab],
+    [],
   );
-
-  const columns = activeTab === 'login' ? loginColumns : operationColumns;
-  const searchFields = activeTab === 'login' ? loginSearchFields : operationSearchFields;
-  const advancedSearchFields =
-    activeTab === 'login' ? loginAdvancedSearchFields : operationAdvancedSearchFields;
 
   const exportButton = useMemo(
     () => (
@@ -139,30 +131,19 @@ const AuditLogsPage: React.FC = () => {
   return (
     <>
       <StandardTable<AuditLogRecord>
-        key={activeTab}
-        tabs={[
-          { key: 'operation', label: '操作日志' },
-          { key: 'login', label: '登录日志' },
-        ]}
-        activeTab={activeTab}
-        onTabChange={(key) => setActiveTab(key as AuditCategory)}
         title="审计日志"
-        description={
-          activeTab === 'login'
-            ? '记录所有用户的登录和登出活动，用于安全审计和异常登录排查。'
-            : '记录系统中所有用户操作，用于安全审计和合规追溯。支持按操作类型、资源、用户、时间范围等多维筛选。'
-        }
+        description="记录系统中所有用户操作，用于安全审计和合规追溯。支持按操作类型、资源、用户、时间范围等多维筛选。"
         headerIcon={headerIcon}
         headerExtra={statsLoadFailed ? <span style={{ color: '#ff4d4f', fontSize: 12 }}>统计加载失败，请刷新页面重试</span> : <AuditStatsBar stats={stats} trendData={trendData} />}
-        searchFields={searchFields}
-        advancedSearchFields={advancedSearchFields}
-        extraToolbarActions={activeTab === 'operation' ? exportButton : undefined}
-        columns={columns}
+        searchFields={operationSearchFields}
+        advancedSearchFields={operationAdvancedSearchFields}
+        extraToolbarActions={exportButton}
+        columns={operationColumns}
         rowKey="id"
         onRowClick={openDetail}
         request={handleRequest}
         defaultPageSize={20}
-        preferenceKey={`audit_log_${activeTab}`}
+        preferenceKey="audit_log_operation"
       />
 
       <AuditDetailDrawer
@@ -174,7 +155,7 @@ const AuditLogsPage: React.FC = () => {
       />
       <AuditExportModal
         open={exportModalOpen}
-        category={activeTab}
+        category="operation"
         onClose={() => setExportModalOpen(false)}
       />
     </>

@@ -35,7 +35,6 @@ const riskMap: Record<string, { color: string; label: string }> = {
 };
 
 export function createAuditLogColumns(): {
-  loginColumns: StandardColumnDef<AuditLogRecord>[];
   operationColumns: StandardColumnDef<AuditLogRecord>[];
 } {
   const timeColumn: StandardColumnDef<AuditLogRecord> = {
@@ -223,38 +222,5 @@ export function createAuditLogColumns(): {
     { ...ipColumn, defaultVisible: false },
   ];
 
-  const loginColumns: StandardColumnDef<AuditLogRecord>[] = [
-    timeColumn,
-    userColumn,
-    {
-      columnKey: 'action',
-      columnTitle: '操作',
-      dataIndex: 'action',
-      width: 90,
-      render: (_, record) => {
-        const action = record.action || '';
-        return (
-          <Tag color={ACTION_COLORS[action] || 'default'} style={{ margin: 0 }}>
-            {ACTION_LABELS[action] || action}
-          </Tag>
-        );
-      },
-    },
-    statusColumn,
-    ipColumn,
-    {
-      columnKey: 'user_agent',
-      columnTitle: '客户端',
-      dataIndex: 'user_agent',
-      width: 200,
-      ellipsis: true,
-      render: (_, record) => (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          {record.user_agent || '-'}
-        </Text>
-      ),
-    },
-  ];
-
-  return { loginColumns, operationColumns };
+  return { operationColumns };
 }

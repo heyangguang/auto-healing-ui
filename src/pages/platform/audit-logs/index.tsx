@@ -122,14 +122,14 @@ const PlatformAuditLogsPage: React.FC = () => {
         key={activeTab}
         tabs={[
           { key: 'operation', label: '操作日志' },
-          { key: 'login', label: '登录日志' },
+          { key: 'login', label: '认证日志' },
         ]}
         activeTab={activeTab}
         onTabChange={(key) => setActiveTab(key as AuditCategory)}
         title="平台审计日志"
         description={
           activeTab === 'login'
-            ? '记录平台管理员的所有登录和登出活动，用于安全审计和异常登录排查。'
+            ? '记录平台管理员的登录、登出、注册及提权进入/退出活动，用于安全审计和认证行为排查。'
             : '记录平台管理员的所有操作（用户管理、角色管理、租户管理等），用于平台级安全审计。'
         }
         headerIcon={headerIcon}

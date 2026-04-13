@@ -53,21 +53,3 @@ export const operationAdvancedSearchFields: AdvancedSearchField[] = [
   },
   { key: 'created_at', label: '时间范围', type: 'dateRange' },
 ];
-
-export const loginSearchFields: SearchField[] = [
-  { key: 'search', label: '全局搜索' },
-  { key: 'username', label: '用户名' },
-];
-
-export const loginAdvancedSearchFields: AdvancedSearchField[] = [
-  { key: 'search', label: '关键字', type: 'input', placeholder: '搜索用户名 / IP 地址' },
-  { key: 'username__exact', label: '用户名', type: 'input', placeholder: '精确用户名' },
-  {
-    key: 'status',
-    label: '操作结果',
-    type: 'select',
-    placeholder: '全部状态',
-    options: AUDIT_RESULT_OPTIONS,
-  },
-  { key: 'created_at', label: '时间范围', type: 'dateRange' },
-];

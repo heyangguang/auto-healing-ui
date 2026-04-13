@@ -20,8 +20,8 @@ import type { AuditLogRecord } from '@/pages/system/audit-logs/types';
 
 const { Text } = Typography;
 
-const LOGIN_ACTIONS = ['login', 'logout', 'impersonation_enter', 'impersonation_exit'];
-const LOGIN_RESOURCES = ['auth', 'auth-logout', 'impersonation'];
+const LOGIN_ACTIONS = ['login', 'logout', 'register', 'impersonation_enter', 'impersonation_exit'];
+const LOGIN_RESOURCES = ['auth', 'auth-logout', 'auth-register', 'impersonation'];
 
 const riskMap: Record<string, { color: string; label: string }> = {
   critical: { color: 'red', label: '极高' },
