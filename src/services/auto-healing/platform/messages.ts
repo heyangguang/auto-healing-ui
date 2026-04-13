@@ -32,11 +32,6 @@ export interface TenantScopedSiteMessageCreateResult {
     created_count: number;
 }
 
-export interface SiteMessageSettings {
-    retention_days: number;
-    updated_at?: string;
-}
-
 export interface CreateSiteMessageParams {
     category: string;
     title: string;
@@ -60,20 +55,4 @@ export async function createSiteMessage(data: CreateSiteMessageParams) {
         '/api/v1/platform/site-messages',
         { method: 'POST', data },
     )) as CreatedSiteMessage | TenantScopedSiteMessageCreateResult;
-}
-
-/** 获取站内信设置（平台管理员） */
-export async function getSiteMessageSettings() {
-    return unwrapData(await request<{ data: SiteMessageSettings }>(
-        '/api/v1/platform/site-messages/settings',
-        { method: 'GET' },
-    )) as SiteMessageSettings;
-}
-
-/** 更新站内信设置（平台管理员） */
-export async function updateSiteMessageSettings(data: Pick<SiteMessageSettings, 'retention_days'>) {
-    return unwrapData(await request<{ data: SiteMessageSettings }>(
-        '/api/v1/platform/site-messages/settings',
-        { method: 'PUT', data },
-    )) as SiteMessageSettings;
 }
