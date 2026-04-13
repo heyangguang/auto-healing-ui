@@ -9,6 +9,7 @@ import {
   Switch,
 } from 'antd';
 import type { FormInstance } from 'antd';
+import type { SelectProps } from 'antd';
 import {
   CheckCircleOutlined,
   CopyOutlined,
@@ -32,11 +33,16 @@ type SelectableUser = {
 type TenantRoleSelectProps = {
   tenantRoles: TenantRole[];
   tenantRolesLoadFailed: boolean;
-};
+} & SelectProps<string>;
 
-function TenantRoleSelectOptions({ tenantRoles, tenantRolesLoadFailed }: TenantRoleSelectProps) {
+export function TenantRoleSelectOptions({
+  tenantRoles,
+  tenantRolesLoadFailed,
+  ...selectProps
+}: TenantRoleSelectProps) {
   return (
     <Select
+      {...selectProps}
       placeholder="选择角色"
       notFoundContent={tenantRolesLoadFailed ? '角色加载失败，请刷新页面后重试' : '暂无可选角色'}
     >
