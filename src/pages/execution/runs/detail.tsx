@@ -110,10 +110,7 @@ const ExecutionRunDetail: React.FC = () => {
                 if (!streamSequenceRef.current.isCurrent(token)) return;
                 markStreamClosed();
                 setLogLoadError('实时日志连接失败，请刷新后重试');
-                void Promise.all([
-                    loadRun({ runId, token: detailToken }),
-                    loadLogs({ merge: true, runId, token: detailToken }),
-                ]);
+                void refreshRunDetailRef.current?.({ allowRecentFinal: false });
             },
         );
         closeStreamRef.current = closeStream;

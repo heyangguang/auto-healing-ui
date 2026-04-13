@@ -86,7 +86,13 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
         }, () => {
             if (!requestSequenceRef.current.isCurrent(token)) return;
             markStreamClosed();
-            void refreshSnapshot(id, token);
+            void refreshSnapshot(id, token).then((runData) => {
+                if (!requestSequenceRef.current.isCurrent(token)) return;
+                const shouldStream = runData?.status === 'running' || runData?.status === 'pending';
+                if (shouldStream) {
+                    startStream(id, token);
+                }
+            });
         });
         closeStreamRef.current = close;
     }, [closeCurrentStream, markStreamClosed, refreshSnapshot]);
