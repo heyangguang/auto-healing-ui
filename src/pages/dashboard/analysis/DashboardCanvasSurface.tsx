@@ -10,6 +10,7 @@ const BREAKPOINT_COLS = { lg: 12, md: 10, sm: 6, xs: 4 } as const;
 
 type DashboardCanvasSurfaceProps = {
   activeWorkspace: DashboardWorkspace;
+  canEditActiveWorkspace: boolean;
   containerRef: React.RefObject<HTMLDivElement | null>;
   headerExtra: React.ReactNode;
   isEditing: boolean;
@@ -24,6 +25,7 @@ type DashboardCanvasSurfaceProps = {
 
 const DashboardCanvasSurface: React.FC<DashboardCanvasSurfaceProps> = ({
   activeWorkspace,
+  canEditActiveWorkspace,
   containerRef,
   headerExtra,
   isEditing,
@@ -44,11 +46,13 @@ const DashboardCanvasSurface: React.FC<DashboardCanvasSurfaceProps> = ({
     {activeWorkspace.widgets.length === 0 ? (
       <div style={{ minHeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', border: '2px dashed #e0e0e0' }}>
         <Empty
-          description={<Typography.Text type="secondary" style={{ fontSize: 14 }}>工作区为空，点击添加组件开始构建仪表盘</Typography.Text>}
+          description={<Typography.Text type="secondary" style={{ fontSize: 14 }}>{canEditActiveWorkspace ? '工作区为空，点击添加组件开始构建仪表盘' : '当前工作区为只读视图，请切换到可编辑工作区或复制副本'}</Typography.Text>}
         >
-          <Button type="primary" size="large" icon={<AppstoreAddOutlined />} onClick={onOpenAddWidgetDrawer} style={{ borderRadius: 0 }}>
-            添加组件
-          </Button>
+          {canEditActiveWorkspace && (
+            <Button type="primary" size="large" icon={<AppstoreAddOutlined />} onClick={onOpenAddWidgetDrawer} style={{ borderRadius: 0 }}>
+              添加组件
+            </Button>
+          )}
         </Empty>
       </div>
     ) : (

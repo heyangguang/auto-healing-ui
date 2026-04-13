@@ -49,17 +49,14 @@ export function mergeSystemWorkspaces(
     };
   }
 
-  const userWorkspaces = nonSystemWorkspaces.filter((workspace) => workspace.id !== 'default');
-  const mergedWorkspaces = [...systemWorkspaces.map(toSystemWorkspace), ...userWorkspaces];
+  const mergedWorkspaces = [...systemWorkspaces.map(toSystemWorkspace), ...nonSystemWorkspaces];
 
   return {
     ...previousState,
     workspaces: mergedWorkspaces,
     activeWorkspaceId: resolveActiveWorkspaceId(
       mergedWorkspaces,
-      previousState.activeWorkspaceId === 'default'
-        ? mergedWorkspaces[0]?.id || previousState.activeWorkspaceId
-        : previousState.activeWorkspaceId,
+      previousState.activeWorkspaceId,
       preferredActiveWorkspaceId,
     ),
   };

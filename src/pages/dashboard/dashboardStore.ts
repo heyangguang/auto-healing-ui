@@ -47,6 +47,12 @@ export interface DashboardState {
 // ==================== 常量 ====================
 
 const STORAGE_KEY_PREFIX = 'auto_healing_dashboard_v5';
+const LEGACY_STORAGE_PREFIXES = [
+    'auto_healing_dashboard_v1',
+    'auto_healing_dashboard_v2',
+    'auto_healing_dashboard_v3',
+    'auto_healing_dashboard_v4',
+] as const;
 
 // ==================== 默认布局 ====================
 
@@ -119,7 +125,7 @@ export function loadDashboardState(): DashboardState {
         if (raw) {
             const parsed = JSON.parse(raw) as DashboardState;
             // 验证基本结构
-            if (parsed.workspaces && parsed.workspaces.length > 0 && parsed.activeWorkspaceId) {
+            if (Array.isArray(parsed.workspaces) && typeof parsed.activeWorkspaceId === 'string') {
                 return parsed;
             }
         }
@@ -136,6 +142,10 @@ export function saveDashboardState(state: DashboardState): void {
             ...state,
             workspaces: state.workspaces.filter(ws => !ws.isSystem),
         };
+        if (userState.workspaces.length === 0) {
+            localStorage.setItem(getDashboardStorageKey(), JSON.stringify(userState));
+            return;
+        }
         // If active workspace is a system one, reset to first user workspace
         if (!userState.workspaces.find(ws => ws.id === userState.activeWorkspaceId)) {
             userState.activeWorkspaceId = userState.workspaces[0]?.id || 'default';
@@ -151,14 +161,19 @@ export function saveDashboardState(state: DashboardState): void {
  */
 export function clearLegacyCache(): void {
     try {
-        const scopedKeys = Object.keys(localStorage).filter((key) => key.startsWith(STORAGE_KEY_PREFIX));
+        const scopedKeys: string[] = [];
+        for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index);
+            if (!key) {
+                continue;
+            }
+            if (LEGACY_STORAGE_PREFIXES.some((prefix) => key === prefix || key.startsWith(`${prefix}:`))) {
+                scopedKeys.push(key);
+            }
+        }
         for (const key of scopedKeys) {
             localStorage.removeItem(key);
         }
-        localStorage.removeItem('auto_healing_dashboard_v1');
-        localStorage.removeItem('auto_healing_dashboard_v2');
-        localStorage.removeItem('auto_healing_dashboard_v3');
-        localStorage.removeItem('auto_healing_dashboard_v4');
     } catch { /* ignore */ }
 }
 

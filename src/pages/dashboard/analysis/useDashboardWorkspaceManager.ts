@@ -1,5 +1,6 @@
 import { message } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import {
   clearLegacyCache,
   loadDashboardState,
@@ -17,6 +18,10 @@ import type {
   DashboardConfigPayload,
   DashboardRenameState,
 } from './dashboardWorkspaceTypes';
+import {
+  canEditDashboardWorkspace,
+  getWorkspaceEditDeniedMessage,
+} from './dashboardWorkspaceMeta';
 import { mergeSystemWorkspaces } from './dashboardWorkspaceState';
 import { useDashboardWorkspaceActions } from './useDashboardWorkspaceActions';
 
@@ -35,6 +40,12 @@ export const useDashboardWorkspaceManager = ({
   generateResponsiveLayouts,
   layoutsAreEqual,
 }: UseDashboardWorkspaceManagerOptions) => {
+  const emptyWorkspace: DashboardWorkspace = {
+    id: '',
+    name: '',
+    widgets: [],
+    layouts: [],
+  };
   const [state, setState] = useState<DashboardState>(() => {
     clearLegacyCache();
     return loadDashboardState();
@@ -100,12 +111,13 @@ export const useDashboardWorkspaceManager = ({
           widgets: workspace.widgets,
           layouts: workspace.layouts,
         },
-      }).catch(async () => {
+      }).catch(async (error) => {
+        const errorMessage = extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '系统工作区保存失败');
         try {
           await syncRemoteSystemWorkspaces(realId);
-          message.error('系统工作区保存失败，已恢复到服务端版本');
+          message.error(`${errorMessage}，已恢复到服务端版本`);
         } catch {
-          message.error('系统工作区保存失败，且最新配置同步失败，请刷新页面。');
+          message.error(`${errorMessage}，且最新配置同步失败，请刷新页面。`);
         }
       });
     }, 1000);
@@ -127,17 +139,30 @@ export const useDashboardWorkspaceManager = ({
   }, [canManageSystemWorkspaces, saveSystemWorkspaceToBackend]);
 
   const activeWorkspace = useMemo(
-    () => state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId) || state.workspaces[0],
+    () => state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId)
+      || state.workspaces[0]
+      || emptyWorkspace,
     [state],
+  );
+  const hasActiveWorkspace = Boolean(activeWorkspace.id);
+  const canEditActiveWorkspace = useMemo(
+    () => hasActiveWorkspace && canEditDashboardWorkspace(activeWorkspace, {
+      canManageDashboardConfig,
+      canManageSystemWorkspaces,
+    }),
+    [activeWorkspace, canManageDashboardConfig, canManageSystemWorkspaces, hasActiveWorkspace],
   );
 
   useEffect(() => {
-    if (!isEditing || !activeWorkspace?.isSystem || canManageSystemWorkspaces) {
+    if (!isEditing || !hasActiveWorkspace || canEditActiveWorkspace) {
       return;
     }
     setIsEditing(false);
-    message.warning('你没有权限编辑系统工作区');
-  }, [activeWorkspace?.id, activeWorkspace?.isSystem, canManageSystemWorkspaces, isEditing]);
+    message.warning(getWorkspaceEditDeniedMessage(activeWorkspace, {
+      canManageDashboardConfig,
+      canManageSystemWorkspaces,
+    }));
+  }, [activeWorkspace, canEditActiveWorkspace, canManageDashboardConfig, canManageSystemWorkspaces, hasActiveWorkspace, isEditing]);
 
   const notifyWorkspaceMutation = useCallback((label: string, isSystem?: boolean) => {
     if (isSystem) {
@@ -165,6 +190,7 @@ export const useDashboardWorkspaceManager = ({
     handleToggleWidget,
   } = useDashboardWorkspaceActions({
     activeWorkspace,
+    canManageSystemWorkspaces,
     autoArrangeLayouts,
     canManageDashboardConfig,
     layoutsAreEqual,
@@ -185,6 +211,7 @@ export const useDashboardWorkspaceManager = ({
 
   return {
     activeWorkspace,
+    canEditActiveWorkspace,
     handleAddWorkspace,
     handleAutoLayout,
     handleDeleteWorkspace,

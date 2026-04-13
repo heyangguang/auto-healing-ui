@@ -1,16 +1,18 @@
 import React from 'react';
-import { Checkbox, Tag } from 'antd';
+import { Alert, Checkbox, Tag } from 'antd';
 import { AppstoreOutlined } from '@ant-design/icons';
 import type { WorkspaceSummary } from './roleFormTypes';
 
 type RoleFormWorkspaceSectionProps = {
   allWorkspaces: WorkspaceSummary[];
+  errorMessage?: string;
   selectedWorkspaceIds: string[];
   onToggle: (workspaceId: string, checked: boolean) => void;
 };
 
 const RoleFormWorkspaceSection: React.FC<RoleFormWorkspaceSectionProps> = ({
   allWorkspaces,
+  errorMessage,
   selectedWorkspaceIds,
   onToggle,
 }) => (
@@ -24,7 +26,15 @@ const RoleFormWorkspaceSection: React.FC<RoleFormWorkspaceSectionProps> = ({
       </span>
     </div>
     <div className="role-form-ws-container">
-      {allWorkspaces.length === 0 && (
+      {errorMessage && (
+        <Alert
+          type="warning"
+          showIcon
+          title={errorMessage}
+          style={{ marginBottom: 12, borderRadius: 0 }}
+        />
+      )}
+      {!errorMessage && allWorkspaces.length === 0 && (
         <div style={{ color: '#bfbfbf', textAlign: 'center', padding: 40 }}>
           暂无系统工作区
         </div>

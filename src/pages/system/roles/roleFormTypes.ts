@@ -22,6 +22,11 @@ export type RoleWorkspaceAssignment = {
   workspace_ids?: string[];
 };
 
+export type RoleWorkspaceState = {
+  errorMessage?: string;
+  status: 'loaded' | 'forbidden' | 'error';
+};
+
 export type RoleUserAssignmentFailure = {
   userId: string;
   op: 'assign' | 'remove';

@@ -11,6 +11,7 @@ import type { RoleDrawerDetail } from './rolePageTypes';
 const { Text } = Typography;
 
 type RoleAccess = {
+    canManageWorkspace: boolean;
     canUpdateRole: boolean;
     canDeleteRole: boolean;
 };
@@ -59,17 +60,18 @@ const RoleDetailDrawer: React.FC<RoleDetailDrawerProps> = ({ open, role, loading
                                 >
                                     分配用户
                                 </Button>
-                                <Button
-                                    size="small"
-                                    icon={<AppstoreOutlined />}
-                                    disabled={!access.canUpdateRole}
-                                    onClick={() => {
-                                        onClose();
-                                        history.push(`/system/roles/${role.id}/edit`);
-                                    }}
-                                >
-                                    分配工作区
-                                </Button>
+                                {access.canManageWorkspace && (
+                                    <Button
+                                        size="small"
+                                        icon={<AppstoreOutlined />}
+                                        onClick={() => {
+                                            onClose();
+                                            history.push(`/system/roles/${role.id}/edit`);
+                                        }}
+                                    >
+                                        分配工作区
+                                    </Button>
+                                )}
                                 {!role.is_system && (
                                     <>
                                         <Button
@@ -173,10 +175,14 @@ const RoleDetailDrawer: React.FC<RoleDetailDrawerProps> = ({ open, role, loading
                             <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <AppstoreOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
                                 <Text type="secondary" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-                                    工作区分配 ({role._workspaceNames?.length || 0})
+                                    工作区分配 ({role._workspaceStatus === 'loaded' ? (role._workspaceNames?.length || 0) : 0})
                                 </Text>
                             </div>
-                            {role._workspaceNames && role._workspaceNames.length > 0 ? (
+                            {role._workspaceStatus === 'forbidden' ? (
+                                <Text type="secondary" style={{ fontStyle: 'italic' }}>{role._workspaceMessage || '你没有权限查看工作区分配'}</Text>
+                            ) : role._workspaceStatus === 'error' ? (
+                                <Text type="danger" style={{ fontStyle: 'italic' }}>{role._workspaceMessage || '工作区分配加载失败'}</Text>
+                            ) : role._workspaceNames && role._workspaceNames.length > 0 ? (
                                 <Space size={[4, 4]} wrap>
                                     {(() => {
                                         const workspaceNameCounts = new Map<string, number>();

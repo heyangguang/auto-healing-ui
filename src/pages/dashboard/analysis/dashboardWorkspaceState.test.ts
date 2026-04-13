@@ -28,10 +28,41 @@ describe('dashboardWorkspaceState helpers', () => {
     expect(nextState.activeWorkspaceId).toBe('ws-1');
   });
 
-  it('replaces the saved workspace without producing an empty active state', () => {
+  it('keeps default and user workspaces when system workspaces are merged in', () => {
+    const nextState = mergeSystemWorkspaces(
+      buildState(
+        [
+          { id: 'default', name: '运维总览', widgets: [], layouts: [] },
+          { id: 'ws-1', name: '我的工作区', widgets: [], layouts: [] },
+        ],
+        'default',
+      ),
+      [{ id: 'server-1', is_default: true, name: '系统工作区', config: { widgets: [], layouts: [] } }],
+    );
+
+    expect(nextState.workspaces).toEqual([
+      {
+        id: 'sys-server-1',
+        name: '系统工作区',
+        widgets: [],
+        layouts: [],
+        isDefault: true,
+        isSystem: true,
+        isReadOnly: false,
+      },
+      { id: 'default', name: '运维总览', widgets: [], layouts: [] },
+      { id: 'ws-1', name: '我的工作区', widgets: [], layouts: [] },
+    ]);
+    expect(nextState.activeWorkspaceId).toBe('default');
+  });
+
+  it('removes the converted local workspace and focuses the new system workspace', () => {
     const { nextState, synced } = buildStateAfterSavingSystemWorkspace(
       buildState(
-        [{ id: 'default', name: '默认工作区', widgets: [{ instanceId: 'w-1', widgetId: 'stat-1' }], layouts: [{ i: 'w-1', x: 0, y: 0, w: 2, h: 2 }] }],
+        [
+          { id: 'default', name: '默认工作区', widgets: [{ instanceId: 'w-1', widgetId: 'stat-1' }], layouts: [{ i: 'w-1', x: 0, y: 0, w: 2, h: 2 }] },
+          { id: 'ws-1', name: '我的工作区', widgets: [], layouts: [] },
+        ],
         'default',
       ),
       'default',
@@ -49,6 +80,12 @@ describe('dashboardWorkspaceState helpers', () => {
         isDefault: true,
         isSystem: true,
         isReadOnly: false,
+      },
+      {
+        id: 'ws-1',
+        name: '我的工作区',
+        widgets: [],
+        layouts: [],
       },
     ]);
     expect(nextState.activeWorkspaceId).toBe('sys-server-1');

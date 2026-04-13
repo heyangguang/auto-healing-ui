@@ -85,9 +85,10 @@ export async function createSystemWorkspace(data: SystemWorkspacePayload) {
 }
 
 /** GET /api/v1/tenant/dashboard/workspaces */
-export async function listSystemWorkspaces() {
+export async function listSystemWorkspaces(options: DashboardRequestOptions = {}) {
     return unwrapItems<SystemWorkspaceRecord>(await request<AutoHealing.PaginatedResponse<SystemWorkspaceRecord>>('/api/v1/tenant/dashboard/workspaces', {
         method: 'GET',
+        ...options,
     }));
 }
 
@@ -109,9 +110,10 @@ export async function deleteSystemWorkspace(id: string) {
 // ==================== 角色-工作区关联 ====================
 
 /** GET /api/v1/tenant/dashboard/roles/:roleId/workspaces */
-export async function getRoleWorkspaces(roleId: string) {
+export async function getRoleWorkspaces(roleId: string, options: DashboardRequestOptions = {}) {
     return unwrapData(await request<RoleWorkspaceBindingEnvelope | RoleWorkspaceBinding>(`/api/v1/tenant/dashboard/roles/${roleId}/workspaces`, {
         method: 'GET',
+        ...options,
     }));
 }
 

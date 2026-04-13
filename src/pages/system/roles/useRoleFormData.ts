@@ -5,20 +5,28 @@ import { getPermissionTree } from '@/services/auto-healing/permissions';
 import { getUsers, getSimpleUsers } from '@/services/auto-healing/users';
 import { getRoleWorkspaces, listSystemWorkspaces } from '@/services/auto-healing/dashboard';
 import { getDefaultWorkspaceIds } from './roleFormHelpers';
+import {
+  getRoleWorkspaceErrorMessage,
+  isRoleWorkspaceForbiddenError,
+  ROLE_WORKSPACE_MANAGE_DENIED_MESSAGE,
+} from './roleWorkspaceFeedback';
 import type {
   AssignableUser,
   RoleFormValues,
   RoleWorkspaceAssignment,
+  RoleWorkspaceState,
   WorkspaceSummary,
 } from './roleFormTypes';
 
 type UseRoleFormDataOptions = {
+  canManageWorkspace: boolean;
   form: FormInstance<RoleFormValues>;
   isEdit: boolean;
   roleId?: string;
 };
 
 export const useRoleFormData = ({
+  canManageWorkspace,
   form,
   isEdit,
   roleId,
@@ -35,6 +43,7 @@ export const useRoleFormData = ({
   const [originalUserIds, setOriginalUserIds] = useState<string[]>([]);
   const [allWorkspaces, setAllWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [selectedWsIds, setSelectedWsIds] = useState<string[]>([]);
+  const [workspaceState, setWorkspaceState] = useState<RoleWorkspaceState>({ status: 'loaded' });
 
   useEffect(() => {
     (async () => {
@@ -50,20 +59,36 @@ export const useRoleFormData = ({
   }, []);
 
   useEffect(() => {
+    if (!canManageWorkspace) {
+      setWorkspaceState({ errorMessage: ROLE_WORKSPACE_MANAGE_DENIED_MESSAGE, status: 'forbidden' });
+      setWsLoading(false);
+      return;
+    }
     (async () => {
       try {
-        const workspaces = await listSystemWorkspaces() as WorkspaceSummary[];
+        const workspaces = await listSystemWorkspaces({
+          skipErrorHandler: true,
+          suppressForbiddenError: true,
+        }) as WorkspaceSummary[];
         setAllWorkspaces(workspaces);
+        setWorkspaceState({ status: 'loaded' });
         if (!isEdit) {
           setSelectedWsIds(getDefaultWorkspaceIds(workspaces));
         }
-      } catch {
-        /* ignore */
+      } catch (error) {
+        if (isRoleWorkspaceForbiddenError(error)) {
+          setWorkspaceState({ errorMessage: ROLE_WORKSPACE_MANAGE_DENIED_MESSAGE, status: 'forbidden' });
+        } else {
+          setWorkspaceState({
+            errorMessage: getRoleWorkspaceErrorMessage(error, '工作区列表加载失败，请稍后重试'),
+            status: 'error',
+          });
+        }
       } finally {
         setWsLoading(false);
       }
     })();
-  }, [isEdit]);
+  }, [canManageWorkspace, isEdit]);
 
   useEffect(() => {
     (async () => {
@@ -126,16 +151,26 @@ export const useRoleFormData = ({
   }, [isEdit, roleId]);
 
   useEffect(() => {
-    if (!isEdit || !roleId) return;
+    if (!canManageWorkspace || !isEdit || !roleId) return;
     (async () => {
       try {
-        const data = await getRoleWorkspaces(roleId) as RoleWorkspaceAssignment;
+        const data = await getRoleWorkspaces(roleId, {
+          skipErrorHandler: true,
+          suppressForbiddenError: true,
+        }) as RoleWorkspaceAssignment;
         setSelectedWsIds(data.workspace_ids || []);
-      } catch {
-        /* ignore */
+      } catch (error) {
+        if (isRoleWorkspaceForbiddenError(error)) {
+          setWorkspaceState({ errorMessage: ROLE_WORKSPACE_MANAGE_DENIED_MESSAGE, status: 'forbidden' });
+          return;
+        }
+        setWorkspaceState({
+          errorMessage: getRoleWorkspaceErrorMessage(error, '工作区分配加载失败，请稍后重试'),
+          status: 'error',
+        });
       }
     })();
-  }, [isEdit, roleId]);
+  }, [canManageWorkspace, isEdit, roleId]);
 
   return {
     pageLoading: permLoading || roleLoading || usersLoading || wsLoading,
@@ -150,5 +185,6 @@ export const useRoleFormData = ({
     allWorkspaces,
     selectedWsIds,
     setSelectedWsIds,
+    workspaceState,
   };
 };

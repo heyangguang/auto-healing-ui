@@ -6,6 +6,7 @@ import SubPageHeader from '@/components/SubPageHeader';
 import { createRole, updateRole, assignRolePermissions } from '@/services/auto-healing/roles';
 import { assignUserRoles } from '@/services/auto-healing/users';
 import { assignRoleWorkspaces } from '@/services/auto-healing/dashboard';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import './RoleForm.css';
 import RoleFormPermissionsSection from './RoleFormPermissionsSection';
 import RoleFormUserTransferSection from './RoleFormUserTransferSection';
@@ -42,7 +43,8 @@ const RoleFormPage: React.FC = () => {
         allWorkspaces,
         selectedWsIds,
         setSelectedWsIds,
-    } = useRoleFormData({ form, isEdit, roleId: params.id });
+        workspaceState,
+    } = useRoleFormData({ canManageWorkspace: !!access.canManageWorkspace, form, isEdit, roleId: params.id });
 
     const handleGoBack = () => {
         if (window.history.length > 1) history.back();
@@ -120,9 +122,10 @@ const RoleFormPage: React.FC = () => {
                     await assignRolePermissions(params.id, { permission_ids: checkedKeys });
                 }
                 const { failures } = await updateUserAssignments(params.id);
-                // 保存工作区分配（排除默认工作区，默认工作区自动包含）
-                const nonDefaultIds = getNonDefaultWorkspaceIds(selectedWsIds, allWorkspaces);
-                await assignRoleWorkspaces(params.id, nonDefaultIds);
+                if (access.canManageWorkspace) {
+                    const nonDefaultIds = getNonDefaultWorkspaceIds(selectedWsIds, allWorkspaces);
+                    await assignRoleWorkspaces(params.id, nonDefaultIds);
+                }
                 if (failures.length > 0) {
                     showUserAssignmentWarning({
                         title: '角色已保存，但部分用户分配失败',
@@ -153,10 +156,11 @@ const RoleFormPage: React.FC = () => {
                             return;
                         }
                     }
-                    // 保存工作区分配
-                    const nonDefaultIds = getNonDefaultWorkspaceIds(selectedWsIds, allWorkspaces);
-                    if (nonDefaultIds.length > 0) {
-                        await assignRoleWorkspaces(newRoleId, nonDefaultIds);
+                    if (access.canManageWorkspace) {
+                        const nonDefaultIds = getNonDefaultWorkspaceIds(selectedWsIds, allWorkspaces);
+                        if (nonDefaultIds.length > 0) {
+                            await assignRoleWorkspaces(newRoleId, nonDefaultIds);
+                        }
                     }
                 }
                 message.success('创建成功');
@@ -164,7 +168,7 @@ const RoleFormPage: React.FC = () => {
             history.push('/system/roles');
         } catch (error: unknown) {
             if (isFormValidationError(error)) return;
-            message.error(isEdit ? '更新失败' : '创建失败');
+            message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], isEdit ? '更新失败' : '创建失败'));
         } finally {
             setSubmitting(false);
         }
@@ -173,7 +177,9 @@ const RoleFormPage: React.FC = () => {
     return (
         <div className="role-form-page">
             <SubPageHeader
-                title={isSystemRole ? '分配用户与工作区' : isEdit ? '编辑角色' : '创建角色'}
+                title={isSystemRole
+                    ? (access.canManageWorkspace ? '分配用户与工作区' : '分配用户')
+                    : isEdit ? '编辑角色' : '创建角色'}
                 onBack={handleGoBack}
             />
 
@@ -206,11 +212,14 @@ const RoleFormPage: React.FC = () => {
                                 selectedUserIds={selectedUserIds}
                                 onChange={setSelectedUserIds}
                             />
-                            <RoleFormWorkspaceSection
-                                allWorkspaces={allWorkspaces}
-                                selectedWorkspaceIds={selectedWsIds}
-                                onToggle={handleWsToggle}
-                            />
+                            {access.canManageWorkspace && (
+                                <RoleFormWorkspaceSection
+                                    allWorkspaces={allWorkspaces}
+                                    errorMessage={workspaceState.status !== 'loaded' ? workspaceState.errorMessage : undefined}
+                                    selectedWorkspaceIds={selectedWsIds}
+                                    onToggle={handleWsToggle}
+                                />
+                            )}
 
                             {/* 权限分配 — 仅非系统角色 */}
                             {!isSystemRole && (

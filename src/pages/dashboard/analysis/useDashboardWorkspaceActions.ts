@@ -1,5 +1,6 @@
 import { message } from 'antd';
 import { useCallback } from 'react';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import {
   saveDashboardState,
   type DashboardState,
@@ -18,10 +19,17 @@ import {
   removeWidgetFromDashboardWorkspace,
   updateDashboardWorkspaceLayouts,
 } from './dashboardWorkspaceActionState';
+import {
+  canDeleteDashboardWorkspace,
+  canEditDashboardWorkspace,
+  getWorkspaceEditDeniedMessage,
+  isLocalDefaultWorkspace,
+} from './dashboardWorkspaceMeta';
 type UseDashboardWorkspaceActionsOptions = {
   activeWorkspace: DashboardWorkspace;
   autoArrangeLayouts: (widgets: WidgetInstance[], currentLayouts: LayoutItem[]) => LayoutItem[];
   canManageDashboardConfig: boolean;
+  canManageSystemWorkspaces: boolean;
   layoutsAreEqual: (left: readonly LayoutItem[], right: readonly LayoutItem[]) => boolean;
   notifyWorkspaceMutation: (label: string, isSystem?: boolean) => void;
   renameModal: DashboardRenameState;
@@ -41,6 +49,7 @@ export const useDashboardWorkspaceActions = ({
   activeWorkspace,
   autoArrangeLayouts,
   canManageDashboardConfig,
+  canManageSystemWorkspaces,
   layoutsAreEqual,
   notifyWorkspaceMutation,
   renameModal,
@@ -79,6 +88,10 @@ export const useDashboardWorkspaceActions = ({
   }, [canManageDashboardConfig, notifyWorkspaceMutation, saveState, setIsEditing, state]);
 
   const handleDuplicateWorkspace = useCallback((workspace: DashboardWorkspace) => {
+    if (!canManageDashboardConfig) {
+      message.warning('你没有权限创建工作区');
+      return;
+    }
     const duplicatedWorkspace = duplicateDashboardWorkspace(workspace);
     saveState({
       ...state,
@@ -86,9 +99,16 @@ export const useDashboardWorkspaceActions = ({
       activeWorkspaceId: duplicatedWorkspace.id,
     });
     notifyWorkspaceMutation('已复制工作区');
-  }, [notifyWorkspaceMutation, saveState, state]);
+  }, [canManageDashboardConfig, notifyWorkspaceMutation, saveState, state]);
 
   const handleSaveAsSystem = useCallback(async () => {
+    if (!canManageSystemWorkspaces) {
+      message.warning('你没有权限创建系统工作区');
+      return;
+    }
+    if (!activeWorkspace.id || activeWorkspace.isSystem) {
+      return;
+    }
     if (!systemWsName.trim()) {
       message.warning('请输入工作区名称');
       return;
@@ -130,30 +150,44 @@ export const useDashboardWorkspaceActions = ({
         } else {
           message.error('系统工作区已创建，但最新列表尚未同步到本地，请稍后刷新页面。');
         }
-      } catch {
-        message.error('系统工作区已创建，但本地状态同步失败，请刷新页面。');
+      } catch (error) {
+        message.error(`${extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '系统工作区已创建，但本地状态同步失败')}，请刷新页面。`);
       }
       setIsEditing(false);
-    } catch {
-      message.error('保存系统工作区失败');
+    } catch (error) {
+      message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '保存系统工作区失败'));
     }
-  }, [activeWorkspace, setIsEditing, setSaveSystemModalOpen, setState, setSystemWsDesc, setSystemWsName, systemWsDesc, systemWsName]);
+  }, [activeWorkspace, canManageSystemWorkspaces, setIsEditing, setSaveSystemModalOpen, setState, setSystemWsDesc, setSystemWsName, systemWsDesc, systemWsName]);
 
   const handleDeleteWorkspace = useCallback(async (id: string) => {
-    if (state.workspaces.length <= 1) {
-      message.warning('至少保留一个工作区');
+    const workspace = state.workspaces.find((item) => item.id === id) as (DashboardWorkspace & { isDefault?: boolean }) | undefined;
+    if (!workspace) {
       return;
     }
-    const workspace = state.workspaces.find((item) => item.id === id) as (DashboardWorkspace & { isDefault?: boolean }) | undefined;
-    if (workspace?.isDefault) {
-      message.warning('默认工作区不可删除');
+    if (!canDeleteDashboardWorkspace(workspace, state.workspaces.length, {
+      canManageDashboardConfig,
+      canManageSystemWorkspaces,
+    })) {
+      if (state.workspaces.length <= 1) {
+        message.warning('至少保留一个工作区');
+        return;
+      }
+      if (workspace.isReadOnly) {
+        message.warning('只读系统工作区不可删除');
+        return;
+      }
+      if (isLocalDefaultWorkspace(workspace) || workspace.isDefault) {
+        message.warning('默认工作区不可删除');
+        return;
+      }
       return;
     }
     if (workspace?.isSystem) {
       try {
         await deleteSystemWorkspace(id.replace(/^sys-/, ''));
         message.success('系统工作区已删除');
-      } catch {
+      } catch (error) {
+        message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '删除系统工作区失败'));
         return;
       }
     }
@@ -166,17 +200,26 @@ export const useDashboardWorkspaceActions = ({
     if (!workspace?.isSystem) {
       message.success('工作区已删除');
     }
-  }, [saveState, state]);
+  }, [canManageDashboardConfig, canManageSystemWorkspaces, saveState, state]);
 
   const handleRename = useCallback(() => {
-    if (!canManageDashboardConfig) {
-      message.warning('你没有权限重命名工作区');
-      return;
-    }
     if (!renameModal.name.trim()) {
       return;
     }
     const targetWorkspace = state.workspaces.find((workspace) => workspace.id === renameModal.id);
+    if (!targetWorkspace) {
+      return;
+    }
+    if (!canEditDashboardWorkspace(targetWorkspace, {
+      canManageDashboardConfig,
+      canManageSystemWorkspaces,
+    })) {
+      message.warning(getWorkspaceEditDeniedMessage(targetWorkspace, {
+        canManageDashboardConfig,
+        canManageSystemWorkspaces,
+      }));
+      return;
+    }
     saveState({
       ...state,
       workspaces: state.workspaces.map((workspace) => (
@@ -187,7 +230,7 @@ export const useDashboardWorkspaceActions = ({
     });
     setRenameModal({ open: false, id: '', name: '' });
     notifyWorkspaceMutation('已重命名', targetWorkspace?.isSystem);
-  }, [canManageDashboardConfig, notifyWorkspaceMutation, renameModal, saveState, setRenameModal, state]);
+  }, [canManageDashboardConfig, canManageSystemWorkspaces, notifyWorkspaceMutation, renameModal, saveState, setRenameModal, state]);
 
   const handleLayoutChange = useCallback((layout: readonly LayoutItem[], allLayouts: { lg?: readonly LayoutItem[]; md?: readonly LayoutItem[]; sm?: readonly LayoutItem[]; xs?: readonly LayoutItem[] }) => {
     const currentLayout = allLayouts?.lg || layout;
@@ -229,8 +272,18 @@ export const useDashboardWorkspaceActions = ({
   }, [activeWorkspace, autoArrangeLayouts, notifyWorkspaceMutation, saveState, state]);
 
   const handleToggleEdit = useCallback(() => {
+    if (!canEditDashboardWorkspace(activeWorkspace, {
+      canManageDashboardConfig,
+      canManageSystemWorkspaces,
+    })) {
+      message.warning(getWorkspaceEditDeniedMessage(activeWorkspace, {
+        canManageDashboardConfig,
+        canManageSystemWorkspaces,
+      }));
+      return;
+    }
     setIsEditing((previous) => !previous);
-  }, [setIsEditing]);
+  }, [activeWorkspace, canManageDashboardConfig, canManageSystemWorkspaces, setIsEditing]);
 
   return {
     handleAddWorkspace,

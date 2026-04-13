@@ -7,6 +7,11 @@ import { getRoleWorkspaces, listSystemWorkspaces } from '@/services/auto-healing
 import RoleDetailDrawer from './RoleDetailDrawer';
 import RoleTableColumns from './RoleTableColumns';
 import {
+    getRoleWorkspaceErrorMessage,
+    isRoleWorkspaceForbiddenError,
+    ROLE_WORKSPACE_VIEW_DENIED_MESSAGE,
+} from './roleWorkspaceFeedback';
+import {
     getRoleKeywordFilter,
     roleSearchFields,
     rolesHeaderIcon,
@@ -45,29 +50,58 @@ const RolesPage: React.FC = () => {
         setDetailLoading(true);
 
         try {
-            const [roleResponse, workspaceIdsResponse, workspaceListResponse] = await Promise.all([
-                getRole(record.id),
-                getRoleWorkspaces(record.id).catch(() => null),
-                listSystemWorkspaces().catch(() => null),
-            ]);
+            const roleResponse = await getRole(record.id);
             if (detailRequestSeqRef.current !== requestSeq) {
                 return;
             }
 
-            const workspaceIds: string[] = workspaceIdsResponse?.workspace_ids || [];
-            const workspaceList = (workspaceListResponse || []) as WorkspaceSummary[];
-            const explicitWorkspaceNames = workspaceIds
-                .map((workspaceId) => workspaceList.find((workspace) => workspace.id === workspaceId)?.name)
-                .filter((workspaceName): workspaceName is string => Boolean(workspaceName));
-            const defaultWorkspaceNames = workspaceList
-                .filter((workspace) => workspace.is_default)
-                .map((workspace) => workspace.name)
-                .filter(Boolean);
+            if (!access.canManageWorkspace) {
+                setDetailRole({
+                    ...roleResponse,
+                    _workspaceMessage: ROLE_WORKSPACE_VIEW_DENIED_MESSAGE,
+                    _workspaceStatus: 'forbidden',
+                });
+                return;
+            }
+            try {
+                const [workspaceIdsResponse, workspaceListResponse] = await Promise.all([
+                    getRoleWorkspaces(record.id, {
+                        skipErrorHandler: true,
+                        suppressForbiddenError: true,
+                    }),
+                    listSystemWorkspaces({
+                        skipErrorHandler: true,
+                        suppressForbiddenError: true,
+                    }),
+                ]);
+                if (detailRequestSeqRef.current !== requestSeq) {
+                    return;
+                }
 
-            setDetailRole({
-                ...roleResponse,
-                _workspaceNames: Array.from(new Set([...defaultWorkspaceNames, ...explicitWorkspaceNames])),
-            });
+                const workspaceIds: string[] = workspaceIdsResponse?.workspace_ids || [];
+                const workspaceList = (workspaceListResponse || []) as WorkspaceSummary[];
+                const explicitWorkspaceNames = workspaceIds
+                    .map((workspaceId) => workspaceList.find((workspace) => workspace.id === workspaceId)?.name)
+                    .filter((workspaceName): workspaceName is string => Boolean(workspaceName));
+                const defaultWorkspaceNames = workspaceList
+                    .filter((workspace) => workspace.is_default)
+                    .map((workspace) => workspace.name)
+                    .filter(Boolean);
+
+                setDetailRole({
+                    ...roleResponse,
+                    _workspaceNames: Array.from(new Set([...defaultWorkspaceNames, ...explicitWorkspaceNames])),
+                    _workspaceStatus: 'loaded',
+                });
+            } catch (workspaceError) {
+                setDetailRole({
+                    ...roleResponse,
+                    _workspaceMessage: isRoleWorkspaceForbiddenError(workspaceError)
+                        ? ROLE_WORKSPACE_VIEW_DENIED_MESSAGE
+                        : getRoleWorkspaceErrorMessage(workspaceError, '工作区分配加载失败，请稍后重试'),
+                    _workspaceStatus: isRoleWorkspaceForbiddenError(workspaceError) ? 'forbidden' : 'error',
+                });
+            }
         } catch {
             /* global error handler */
         } finally {
@@ -75,7 +109,7 @@ const RolesPage: React.FC = () => {
                 setDetailLoading(false);
             }
         }
-    }, []);
+    }, [access.canManageWorkspace]);
 
     const handleRequest = useCallback(async (params: RoleRequestParams) => {
         const response = await getRoles({ name: getRoleKeywordFilter(params) });

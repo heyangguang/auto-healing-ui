@@ -36,6 +36,7 @@ const DashboardBuilder: React.FC = () => {
   const hasDashboardConfig = !!access.canManageDashboardConfig;
   const {
     activeWorkspace,
+    canEditActiveWorkspace,
     handleAddWorkspace,
     handleAutoLayout,
     handleDeleteWorkspace,
@@ -96,13 +97,14 @@ const DashboardBuilder: React.FC = () => {
     () => buildDashboardWidgetLibrarySections(search, access as Record<string, unknown>),
     [access, search],
   );
+  const isEditingActiveWorkspace = isEditing && canEditActiveWorkspace;
 
   const headerExtra = (
     <DashboardWorkspaceHeader
       activeWorkspace={activeWorkspace}
       hasDashboardConfig={hasDashboardConfig}
       hasWsManage={hasWsManage}
-      isEditing={isEditing}
+      isEditing={isEditingActiveWorkspace}
       onAddWorkspace={handleAddWorkspace}
       onAutoLayout={handleAutoLayout}
       onTabChange={handleTabChange}
@@ -120,11 +122,18 @@ const DashboardBuilder: React.FC = () => {
     <div className="dashboard-page">
       <DashboardCanvasSurface
         activeWorkspace={activeWorkspace}
+        canEditActiveWorkspace={canEditActiveWorkspace}
         containerRef={containerRef}
         headerExtra={headerExtra}
-        isEditing={isEditing}
+        isEditing={isEditingActiveWorkspace}
         onLayoutChange={handleLayoutChange}
-        onOpenAddWidgetDrawer={() => { setIsEditing(true); setDrawerOpen(true); }}
+        onOpenAddWidgetDrawer={() => {
+          if (!canEditActiveWorkspace) {
+            return;
+          }
+          setIsEditing(true);
+          setDrawerOpen(true);
+        }}
         onRemoveWidget={handleRemoveWidget}
         responsiveLayouts={responsiveLayouts}
         visibleCount={visibleCount}

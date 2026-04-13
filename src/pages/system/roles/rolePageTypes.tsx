@@ -1,3 +1,4 @@
+import React from 'react';
 import type { SearchField, StandardTableSearchValues, StandardTableSort } from '@/components/StandardTable';
 
 export type WorkspaceSummary = {
@@ -7,7 +8,9 @@ export type WorkspaceSummary = {
 };
 
 export type RoleDrawerDetail = AutoHealing.RoleWithStats & {
+    _workspaceMessage?: string;
     _workspaceNames?: string[];
+    _workspaceStatus?: 'loaded' | 'forbidden' | 'error';
     updated_at?: string;
 };
 
