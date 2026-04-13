@@ -14,7 +14,14 @@ import {
   HTTP_METHOD_COLORS as METHOD_COLORS,
   TENANT_RESOURCE_LABELS as RESOURCE_LABELS,
 } from '@/constants/auditDicts';
-import { formatChangeValue, getDeletedChangeEntries, getUpdatedChangeEntries } from './helpers';
+import {
+  AUTH_FAILURE_REASON_LABELS,
+  AUTH_METHOD_LABELS,
+  AUTH_SCOPE_LABELS,
+  formatChangeValue,
+  getDeletedChangeEntries,
+  getUpdatedChangeEntries,
+} from './helpers';
 import type { AuditLogRecord } from './types';
 
 const { Text } = Typography;
@@ -51,7 +58,7 @@ const AuditStatusBanner: React.FC<{ detail: AuditLogRecord }> = ({ detail }) => 
 
 const AuditBasicInfo: React.FC<{ detail: AuditLogRecord }> = ({ detail }) => {
   const actorName = String(detail.user?.display_name || detail.username || '-');
-  const actorUsername = String(detail.username || '-');
+  const actorUsername = String(detail.principal_username || detail.username || '-');
   const ipAddress = String(detail.ip_address || '-');
   const actionLabel = String(ACTION_LABELS[detail.action ?? ''] || detail.action || '-');
   const resourceLabel = String(RESOURCE_LABELS[detail.resource_type ?? ''] || detail.resource_type || '-');
@@ -70,10 +77,25 @@ const AuditBasicInfo: React.FC<{ detail: AuditLogRecord }> = ({ detail }) => {
       <Descriptions.Item label="IP 地址">
         <Text code>{ipAddress}</Text>
       </Descriptions.Item>
+      {detail.category === 'auth' && (
+        <>
+          <Descriptions.Item label="主体范围">
+            {AUTH_SCOPE_LABELS[detail.subject_scope || ''] || detail.subject_scope || '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="认证方式">
+            {AUTH_METHOD_LABELS[detail.auth_method || ''] || detail.auth_method || '-'}
+          </Descriptions.Item>
+        </>
+      )}
       <Descriptions.Item label="操作类型">
         <Tag color={ACTION_COLORS[detail.action ?? ''] || 'default'}>{actionLabel}</Tag>
       </Descriptions.Item>
       <Descriptions.Item label="资源类型">{resourceLabel}</Descriptions.Item>
+      {detail.category === 'auth' && detail.subject_tenant_name && (
+        <Descriptions.Item label="所属租户" span={2}>
+          {detail.subject_tenant_name}
+        </Descriptions.Item>
+      )}
       {detail.resource_type === 'impersonation' ? (
         <>
           <Descriptions.Item label="目标租户" span={2}>
@@ -180,6 +202,14 @@ const AuditDetailContent: React.FC<{ detail: AuditLogRecord }> = ({ detail }) =>
       <div className="audit-detail-section">
         <div className="audit-detail-section-title" style={{ color: '#f5222d' }}>错误信息</div>
         <div className="audit-detail-error">{detail.error_message}</div>
+      </div>
+    )}
+    {detail.failure_reason && (
+      <div className="audit-detail-section">
+        <div className="audit-detail-section-title">失败原因</div>
+        <Text type="secondary">
+          {AUTH_FAILURE_REASON_LABELS[detail.failure_reason] || detail.failure_reason}
+        </Text>
       </div>
     )}
     <div className="audit-detail-section">

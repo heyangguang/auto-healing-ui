@@ -37,8 +37,8 @@ describe('audit log helpers', () => {
     expect(buildAuditExportParams({
       username: 'ops',
       date_range: [dayjs('2026-03-03'), dayjs('2026-03-04')],
-    }, 'login', 1, 1)).toEqual({
-      category: 'login',
+    }, 'auth', 1, 1)).toEqual({
+      category: 'auth',
       page: 1,
       page_size: 1,
       username: 'ops',

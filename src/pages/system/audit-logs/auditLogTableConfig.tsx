@@ -15,13 +15,17 @@ import {
   TENANT_RESOURCE_LABELS as RESOURCE_LABELS,
 } from '@/constants/auditDicts';
 import dayjs from 'dayjs';
+import {
+  AUTH_FAILURE_REASON_LABELS,
+  AUTH_SCOPE_LABELS,
+} from './helpers';
 import { AUDIT_RISK_LEVEL_OPTIONS } from './auditLogSearchConfig';
 import type { AuditLogRecord } from './types';
 
 const { Text } = Typography;
 
-const LOGIN_ACTIONS = ['login', 'logout', 'impersonation_enter', 'impersonation_exit'];
-const LOGIN_RESOURCES = ['auth', 'auth-logout', 'impersonation'];
+const AUTH_ACTIONS = ['login', 'logout', 'register'];
+const AUTH_RESOURCES = ['auth', 'auth-logout', 'auth-register'];
 const AUDIT_RESULT_OPTIONS = [
   { label: '成功', value: 'success' },
   { label: '失败', value: 'failed' },
@@ -35,6 +39,7 @@ const riskMap: Record<string, { color: string; label: string }> = {
 };
 
 export function createAuditLogColumns(): {
+  loginColumns: StandardColumnDef<AuditLogRecord>[];
   operationColumns: StandardColumnDef<AuditLogRecord>[];
 } {
   const timeColumn: StandardColumnDef<AuditLogRecord> = {
@@ -97,7 +102,7 @@ export function createAuditLogColumns(): {
       dataIndex: 'action',
       width: 110,
       headerFilters: Object.entries(ACTION_LABELS)
-        .filter(([value]) => !LOGIN_ACTIONS.includes(value))
+        .filter(([value]) => !AUTH_ACTIONS.includes(value))
         .map(([value, label]) => ({ label, value })),
       render: (_, record) => {
         const action = record.action || '';
@@ -114,7 +119,7 @@ export function createAuditLogColumns(): {
       dataIndex: 'resource_type',
       width: 110,
       headerFilters: Object.entries(RESOURCE_LABELS)
-        .filter(([value]) => !LOGIN_RESOURCES.includes(value))
+        .filter(([value]) => !AUTH_RESOURCES.includes(value))
         .map(([value, label]) => ({ label, value })),
       render: (_, record) => {
         const resourceType = record.resource_type || '';
@@ -222,5 +227,62 @@ export function createAuditLogColumns(): {
     { ...ipColumn, defaultVisible: false },
   ];
 
-  return { operationColumns };
+  const authColumns: StandardColumnDef<AuditLogRecord>[] = [
+    timeColumn,
+    {
+      ...userColumn,
+      render: (_, record) => (
+        <span className="audit-user-cell">
+          <span className="audit-user-name">{record.user?.display_name || record.principal_username || record.username || '-'}</span>
+          <span className="audit-user-sub">{AUTH_SCOPE_LABELS[record.subject_scope || ''] || record.username || record.principal_username || '-'}</span>
+        </span>
+      ),
+    },
+    {
+      columnKey: 'action',
+      columnTitle: '操作',
+      dataIndex: 'action',
+      width: 90,
+      render: (_, record) => {
+        const action = record.action || '';
+        return (
+          <Tag color={ACTION_COLORS[action] || 'default'} style={{ margin: 0 }}>
+            {ACTION_LABELS[action] || action}
+          </Tag>
+        );
+      },
+    },
+    statusColumn,
+    {
+      columnKey: 'failure_reason',
+      columnTitle: '失败原因',
+      dataIndex: 'failure_reason',
+      width: 150,
+      render: (_, record) =>
+        record.failure_reason ? (
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {AUTH_FAILURE_REASON_LABELS[record.failure_reason] || record.failure_reason}
+          </Text>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            —
+          </Text>
+        ),
+    },
+    ipColumn,
+    {
+      columnKey: 'user_agent',
+      columnTitle: '客户端',
+      dataIndex: 'user_agent',
+      width: 200,
+      ellipsis: true,
+      render: (_, record) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {record.user_agent || '-'}
+        </Text>
+      ),
+    },
+  ];
+
+  return { loginColumns: authColumns, operationColumns };
 }

@@ -81,17 +81,20 @@ describe('AuditLogsPage', () => {
     jest.clearAllMocks();
   });
 
-  it('keeps tenant audit on operation logs only', async () => {
+  it('separates tenant operation logs and auth logs', async () => {
     render(React.createElement(AuditLogsPage));
 
     expect(screen.getByText('审计日志')).toBeTruthy();
-    expect(screen.queryByText('登录日志')).toBeNull();
+    expect(screen.getByText('认证日志')).toBeTruthy();
 
     await waitFor(() => {
       expect(capturedStandardTableProps).toBeTruthy();
     });
 
-    expect(capturedStandardTableProps?.tabs).toBeUndefined();
+    expect(capturedStandardTableProps?.tabs).toEqual([
+      { key: 'operation', label: '操作日志' },
+      { key: 'auth', label: '认证日志' },
+    ]);
     expect(capturedExportModalProps?.category).toBe('operation');
 
     const request = capturedStandardTableProps?.request as ((params: Record<string, unknown>) => Promise<unknown>);

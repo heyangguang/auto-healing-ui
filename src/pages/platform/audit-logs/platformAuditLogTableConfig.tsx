@@ -16,12 +16,17 @@ import {
   PLATFORM_RESOURCE_LABELS as RESOURCE_LABELS,
 } from '@/constants/auditDicts';
 import dayjs from 'dayjs';
+import {
+  AUTH_FAILURE_REASON_LABELS,
+  AUTH_METHOD_LABELS,
+  AUTH_SCOPE_LABELS,
+} from '@/pages/system/audit-logs/helpers';
 import type { AuditLogRecord } from '@/pages/system/audit-logs/types';
 
 const { Text } = Typography;
 
-const LOGIN_ACTIONS = ['login', 'logout', 'register', 'impersonation_enter', 'impersonation_exit'];
-const LOGIN_RESOURCES = ['auth', 'auth-logout', 'auth-register', 'impersonation'];
+const AUTH_ACTIONS = ['login', 'logout', 'register'];
+const AUTH_RESOURCES = ['auth', 'auth-logout', 'auth-register'];
 
 const riskMap: Record<string, { color: string; label: string }> = {
   critical: { color: 'red', label: '极高' },
@@ -95,7 +100,7 @@ export function createPlatformAuditLogColumns(): {
       dataIndex: 'action',
       width: 110,
       headerFilters: Object.entries(ACTION_LABELS)
-        .filter(([value]) => !LOGIN_ACTIONS.includes(value))
+        .filter(([value]) => !AUTH_ACTIONS.includes(value))
         .map(([value, label]) => ({ label, value })),
       render: (_, record) => {
         const action = record.action ?? '';
@@ -112,7 +117,7 @@ export function createPlatformAuditLogColumns(): {
       dataIndex: 'resource_type',
       width: 110,
       headerFilters: Object.entries(RESOURCE_LABELS)
-        .filter(([value]) => !LOGIN_RESOURCES.includes(value))
+        .filter(([value]) => !AUTH_RESOURCES.includes(value))
         .map(([value, label]) => ({ label, value })),
       render: (_, record) => {
         const resourceType = record.resource_type ?? '';
@@ -204,9 +209,39 @@ export function createPlatformAuditLogColumns(): {
     { ...ipColumn, defaultVisible: false },
   ];
 
-  const loginColumns: StandardColumnDef<AuditLogRecord>[] = [
+  const authColumns: StandardColumnDef<AuditLogRecord>[] = [
     timeColumn,
-    userColumn,
+    {
+      ...userColumn,
+      render: (_, record) => (
+        <Space size={4}>
+          <UserOutlined style={{ color: '#722ed1' }} />
+          <span>{record.principal_username || record.username || '-'}</span>
+        </Space>
+      ),
+    },
+    {
+      columnKey: 'subject_scope',
+      columnTitle: '主体范围',
+      dataIndex: 'subject_scope',
+      width: 110,
+      render: (_, record) => (
+        <Tag color={record.subject_scope === 'platform_admin' ? 'purple' : record.subject_scope === 'tenant_user' ? 'blue' : 'default'} style={{ margin: 0 }}>
+          {AUTH_SCOPE_LABELS[record.subject_scope || ''] || record.subject_scope || '-'}
+        </Tag>
+      ),
+    },
+    {
+      columnKey: 'subject_tenant_name',
+      columnTitle: '租户归属',
+      dataIndex: 'subject_tenant_name',
+      width: 140,
+      render: (_, record) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {record.subject_tenant_name || '—'}
+        </Text>
+      ),
+    },
     {
       columnKey: 'action',
       columnTitle: '操作',
@@ -222,6 +257,28 @@ export function createPlatformAuditLogColumns(): {
       },
     },
     statusColumn,
+    {
+      columnKey: 'failure_reason',
+      columnTitle: '失败原因',
+      dataIndex: 'failure_reason',
+      width: 150,
+      render: (_, record) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {record.failure_reason ? (AUTH_FAILURE_REASON_LABELS[record.failure_reason] || record.failure_reason) : '—'}
+        </Text>
+      ),
+    },
+    {
+      columnKey: 'auth_method',
+      columnTitle: '认证方式',
+      dataIndex: 'auth_method',
+      width: 110,
+      render: (_, record) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {AUTH_METHOD_LABELS[record.auth_method || ''] || record.auth_method || '—'}
+        </Text>
+      ),
+    },
     ipColumn,
     {
       columnKey: 'user_agent',
@@ -237,5 +294,5 @@ export function createPlatformAuditLogColumns(): {
     },
   ];
 
-  return { loginColumns, operationColumns };
+  return { loginColumns: authColumns, operationColumns };
 }

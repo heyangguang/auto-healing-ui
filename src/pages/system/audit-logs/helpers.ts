@@ -12,6 +12,30 @@ import type {
 
 const SPECIAL_AUDIT_FILTER_KEYS = ['created_at', 'exclude_action', 'exclude_resource_type'] as const;
 
+export const AUTH_SCOPE_LABELS: Record<string, string> = {
+  platform_admin: '平台管理员',
+  tenant_user: '租户用户',
+  unknown: '未知用户名',
+};
+
+export const AUTH_METHOD_LABELS: Record<string, string> = {
+  password: '密码',
+  token: '令牌',
+  invitation_register: '邀请注册',
+};
+
+export const AUTH_FAILURE_REASON_LABELS: Record<string, string> = {
+  unknown_username: '用户名不存在',
+  invalid_password: '密码错误',
+  user_locked: '账户已锁定',
+  user_inactive: '账户已禁用',
+  invitation_invalid: '邀请失效',
+  validation_failed: '请求参数错误',
+  username_exists: '用户名已存在',
+  email_exists: '邮箱已存在',
+  system_error: '系统错误',
+};
+
 export const formatChangeValue = (value: unknown): string => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'object') return JSON.stringify(value, null, 2);

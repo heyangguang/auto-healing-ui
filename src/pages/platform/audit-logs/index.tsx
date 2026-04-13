@@ -21,8 +21,8 @@ import {
   createPlatformAuditLogColumns,
 } from './platformAuditLogTableConfig';
 import {
-  loginAdvancedSearchFields,
-  loginSearchFields,
+  authAdvancedSearchFields,
+  authSearchFields,
   operationAdvancedSearchFields,
   operationSearchFields,
 } from './platformAuditLogSearchConfig';
@@ -53,19 +53,19 @@ const PlatformAuditLogsPage: React.FC = () => {
 
   useEffect(() => {
     setStatsLoadFailed(false);
-    getPlatformAuditStats()
+    getPlatformAuditStats(activeTab)
       .then(setStats)
       .catch(() => {
         setStatsLoadFailed(true);
         message.error('平台审计统计加载失败，请刷新页面重试');
       });
-    getPlatformAuditTrend(7)
+    getPlatformAuditTrend(7, activeTab)
       .then((data) => setTrendData(data as TrendPoint[]))
       .catch(() => {
         setStatsLoadFailed(true);
         message.error('平台审计趋势加载失败，请刷新页面重试');
       });
-  }, []);
+  }, [activeTab]);
 
   const closeDetailDrawer = useCallback(() => {
     detailRequestSeqRef.current += 1;
@@ -111,10 +111,10 @@ const PlatformAuditLogsPage: React.FC = () => {
     [activeTab],
   );
 
-  const columns = activeTab === 'login' ? loginColumns : operationColumns;
-  const searchFields = activeTab === 'login' ? loginSearchFields : operationSearchFields;
+  const columns = activeTab === 'auth' ? loginColumns : operationColumns;
+  const searchFields = activeTab === 'auth' ? authSearchFields : operationSearchFields;
   const advancedSearchFields =
-    activeTab === 'login' ? loginAdvancedSearchFields : operationAdvancedSearchFields;
+    activeTab === 'auth' ? authAdvancedSearchFields : operationAdvancedSearchFields;
 
   return (
     <>
@@ -122,14 +122,14 @@ const PlatformAuditLogsPage: React.FC = () => {
         key={activeTab}
         tabs={[
           { key: 'operation', label: '操作日志' },
-          { key: 'login', label: '认证日志' },
+          { key: 'auth', label: '认证日志' },
         ]}
         activeTab={activeTab}
         onTabChange={(key) => setActiveTab(key as AuditCategory)}
         title="平台审计日志"
         description={
-          activeTab === 'login'
-            ? '记录平台管理员的登录、登出、注册及提权进入/退出活动，用于安全审计和认证行为排查。'
+          activeTab === 'auth'
+            ? '记录全局认证事件，包括平台管理员、租户用户和未知用户名的登录、登出、邀请注册行为，用于认证安全审计。'
             : '记录平台管理员的所有操作（用户管理、角色管理、租户管理等），用于平台级安全审计。'
         }
         headerIcon={headerIcon}

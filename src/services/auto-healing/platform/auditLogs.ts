@@ -32,7 +32,15 @@ type PlatformAuditLogListParams = {
 
 type PlatformAuditLogRecord = {
     id: string;
+    user_id?: string;
     username?: string;
+    principal_username?: string;
+    subject_scope?: string;
+    subject_tenant_id?: string;
+    subject_tenant_name?: string;
+    failure_reason?: string;
+    auth_method?: string;
+    category?: string;
     user?: { display_name?: string };
     action?: string;
     resource_type?: string;
@@ -122,17 +130,20 @@ export async function getPlatformAuditLogDetail(id: string) {
     );
 }
 
-export async function getPlatformAuditStats() {
+export async function getPlatformAuditStats(category?: string) {
     return unwrapData(
-        await request<ServiceDataEnvelope<PlatformAuditStatsSummary>>('/api/v1/platform/audit-logs/stats', { method: 'GET' }),
+        await request<ServiceDataEnvelope<PlatformAuditStatsSummary>>('/api/v1/platform/audit-logs/stats', {
+            method: 'GET',
+            params: category ? { category } : undefined,
+        }),
     );
 }
 
-export async function getPlatformAuditTrend(days: number = 7) {
+export async function getPlatformAuditTrend(days: number = 7, category?: string) {
     return unwrapItems(
         await request<ServiceItemsEnvelope<PlatformAuditTrendPoint>>('/api/v1/platform/audit-logs/trend', {
             method: 'GET',
-            params: { days },
+            params: category ? { days, category } : { days },
         }),
     );
 }

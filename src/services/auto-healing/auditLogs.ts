@@ -30,8 +30,16 @@ type AuditLogListParams = {
 
 type AuditLogRecord = {
     id: string;
+    user_id?: string;
     action?: string;
+    category?: string;
     username?: string;
+    principal_username?: string;
+    subject_scope?: string;
+    subject_tenant_id?: string;
+    subject_tenant_name?: string;
+    failure_reason?: string;
+    auth_method?: string;
     user?: { display_name?: string };
     resource_type?: string;
     resource_name?: string;
@@ -145,16 +153,24 @@ export async function getAuditLogDetail(id: string) {
 /**
  * 获取审计统计概览
  */
-export async function getAuditStats() {
-    return unwrapData(await request<DataEnvelope<AuditStatsSummary>>('/api/v1/tenant/audit-logs/stats', { method: 'GET' }));
+export async function getAuditStats(category?: string) {
+    return unwrapData(
+        await request<DataEnvelope<AuditStatsSummary>>('/api/v1/tenant/audit-logs/stats', {
+            method: 'GET',
+            params: category ? { category } : undefined,
+        }),
+    );
 }
 
 /**
  * 获取操作趋势
  */
-export async function getAuditTrend(days: number = 7) {
+export async function getAuditTrend(days: number = 7, category?: string) {
     return unwrapItems(
-        await request<ItemEnvelope<AuditTrendPoint>>('/api/v1/tenant/audit-logs/trend', { method: 'GET', params: { days } }),
+        await request<ItemEnvelope<AuditTrendPoint>>('/api/v1/tenant/audit-logs/trend', {
+            method: 'GET',
+            params: category ? { days, category } : { days },
+        }),
     );
 }
 

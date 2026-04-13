@@ -12,7 +12,15 @@ export type AuditChangeEntry = {
 
 export type AuditLogRecord = {
   id: string;
+  user_id?: string;
   username?: string;
+  principal_username?: string;
+  subject_scope?: string;
+  subject_tenant_id?: string;
+  subject_tenant_name?: string;
+  failure_reason?: string;
+  auth_method?: string;
+  category?: string;
   user?: AuditLogUserSummary;
   action?: string;
   resource_type?: string;
@@ -48,7 +56,7 @@ export type TrendPoint = {
   count: number;
 };
 
-export type AuditCategory = 'operation' | 'login';
+export type AuditCategory = 'operation' | 'auth';
 export type AuditDateRange = [dayjs.Dayjs | null, dayjs.Dayjs | null];
 export type AuditSearchValue = string | string[] | AuditDateRange | null | undefined;
 export type AuditAdvancedSearch = StandardTableSearchValues;

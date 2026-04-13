@@ -16,6 +16,8 @@ import {
   createAuditLogColumns,
 } from './auditLogTableConfig';
 import {
+  authAdvancedSearchFields,
+  authSearchFields,
   operationAdvancedSearchFields,
   operationSearchFields,
 } from './auditLogSearchConfig';
@@ -39,10 +41,11 @@ const headerIcon = (
   </svg>
 );
 
-const { operationColumns } = createAuditLogColumns();
+const { loginColumns, operationColumns } = createAuditLogColumns();
 
 const AuditLogsPage: React.FC = () => {
   const access = useAccess();
+  const [activeTab, setActiveTab] = useState<AuditCategory>('operation');
   const [stats, setStats] = useState<AuditStatsSummary | null>(null);
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [statsLoadFailed, setStatsLoadFailed] = useState(false);
@@ -55,19 +58,19 @@ const AuditLogsPage: React.FC = () => {
 
   useEffect(() => {
     setStatsLoadFailed(false);
-    getAuditStats()
+    getAuditStats(activeTab)
       .then(setStats)
       .catch(() => {
         setStatsLoadFailed(true);
         message.error('审计统计加载失败，请刷新页面重试');
       });
-    getAuditTrend(7)
+    getAuditTrend(7, activeTab)
       .then((data) => setTrendData(data as TrendPoint[]))
       .catch(() => {
         setStatsLoadFailed(true);
         message.error('审计趋势加载失败，请刷新页面重试');
       });
-  }, []);
+  }, [activeTab]);
 
   const closeDetailDrawer = useCallback(() => {
     detailRequestSeqRef.current += 1;
@@ -104,14 +107,19 @@ const AuditLogsPage: React.FC = () => {
 
   const handleRequest = useCallback(
     async (params: AuditRequestParams) => {
-      const response = await getAuditLogs(buildAuditListParams(params, 'operation'));
+      const response = await getAuditLogs(buildAuditListParams(params, activeTab));
       return {
         data: (response.data || []) as AuditLogRecord[],
         total: response.total ?? 0,
       };
     },
-    [],
+    [activeTab],
   );
+
+  const columns = activeTab === 'auth' ? loginColumns : operationColumns;
+  const searchFields = activeTab === 'auth' ? authSearchFields : operationSearchFields;
+  const advancedSearchFields =
+    activeTab === 'auth' ? authAdvancedSearchFields : operationAdvancedSearchFields;
 
   const exportButton = useMemo(
     () => (
@@ -131,19 +139,30 @@ const AuditLogsPage: React.FC = () => {
   return (
     <>
       <StandardTable<AuditLogRecord>
+        key={activeTab}
+        tabs={[
+          { key: 'operation', label: '操作日志' },
+          { key: 'auth', label: '认证日志' },
+        ]}
+        activeTab={activeTab}
+        onTabChange={(key) => setActiveTab(key as AuditCategory)}
         title="审计日志"
-        description="记录系统中所有用户操作，用于安全审计和合规追溯。支持按操作类型、资源、用户、时间范围等多维筛选。"
+        description={
+          activeTab === 'auth'
+            ? '记录当前租户成员的认证事件，包括登录、登出和邀请注册，用于安全审计和异常认证排查。'
+            : '记录当前租户内的业务操作，用于安全审计和合规追溯。支持按操作类型、资源、用户、时间范围等多维筛选。'
+        }
         headerIcon={headerIcon}
         headerExtra={statsLoadFailed ? <span style={{ color: '#ff4d4f', fontSize: 12 }}>统计加载失败，请刷新页面重试</span> : <AuditStatsBar stats={stats} trendData={trendData} />}
-        searchFields={operationSearchFields}
-        advancedSearchFields={operationAdvancedSearchFields}
-        extraToolbarActions={exportButton}
-        columns={operationColumns}
+        searchFields={searchFields}
+        advancedSearchFields={advancedSearchFields}
+        extraToolbarActions={activeTab === 'operation' ? exportButton : undefined}
+        columns={columns}
         rowKey="id"
         onRowClick={openDetail}
         request={handleRequest}
         defaultPageSize={20}
-        preferenceKey="audit_log_operation"
+        preferenceKey={`audit_log_${activeTab}`}
       />
 
       <AuditDetailDrawer
@@ -155,7 +174,7 @@ const AuditLogsPage: React.FC = () => {
       />
       <AuditExportModal
         open={exportModalOpen}
-        category="operation"
+        category={activeTab}
         onClose={() => setExportModalOpen(false)}
       />
     </>

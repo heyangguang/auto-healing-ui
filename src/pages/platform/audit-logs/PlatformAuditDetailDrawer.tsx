@@ -15,6 +15,9 @@ import {
   PLATFORM_RESOURCE_LABELS as RESOURCE_LABELS,
 } from '@/constants/auditDicts';
 import {
+  AUTH_FAILURE_REASON_LABELS,
+  AUTH_METHOD_LABELS,
+  AUTH_SCOPE_LABELS,
   formatChangeValue,
   getDeletedChangeEntries,
   getUpdatedChangeEntries,
@@ -79,12 +82,22 @@ const PlatformAuditDetailDrawer: React.FC<PlatformAuditDetailDrawerProps> = ({
           <Descriptions.Item label="操作用户">
             <Space size={4}>
               <UserOutlined />
-              {detail.username}
+              {detail.principal_username || detail.username || '-'}
             </Space>
           </Descriptions.Item>
           <Descriptions.Item label="IP 地址">
             <Text code>{detail.ip_address}</Text>
           </Descriptions.Item>
+          {detail.category === 'auth' && (
+            <>
+              <Descriptions.Item label="主体范围">
+                {AUTH_SCOPE_LABELS[detail.subject_scope || ''] || detail.subject_scope || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="认证方式">
+                {AUTH_METHOD_LABELS[detail.auth_method || ''] || detail.auth_method || '-'}
+              </Descriptions.Item>
+            </>
+          )}
           <Descriptions.Item label="操作类型">
             <Tag color={ACTION_COLORS[detail.action ?? ''] || 'default'}>
               {ACTION_LABELS[detail.action ?? ''] || detail.action}
@@ -93,6 +106,16 @@ const PlatformAuditDetailDrawer: React.FC<PlatformAuditDetailDrawerProps> = ({
           <Descriptions.Item label="资源类型">
             {RESOURCE_LABELS[detail.resource_type ?? ''] || detail.resource_type}
           </Descriptions.Item>
+          {detail.category === 'auth' && (
+            <>
+              <Descriptions.Item label="主体用户名" span={2}>
+                {detail.principal_username || detail.username || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="所属租户" span={2}>
+                {detail.subject_tenant_name || '—'}
+              </Descriptions.Item>
+            </>
+          )}
           {detail.resource_type === 'impersonation' ? (
             <>
               <Descriptions.Item label="目标租户" span={2}>
@@ -198,6 +221,14 @@ const PlatformAuditDetailDrawer: React.FC<PlatformAuditDetailDrawerProps> = ({
               错误信息
             </div>
             <div className="audit-detail-error">{detail.error_message}</div>
+          </div>
+        )}
+        {detail.failure_reason && (
+          <div className="audit-detail-section">
+            <div className="audit-detail-section-title">失败原因</div>
+            <Text type="secondary">
+              {AUTH_FAILURE_REASON_LABELS[detail.failure_reason] || detail.failure_reason}
+            </Text>
           </div>
         )}
 
