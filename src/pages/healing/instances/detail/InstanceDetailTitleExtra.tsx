@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { normalizeNodeState } from '../utils/canvasBuilder';
 import { INSTANCE_STATUS_LABELS } from '@/constants/instanceDicts';
+import { plainButtonReset } from '@/styles/plainButton';
 
 type InstanceDetailTitleExtraProps = {
     id?: string;
@@ -66,7 +67,7 @@ const InstanceDetailTitleExtra: React.FC<InstanceDetailTitleExtraProps> = ({
             <button
                 type="button"
                 onClick={onOpenIncident}
-                style={{ color: '#1890ff', fontSize: 12, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer' }}
+                style={{ ...plainButtonReset, color: '#1890ff', fontSize: 12, cursor: 'pointer' }}
             >
                 <WarningOutlined style={{ marginRight: 4 }} />
                 {instance.incident.title}
@@ -76,7 +77,7 @@ const InstanceDetailTitleExtra: React.FC<InstanceDetailTitleExtraProps> = ({
             <button
                 type="button"
                 onClick={onOpenRule}
-                style={{ color: '#722ed1', fontSize: 12, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer' }}
+                style={{ ...plainButtonReset, color: '#722ed1', fontSize: 12, cursor: 'pointer' }}
             >
                 <ThunderboltOutlined style={{ marginRight: 4 }} />
                 {instance.rule.name}

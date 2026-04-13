@@ -126,7 +126,6 @@ const ScheduleTemplateSelection: React.FC<ScheduleTemplateSelectionProps> = ({
                                         event.preventDefault();
                                         onSelectTemplate(template);
                                     }}
-                                    style={{ width: '100%', textAlign: 'left', background: 'transparent' }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                                         <Avatar

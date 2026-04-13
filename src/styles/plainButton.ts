@@ -1,0 +1,18 @@
+export const plainButtonReset = {
+    appearance: 'none' as const,
+    WebkitAppearance: 'none' as const,
+    MozAppearance: 'none' as const,
+    background: 'transparent',
+    backgroundImage: 'none',
+    border: 'none',
+    borderRadius: 0,
+    boxShadow: 'none',
+    color: 'inherit',
+    font: 'inherit',
+    lineHeight: 'inherit',
+    margin: 0,
+    outline: 'none',
+    padding: 0,
+    textAlign: 'inherit' as const,
+    textDecoration: 'none',
+};

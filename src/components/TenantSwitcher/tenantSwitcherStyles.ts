@@ -1,6 +1,9 @@
+import { plainButtonReset } from '@/styles/plainButton';
+
 export const tenantSwitcherStyles = {
     container: { position: 'relative' as const },
     trigger: {
+        ...plainButtonReset,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -39,6 +42,7 @@ export const tenantSwitcherStyles = {
     },
     list: { maxHeight: 220, overflowY: 'auto' as const, padding: '2px 0' },
     item: (active: boolean) => ({
+        ...plainButtonReset,
         display: 'flex',
         alignItems: 'center',
         gap: 8,

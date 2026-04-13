@@ -1,5 +1,21 @@
 import { createStyles } from 'antd-style';
 
+const buttonReset = {
+    appearance: 'none' as const,
+    WebkitAppearance: 'none' as const,
+    background: 'transparent',
+    border: 'none',
+    borderRadius: 0,
+    boxShadow: 'none',
+    color: 'inherit',
+    font: 'inherit',
+    margin: 0,
+    outline: 'none',
+    padding: 0,
+    textAlign: 'inherit' as const,
+    width: '100%',
+};
+
 export const useWorkbenchPageStyles = createStyles(({ token }) => ({
     page: { padding: 24, minHeight: 'calc(100vh - 48px)' },
     container: { maxWidth: 1600, margin: '0 auto', display: 'flex', gap: 20 },
@@ -10,7 +26,7 @@ export const useWorkbenchPageStyles = createStyles(({ token }) => ({
     cardTitle: { fontSize: 14, fontWeight: 600, color: '#595959', display: 'flex', alignItems: 'center', gap: 8 },
     cardTitleIcon: { fontSize: 16, color: '#8c8c8c' },
     cardLink: { fontSize: 12, color: token.colorPrimary, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } },
-    cardLinkButton: { border: 'none', background: 'transparent', padding: 0, fontSize: 12, color: token.colorPrimary, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } },
+    cardLinkButton: { ...buttonReset, width: 'auto', fontSize: 12, color: token.colorPrimary, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } },
     cardBody: { padding: 16 },
     topRow: { display: 'flex', gap: 20, alignItems: 'stretch' },
     pendingItem: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', transition: 'background 0.15s', '&:hover': { background: '#fafafa' }, '&:last-child': { borderBottom: 'none' } },
@@ -20,7 +36,7 @@ export const useWorkbenchPageStyles = createStyles(({ token }) => ({
     pendingType: { fontSize: 11, color: '#bfbfbf', flexShrink: 0 },
     pendingTime: { fontSize: 11, color: '#bfbfbf', flexShrink: 0 },
     favGrid: { display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 0 },
-    favItem: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6, padding: '14px 8px 12px', cursor: 'pointer', transition: 'all 0.15s', '&:hover': { background: '#f5f7fa' } },
+    favItem: { ...buttonReset, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6, padding: '14px 8px 12px', cursor: 'pointer', transition: 'all 0.15s', '&:hover': { background: '#f5f7fa' } },
     favIconWrap: { fontSize: 22, color: '#595959' },
     favName: { fontSize: 12, color: '#595959' },
     metricsRow: { display: 'flex', gap: 16 },
@@ -42,7 +58,7 @@ export const useWorkbenchPageStyles = createStyles(({ token }) => ({
     scheduleTaskTime: { fontSize: 11, fontWeight: 600, color: '#1677ff', flexShrink: 0, fontFamily: 'monospace' },
     scheduleTaskName: { fontSize: 12, color: '#262626', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
     resourceGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 },
-    resourceItem: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', padding: '14px 8px', cursor: 'pointer', borderRight: '1px solid #f5f5f5', borderBottom: '1px solid #f5f5f5', '&:nth-child(4n)': { borderRight: 'none' }, '&:nth-child(n+5)': { borderBottom: 'none' }, '&:hover': { background: '#fafafa' } },
+    resourceItem: { ...buttonReset, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', padding: '14px 8px', cursor: 'pointer', borderRight: '1px solid #f5f5f5', borderBottom: '1px solid #f5f5f5', '&:nth-child(4n)': { borderRight: 'none' }, '&:nth-child(n+5)': { borderBottom: 'none' }, '&:hover': { background: '#fafafa' } },
     resourceIcon: { fontSize: 22, marginBottom: 4 },
     resourceValue: { fontSize: 20, fontWeight: 700, color: '#262626', lineHeight: 1.2 },
     resourceLabel: { fontSize: 12, color: '#595959', marginTop: 2 },
@@ -53,7 +69,7 @@ export const useWorkbenchPageStyles = createStyles(({ token }) => ({
     changeText: { fontSize: 13, color: '#262626' },
     changeDetail: { fontSize: 11, color: '#8c8c8c', marginTop: 1 },
     changeTime: { fontSize: 11, color: '#bfbfbf', flexShrink: 0 },
-    guideItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', '&:last-child': { borderBottom: 'none' }, '&:hover': { background: '#f6f8ff' } },
+    guideItem: { ...buttonReset, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', '&:last-child': { borderBottom: 'none' }, '&:hover': { background: '#f6f8ff' } },
     guideIcon: { width: 32, height: 32, background: '#e6f4ff', color: '#1677ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 },
     guideContent: { flex: 1, minWidth: 0 },
     guideTitle: { fontSize: 13, fontWeight: 500, color: '#262626' },

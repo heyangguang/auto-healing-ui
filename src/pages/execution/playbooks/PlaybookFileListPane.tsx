@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tag, Typography } from 'antd';
 import { FileTextOutlined, FolderOpenOutlined, FolderOutlined } from '@ant-design/icons';
+import { plainButtonReset } from '@/styles/plainButton';
 
 const { Text } = Typography;
 
@@ -89,12 +90,12 @@ export default function PlaybookFileListPane(props: PlaybookFileListPaneProps) {
                                     type="button"
                                     onClick={() => onSelectFile(file.path)}
                                     style={{
+                                        ...plainButtonReset,
                                         width: '100%',
                                         padding: '8px 12px',
                                         paddingLeft: directory !== '.' ? 32 : 12,
                                         cursor: 'pointer',
                                         background: isSelected ? '#ddf4ff' : 'transparent',
-                                        border: 'none',
                                         borderBottom: '1px solid #eaecef',
                                         display: 'flex',
                                         alignItems: 'center',

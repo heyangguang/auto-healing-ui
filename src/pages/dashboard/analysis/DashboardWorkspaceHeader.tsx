@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import type { DashboardWorkspace } from '../dashboardStore';
+import { plainButtonReset } from '@/styles/plainButton';
 
 type DashboardWorkspaceHeaderProps = {
   activeWorkspace: DashboardWorkspace;
@@ -137,7 +138,7 @@ const DashboardWorkspaceHeader: React.FC<DashboardWorkspaceHeaderProps> = ({
           type="button"
           aria-label="新建工作区"
           onClick={() => hasDashboardConfig && onAddWorkspace()}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', cursor: hasDashboardConfig ? 'pointer' : 'not-allowed', color: '#bfbfbf', borderBottom: '2px solid transparent', transition: 'color 0.12s', opacity: hasDashboardConfig ? 1 : 0.45, background: 'transparent', border: 0 }}
+          style={{ ...plainButtonReset, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', cursor: hasDashboardConfig ? 'pointer' : 'not-allowed', color: '#bfbfbf', borderBottom: '2px solid transparent', transition: 'color 0.12s', opacity: hasDashboardConfig ? 1 : 0.45 }}
           onMouseEnter={(event) => { if (hasDashboardConfig) event.currentTarget.style.color = '#1677ff'; }}
           onMouseLeave={(event) => { event.currentTarget.style.color = '#bfbfbf'; }}
         >

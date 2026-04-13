@@ -110,6 +110,8 @@
 }
 
 .standard-table-clear-filters {
+    appearance: none;
+    -webkit-appearance: none;
     font-size: 13px;
     color: #1677ff;
     cursor: pointer;
@@ -117,6 +119,9 @@
     white-space: nowrap;
     background: none;
     border: none;
+    box-shadow: none;
+    font: inherit;
+    outline: none;
     padding: 0;
 }
 
@@ -174,6 +179,8 @@
 
 /* 高级搜索文字 */
 .standard-table-advanced-toggle {
+    appearance: none;
+    -webkit-appearance: none;
     cursor: pointer;
     color: #1677ff;
     font-size: 13px;
@@ -183,6 +190,9 @@
     margin-right: 12px;
     background: none;
     border: none;
+    box-shadow: none;
+    font: inherit;
+    outline: none;
     padding: 0;
 }
 

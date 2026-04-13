@@ -1,4 +1,5 @@
 import { createStyles } from 'antd-style';
+import { plainButtonReset } from '@/styles/plainButton';
 
 const useTopNavStyles = createStyles(({ token }) => ({
     navBar: {
@@ -23,6 +24,7 @@ const useTopNavStyles = createStyles(({ token }) => ({
         minWidth: 0,
     },
     hamburger: {
+        ...plainButtonReset,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -37,6 +39,7 @@ const useTopNavStyles = createStyles(({ token }) => ({
         '&:hover': { color: '#fff', background: 'rgba(255,255,255,0.08)' },
     },
     logo: {
+        ...plainButtonReset,
         display: 'flex',
         alignItems: 'center',
         gap: 10,
@@ -57,6 +60,7 @@ const useTopNavStyles = createStyles(({ token }) => ({
     },
     navLinks: { display: 'flex', gap: 4 },
     navItem: {
+        ...plainButtonReset,
         display: 'inline-flex',
         alignItems: 'center',
         gap: 5,
@@ -87,6 +91,7 @@ const useTopNavStyles = createStyles(({ token }) => ({
         minWidth: 0,
     },
     iconBtn: {
+        ...plainButtonReset,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -102,6 +107,7 @@ const useTopNavStyles = createStyles(({ token }) => ({
     },
     divider: { width: 1, height: 20, background: 'rgba(255,255,255,0.2)', margin: '0 8px' },
     avatarWrapper: {
+        ...plainButtonReset,
         display: 'flex',
         alignItems: 'center',
         gap: 8,

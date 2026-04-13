@@ -1,4 +1,5 @@
 import { createStyles } from 'antd-style';
+import { plainButtonReset } from '@/styles/plainButton';
 
 export const useStyles = createStyles(({ token }) => ({
     searchWrapper: {
@@ -76,6 +77,7 @@ export const useStyles = createStyles(({ token }) => ({
         gap: 5,
     },
     item: {
+        ...plainButtonReset,
         display: 'flex',
         alignItems: 'center',
         height: 36,
@@ -133,6 +135,7 @@ export const useStyles = createStyles(({ token }) => ({
         margin: '4px 12px',
     },
     viewMore: {
+        ...plainButtonReset,
         display: 'flex',
         alignItems: 'center',
         height: 28,

@@ -1,3 +1,5 @@
+import { plainButtonReset } from '@/styles/plainButton';
+
 export const POLL_INTERVAL = 5 * 60_000;
 export const NOTIFICATION_PANEL_ID = 'notification-bell-panel';
 
@@ -30,6 +32,7 @@ export function getNotificationDotColor(category: string) {
 export const bellStyles = {
     container: { position: 'relative' as const },
     trigger: {
+        ...plainButtonReset,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -94,9 +97,8 @@ export const bellStyles = {
         transition: 'background 0.2s',
     },
     msgButton: {
+        ...plainButtonReset,
         width: '100%',
-        border: 0,
-        background: 'transparent',
         textAlign: 'left' as const,
     },
     dotWrap: {
@@ -152,8 +154,8 @@ export const bellStyles = {
         borderTop: '1px solid #f0f0f0',
     },
     footerButton: {
+        ...plainButtonReset,
         width: '100%',
-        border: 0,
         background: '#fafafa',
     },
 };

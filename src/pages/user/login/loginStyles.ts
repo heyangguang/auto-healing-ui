@@ -1,4 +1,5 @@
 import { createStyles } from 'antd-style';
+import { plainButtonReset } from '@/styles/plainButton';
 
 export const useLoginStyles = createStyles(() => ({
   lang: { width: 42, height: 42, lineHeight: '42px', position: 'fixed', right: 16, top: 16, borderRadius: 0, ':hover': { backgroundColor: 'rgba(0,0,0,0.04)' }, zIndex: 999 },
@@ -39,7 +40,7 @@ export const useLoginStyles = createStyles(() => ({
   formTitle: { fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 4, textAlign: 'center' as const },
   formSub: { fontSize: 13, color: '#9ca3af', textAlign: 'center' as const, marginBottom: 24 },
   inputLbl: { fontSize: 12, fontWeight: 600, color: '#374151', letterSpacing: 0.5 },
-  ssoBtn: { width: '100%', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 500, transition: 'all 0.2s', ':hover': { borderColor: '#93c5fd', color: '#2563eb' } },
+  ssoBtn: { ...plainButtonReset, width: '100%', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 500, transition: 'all 0.2s', ':hover': { borderColor: '#93c5fd', color: '#2563eb' } },
   helpRow: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 },
   helpLink: { fontSize: 12, color: '#9ca3af', cursor: 'pointer', transition: 'color 0.2s', ':hover': { color: '#2563eb' } },
   featureStrip: { display: 'flex', gap: 0, borderTop: '1px solid #e5e7eb', position: 'relative', zIndex: 1 },
