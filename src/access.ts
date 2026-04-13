@@ -102,8 +102,6 @@ export default function access(
       'audit:list',
       'site-message:list',
       'site-message:create',
-      'site-message:settings:view',
-      'site-message:settings:manage',
     ),
 
     // ===============================
@@ -220,8 +218,6 @@ export default function access(
     // ===============================
     canCreateSiteMessage: hasPermission('site-message:create'),
     canViewSiteMessages: hasPermission('site-message:list'),
-    canViewSiteMessageSettings: hasPermission('site-message:settings:view'),
-    canManageSiteMessageSettings: hasPermission('site-message:settings:manage'),
 
     // ===============================
     // Dashboard
