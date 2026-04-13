@@ -97,10 +97,10 @@ export default function PlaybookDetailPane(props: PlaybookDetailPaneProps) {
     } = props;
 
     if (!selectedPlaybook) {
-        return <div style={{ height: 'calc(100vh - 200px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Empty description="请从左侧选择一个 Playbook" /></div>;
+        return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Empty description="请从左侧选择一个 Playbook" /></div>;
     }
     if (loadingDetail || !statusInfo) {
-        return <div style={{ height: 'calc(100vh - 200px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin size="large" /></div>;
+        return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin size="large" /></div>;
     }
 
     return (

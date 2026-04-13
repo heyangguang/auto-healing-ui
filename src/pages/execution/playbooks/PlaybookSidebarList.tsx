@@ -67,7 +67,7 @@ export default function PlaybookSidebarList(props: PlaybookSidebarListProps) {
 
     return (
         <Card styles={{ body: { padding: 0 } }} style={{ height: '100%' }}>
-            <div style={{ height: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <div ref={parentRef} style={{ flex: 1, overflowY: 'auto' }}>
                     {!initialized ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><Spin /></div>
                         : flattenedList.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 Playbook" style={{ marginTop: 40 }} />

@@ -4,6 +4,8 @@ import PlaybookDetailPane from './PlaybookDetailPane';
 import PlaybookSidebar from './PlaybookSidebar';
 import type { PlaybookStatusSummary } from './playbookTypes';
 
+const WORKSPACE_VIEWPORT_OFFSET_PX = 204;
+
 type PlaybookWorkspaceProps = {
     activeTab: string;
     canManagePlaybook: boolean;
@@ -70,7 +72,7 @@ export default function PlaybookWorkspace(props: PlaybookWorkspaceProps) {
     } = props;
 
     return (
-        <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 260px)' }}>
+        <div style={{ display: 'flex', gap: 16, height: `calc(100vh - ${WORKSPACE_VIEWPORT_OFFSET_PX}px)` }}>
             <div style={{ width: (activeTab === 'variables' || activeTab === 'files') ? 48 : 280, flexShrink: 0, transition: 'opacity 0.15s ease-out', opacity: 1 }}>
                 <PlaybookSidebar activeTab={activeTab} expandedKeys={expandedKeys} groupedPlaybooks={groupedPlaybooks} initialized={initialized} onSelectPlaybook={onSelectPlaybook} onSetActiveTab={onSetActiveTab} onToggleRepo={onToggleRepo} selectedPlaybook={selectedPlaybook} />
             </div>
