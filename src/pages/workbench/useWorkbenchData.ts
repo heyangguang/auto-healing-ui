@@ -54,7 +54,7 @@ export const useWorkbenchData = ({
         : Promise.resolve({ dates: {} });
       const announcementsRequest = getWorkbenchAnnouncements(5);
       const auditRequest = canViewAuditLogs
-        ? getAuditLogs({ page: 1, page_size: 10, sort_by: 'created_at', sort_order: 'desc' })
+        ? getAuditLogs({ page: 1, page_size: 10, exclude_action: 'login', sort_by: 'created_at', sort_order: 'desc' })
         : Promise.resolve({ data: [] });
 
       const [overviewRes, calendarRes, announcementsRes, favoritesRes, auditRes, approvalsRes, triggersRes] =
