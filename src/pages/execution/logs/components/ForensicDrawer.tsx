@@ -10,6 +10,7 @@ import { mergeLogEntries, sortLogEntries } from '../logStreamHelpers';
 
 const { Text } = Typography;
 const RECENT_STREAM_WINDOW_MS = 30_000;
+const LOG_REFRESH_INTERVAL_MS = 2_000;
 
 const shouldKeepLiveStream = (runData?: AutoHealing.ExecutionRun) => {
     const isRecent = !!runData?.created_at
@@ -33,6 +34,7 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
     const [loading, setLoading] = useState(false);
     const [streaming, setStreaming] = useState(false);
     const closeStreamRef = useRef<(() => void) | null>(null);
+    const pollTimerRef = useRef<number | null>(null);
     const requestSequenceRef = useRef(createRequestSequence());
     const streamingRef = useRef(false);
     const currentStreamRunIdRef = useRef<string | undefined>(undefined);
@@ -49,6 +51,13 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
         markStreamClosed();
         closeStream?.();
     }, [markStreamClosed]);
+
+    const closePolling = useCallback(() => {
+        if (pollTimerRef.current !== null) {
+            window.clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+        }
+    }, []);
 
     const refreshSnapshot = useCallback(async (currentRunId: string, token = requestSequenceRef.current.current()) => {
         try {
@@ -84,9 +93,9 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
             setRun(prev => prev ? { ...prev, status: res.status as AutoHealing.ExecutionRun['status'] } : prev);
             void refreshSnapshot(id, token);
         }, () => {
-            if (!requestSequenceRef.current.isCurrent(token)) return;
-            markStreamClosed();
-            void refreshSnapshot(id, token).then((runData) => {
+                if (!requestSequenceRef.current.isCurrent(token)) return;
+                markStreamClosed();
+                void refreshSnapshot(id, token).then((runData) => {
                 if (!requestSequenceRef.current.isCurrent(token)) return;
                 const shouldStream = runData?.status === 'running' || runData?.status === 'pending';
                 if (shouldStream) {
@@ -97,11 +106,36 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
         closeStreamRef.current = close;
     }, [closeCurrentStream, markStreamClosed, refreshSnapshot]);
 
+    const startPolling = useCallback((currentRunId: string, token: number) => {
+        if (pollTimerRef.current !== null) {
+            return;
+        }
+
+        pollTimerRef.current = window.setInterval(() => {
+            void refreshSnapshot(currentRunId, token).then((runData) => {
+                if (!requestSequenceRef.current.isCurrent(token)) {
+                    return;
+                }
+                const shouldStream = shouldKeepLiveStream(runData);
+                if (shouldStream && !streamingRef.current) {
+                    startStream(currentRunId, token);
+                }
+                if (!shouldStream) {
+                    closePolling();
+                    if (currentStreamRunIdRef.current === currentRunId) {
+                        closeCurrentStream();
+                    }
+                }
+            });
+        }, LOG_REFRESH_INTERVAL_MS);
+    }, [closeCurrentStream, closePolling, refreshSnapshot, startStream]);
+
     const loadData = useCallback(async (currentRunId: string) => {
         const token = requestSequenceRef.current.next();
         const isSameRun = run?.id === currentRunId;
         if (!isSameRun) {
             closeCurrentStream();
+            closePolling();
             setLogs([]);
             setRun(undefined);
         }
@@ -114,8 +148,10 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
             const shouldStream = shouldKeepLiveStream(runRes.data);
             if (shouldStream) {
                 startStream(currentRunId, token);
+                startPolling(currentRunId, token);
             } else if (currentStreamRunIdRef.current === currentRunId) {
                 closeCurrentStream();
+                closePolling();
             }
 
             const logsRes = await getExecutionLogs(currentRunId);
@@ -129,7 +165,7 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
                 setLoading(false);
             }
         }
-    }, [closeCurrentStream, run?.id, startStream]);
+    }, [closeCurrentStream, closePolling, run?.id, startPolling, startStream]);
 
     const handleRefresh = useCallback(async () => {
         if (!runId) {
@@ -143,16 +179,18 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
             const shouldStream = shouldKeepLiveStream(runData);
             if (shouldStream && !streamingRef.current) {
                 startStream(runId, token);
+                startPolling(runId, token);
             }
             if (!shouldStream && currentStreamRunIdRef.current === runId) {
                 closeCurrentStream();
+                closePolling();
             }
         } finally {
             if (requestSequenceRef.current.isCurrent(token)) {
                 setLoading(false);
             }
         }
-    }, [closeCurrentStream, refreshSnapshot, runId, startStream]);
+    }, [closeCurrentStream, closePolling, refreshSnapshot, runId, startPolling, startStream]);
 
     useEffect(() => {
         if (open && runId) {
@@ -160,17 +198,19 @@ const ForensicDrawer: React.FC<ForensicDrawerProps> = ({ runId, open, onClose })
         } else {
             requestSequenceRef.current.invalidate();
             closeCurrentStream();
+            closePolling();
             setLogs([]);
             setRun(undefined);
         }
-    }, [closeCurrentStream, loadData, open, runId]);
+    }, [closeCurrentStream, closePolling, loadData, open, runId]);
 
     useEffect(() => {
         return () => {
             requestSequenceRef.current.invalidate();
             closeCurrentStream();
+            closePolling();
         };
-    }, [closeCurrentStream]);
+    }, [closeCurrentStream, closePolling]);
 
     const activeRun = run?.id === runId ? run : undefined;
     const activeLogs = activeRun ? logs : [];
