@@ -1,4 +1,5 @@
 import type { CurrentUserTenant } from '@/services/auto-healing/commonTenants';
+import { emitTenantContextChanged } from '@/utils/tenantContextEvents';
 
 const TENANT_STORAGE_KEY = 'tenant-storage';
 
@@ -34,6 +35,7 @@ export function loadTenantStorageState(): TenantStorageState {
 export function saveTenantStorageState(state: TenantStorageState) {
     try {
         localStorage.setItem(TENANT_STORAGE_KEY, JSON.stringify(state));
+        emitTenantContextChanged();
     } catch (error) {
         console.error('[TenantSwitcher] 写入 tenant-storage 失败:', error);
     }

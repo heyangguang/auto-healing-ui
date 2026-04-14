@@ -1,4 +1,5 @@
 import { hasActiveImpersonationSession } from './tenantContext';
+import { emitTenantContextChanged } from './tenantContextEvents';
 
 const TOKEN_KEY = 'auto_healing_token';
 const REFRESH_TOKEN_KEY = 'auto_healing_refresh_token';
@@ -57,6 +58,7 @@ export const TokenManager = {
     localStorage.removeItem('is-platform-admin');
     localStorage.removeItem('impersonation-storage');
     localStorage.removeItem('auto_healing_saved_login');
+    emitTenantContextChanged();
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     cachedTokenExpiry = null;
@@ -140,8 +142,10 @@ async function doRefreshToken(): Promise<string | null> {
         currentTenantId: preservedTenantId,
         tenants: data.tenants,
       }));
+      emitTenantContextChanged();
     } else if (isPlatformAdmin && !isImpersonating) {
       localStorage.removeItem('tenant-storage');
+      emitTenantContextChanged();
     }
     return data.access_token;
   } catch {

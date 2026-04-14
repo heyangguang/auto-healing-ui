@@ -1,3 +1,5 @@
+import { emitTenantContextChanged } from '@/utils/tenantContextEvents';
+
 /**
  * Impersonation 状态管理工具
  * 使用 localStorage 持久化（与 TenantSwitcher 的 tenant-storage 模式一致）
@@ -46,12 +48,14 @@ export const saveImpersonationState = (session: ImpersonationSession) => {
             isImpersonating: true,
             session,
         }));
+        emitTenantContextChanged();
     } catch { /* ignore */ }
 };
 
 /** 清除 Impersonation 状态 */
 export const clearImpersonationState = () => {
     localStorage.removeItem(STORAGE_KEY);
+    emitTenantContextChanged();
 };
 
 /** 检查当前是否在 Impersonation 模式 */

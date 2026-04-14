@@ -1,36 +1,12 @@
 import { useRequest } from '@umijs/max';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getDashboardOverview } from '@/services/auto-healing/dashboard';
+import { getTenantContextScopeKey } from '@/utils/tenantContext';
+import { subscribeTenantContextChanged } from '@/utils/tenantContextEvents';
 
 const resolvedSectionData = new Map<string, DashboardSectionMap[DashboardSectionKey]>();
+const autoRefreshAttemptedKeys = new Set<string>();
 const DASHBOARD_LOADING_DELAY_MS = 200;
-
-const getTenantCacheScope = () => {
-    try {
-        const impersonationRaw = localStorage.getItem('impersonation-storage');
-        if (impersonationRaw) {
-            const impersonation = JSON.parse(impersonationRaw);
-            const tenantId = impersonation?.session?.tenantId;
-            if (tenantId) return `impersonation:${tenantId}`;
-        }
-    } catch {
-        // ignore malformed storage
-    }
-
-    try {
-        const tenantRaw = localStorage.getItem('tenant-storage');
-        if (tenantRaw) {
-            const tenantStorage = JSON.parse(tenantRaw);
-            if (tenantStorage?.currentTenantId) {
-                return `tenant:${tenantStorage.currentTenantId}`;
-            }
-        }
-    } catch {
-        // ignore malformed storage
-    }
-
-    return 'platform';
-};
 
 type StatusCountItem = {
     status?: string;
@@ -195,7 +171,8 @@ export type DashboardSectionKey = keyof DashboardSectionMap;
  * 3. pollingInterval — 60秒自动刷新
  */
 export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
-    const tenantCacheScope = getTenantCacheScope();
+    const [tenantCacheScope, setTenantCacheScope] = useState(() => getTenantContextScopeKey());
+    const [autoRefreshing, setAutoRefreshing] = useState(false);
     const sectionCacheKey = `dashboard-section-${tenantCacheScope}-${section}`;
     type DashboardOverviewResult = Record<string, unknown> & {
         data?: Record<string, unknown>;
@@ -225,7 +202,28 @@ export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
         }
     }, [sectionCacheKey, sectionData]);
 
-    const initialLoading = loading && data == null;
+    useEffect(() => {
+        if (data != null || loading || autoRefreshAttemptedKeys.has(sectionCacheKey)) {
+            return;
+        }
+
+        autoRefreshAttemptedKeys.add(sectionCacheKey);
+        setAutoRefreshing(true);
+        Promise.resolve(refresh())
+            .catch(() => undefined)
+            .finally(() => {
+                setAutoRefreshing(false);
+            });
+    }, [data, loading, refresh, sectionCacheKey]);
+
+    useEffect(() => subscribeTenantContextChanged(() => {
+        setTenantCacheScope((current) => {
+            const next = getTenantContextScopeKey();
+            return current === next ? current : next;
+        });
+    }), []);
+
+    const initialLoading = (loading || autoRefreshing) && data == null;
 
     return {
         data,
@@ -236,4 +234,5 @@ export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
 
 export const __TEST_ONLY__ = {
     clearResolvedSectionCache: () => resolvedSectionData.clear(),
+    clearAutoRefreshAttemptedKeys: () => autoRefreshAttemptedKeys.clear(),
 };

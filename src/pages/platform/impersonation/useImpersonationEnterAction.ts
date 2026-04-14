@@ -5,6 +5,7 @@ import {
   type ImpersonationRequest,
 } from '@/services/auto-healing/platform/impersonation';
 import { saveImpersonationState } from '@/store/impersonation';
+import { emitTenantContextChanged } from '@/utils/tenantContextEvents';
 
 export default function useImpersonationEnterAction(
   runAction: (requestId: string, operation: () => Promise<void>) => Promise<void>,
@@ -26,6 +27,7 @@ export default function useImpersonationEnterAction(
         currentTenantId: entered.tenant_id,
         currentTenantName: entered.tenant_name,
       }));
+      emitTenantContextChanged();
       message.success(`已进入「${entered.tenant_name}」租户视角`);
       setTimeout(() => { window.location.href = '/workbench'; }, 500);
     });

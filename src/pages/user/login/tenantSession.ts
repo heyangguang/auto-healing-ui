@@ -1,3 +1,5 @@
+import { emitTenantContextChanged } from '@/utils/tenantContextEvents';
+
 type LoginTenantSummary = {
   currentTenantId?: string;
   isPlatformAdmin: boolean;
@@ -13,11 +15,13 @@ export function persistTenantSession({
 
   if (isPlatformAdmin) {
     localStorage.removeItem('tenant-storage');
+    emitTenantContextChanged();
     return 'platform';
   }
 
   if (!tenants?.length) {
     localStorage.removeItem('tenant-storage');
+    emitTenantContextChanged();
     return 'none';
   }
 
@@ -25,5 +29,6 @@ export function persistTenantSession({
     currentTenantId,
     tenants,
   }));
+  emitTenantContextChanged();
   return 'tenant';
 }
