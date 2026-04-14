@@ -1,4 +1,61 @@
 declare namespace GeneratedAutoHealing {
+  type postTenantPluginsByIdSyncParams =           {
+                'id': string;
+          };
+
+  type postTenantPluginsByIdTestParams =           {
+                'id': string;
+          };
+
+  type postTenantSecretsSourcesByIdDisableParams =           {
+                'id': string;
+          };
+
+  type postTenantSecretsSourcesByIdEnableParams =           {
+                'id': string;
+          };
+
+  type postTenantSecretsSourcesByIdTestParams =           {
+                'id': string;
+          };
+
+  type postTenantSecretsSourcesByIdTestQueryParams =           {
+                'id': string;
+          };
+
+  type postTenantTemplatesByIdPreviewParams =           {
+                'id': string;
+          };
+
+  type postTenantUsersByIdResetPasswordParams =           {
+                'id': string;
+          };
+
+  type putPlatformDictionariesByIdParams =           {
+                'id': string;
+          };
+
+  type putPlatformRolesByIdParams =           {
+                'id': string;
+          };
+
+  type putPlatformRolesByIdPermissionsParams =           {
+                'id': string;
+          };
+
+  type putPlatformSettingsByKeyParams =           {
+                'key': string;
+          };
+
+  type putPlatformTenantsByIdMembersByUserIdRoleParams =           {
+                'id': string;
+                'userId': string;
+          };
+
+  type putPlatformTenantsByIdParams =           {
+                'id': string;
+          };
+
   type putPlatformUsersByIdParams =           {
                 'id': string;
           };
@@ -40,6 +97,10 @@ declare namespace GeneratedAutoHealing {
           };
 
   type putTenantHealingRulesByIdParams =           {
+                'id': string;
+          };
+
+  type putTenantIncidentSolutionTemplatesByIdParams =           {
                 'id': string;
           };
 
@@ -192,63 +253,5 @@ declare namespace GeneratedAutoHealing {
     private_key?: string;
     /** 密码（password 方式） */
     password?: string;
-  };
-
-  type SecretQuery = {
-    hostname: string;
-    ip_address?: string;
-    /** 密钥源ID（可选，不指定则使用默认密钥源） */
-    source_id?: string;
-  };
-
-  type SecretsSection = {
-    total?: number;
-    active?: number;
-    by_type?: StatusCount[];
-    by_auth_type?: StatusCount[];
-  };
-
-  type SecretsSource = {
-    id?: string;
-    name?: string;
-    type?: string;
-    /** SSH 认证类型（file 类型只支持 ssh_key） */
-    auth_type?: string;
-    /** 配置详情（根据 type 不同结构不同） */
-    config?: Record<string, unknown>;
-    /** 是否默认密钥源 */
-    is_default?: boolean;
-    /** 优先级（数字越小越优先） */
-    priority?: number;
-    status?: string;
-    created_at?: string;
-  };
-
-  type SiteMessage = {
-    id?: string;
-    tenant_id?: string;
-    target_tenant_id?: string;
-    category?: string;
-    title?: string;
-    content?: string;
-    created_at?: string;
-    expires_at?: string;
-  };
-
-  type SiteMessageWithReadStatus =
-    // #/components/schemas/SiteMessage
-    SiteMessage & {
-      is_read?: boolean;
-    };
-
-  type StatusCount = {
-    status?: string;
-    count?: number;
-  };
-
-  type Success = {
-    code?: number;
-    message?: string;
-    data?: Record<string, unknown>;
   };
 }

@@ -1,4 +1,28 @@
 declare namespace GeneratedAutoHealing {
+  type FilterOption = {
+    label?: string;
+    value?: string;
+  };
+
+  type FlowClosePolicy = {
+    /** 是否启用新版自动关单策略 */
+    enabled?: boolean;
+    /** 触发时机，当前仅支持 flow_success */
+    trigger_on?: "flow_success";
+    /** 解决方案模板 ID */
+    solution_template_id?: string;
+    /** 默认关闭状态 */
+    default_close_status?: "resolved" | "closed";
+    /** 默认关闭原因码 */
+    default_close_code?: string;
+  };
+
+  type FlowEdge = {
+    from?: string;
+    to?: string;
+    condition?: string;
+  };
+
   type FlowExecutionLog = {
     id?: string;
     flow_instance_id?: string;
@@ -230,30 +254,5 @@ declare namespace GeneratedAutoHealing {
 
   type getTenantChannelsByIdParams =           {
                 'id': string;
-          };
-
-  type getTenantChannelsParams =           {
-                'page'?: number;
-                'page_size'?: number;
-                'type'?: string;
-          };
-
-  type getTenantCmdbByIdMaintenanceLogsParams =           {
-                'id': string;
-                'page'?: number;
-                'page_size'?: number;
-          };
-
-  type getTenantCmdbByIdParams =           {
-                'id': string;
-          };
-
-  type getTenantCmdbIdsParams =           {
-                'plugin_id'?: string;
-                'type'?: string;
-                'status'?: string;
-                'environment'?: string;
-                'source_plugin_name'?: string;
-                'has_plugin'?: boolean;
           };
 }

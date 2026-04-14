@@ -1,4 +1,61 @@
 declare namespace GeneratedAutoHealing {
+  type MessageResponse =
+    // #/components/schemas/Success
+    Success;
+
+  type Notification = {
+    id?: string;
+    execution_run_id?: string;
+    template_id?: string;
+    channel_id?: string;
+    status?: "pending" | "sent" | "delivered" | "failed" | "bounced";
+    subject?: string;
+    body?: string;
+    recipients?: string[];
+    retry_count?: number;
+    error_message?: string;
+    response_data?: Record<string, unknown>;
+    next_retry_at?: string;
+    sent_at?: string;
+    created_at?: string;
+  };
+
+  type NotificationChannel = {
+    id?: string;
+    name?: string;
+    type?: string;
+    description?: string;
+    retry_config?: { max_retries?: number; retry_intervals?: number[] };
+    recipients?: string[];
+    is_active?: boolean;
+    is_default?: boolean;
+    rate_limit_per_minute?: number;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  type NotificationChannelCreate = {
+    name: string;
+    type: string;
+    description?: string;
+    config: Record<string, unknown>;
+    retry_config?: Record<string, unknown>;
+    recipients?: string[];
+    is_default?: boolean;
+    rate_limit_per_minute?: number;
+  };
+
+  type NotificationChannelUpdate = {
+    name?: string;
+    description?: string;
+    config?: Record<string, unknown>;
+    retry_config?: Record<string, unknown>;
+    recipients?: string[];
+    is_active?: boolean;
+    is_default?: boolean;
+    rate_limit_per_minute?: number;
+  };
+
   type NotificationSection = {
     channels_total?: number;
     templates_total?: number;
@@ -79,7 +136,7 @@ declare namespace GeneratedAutoHealing {
   };
 
   type NotificationTypeCount = {
-    type?: "webhook" | "email" | "dingtalk" | "wecom" | "slack" | "teams";
+    type?: "webhook" | "dingtalk" | "email";
     count?: number;
   };
 
@@ -190,62 +247,5 @@ declare namespace GeneratedAutoHealing {
     min?: number;
     max?: number;
     pattern?: string;
-  };
-
-  type Plugin = {
-    id?: string;
-    name?: string;
-    /** 插件类型 */
-    type?: string;
-    description?: string;
-    version?: string;
-    status?: string;
-    /** 连接配置，包含：
-- url: API地址 (必填)
-- auth_type: 认证方式 basic/bearer/api_key (必填)
-- username/password: Basic认证
-- token: Bearer认证
-- api_key/api_key_header: API Key认证
-- since_param: 增量同步时间参数名
-- response_data_path: 响应数据路径
-- extra_params: 额外查询参数 (对象格式)
-- close_incident_url: 关闭工单接口URL (ITSM专用)
- */
-    config?: Record<string, unknown>;
-    /** 字段映射规则，格式：
-incident_mapping: { 标准字段: 外部字段 }
-cmdb_mapping: { 标准字段: 外部字段 }
- */
-    field_mapping?: Record<string, unknown>;
-    /** 同步过滤器配置，支持 logic/rules 嵌套条件 */
-    sync_filter?: Record<string, unknown>;
-    sync_enabled?: boolean;
-    sync_interval_minutes?: number;
-    last_sync_at?: string;
-    next_sync_at?: string;
-    error_message?: string;
-    created_at?: string;
-  };
-
-  type PluginItem = {
-    id?: string;
-    name?: string;
-    type?: string;
-    status?: string;
-    last_sync_at?: string;
-  };
-
-  type PluginSection = {
-    total?: number;
-    active?: number;
-    inactive?: number;
-    error?: number;
-    sync_success_rate?: number;
-    by_status?: StatusCount[];
-    by_type?: StatusCount[];
-    sync_trend_7d?: TrendPoint[];
-    recent_syncs?: SyncItem[];
-    error_plugins?: PluginItem[];
-    plugin_overview?: PluginItem[];
   };
 }

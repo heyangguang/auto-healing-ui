@@ -1,4 +1,36 @@
 declare namespace GeneratedAutoHealing {
+  type HealingFlowUpdate = {
+    name?: string;
+    description?: string;
+    nodes?: FlowNode[];
+    edges?: FlowEdge[];
+    is_active?: boolean;
+    auto_close_source_incident?: boolean;
+    close_policy?: FlowClosePolicy;
+  };
+
+  type HealingNodeConfigField = {
+    type?: string;
+    required?: boolean;
+    default?: string;
+    description?: string;
+  };
+
+  type HealingNodeDefinition = {
+    name?: string;
+    description?: string;
+    config?: Record<string, unknown>;
+    ports?: HealingNodePorts;
+    inputs?: HealingNodeIO[];
+    outputs?: HealingNodeIO[];
+  };
+
+  type HealingNodeIO = {
+    key?: string;
+    type?: string;
+    description?: string;
+  };
+
   type HealingNodePortOption = {
     id?: string;
     name?: string;
@@ -137,6 +169,36 @@ declare namespace GeneratedAutoHealing {
     critical_incidents?: RecentItem[];
   };
 
+  type IncidentSolutionTemplate = {
+    id?: string;
+    name?: string;
+    description?: string;
+    resolution_template?: string;
+    work_notes_template?: string;
+    default_close_code?: string;
+    default_close_status?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  type IncidentSolutionTemplateCreate = {
+    name: string;
+    description?: string;
+    resolution_template: string;
+    work_notes_template: string;
+    default_close_code?: string;
+    default_close_status?: string;
+  };
+
+  type IncidentSolutionTemplateUpdate = {
+    name?: string;
+    description?: string;
+    resolution_template?: string;
+    work_notes_template?: string;
+    default_close_code?: string;
+    default_close_status?: string;
+  };
+
   type IncidentWritebackLog = {
     id?: string;
     incident_id?: string;
@@ -191,64 +253,5 @@ declare namespace GeneratedAutoHealing {
     action?: string;
     reason?: string;
     created_at?: string;
-  };
-
-  type MessageResponse =
-    // #/components/schemas/Success
-    Success;
-
-  type Notification = {
-    id?: string;
-    execution_run_id?: string;
-    workflow_instance_id?: string;
-    incident_id?: string;
-    template_id?: string;
-    channel_id?: string;
-    status?: "pending" | "sent" | "delivered" | "failed" | "bounced";
-    subject?: string;
-    body?: string;
-    recipients?: string[];
-    retry_count?: number;
-    error_message?: string;
-    response_data?: Record<string, unknown>;
-    next_retry_at?: string;
-    sent_at?: string;
-    created_at?: string;
-  };
-
-  type NotificationChannel = {
-    id?: string;
-    name?: string;
-    type?: string;
-    description?: string;
-    retry_config?: { max_retries?: number; retry_intervals?: number[] };
-    recipients?: string[];
-    is_active?: boolean;
-    is_default?: boolean;
-    rate_limit_per_minute?: number;
-    created_at?: string;
-    updated_at?: string;
-  };
-
-  type NotificationChannelCreate = {
-    name: string;
-    type: string;
-    description?: string;
-    config: Record<string, unknown>;
-    retry_config?: Record<string, unknown>;
-    recipients?: string[];
-    is_default?: boolean;
-    rate_limit_per_minute?: number;
-  };
-
-  type NotificationChannelUpdate = {
-    name?: string;
-    description?: string;
-    config?: Record<string, unknown>;
-    retry_config?: Record<string, unknown>;
-    recipients?: string[];
-    is_active?: boolean;
-    is_default?: boolean;
-    rate_limit_per_minute?: number;
   };
 }

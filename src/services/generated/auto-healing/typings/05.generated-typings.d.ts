@@ -1,4 +1,31 @@
 declare namespace GeneratedAutoHealing {
+  type getTenantHealingRulesParams =           {
+                'page'?: number;
+                'page_size'?: number;
+                'is_active'?: boolean;
+                'flow_id'?: string;
+          };
+
+  type getTenantImpersonationHistoryParams =           {
+                'page'?: number;
+                'page_size'?: number;
+                'requester_name'?: string;
+                'reason'?: string;
+                'status'?: string;
+          };
+
+  type getTenantIncidentsByIdParams =           {
+                'id': string;
+          };
+
+  type getTenantIncidentsByIdWritebackLogsParams =           {
+                'id': string;
+          };
+
+  type getTenantIncidentSolutionTemplatesByIdParams =           {
+                'id': string;
+          };
+
   type getTenantIncidentsParams =           {
                 'page'?: number;
                 'page_size'?: number;
@@ -212,6 +239,7 @@ declare namespace GeneratedAutoHealing {
     is_active?: boolean;
     /** 流程成功完成后自动关闭源工单 */
     auto_close_source_incident?: boolean;
+    close_policy?: FlowClosePolicy;
     created_by?: string;
     created_at?: string;
   };
@@ -223,36 +251,6 @@ declare namespace GeneratedAutoHealing {
     edges?: FlowEdge[];
     is_active?: boolean;
     auto_close_source_incident?: boolean;
-  };
-
-  type HealingFlowUpdate = {
-    name?: string;
-    description?: string;
-    nodes?: FlowNode[];
-    edges?: FlowEdge[];
-    is_active?: boolean;
-    auto_close_source_incident?: boolean;
-  };
-
-  type HealingNodeConfigField = {
-    type?: string;
-    required?: boolean;
-    default?: string;
-    description?: string;
-  };
-
-  type HealingNodeDefinition = {
-    name?: string;
-    description?: string;
-    config?: Record<string, unknown>;
-    ports?: HealingNodePorts;
-    inputs?: HealingNodeIO[];
-    outputs?: HealingNodeIO[];
-  };
-
-  type HealingNodeIO = {
-    key?: string;
-    type?: string;
-    description?: string;
+    close_policy?: FlowClosePolicy;
   };
 }

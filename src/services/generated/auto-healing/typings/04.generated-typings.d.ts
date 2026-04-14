@@ -1,4 +1,29 @@
 declare namespace GeneratedAutoHealing {
+  type getTenantChannelsParams =           {
+                'page'?: number;
+                'page_size'?: number;
+                'type'?: string;
+          };
+
+  type getTenantCmdbByIdMaintenanceLogsParams =           {
+                'id': string;
+                'page'?: number;
+                'page_size'?: number;
+          };
+
+  type getTenantCmdbByIdParams =           {
+                'id': string;
+          };
+
+  type getTenantCmdbIdsParams =           {
+                'plugin_id'?: string;
+                'type'?: string;
+                'status'?: string;
+                'environment'?: string;
+                'source_plugin_name'?: string;
+                'has_plugin'?: boolean;
+          };
+
   type getTenantCmdbParams =           {
                 'page'?: number;
                 'page_size'?: number;
@@ -227,29 +252,6 @@ declare namespace GeneratedAutoHealing {
           };
 
   type getTenantHealingRulesByIdParams =           {
-                'id': string;
-          };
-
-  type getTenantHealingRulesParams =           {
-                'page'?: number;
-                'page_size'?: number;
-                'is_active'?: boolean;
-                'flow_id'?: string;
-          };
-
-  type getTenantImpersonationHistoryParams =           {
-                'page'?: number;
-                'page_size'?: number;
-                'requester_name'?: string;
-                'reason'?: string;
-                'status'?: string;
-          };
-
-  type getTenantIncidentsByIdParams =           {
-                'id': string;
-          };
-
-  type getTenantIncidentsByIdWritebackLogsParams =           {
                 'id': string;
           };
 }

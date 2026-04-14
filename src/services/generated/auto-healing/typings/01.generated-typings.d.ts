@@ -37,13 +37,18 @@ declare namespace GeneratedAutoHealing {
   };
 
   type CloseIncidentRequest = {
-    /** 解决方案描述 */
+    /** 解决结论；若配置 solution_template_id 且未显式填写，则由模板渲染生成 */
     resolution?: string;
-    /** 工作备注 */
+    /** 处理过程与验证结果；若配置 solution_template_id 且未显式填写，则由模板渲染生成 */
     work_notes?: string;
-    /** 关闭代码 */
+    /** 关闭原因码，如 auto_healed / manual_fixed / not_reproducible */
     close_code?: string;
+    /** 关闭后的生命周期状态 */
     close_status?: "resolved" | "closed";
+    /** 解决方案模板 ID */
+    solution_template_id?: string;
+    /** 模板变量，用于注入运行事实或手工补充信息 */
+    template_vars?: Record<string, unknown>;
   };
 
   type CloseIncidentResponse = {
@@ -250,9 +255,5 @@ declare namespace GeneratedAutoHealing {
   type deletePlatformTenantsByIdMembersByUserIdParams =           {
                 'id': string;
                 'userId': string;
-          };
-
-  type deletePlatformTenantsByIdParams =           {
-                'id': string;
           };
 }

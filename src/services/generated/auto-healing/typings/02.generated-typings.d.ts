@@ -1,4 +1,8 @@
 declare namespace GeneratedAutoHealing {
+  type deletePlatformTenantsByIdParams =           {
+                'id': string;
+          };
+
   type deletePlatformUsersByIdParams =           {
                 'id': string;
           };
@@ -34,6 +38,10 @@ declare namespace GeneratedAutoHealing {
   type deleteTenantHealingRulesByIdParams =           {
                 'id': string;
                 'force'?: boolean;
+          };
+
+  type deleteTenantIncidentSolutionTemplatesByIdParams =           {
+                'id': string;
           };
 
   type deleteTenantPlaybooksByIdParams =           {
@@ -243,16 +251,5 @@ declare namespace GeneratedAutoHealing {
     key_path: string;
     /** SSH 用户名，默认 root */
     username?: string;
-  };
-
-  type FilterOption = {
-    label?: string;
-    value?: string;
-  };
-
-  type FlowEdge = {
-    from?: string;
-    to?: string;
-    condition?: string;
   };
 }

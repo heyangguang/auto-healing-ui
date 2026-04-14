@@ -62,7 +62,7 @@
     },
     {
       "name": "通知渠道",
-      "description": "通知渠道管理 (Webhook, 钉钉, 邮件)"
+      "description": "通知渠道管理 (Webhook, 钉钉, 企业微信, Slack, Teams, 邮件)"
     },
     {
       "name": "通知模板",
@@ -6794,6 +6794,21 @@
                     "x-dict-type": "notification_format",
                     "x-dict-mode": "exact",
                     "description": "未使用模板时的消息格式，默认 text"
+                  },
+                  "execution_run_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "可选，关联执行记录"
+                  },
+                  "workflow_instance_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "可选，关联流程实例"
+                  },
+                  "incident_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "可选，关联工单/事件"
                   }
                 }
               }
@@ -14754,6 +14769,14 @@
             "type": "string",
             "format": "uuid"
           },
+          "workflow_instance_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "incident_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "template_id": {
             "type": "string",
             "format": "uuid"
@@ -14848,8 +14871,11 @@
             "type": "string",
             "enum": [
               "webhook",
+              "email",
               "dingtalk",
-              "email"
+              "wecom",
+              "slack",
+              "teams"
             ]
           },
           "count": {
@@ -15497,11 +15523,45 @@
           "description": {
             "type": "string"
           },
+          "problem_template": {
+            "type": "string",
+            "description": "问题说明模板"
+          },
+          "solution_template": {
+            "type": "string",
+            "description": "解决方案模板，描述标准处理方案"
+          },
+          "verification_template": {
+            "type": "string",
+            "description": "验证结果模板"
+          },
+          "conclusion_template": {
+            "type": "string",
+            "description": "最终结论模板"
+          },
+          "steps_render_mode": {
+            "type": "string",
+            "description": "执行步骤渲染模式",
+            "enum": [
+              "summary",
+              "detailed"
+            ]
+          },
+          "steps_max_count": {
+            "type": "integer",
+            "description": "最多渲染的执行步骤数量"
+          },
+          "step_output_max_length": {
+            "type": "integer",
+            "description": "单步输出摘要最大长度"
+          },
           "resolution_template": {
-            "type": "string"
+            "type": "string",
+            "description": "兼容旧模型的结论模板"
           },
           "work_notes_template": {
-            "type": "string"
+            "type": "string",
+            "description": "兼容旧模型的过程模板"
           },
           "default_close_code": {
             "type": "string"
@@ -15522,9 +15582,7 @@
       "IncidentSolutionTemplateCreate": {
         "type": "object",
         "required": [
-          "name",
-          "resolution_template",
-          "work_notes_template"
+          "name"
         ],
         "properties": {
           "name": {
@@ -15532,6 +15590,31 @@
           },
           "description": {
             "type": "string"
+          },
+          "problem_template": {
+            "type": "string"
+          },
+          "solution_template": {
+            "type": "string"
+          },
+          "verification_template": {
+            "type": "string"
+          },
+          "conclusion_template": {
+            "type": "string"
+          },
+          "steps_render_mode": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "detailed"
+            ]
+          },
+          "steps_max_count": {
+            "type": "integer"
+          },
+          "step_output_max_length": {
+            "type": "integer"
           },
           "resolution_template": {
             "type": "string"
@@ -15555,6 +15638,31 @@
           },
           "description": {
             "type": "string"
+          },
+          "problem_template": {
+            "type": "string"
+          },
+          "solution_template": {
+            "type": "string"
+          },
+          "verification_template": {
+            "type": "string"
+          },
+          "conclusion_template": {
+            "type": "string"
+          },
+          "steps_render_mode": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "detailed"
+            ]
+          },
+          "steps_max_count": {
+            "type": "integer"
+          },
+          "step_output_max_length": {
+            "type": "integer"
           },
           "resolution_template": {
             "type": "string"

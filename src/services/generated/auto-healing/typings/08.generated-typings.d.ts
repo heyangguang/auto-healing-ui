@@ -1,4 +1,61 @@
 declare namespace GeneratedAutoHealing {
+  type Plugin = {
+    id?: string;
+    name?: string;
+    /** 插件类型 */
+    type?: string;
+    description?: string;
+    version?: string;
+    status?: string;
+    /** 连接配置，包含：
+- url: API地址 (必填)
+- auth_type: 认证方式 basic/bearer/api_key (必填)
+- username/password: Basic认证
+- token: Bearer认证
+- api_key/api_key_header: API Key认证
+- since_param: 增量同步时间参数名
+- response_data_path: 响应数据路径
+- extra_params: 额外查询参数 (对象格式)
+- close_incident_url: 关闭工单接口URL (ITSM专用)
+ */
+    config?: Record<string, unknown>;
+    /** 字段映射规则，格式：
+incident_mapping: { 标准字段: 外部字段 }
+cmdb_mapping: { 标准字段: 外部字段 }
+ */
+    field_mapping?: Record<string, unknown>;
+    /** 同步过滤器配置，支持 logic/rules 嵌套条件 */
+    sync_filter?: Record<string, unknown>;
+    sync_enabled?: boolean;
+    sync_interval_minutes?: number;
+    last_sync_at?: string;
+    next_sync_at?: string;
+    error_message?: string;
+    created_at?: string;
+  };
+
+  type PluginItem = {
+    id?: string;
+    name?: string;
+    type?: string;
+    status?: string;
+    last_sync_at?: string;
+  };
+
+  type PluginSection = {
+    total?: number;
+    active?: number;
+    inactive?: number;
+    error?: number;
+    sync_success_rate?: number;
+    by_status?: StatusCount[];
+    by_type?: StatusCount[];
+    sync_trend_7d?: TrendPoint[];
+    recent_syncs?: SyncItem[];
+    error_plugins?: PluginItem[];
+    plugin_overview?: PluginItem[];
+  };
+
   type PluginStats = {
     /** 总数 */
     total?: number;
@@ -195,63 +252,6 @@ declare namespace GeneratedAutoHealing {
           };
 
   type postTenantPluginsByIdDeactivateParams =           {
-                'id': string;
-          };
-
-  type postTenantPluginsByIdSyncParams =           {
-                'id': string;
-          };
-
-  type postTenantPluginsByIdTestParams =           {
-                'id': string;
-          };
-
-  type postTenantSecretsSourcesByIdDisableParams =           {
-                'id': string;
-          };
-
-  type postTenantSecretsSourcesByIdEnableParams =           {
-                'id': string;
-          };
-
-  type postTenantSecretsSourcesByIdTestParams =           {
-                'id': string;
-          };
-
-  type postTenantSecretsSourcesByIdTestQueryParams =           {
-                'id': string;
-          };
-
-  type postTenantTemplatesByIdPreviewParams =           {
-                'id': string;
-          };
-
-  type postTenantUsersByIdResetPasswordParams =           {
-                'id': string;
-          };
-
-  type putPlatformDictionariesByIdParams =           {
-                'id': string;
-          };
-
-  type putPlatformRolesByIdParams =           {
-                'id': string;
-          };
-
-  type putPlatformRolesByIdPermissionsParams =           {
-                'id': string;
-          };
-
-  type putPlatformSettingsByKeyParams =           {
-                'key': string;
-          };
-
-  type putPlatformTenantsByIdMembersByUserIdRoleParams =           {
-                'id': string;
-                'userId': string;
-          };
-
-  type putPlatformTenantsByIdParams =           {
                 'id': string;
           };
 }
