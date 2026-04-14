@@ -20,7 +20,7 @@ export async function getAuthInvitationByToken(
   });
 }
 
-/** 用户登录 POST /api/v1/auth/login */
+/** 用户登录 所有登录尝试都会写入平台认证审计，未知用户名失败也会保留尝试用户名与失败原因。 POST /api/v1/auth/login */
 export async function postAuthLogin(
   body: {
     username: string;
@@ -40,7 +40,7 @@ export async function postAuthLogin(
   });
 }
 
-/** 用户登出 POST /api/v1/auth/logout */
+/** 用户登出 登出事件统一记录为平台认证审计（category=auth, action=logout）。 POST /api/v1/auth/logout */
 export async function postAuthLogout(options?: Record<string, unknown>) {
   return request<{
     code?: number;
@@ -140,7 +140,7 @@ export async function getAuthProfileActivities(
   });
 }
 
-/** 获取当前用户登录历史 GET /api/v1/auth/profile/login-history */
+/** 获取当前用户登录历史 读取当前用户的认证历史，数据源统一来自平台认证审计，不依赖当前租户上下文。 GET /api/v1/auth/profile/login-history */
 export async function getAuthProfileLoginHistory(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: GeneratedAutoHealing.getAuthProfileLoginHistoryParams,
@@ -180,7 +180,7 @@ export async function postAuthRefresh(
   });
 }
 
-/** 通过邀请注册用户 POST /api/v1/auth/register */
+/** 通过邀请注册用户 邀请注册成功或失败都会记录为平台认证审计事件（category=auth, action=register）。 POST /api/v1/auth/register */
 export async function postAuthRegister(
   body: Record<string, unknown>,
   options?: Record<string, unknown>

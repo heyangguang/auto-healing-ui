@@ -1,4 +1,90 @@
 declare namespace GeneratedAutoHealing {
+  type PluginStats = {
+    /** 总数 */
+    total?: number;
+    /** 按类型分布 */
+    by_type?: Record<string, unknown>;
+    /** 按状态分布 */
+    by_status?: Record<string, unknown>;
+    /** 启用同步数 */
+    sync_enabled?: number;
+    /** 未启用同步数 */
+    sync_disabled?: number;
+    /** 激活数 */
+    active_count?: number;
+    /** 未激活数 */
+    inactive_count?: number;
+    /** 错误数 */
+    error_count?: number;
+  };
+
+  type PluginSyncLog = {
+    id?: string;
+    plugin_id?: string;
+    sync_type?: string;
+    status?: string;
+    records_fetched?: number;
+    records_processed?: number;
+    records_failed?: number;
+    /** 同步详情 */
+    details?: { new_count?: number; updated_count?: number };
+    started_at?: string;
+    completed_at?: string;
+    error_message?: string;
+  };
+
+  type postPlatformImpersonationRequestsByIdCancelParams =           {
+                'id': string;
+          };
+
+  type postPlatformImpersonationRequestsByIdEnterParams =           {
+                'id': string;
+          };
+
+  type postPlatformImpersonationRequestsByIdExitParams =           {
+                'id': string;
+          };
+
+  type postPlatformImpersonationRequestsByIdTerminateParams =           {
+                'id': string;
+          };
+
+  type postPlatformTenantsByIdInvitationsParams =           {
+                'id': string;
+          };
+
+  type postPlatformTenantsByIdMembersParams =           {
+                'id': string;
+          };
+
+  type postPlatformUsersByIdResetPasswordParams =           {
+                'id': string;
+          };
+
+  type postTenantBlacklistExemptionsByIdApproveParams =           {
+                'id': string;
+          };
+
+  type postTenantBlacklistExemptionsByIdRejectParams =           {
+                'id': string;
+          };
+
+  type postTenantChannelsByIdTestParams =           {
+                'id': string;
+          };
+
+  type postTenantCmdbByIdMaintenanceParams =           {
+                'id': string;
+          };
+
+  type postTenantCmdbByIdResumeParams =           {
+                'id': string;
+          };
+
+  type postTenantCmdbByIdTestConnectionParams =           {
+                'id': string;
+          };
+
   type postTenantCommandBlacklistByIdToggleParams =           {
                 'id': string;
           };
@@ -49,6 +135,10 @@ declare namespace GeneratedAutoHealing {
           };
 
   type postTenantHealingInstancesByIdCancelParams =           {
+                'id': string;
+          };
+
+  type postTenantHealingInstancesByIdRecoverParams =           {
                 'id': string;
           };
 
@@ -164,96 +254,4 @@ declare namespace GeneratedAutoHealing {
   type putPlatformTenantsByIdParams =           {
                 'id': string;
           };
-
-  type putPlatformUsersByIdParams =           {
-                'id': string;
-          };
-
-  type putPlatformUsersByIdRolesParams =           {
-                'id': string;
-          };
-
-  type putTenantChannelsByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantCommandBlacklistByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantDashboardRolesByRoleIdWorkspacesParams =           {
-                'roleId': string;
-          };
-
-  type putTenantDashboardWorkspacesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantExecutionSchedulesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantExecutionTasksByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantGitReposByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantHealingFlowsByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantHealingRulesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantPlaybooksByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantPlaybooksByIdVariablesParams =           {
-                'id': string;
-          };
-
-  type putTenantPluginsByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantRolesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantRolesByIdPermissionsParams =           {
-                'id': string;
-          };
-
-  type putTenantSecretsSourcesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantTemplatesByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantUsersByIdParams =           {
-                'id': string;
-          };
-
-  type putTenantUsersByIdRolesParams =           {
-                'id': string;
-          };
-
-  type RankItem = {
-    name?: string;
-    count?: number;
-  };
-
-  type RecentItem = {
-    id?: string;
-    title?: string;
-    status?: string;
-    created_at?: string;
-  };
 }

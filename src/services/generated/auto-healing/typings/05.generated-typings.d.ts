@@ -1,4 +1,54 @@
 declare namespace GeneratedAutoHealing {
+  type getTenantIncidentsParams =           {
+                'page'?: number;
+                'page_size'?: number;
+                'plugin_id'?: string;
+                'source_plugin_name'?: string;
+                'search'?: string;
+                'external_id'?: string;
+                'status'?: string;
+                'healing_status'?: string;
+                'severity'?: string;
+                'has_plugin'?: boolean;
+                'sort_by'?: "created_at" | "severity";
+                'sort_order'?: "asc" | "desc";
+          };
+
+  type getTenantNotificationsByIdParams =           {
+                'id': string;
+          };
+
+  type getTenantNotificationsParams =           {
+                'page'?: number;
+                'page_size'?: number;
+                'status'?: string;
+                'task_name'?: string;
+                'triggered_by'?: string;
+                'subject'?: string;
+                'channel_id'?: string;
+                'template_id'?: string;
+                'task_id'?: string;
+                'execution_run_id'?: string;
+                'created_after'?: string;
+                'created_before'?: string;
+                'sort_by'?: "created_at" | "status" | "subject" | "sent_at";
+                'sort_order'?: "asc" | "desc";
+          };
+
+  type getTenantPlaybooksByIdFilesParams =           {
+                'id': string;
+          };
+
+  type getTenantPlaybooksByIdParams =           {
+                'id': string;
+          };
+
+  type getTenantPlaybooksByIdScanLogsParams =           {
+                'id': string;
+                'page'?: number;
+                'page_size'?: number;
+          };
+
   type getTenantPlaybooksParams =           {
                 'page'?: number;
                 'page_size'?: number;
@@ -160,6 +210,8 @@ declare namespace GeneratedAutoHealing {
     /** DAG 边定义 */
     edges?: FlowEdge[];
     is_active?: boolean;
+    /** 流程成功完成后自动关闭源工单 */
+    auto_close_source_incident?: boolean;
     created_by?: string;
     created_at?: string;
   };
@@ -170,6 +222,7 @@ declare namespace GeneratedAutoHealing {
     nodes?: FlowNode[];
     edges?: FlowEdge[];
     is_active?: boolean;
+    auto_close_source_incident?: boolean;
   };
 
   type HealingFlowUpdate = {
@@ -178,6 +231,7 @@ declare namespace GeneratedAutoHealing {
     nodes?: FlowNode[];
     edges?: FlowEdge[];
     is_active?: boolean;
+    auto_close_source_incident?: boolean;
   };
 
   type HealingNodeConfigField = {
@@ -200,58 +254,5 @@ declare namespace GeneratedAutoHealing {
     key?: string;
     type?: string;
     description?: string;
-  };
-
-  type HealingNodePortOption = {
-    id?: string;
-    name?: string;
-    condition?: string;
-  };
-
-  type HealingNodePorts = {
-    in?: number;
-    out?: number;
-    out_ports?: HealingNodePortOption[];
-  };
-
-  type HealingNodeSchema = {
-    initial_context?: Record<string, unknown>;
-    nodes?: Record<string, unknown>;
-  };
-
-  type HealingRule = {
-    id?: string;
-    name?: string;
-    description?: string;
-    priority?: number;
-    trigger_mode?: "auto" | "manual";
-    conditions?: RuleCondition[];
-    match_mode?: "all" | "any";
-    flow_id?: string;
-    is_active?: boolean;
-    last_run_at?: string;
-    created_at?: string;
-  };
-
-  type HealingRuleCreate = {
-    name: string;
-    description?: string;
-    priority?: number;
-    trigger_mode?: "auto" | "manual";
-    conditions?: RuleCondition[];
-    match_mode?: "all" | "any";
-    flow_id?: string;
-    is_active?: boolean;
-  };
-
-  type HealingRuleUpdate = {
-    name?: string;
-    description?: string;
-    priority?: number;
-    trigger_mode?: "auto" | "manual";
-    conditions?: RuleCondition[];
-    match_mode?: "all" | "any";
-    flow_id?: string;
-    is_active?: boolean;
   };
 }

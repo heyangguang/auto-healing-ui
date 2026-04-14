@@ -1,4 +1,57 @@
 declare namespace GeneratedAutoHealing {
+  type HealingNodePortOption = {
+    id?: string;
+    name?: string;
+    condition?: string;
+  };
+
+  type HealingNodePorts = {
+    in?: number;
+    out?: number;
+    out_ports?: HealingNodePortOption[];
+  };
+
+  type HealingNodeSchema = {
+    initial_context?: Record<string, unknown>;
+    nodes?: Record<string, unknown>;
+  };
+
+  type HealingRule = {
+    id?: string;
+    name?: string;
+    description?: string;
+    priority?: number;
+    trigger_mode?: "auto" | "manual";
+    conditions?: RuleCondition[];
+    match_mode?: "all" | "any";
+    flow_id?: string;
+    is_active?: boolean;
+    last_run_at?: string;
+    created_at?: string;
+  };
+
+  type HealingRuleCreate = {
+    name: string;
+    description?: string;
+    priority?: number;
+    trigger_mode?: "auto" | "manual";
+    conditions?: RuleCondition[];
+    match_mode?: "all" | "any";
+    flow_id?: string;
+    is_active?: boolean;
+  };
+
+  type HealingRuleUpdate = {
+    name?: string;
+    description?: string;
+    priority?: number;
+    trigger_mode?: "auto" | "manual";
+    conditions?: RuleCondition[];
+    match_mode?: "all" | "any";
+    flow_id?: string;
+    is_active?: boolean;
+  };
+
   type HealingSchemaObject = {
     type?: string;
     description?: string;
@@ -84,6 +137,29 @@ declare namespace GeneratedAutoHealing {
     critical_incidents?: RecentItem[];
   };
 
+  type IncidentWritebackLog = {
+    id?: string;
+    incident_id?: string;
+    plugin_id?: string;
+    external_id?: string;
+    action?: "close" | "update";
+    trigger_source?: string;
+    status?: "pending" | "success" | "failed" | "skipped";
+    request_method?: string;
+    request_url?: string;
+    request_payload?: Record<string, unknown>;
+    response_status_code?: number;
+    response_body?: string;
+    error_message?: string;
+    operator_user_id?: string;
+    operator_name?: string;
+    flow_instance_id?: string;
+    execution_run_id?: string;
+    started_at?: string;
+    finished_at?: string;
+    created_at?: string;
+  };
+
   type InstanceItem = {
     id?: string;
     flow_name?: string;
@@ -124,6 +200,8 @@ declare namespace GeneratedAutoHealing {
   type Notification = {
     id?: string;
     execution_run_id?: string;
+    workflow_instance_id?: string;
+    incident_id?: string;
     template_id?: string;
     channel_id?: string;
     status?: "pending" | "sent" | "delivered" | "failed" | "bounced";
@@ -172,84 +250,5 @@ declare namespace GeneratedAutoHealing {
     is_active?: boolean;
     is_default?: boolean;
     rate_limit_per_minute?: number;
-  };
-
-  type NotificationSection = {
-    channels_total?: number;
-    templates_total?: number;
-    logs_total?: number;
-    delivery_rate?: number;
-    by_channel_type?: StatusCount[];
-    by_log_status?: StatusCount[];
-    trend_7d?: TrendPoint[];
-    recent_logs?: NotifLogItem[];
-    failed_logs?: NotifLogItem[];
-  };
-
-  type NotificationStats = {
-    channels_total?: number;
-    channels_by_type?: NotificationTypeCount[];
-    templates_total?: number;
-    templates_active?: number;
-    logs_total?: number;
-    logs_by_status?: NotificationStatusCount[];
-  };
-
-  type NotificationStatusCount = {
-    status?: "pending" | "sent" | "delivered" | "failed" | "bounced";
-    count?: number;
-  };
-
-  type NotificationTemplate = {
-    id?: string;
-    name?: string;
-    description?: string;
-    event_type?: string;
-    supported_channels?: string[];
-    subject_template?: string;
-    body_template?: string;
-    format?: string;
-    /** 模板使用的 40 个变量列表 */
-    available_variables?: string[];
-    created_at?: string;
-    updated_at?: string;
-    is_active?: boolean;
-  };
-
-  type NotificationTemplateCreate = {
-    name: string;
-    description?: string;
-    event_type?: string;
-    supported_channels?: string[];
-    subject_template?: string;
-    /** 支持 40 个变量:
-- 时间: timestamp, date, time
-- 执行: execution.run_id, status, exit_code, duration, stdout, stderr
-- 任务: task.id, name, target_hosts, host_count, executor_type
-- 仓库: repository.id, name, url, main_playbook, branch
-- 统计: stats.ok, changed, failed, unreachable, skipped, total, success_rate
-- 系统: system.name, version, env
-- 错误: error.message, error.host
- */
-    body_template: string;
-    format?: string;
-    is_active?: boolean;
-  };
-
-  type NotificationTemplateUpdate = {
-    name?: string;
-    description?: string;
-    event_type?: string;
-    supported_channels?: string[];
-    subject_template?: string;
-    body_template?: string;
-    format?: string;
-    is_active?: boolean;
-  };
-
-  type NotificationTriggerConfig = {
-    enabled?: boolean;
-    channel_ids?: string[];
-    template_id?: string;
   };
 }

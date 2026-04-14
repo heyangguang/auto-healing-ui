@@ -50,6 +50,7 @@ declare namespace GeneratedAutoHealing {
     message?: string;
     local_status?: string;
     source_updated?: boolean;
+    writeback_log_id?: string;
   };
 
   type CMDBItem = {

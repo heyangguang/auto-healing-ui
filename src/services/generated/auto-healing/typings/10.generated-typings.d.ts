@@ -1,4 +1,86 @@
 declare namespace GeneratedAutoHealing {
+  type SyncItem = {
+    id?: string;
+    plugin_name?: string;
+    status?: string;
+    sync_type?: string;
+    started_at?: string;
+  };
+
+  type SystemHealth = {
+    status?: string;
+    version?: string;
+    uptime_seconds?: number;
+    environment?: string;
+    api_latency_ms?: number;
+    db_latency_ms?: number;
+  };
+
+  type TaskNotificationConfig = {
+    enabled?: boolean;
+    on_start?: NotificationTriggerConfig;
+    on_success?: NotificationTriggerConfig;
+    on_failure?: NotificationTriggerConfig;
+  };
+
+  type TemplateVariable = {
+    name?: string;
+    category?:
+      | "timestamp"
+      | "execution"
+      | "task"
+      | "repository"
+      | "stats"
+      | "system"
+      | "error";
+    description?: string;
+  };
+
+  type TrendPoint = {
+    date?: string;
+    count?: number;
+  };
+
+  type TriggerItem = {
+    id?: string;
+    title?: string;
+    severity?: string;
+    affected_ci?: string;
+    created_at?: string;
+  };
+
+  type UpdateGitRepoRequest = {
+    /** 默认分支 */
+    default_branch?: string;
+    /** 认证类型 */
+    auth_type?: string;
+    /** 认证配置 */
+    auth_config?: Record<string, unknown>;
+    /** 是否启用定时同步 */
+    sync_enabled?: boolean;
+    /** 同步间隔，如 10s, 5m, 1h */
+    sync_interval?: string;
+  };
+
+  type User = {
+    id?: string;
+    username?: string;
+    email?: string;
+    display_name?: string;
+    status?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  type UserInfo = {
+    id?: string;
+    username?: string;
+    email?: string;
+    display_name?: string;
+    roles?: string[];
+    permissions?: string[];
+  };
+
   type UserProfile = {
     id?: string;
     username?: string;

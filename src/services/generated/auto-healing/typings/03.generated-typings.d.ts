@@ -67,6 +67,22 @@ declare namespace GeneratedAutoHealing {
     config?: Record<string, unknown>;
   };
 
+  type FlowRecoveryAttempt = {
+    id?: string;
+    flow_instance_id?: string;
+    trigger_source?: "manual" | "scheduler";
+    current_node_id?: string;
+    current_node_type?: string;
+    detect_reason?: string;
+    recovery_action?: string;
+    status?: "started" | "success" | "failed" | "skipped";
+    details?: Record<string, unknown>;
+    error_message?: string;
+    started_at?: string;
+    finished_at?: string;
+    created_at?: string;
+  };
+
   type getAuthInvitationByTokenParams =           {
                 'token': string;
           };
@@ -95,6 +111,20 @@ declare namespace GeneratedAutoHealing {
   type getPlatformAuditLogsParams =           {
                 'page'?: number;
                 'page_size'?: number;
+                'category'?: "operation" | "auth" | "login";
+                'action'?: string;
+                'resource_type'?: string;
+                'username'?: string;
+                'status'?: "success" | "failed";
+          };
+
+  type getPlatformAuditLogsStatsParams =           {
+                'category'?: "operation" | "auth" | "login";
+          };
+
+  type getPlatformAuditLogsTrendParams =           {
+                'days'?: number;
+                'category'?: "operation" | "auth" | "login";
           };
 
   type getPlatformImpersonationRequestsByIdParams =           {
@@ -156,12 +186,21 @@ declare namespace GeneratedAutoHealing {
                 'page_size'?: number;
           };
 
+  type getTenantAuditLogsParams =           {
+                'category'?: "operation" | "auth" | "login";
+          };
+
   type getTenantAuditLogsResourceStatsParams =           {
                 'days'?: number;
           };
 
+  type getTenantAuditLogsStatsParams =           {
+                'category'?: "operation" | "auth" | "login";
+          };
+
   type getTenantAuditLogsTrendParams =           {
                 'days'?: number;
+                'category'?: "operation" | "auth" | "login";
           };
 
   type getTenantAuditLogsUserRankingParams =           {
@@ -216,44 +255,5 @@ declare namespace GeneratedAutoHealing {
                 'environment'?: string;
                 'source_plugin_name'?: string;
                 'has_plugin'?: boolean;
-          };
-
-  type getTenantCmdbParams =           {
-                'page'?: number;
-                'page_size'?: number;
-                'type'?: string;
-                'status'?: string;
-                'environment'?: string;
-                'source_plugin_name'?: string;
-          };
-
-  type getTenantCommandBlacklistByIdParams =           {
-                'id': string;
-          };
-
-  type getTenantCommandBlacklistParams =           {
-                'page'?: number;
-                'page_size'?: number;
-                'search'?: string;
-                'severity'?: string;
-                'is_active'?: boolean;
-                'match_type'?: string;
-                'pattern'?: string;
-                'operator'?: string;
-                'scope'?: string;
-                'sort_by'?: string;
-                'sort_order'?: string;
-          };
-
-  type getTenantDashboardOverviewParams =           {
-                'sections': string;
-          };
-
-  type getTenantDashboardRolesByRoleIdWorkspacesParams =           {
-                'roleId': string;
-          };
-
-  type getTenantExecutionRunsByIdLogsParams =           {
-                'id': string;
           };
 }

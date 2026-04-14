@@ -1,6 +1,85 @@
 declare namespace GeneratedAutoHealing {
+  type NotificationSection = {
+    channels_total?: number;
+    templates_total?: number;
+    logs_total?: number;
+    delivery_rate?: number;
+    by_channel_type?: StatusCount[];
+    by_log_status?: StatusCount[];
+    trend_7d?: TrendPoint[];
+    recent_logs?: NotifLogItem[];
+    failed_logs?: NotifLogItem[];
+  };
+
+  type NotificationStats = {
+    channels_total?: number;
+    channels_by_type?: NotificationTypeCount[];
+    templates_total?: number;
+    templates_active?: number;
+    logs_total?: number;
+    logs_by_status?: NotificationStatusCount[];
+  };
+
+  type NotificationStatusCount = {
+    status?: "pending" | "sent" | "delivered" | "failed" | "bounced";
+    count?: number;
+  };
+
+  type NotificationTemplate = {
+    id?: string;
+    name?: string;
+    description?: string;
+    event_type?: string;
+    supported_channels?: string[];
+    subject_template?: string;
+    body_template?: string;
+    format?: string;
+    /** 模板使用的 40 个变量列表 */
+    available_variables?: string[];
+    created_at?: string;
+    updated_at?: string;
+    is_active?: boolean;
+  };
+
+  type NotificationTemplateCreate = {
+    name: string;
+    description?: string;
+    event_type?: string;
+    supported_channels?: string[];
+    subject_template?: string;
+    /** 支持 40 个变量:
+- 时间: timestamp, date, time
+- 执行: execution.run_id, status, exit_code, duration, stdout, stderr
+- 任务: task.id, name, target_hosts, host_count, executor_type
+- 仓库: repository.id, name, url, main_playbook, branch
+- 统计: stats.ok, changed, failed, unreachable, skipped, total, success_rate
+- 系统: system.name, version, env
+- 错误: error.message, error.host
+ */
+    body_template: string;
+    format?: string;
+    is_active?: boolean;
+  };
+
+  type NotificationTemplateUpdate = {
+    name?: string;
+    description?: string;
+    event_type?: string;
+    supported_channels?: string[];
+    subject_template?: string;
+    body_template?: string;
+    format?: string;
+    is_active?: boolean;
+  };
+
+  type NotificationTriggerConfig = {
+    enabled?: boolean;
+    channel_ids?: string[];
+    template_id?: string;
+  };
+
   type NotificationTypeCount = {
-    type?: "webhook" | "dingtalk" | "email";
+    type?: "webhook" | "email" | "dingtalk" | "wecom" | "slack" | "teams";
     count?: number;
   };
 
@@ -169,90 +248,4 @@ cmdb_mapping: { 标准字段: 外部字段 }
     error_plugins?: PluginItem[];
     plugin_overview?: PluginItem[];
   };
-
-  type PluginStats = {
-    /** 总数 */
-    total?: number;
-    /** 按类型分布 */
-    by_type?: Record<string, unknown>;
-    /** 按状态分布 */
-    by_status?: Record<string, unknown>;
-    /** 启用同步数 */
-    sync_enabled?: number;
-    /** 未启用同步数 */
-    sync_disabled?: number;
-    /** 激活数 */
-    active_count?: number;
-    /** 未激活数 */
-    inactive_count?: number;
-    /** 错误数 */
-    error_count?: number;
-  };
-
-  type PluginSyncLog = {
-    id?: string;
-    plugin_id?: string;
-    sync_type?: string;
-    status?: string;
-    records_fetched?: number;
-    records_processed?: number;
-    records_failed?: number;
-    /** 同步详情 */
-    details?: { new_count?: number; updated_count?: number };
-    started_at?: string;
-    completed_at?: string;
-    error_message?: string;
-  };
-
-  type postPlatformImpersonationRequestsByIdCancelParams =           {
-                'id': string;
-          };
-
-  type postPlatformImpersonationRequestsByIdEnterParams =           {
-                'id': string;
-          };
-
-  type postPlatformImpersonationRequestsByIdExitParams =           {
-                'id': string;
-          };
-
-  type postPlatformImpersonationRequestsByIdTerminateParams =           {
-                'id': string;
-          };
-
-  type postPlatformTenantsByIdInvitationsParams =           {
-                'id': string;
-          };
-
-  type postPlatformTenantsByIdMembersParams =           {
-                'id': string;
-          };
-
-  type postPlatformUsersByIdResetPasswordParams =           {
-                'id': string;
-          };
-
-  type postTenantBlacklistExemptionsByIdApproveParams =           {
-                'id': string;
-          };
-
-  type postTenantBlacklistExemptionsByIdRejectParams =           {
-                'id': string;
-          };
-
-  type postTenantChannelsByIdTestParams =           {
-                'id': string;
-          };
-
-  type postTenantCmdbByIdMaintenanceParams =           {
-                'id': string;
-          };
-
-  type postTenantCmdbByIdResumeParams =           {
-                'id': string;
-          };
-
-  type postTenantCmdbByIdTestConnectionParams =           {
-                'id': string;
-          };
 }

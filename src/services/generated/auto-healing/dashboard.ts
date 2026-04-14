@@ -94,12 +94,14 @@ export async function putTenantDashboardRolesByRoleIdWorkspaces(
   );
 }
 
-/** 获取系统工作区列表 GET /api/v1/tenant/dashboard/workspaces */
+/** 获取当前用户可见的系统工作区列表 GET /api/v1/tenant/dashboard/workspaces */
 export async function getTenantDashboardWorkspaces(options?: {
   [key: string]: unknown;
 }) {
   return request<
-    GeneratedAutoHealing.Success & { data?: Record<string, unknown>[] }
+    GeneratedAutoHealing.Success & {
+      data?: GeneratedAutoHealing.DashboardSystemWorkspace[];
+    }
   >("/api/v1/tenant/dashboard/workspaces", {
     method: "GET",
     ...(options || {}),
@@ -115,39 +117,45 @@ export async function postTenantDashboardWorkspaces(
   },
   options?: Record<string, unknown>
 ) {
-  return request<GeneratedAutoHealing.Success & { data?: Record<string, unknown> }>(
-    "/api/v1/tenant/dashboard/workspaces",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      data: body,
-      ...(options || {}),
+  return request<
+    GeneratedAutoHealing.Success & {
+      data?: GeneratedAutoHealing.DashboardSystemWorkspace;
     }
-  );
+  >("/api/v1/tenant/dashboard/workspaces", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    data: body,
+    ...(options || {}),
+  });
 }
 
 /** 更新系统工作区 PUT /api/v1/tenant/dashboard/workspaces/${param0} */
 export async function putTenantDashboardWorkspacesById(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: GeneratedAutoHealing.putTenantDashboardWorkspacesByIdParams,
-  body: Record<string, unknown>,
+  body: {
+    name?: string;
+    description?: string;
+    config?: Record<string, unknown>;
+  },
   options?: Record<string, unknown>
 ) {
   const { id: param0, ...queryParams } = params;
-  return request<GeneratedAutoHealing.Success & { data?: Record<string, unknown> }>(
-    `/api/v1/tenant/dashboard/workspaces/${param0}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      params: { ...queryParams },
-      data: body,
-      ...(options || {}),
+  return request<
+    GeneratedAutoHealing.Success & {
+      data?: GeneratedAutoHealing.DashboardSystemWorkspace;
     }
-  );
+  >(`/api/v1/tenant/dashboard/workspaces/${param0}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    params: { ...queryParams },
+    data: body,
+    ...(options || {}),
+  });
 }
 
 /** 删除系统工作区 DELETE /api/v1/tenant/dashboard/workspaces/${param0} */

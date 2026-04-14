@@ -45,7 +45,7 @@ tags:
 - name: 执行任务
   description: Ansible Playbook 执行任务管理
 - name: 通知渠道
-  description: 通知渠道管理 (Webhook, 钉钉, 邮件)
+  description: 通知渠道管理 (Webhook, 钉钉, 企业微信, Slack, Teams, 邮件)
 - name: 通知模板
   description: 通知模板管理 (支持 40+ 变量)
 - name: 通知记录
@@ -3247,6 +3247,23 @@ paths:
         '200':
           $ref: '#/components/responses/Success'
       operationId: postTenantHealingInstancesByIdCancel
+  /tenant/healing/instances/{id}/recover:
+    post:
+      tags:
+      - 流程实例
+      summary: 手动恢复流程实例
+      description: 对卡住或异常中断的流程实例触发一次恢复尝试。
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success'
+      operationId: postTenantHealingInstancesByIdRecover
   /tenant/healing/instances/{id}/retry:
     post:
       tags:
@@ -3273,6 +3290,33 @@ paths:
         '200':
           $ref: '#/components/responses/Success'
       operationId: postTenantHealingInstancesByIdRetry
+  /tenant/healing/instances/{id}/recovery-logs:
+    get:
+      tags:
+      - 流程实例
+      summary: 获取实例恢复记录
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Success'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FlowRecoveryAttempt'
+      operationId: getTenantHealingInstancesByIdRecoveryLogs
   /tenant/healing/instances/{id}/events:
     get:
       tags:
@@ -4127,6 +4171,18 @@ paths:
                   x-dict-type: notification_format
                   x-dict-mode: exact
                   description: 未使用模板时的消息格式，默认 text
+                execution_run_id:
+                  type: string
+                  format: uuid
+                  description: 可选，关联执行记录
+                workflow_instance_id:
+                  type: string
+                  format: uuid
+                  description: 可选，关联流程实例
+                incident_id:
+                  type: string
+                  format: uuid
+                  description: 可选，关联工单/事件
       responses:
         '200':
           description: 发送成功
@@ -4334,7 +4390,7 @@ paths:
     get:
       tags:
       - Dashboard
-      summary: 获取系统工作区列表
+      summary: 获取当前用户可见的系统工作区列表
       responses:
         '200':
           description: 成功
@@ -4348,8 +4404,7 @@ paths:
                     data:
                       type: array
                       items:
-                        type: object
-                        additionalProperties: true
+                        $ref: '#/components/schemas/DashboardSystemWorkspace'
       operationId: getTenantDashboardWorkspaces
     post:
       tags:
@@ -4361,6 +4416,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
               - name
               - config
@@ -4382,8 +4438,7 @@ paths:
                 - type: object
                   properties:
                     data:
-                      type: object
-                      additionalProperties: true
+                      $ref: '#/components/schemas/DashboardSystemWorkspace'
       operationId: postTenantDashboardWorkspaces
   /tenant/site-messages:
     get:
@@ -4523,7 +4578,15 @@ paths:
           application/json:
             schema:
               type: object
-              additionalProperties: true
+              additionalProperties: false
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                config:
+                  type: object
+                  additionalProperties: true
       responses:
         '200':
           description: 成功
@@ -4535,8 +4598,7 @@ paths:
                 - type: object
                   properties:
                     data:
-                      type: object
-                      additionalProperties: true
+                      $ref: '#/components/schemas/DashboardSystemWorkspace'
       operationId: putTenantDashboardWorkspacesById
     delete:
       tags:
@@ -4615,7 +4677,10 @@ paths:
                   type: object
                   description: 连接配置
                   example:
-                    url: https://itsm.example.com/api/incidents
+                    url: https://adapter.example.com/api/incidents
+                    auth_type: none
+                    close_incident_url: https://adapter.example.com/api/incidents/{external_id}/close
+                    close_incident_method: POST
                 field_mapping:
                   type: object
                   description: 字段映射规则
@@ -5085,6 +5150,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/CloseIncidentResponse'
       operationId: postTenantIncidentsByIdClose
+  /tenant/incidents/{id}/writeback-logs:
+    get:
+      tags:
+      - 工单管理
+      summary: 获取工单回写日志
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncidentWritebackLog'
+      operationId: getTenantIncidentsByIdWritebackLogs
   /tenant/incidents/{id}/trigger:
     post:
       tags:
@@ -6132,18 +6214,25 @@ paths:
       tags:
       - Playbook模板
       summary: 扫描 Playbook 变量
-      description: '递归扫描 Playbook 及其引用的所有文件，智能推断变量类型。
+      description: '递归扫描入口 Playbook 及其依赖文件，智能推断变量类型。
 
 
         类型推断优先级：
 
-        1. 增强模式 (.auto-healing.yml)
+        1. 增强模式 (.auto-healing.yml / .auto-healing.yaml)
 
         2. Jinja2 default 表达式
 
         3. 变量名启发式
 
         4. 默认 string
+
+
+        增强模式支持：
+
+        - `exposure_mode: scoped`
+
+        - `variables[].playbooks` 指定变量仅暴露给特定入口文件
 
         '
       parameters:
@@ -6209,8 +6298,8 @@ paths:
     get:
       tags:
       - Playbook模板
-      summary: 获取文件列表
-      description: 获取 Playbook 扫描过的所有文件列表
+      summary: 获取 Playbook 依赖文件列表
+      description: 获取 Playbook 的入口文件与扫描到的依赖文件列表
       parameters:
       - $ref: '#/components/parameters/ID'
       responses:
@@ -6224,29 +6313,32 @@ paths:
                   code:
                     type: integer
                   data:
-                    type: object
-                    properties:
-                      files:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            path:
-                              type: string
-                              description: 文件路径
-                            type:
-                              type: string
-                              description: 文件类型
-                              enum:
-                              - entry
-                              - task
-                              - vars
-                              - defaults
-                              - handlers
-                              - template
-                              - file
-                              - role
-                              - include
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        path:
+                          type: string
+                          description: 文件路径
+                        type:
+                          type: string
+                          description: 文件类型
+                          enum:
+                          - playbook
+                          - task
+                          - vars
+                          - defaults
+                          - handlers
+                          - template
+                          - file
+                          - role
+                          - include
+                        relation:
+                          type: string
+                          description: 文件与当前入口的关系
+                          enum:
+                          - entry
+                          - dependency
       operationId: getTenantPlaybooksByIdFiles
   /tenant/playbooks/{id}/scan-logs:
     get:
@@ -7764,6 +7856,9 @@ components:
             $ref: '#/components/schemas/FlowEdge'
         is_active:
           type: boolean
+        auto_close_source_incident:
+          type: boolean
+          description: 流程成功完成后自动关闭源工单
         created_by:
           type: string
           format: uuid
@@ -7789,6 +7884,8 @@ components:
             $ref: '#/components/schemas/FlowEdge'
         is_active:
           type: boolean
+        auto_close_source_incident:
+          type: boolean
     HealingFlowUpdate:
       type: object
       properties:
@@ -7805,6 +7902,8 @@ components:
           items:
             $ref: '#/components/schemas/FlowEdge'
         is_active:
+          type: boolean
+        auto_close_source_incident:
           type: boolean
     FlowNode:
       type: object
@@ -8016,6 +8115,52 @@ components:
           format: date-time
           nullable: true
         completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    FlowRecoveryAttempt:
+      type: object
+      description: 流程实例恢复尝试
+      properties:
+        id:
+          type: string
+          format: uuid
+        flow_instance_id:
+          type: string
+          format: uuid
+        trigger_source:
+          type: string
+          enum:
+          - manual
+          - scheduler
+        current_node_id:
+          type: string
+        current_node_type:
+          type: string
+        detect_reason:
+          type: string
+        recovery_action:
+          type: string
+        status:
+          type: string
+          enum:
+          - started
+          - success
+          - failed
+          - skipped
+        details:
+          type: object
+          additionalProperties: true
+        error_message:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
           type: string
           format: date-time
           nullable: true
@@ -9045,6 +9190,12 @@ components:
         execution_run_id:
           type: string
           format: uuid
+        workflow_instance_id:
+          type: string
+          format: uuid
+        incident_id:
+          type: string
+          format: uuid
         template_id:
           type: string
           format: uuid
@@ -9113,8 +9264,11 @@ components:
           type: string
           enum:
           - webhook
-          - dingtalk
           - email
+          - dingtalk
+          - wecom
+          - slack
+          - teams
         count:
           type: integer
     NotificationStatusCount:
@@ -9581,6 +9735,75 @@ components:
           type: string
         source_updated:
           type: boolean
+        writeback_log_id:
+          type: string
+          format: uuid
+    IncidentWritebackLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        incident_id:
+          type: string
+          format: uuid
+        plugin_id:
+          type: string
+          format: uuid
+          nullable: true
+        external_id:
+          type: string
+        action:
+          type: string
+          enum:
+          - close
+          - update
+        trigger_source:
+          type: string
+        status:
+          type: string
+          enum:
+          - pending
+          - success
+          - failed
+          - skipped
+        request_method:
+          type: string
+        request_url:
+          type: string
+        request_payload:
+          type: object
+        response_status_code:
+          type: integer
+          nullable: true
+        response_body:
+          type: string
+        error_message:
+          type: string
+        operator_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        operator_name:
+          type: string
+        flow_instance_id:
+          type: string
+          format: uuid
+          nullable: true
+        execution_run_id:
+          type: string
+          format: uuid
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
     SecretsSource:
       type: object
       properties:

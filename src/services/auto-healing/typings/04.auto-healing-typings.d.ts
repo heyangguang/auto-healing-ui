@@ -110,9 +110,9 @@ declare namespace AutoHealing {
 
     // ==================== 通知模块 ====================
 
-    type ChannelType = 'webhook' | 'dingtalk' | 'email';
+    type ChannelType = 'webhook' | 'email' | 'dingtalk' | 'wecom' | 'slack' | 'teams';
 
-    type EventType = 'execution_result' | 'execution_started' | 'alert';
+    type EventType = 'execution_started' | 'execution_result' | 'flow_result' | 'approval_required' | 'manual_notification';
 
     type TemplateFormat = 'text' | 'markdown' | 'html';
 

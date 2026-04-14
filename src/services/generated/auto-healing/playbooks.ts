@@ -112,7 +112,7 @@ export async function deleteTenantPlaybooksById(
   });
 }
 
-/** 获取文件列表 获取 Playbook 扫描过的所有文件列表 GET /api/v1/tenant/playbooks/${param0}/files */
+/** 获取 Playbook 依赖文件列表 获取 Playbook 的入口文件与扫描到的依赖文件列表 GET /api/v1/tenant/playbooks/${param0}/files */
 export async function getTenantPlaybooksByIdFiles(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: GeneratedAutoHealing.getTenantPlaybooksByIdFilesParams,
@@ -122,20 +122,19 @@ export async function getTenantPlaybooksByIdFiles(
   return request<{
     code?: number;
     data?: {
-      files?: {
-        path?: string;
-        type?:
-          | "entry"
-          | "task"
-          | "vars"
-          | "defaults"
-          | "handlers"
-          | "template"
-          | "file"
-          | "role"
-          | "include";
-      }[];
-    };
+      path?: string;
+      type?:
+        | "playbook"
+        | "task"
+        | "vars"
+        | "defaults"
+        | "handlers"
+        | "template"
+        | "file"
+        | "role"
+        | "include";
+      relation?: "entry" | "dependency";
+    }[];
   }>(`/api/v1/tenant/playbooks/${param0}/files`, {
     method: "GET",
     params: { ...queryParams },
@@ -179,13 +178,17 @@ export async function postTenantPlaybooksByIdReady(
   });
 }
 
-/** 扫描 Playbook 变量 递归扫描 Playbook 及其引用的所有文件，智能推断变量类型。
+/** 扫描 Playbook 变量 递归扫描入口 Playbook 及其依赖文件，智能推断变量类型。
 
 类型推断优先级：
-1. 增强模式 (.auto-healing.yml)
+1. 增强模式 (.auto-healing.yml / .auto-healing.yaml)
 2. Jinja2 default 表达式
 3. 变量名启发式
 4. 默认 string
+
+增强模式支持：
+- `exposure_mode: scoped`
+- `variables[].playbooks` 指定变量仅暴露给特定入口文件
  POST /api/v1/tenant/playbooks/${param0}/scan */
 export async function postTenantPlaybooksByIdScan(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

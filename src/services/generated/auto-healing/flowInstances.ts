@@ -76,6 +76,42 @@ export async function getTenantHealingInstancesByIdEvents(
   });
 }
 
+/** 手动恢复流程实例 对卡住或异常中断的流程实例触发一次恢复尝试。 POST /api/v1/tenant/healing/instances/${param0}/recover */
+export async function postTenantHealingInstancesByIdRecover(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: GeneratedAutoHealing.postTenantHealingInstancesByIdRecoverParams,
+  options?: Record<string, unknown>
+) {
+  const { id: param0, ...queryParams } = params;
+  return request<{
+    code?: number;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>(`/api/v1/tenant/healing/instances/${param0}/recover`, {
+    method: "POST",
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
+/** 获取实例恢复记录 GET /api/v1/tenant/healing/instances/${param0}/recovery-logs */
+export async function getTenantHealingInstancesByIdRecoveryLogs(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: GeneratedAutoHealing.getTenantHealingInstancesByIdRecoveryLogsParams,
+  options?: Record<string, unknown>
+) {
+  const { id: param0, ...queryParams } = params;
+  return request<
+    GeneratedAutoHealing.Success & {
+      data?: GeneratedAutoHealing.FlowRecoveryAttempt[];
+    }
+  >(`/api/v1/tenant/healing/instances/${param0}/recovery-logs`, {
+    method: "GET",
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
 /** 重试流程实例 POST /api/v1/tenant/healing/instances/${param0}/retry */
 export async function postTenantHealingInstancesByIdRetry(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)

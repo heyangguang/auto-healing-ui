@@ -1,4 +1,43 @@
 declare namespace GeneratedAutoHealing {
+  type getTenantCmdbParams =           {
+                'page'?: number;
+                'page_size'?: number;
+                'type'?: string;
+                'status'?: string;
+                'environment'?: string;
+                'source_plugin_name'?: string;
+          };
+
+  type getTenantCommandBlacklistByIdParams =           {
+                'id': string;
+          };
+
+  type getTenantCommandBlacklistParams =           {
+                'page'?: number;
+                'page_size'?: number;
+                'search'?: string;
+                'severity'?: string;
+                'is_active'?: boolean;
+                'match_type'?: string;
+                'pattern'?: string;
+                'operator'?: string;
+                'scope'?: string;
+                'sort_by'?: string;
+                'sort_order'?: string;
+          };
+
+  type getTenantDashboardOverviewParams =           {
+                'sections': string;
+          };
+
+  type getTenantDashboardRolesByRoleIdWorkspacesParams =           {
+                'roleId': string;
+          };
+
+  type getTenantExecutionRunsByIdLogsParams =           {
+                'id': string;
+          };
+
   type getTenantExecutionRunsByIdParams =           {
                 'id': string;
           };
@@ -136,6 +175,10 @@ declare namespace GeneratedAutoHealing {
                 'id': string;
           };
 
+  type getTenantHealingInstancesByIdRecoveryLogsParams =           {
+                'id': string;
+          };
+
   type getTenantHealingInstancesParams =           {
                 'page'?: number;
                 'page_size'?: number;
@@ -206,53 +249,7 @@ declare namespace GeneratedAutoHealing {
                 'id': string;
           };
 
-  type getTenantIncidentsParams =           {
-                'page'?: number;
-                'page_size'?: number;
-                'plugin_id'?: string;
-                'source_plugin_name'?: string;
-                'search'?: string;
-                'external_id'?: string;
-                'status'?: string;
-                'healing_status'?: string;
-                'severity'?: string;
-                'has_plugin'?: boolean;
-                'sort_by'?: "created_at" | "severity";
-                'sort_order'?: "asc" | "desc";
-          };
-
-  type getTenantNotificationsByIdParams =           {
+  type getTenantIncidentsByIdWritebackLogsParams =           {
                 'id': string;
-          };
-
-  type getTenantNotificationsParams =           {
-                'page'?: number;
-                'page_size'?: number;
-                'status'?: string;
-                'task_name'?: string;
-                'triggered_by'?: string;
-                'subject'?: string;
-                'channel_id'?: string;
-                'template_id'?: string;
-                'task_id'?: string;
-                'execution_run_id'?: string;
-                'created_after'?: string;
-                'created_before'?: string;
-                'sort_by'?: "created_at" | "status" | "subject" | "sent_at";
-                'sort_order'?: "asc" | "desc";
-          };
-
-  type getTenantPlaybooksByIdFilesParams =           {
-                'id': string;
-          };
-
-  type getTenantPlaybooksByIdParams =           {
-                'id': string;
-          };
-
-  type getTenantPlaybooksByIdScanLogsParams =           {
-                'id': string;
-                'page'?: number;
-                'page_size'?: number;
           };
 }
