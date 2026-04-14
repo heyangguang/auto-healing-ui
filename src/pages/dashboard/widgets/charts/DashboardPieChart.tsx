@@ -5,10 +5,12 @@
 import { PieChartOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import React from 'react';
-import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
+import DashboardChartFallback, { DASHBOARD_CHART_CONTAINER_STYLE } from './DashboardChartFallback';
+import { DASHBOARD_DONUT_INNER_RADIUS, DASHBOARD_DONUT_RADIUS } from './dashboardDonutChartConfig';
+import { getDashboardChartMetricLabel, readMetricValue, withMetricLabel } from './dashboardChartMetricLabel';
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
@@ -27,37 +29,38 @@ const PALETTE = ['#1677ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1', '#13c2c2
 const DashboardPieChart: React.FC<DashboardPieChartProps> = ({ section, field, title, icon, labelMap, colorMap, centerLabel, isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection(section);
     const { ref, width, height } = useContainerSize();
+    const metricLabel = React.useMemo(() => getDashboardChartMetricLabel(section, field), [field, section]);
 
     const items = Array.isArray(data?.[field]) ? (data[field] as { status: string; count: number }[]) : [];
 
     const chartData = React.useMemo(() => {
         return items
             .filter((d) => d.count > 0)
-            .map((d) => ({
+            .map((d) => withMetricLabel({
                 type: labelMap?.[d.status] ?? d.status ?? '未知',
-                value: Number(d.count),
-            }));
-    }, [items, labelMap]);
+            }, metricLabel, Number(d.count)));
+    }, [items, labelMap, metricLabel]);
 
-    const total = React.useMemo(() => chartData.reduce((s, d) => s + d.value, 0), [chartData]);
+    const total = React.useMemo(() => chartData.reduce((sum, item) => sum + readMetricValue(item, metricLabel), 0), [chartData, metricLabel]);
+    const canRenderChart = width > 0 && height > 0 && chartData.length > 0;
 
     return (
         <WidgetWrapper title={title} icon={icon || <PieChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
-            <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {(width > 0 && height > 0 && chartData.length > 0) ? (
+            <div ref={ref} style={DASHBOARD_CHART_CONTAINER_STYLE}>
+                {canRenderChart ? (
                     <Pie
                         width={width}
                         height={height}
                         data={chartData}
-                        angleField="value"
+                        angleField={metricLabel}
                         colorField="type"
-                        radius={0.7}
-                        innerRadius={0.55}
+                        radius={DASHBOARD_DONUT_RADIUS}
+                        innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
                         color={colorMap ? Object.values(colorMap) : PALETTE}
                         label={false}
                         legend={{ color: { position: 'bottom', layout: { justifyContent: 'center' } } }}
                         interaction={{ elementHighlight: true }}
-                        tooltip={{ title: false }}
+                        tooltip={{ title: 'type' }}
                         annotations={[
                             {
                                 type: 'text',
@@ -85,9 +88,7 @@ const DashboardPieChart: React.FC<DashboardPieChartProps> = ({ section, field, t
                         ]}
                     />
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <DashboardEmptyState minHeight="100%" />
-                    </div>
+                    <DashboardChartFallback hasData={chartData.length > 0} />
                 )}
             </div>
         </WidgetWrapper>

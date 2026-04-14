@@ -112,8 +112,9 @@ describe('DashboardWorkspaceHeader', () => {
     );
 
     expect(screen.getByRole('button', { name: /编辑/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '复制副本' })).toBeTruthy();
     expect(screen.queryByText('只读')).toBeNull();
-    expect(screen.queryByText('复制')).toBeNull();
+    expect(screen.getByText('复制')).toBeTruthy();
   });
 
   it('marks readonly system workspaces as copy-only for non-managers', () => {
@@ -139,6 +140,7 @@ describe('DashboardWorkspaceHeader', () => {
     );
 
     expect(screen.queryByRole('button', { name: /编辑/ })).toBeNull();
+    expect(screen.getByRole('button', { name: '复制副本' })).toBeTruthy();
     expect(screen.getByText('只读')).toBeTruthy();
     expect(screen.getByText('复制')).toBeTruthy();
   });
@@ -166,6 +168,7 @@ describe('DashboardWorkspaceHeader', () => {
     );
 
     expect(screen.queryByLabelText('删除运维总览')).toBeNull();
-    expect(screen.getByText('本地默认')).toBeTruthy();
+    expect(screen.getByText('默认')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '复制副本' })).toBeTruthy();
   });
 });

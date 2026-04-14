@@ -16,6 +16,7 @@ export type SystemWorkspacePayload = {
     layouts?: LayoutItem[];
     widgets?: WidgetInstance[];
   };
+  description?: string;
   id: string;
   is_default?: boolean;
   is_readonly?: boolean;
@@ -29,5 +30,5 @@ export type DashboardConfigPayload = {
   system_workspaces?: SystemWorkspacePayload[];
 };
 
-export type SaveDashboardStateFn = (nextState: DashboardState) => void;
+export type SaveDashboardStateFn = (nextState: DashboardState, changedWorkspaceId?: string) => void;
 export type SaveSystemWorkspaceFn = (workspace: DashboardWorkspace) => void;

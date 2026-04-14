@@ -4,7 +4,7 @@ import type { BadgeProps } from 'antd';
 import { useAccess, history } from '@umijs/max';
 import dayjs from 'dayjs';
 import React from 'react';
-import { RUN_STATUS_MAP } from '@/constants/executionDicts';
+import { getExecutionTriggeredByConfig, RUN_STATUS_MAP } from '@/constants/executionDicts';
 import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
@@ -19,6 +19,23 @@ type RunItem = {
     started_at?: string;
     created_at?: string;
 };
+
+function getTriggeredByLabel(triggeredBy?: string) {
+    if (!triggeredBy) {
+        return '系统触发';
+    }
+    return getExecutionTriggeredByConfig(triggeredBy).label;
+}
+
+function getRunSummary(item: RunItem) {
+    if (item.started_at && item.completed_at) {
+        const durationSeconds = dayjs(item.completed_at).diff(dayjs(item.started_at), 'second');
+        if (durationSeconds >= 0) {
+            return `${durationSeconds}s`;
+        }
+    }
+    return item.completed_at ? '已完成' : '进行中';
+}
 
 function resolveBadgeStatus(color?: string): BadgeProps['status'] {
     if (color === 'success' || color === 'processing' || color === 'error' || color === 'warning') {
@@ -59,7 +76,8 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
                         (Array.isArray(items) ? items : []).map((item: RunItem, index: number) => {
                             const status = item.status ?? '';
                             const st = RUN_STATUS_MAP[status] || { color: 'default', text: status };
-                            const triggeredBy = item.triggered_by || '-';
+                            const triggeredByLabel = getTriggeredByLabel(item.triggered_by);
+                            const runSummary = getRunSummary(item);
 
                             return (
                                 <div
@@ -90,10 +108,10 @@ const ListRecentRuns: React.FC<WidgetComponentProps> = ({ isEditing, onRemove })
 
                                     <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                                         <Typography.Text ellipsis style={{ fontSize: 12, color: '#666' }}>
-                                            {triggeredBy}
+                                            {triggeredByLabel}
                                         </Typography.Text>
                                         <Typography.Text ellipsis type="secondary" style={{ fontSize: 10 }}>
-                                            {item.completed_at ? '已完成' : '进行中'}
+                                            {runSummary}
                                         </Typography.Text>
                                     </div>
 

@@ -3,6 +3,7 @@ import { message } from 'antd';
 import { getDashboardConfig, updateSystemWorkspace } from '@/services/auto-healing/dashboard';
 import {
   clearLegacyCache,
+  getDefaultWorkspace,
   loadDashboardState,
   saveDashboardState,
 } from '../dashboardStore';
@@ -47,7 +48,7 @@ jest.mock('./useDashboardWorkspaceActions', () => ({
             ? { ...workspace, layouts: [...nextLayouts] }
             : workspace
         )),
-      });
+      }, options.activeWorkspace.id);
     },
     handleRemoveWidget: jest.fn(),
     handleRename: jest.fn(),
@@ -129,6 +130,7 @@ describe('useDashboardWorkspaceManager', () => {
 
     await waitFor(() => {
       expect(updateSystemWorkspace).toHaveBeenCalledWith('1', {
+        name: '系统工作区',
         config: {
           widgets: [ORIGINAL_WIDGET],
           layouts: [CHANGED_LAYOUT],
@@ -211,5 +213,95 @@ describe('useDashboardWorkspaceManager', () => {
       expect(result.current.isEditing).toBe(true);
     });
     expect(message.warning).not.toHaveBeenCalledWith('只读系统工作区仅支持复制副本后编辑');
+  });
+
+  it('upgrades an in-memory legacy default workspace on mount', async () => {
+    (loadDashboardState as jest.Mock).mockReturnValue({
+      workspaces: [{
+        id: 'default',
+        layouts: [
+          { i: 'w-1', x: 0, y: 0, w: 3, h: 2 },
+          { i: 'w-2', x: 3, y: 0, w: 3, h: 2 },
+          { i: 'w-3', x: 6, y: 0, w: 3, h: 2 },
+          { i: 'w-4', x: 9, y: 0, w: 3, h: 2 },
+          { i: 'w-5', x: 0, y: 2, w: 4, h: 5 },
+          { i: 'w-6', x: 4, y: 2, w: 4, h: 5 },
+          { i: 'w-7', x: 0, y: 7, w: 8, h: 5 },
+          { i: 'w-8', x: 8, y: 2, w: 4, h: 10 },
+        ],
+        name: '运维总览',
+        widgets: [
+          { instanceId: 'w-1', widgetId: 'stat-incident-total' },
+          { instanceId: 'w-2', widgetId: 'stat-healing-rate' },
+          { instanceId: 'w-3', widgetId: 'stat-pending-items' },
+          { instanceId: 'w-4', widgetId: 'stat-exec-success' },
+          { instanceId: 'w-5', widgetId: 'chart-incident-status' },
+          { instanceId: 'w-6', widgetId: 'chart-instance-status' },
+          { instanceId: 'w-7', widgetId: 'list-recent-instances' },
+          { instanceId: 'w-8', widgetId: 'list-pending-approvals' },
+        ],
+      }],
+      activeWorkspaceId: 'default',
+    });
+    (getDashboardConfig as jest.Mock).mockResolvedValue({ data: { system_workspaces: [] } });
+
+    const { result } = renderHook(() => useDashboardWorkspaceManager({
+      autoArrangeLayouts: jest.fn(),
+      canManageDashboardConfig: true,
+      canManageSystemWorkspaces: true,
+      generateResponsiveLayouts: (layouts) => ({ lg: [...layouts] }),
+      layoutsAreEqual: () => false,
+    }));
+
+    await waitFor(() => {
+      expect(result.current.activeWorkspace.widgets).toEqual(getDefaultWorkspace().widgets);
+      expect(result.current.activeWorkspace.layouts).toEqual(getDefaultWorkspace().layouts);
+    });
+    expect(saveDashboardState).toHaveBeenCalledWith({
+      activeWorkspaceId: 'default',
+      workspaces: [getDefaultWorkspace()],
+    });
+  });
+
+  it('does not autosave to backend when editing a local default workspace while system workspaces exist', async () => {
+    (loadDashboardState as jest.Mock).mockReturnValue({
+      workspaces: [
+        {
+          id: 'sys-1',
+          isSystem: true,
+          layouts: [ORIGINAL_LAYOUT],
+          name: '系统工作区',
+          widgets: [ORIGINAL_WIDGET],
+        },
+        {
+          ...getDefaultWorkspace(),
+          id: 'default',
+          name: '运维总览',
+        },
+      ],
+      activeWorkspaceId: 'default',
+    });
+    (getDashboardConfig as jest.Mock).mockResolvedValue(buildRemoteConfig({ is_readonly: false }));
+
+    const { result } = renderHook(() => useDashboardWorkspaceManager({
+      autoArrangeLayouts: jest.fn(),
+      canManageDashboardConfig: true,
+      canManageSystemWorkspaces: true,
+      generateResponsiveLayouts: (layouts) => ({ lg: [...layouts] }),
+      layoutsAreEqual: () => false,
+    }));
+
+    await waitFor(() => {
+      expect(result.current.activeWorkspace.id).toBe('default');
+    });
+
+    act(() => {
+      result.current.handleLayoutChange([CHANGED_LAYOUT], { lg: [CHANGED_LAYOUT] });
+    });
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(updateSystemWorkspace).not.toHaveBeenCalled();
   });
 });

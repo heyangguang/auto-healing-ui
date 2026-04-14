@@ -1,12 +1,12 @@
-import { useRequest } from '@umijs/max';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { getDashboardOverview } from '@/services/auto-healing/dashboard';
 import { getTenantContextScopeKey } from '@/utils/tenantContext';
 import { subscribeTenantContextChanged } from '@/utils/tenantContextEvents';
-
-const resolvedSectionData = new Map<string, DashboardSectionMap[DashboardSectionKey]>();
-const autoRefreshAttemptedKeys = new Set<string>();
-const DASHBOARD_LOADING_DELAY_MS = 200;
+import {
+    fetchDashboardSection,
+    getDashboardSectionSnapshot,
+    subscribeDashboardSection,
+} from './dashboardSectionStore';
 
 type StatusCountItem = {
     status?: string;
@@ -160,6 +160,21 @@ export type DashboardSectionMap = {
 
 export type DashboardSectionKey = keyof DashboardSectionMap;
 
+type DashboardOverviewResult = Record<string, unknown> & {
+    data?: Record<string, unknown>;
+};
+
+function extractDashboardSectionData<S extends DashboardSectionKey>(
+    rawData: DashboardOverviewResult | null | undefined,
+    section: S,
+) {
+    return (
+        (rawData?.data?.[section] as DashboardSectionMap[S] | undefined)
+        ?? (rawData?.[section] as DashboardSectionMap[S] | undefined)
+        ?? null
+    );
+}
+
 /**
  * Dashboard Section 数据 Hook
  *
@@ -172,49 +187,29 @@ export type DashboardSectionKey = keyof DashboardSectionMap;
  */
 export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
     const [tenantCacheScope, setTenantCacheScope] = useState(() => getTenantContextScopeKey());
-    const [autoRefreshing, setAutoRefreshing] = useState(false);
     const sectionCacheKey = `dashboard-section-${tenantCacheScope}-${section}`;
-    type DashboardOverviewResult = Record<string, unknown> & {
-        data?: Record<string, unknown>;
-    };
-    const { data: rawData, loading, refresh } = useRequest(
-        () => getDashboardOverview([section], { skipTokenRefresh: true }),
-        {
-            cacheKey: sectionCacheKey,
-            staleTime: 30000,     // 30s 内使用缓存，不重新请求
-            refreshDeps: [section, tenantCacheScope],
-            pollingInterval: 60000, // 60s 自动刷新
-            loadingDelay: DASHBOARD_LOADING_DELAY_MS,
-            formatResult: (res: DashboardOverviewResult) => res,
-        }
+    const loadSection = useCallback(async () => {
+        const response = await getDashboardOverview([section], { skipTokenRefresh: true });
+        return extractDashboardSectionData(response, section);
+    }, [section]);
+
+    const snapshot = useSyncExternalStore(
+        useCallback((listener) => subscribeDashboardSection(sectionCacheKey, listener), [sectionCacheKey]),
+        useCallback(() => getDashboardSectionSnapshot<DashboardSectionMap[S]>(sectionCacheKey), [sectionCacheKey]),
+        useCallback(() => getDashboardSectionSnapshot<DashboardSectionMap[S]>(sectionCacheKey), [sectionCacheKey]),
     );
 
-    const sectionData =
-        (rawData?.data?.[section] as DashboardSectionMap[S] | undefined)
-        ?? (rawData?.[section] as DashboardSectionMap[S] | undefined)
-        ?? null;
-    const cachedData = (resolvedSectionData.get(sectionCacheKey) as DashboardSectionMap[S] | undefined) ?? null;
-    const data = sectionData ?? cachedData;
+    useEffect(() => {
+        void fetchDashboardSection(sectionCacheKey, loadSection);
+    }, [loadSection, sectionCacheKey]);
 
     useEffect(() => {
-        if (sectionData != null) {
-            resolvedSectionData.set(sectionCacheKey, sectionData);
-        }
-    }, [sectionCacheKey, sectionData]);
+        const timer = window.setInterval(() => {
+            void fetchDashboardSection(sectionCacheKey, loadSection, { force: true });
+        }, 60_000);
 
-    useEffect(() => {
-        if (data != null || loading || autoRefreshAttemptedKeys.has(sectionCacheKey)) {
-            return;
-        }
-
-        autoRefreshAttemptedKeys.add(sectionCacheKey);
-        setAutoRefreshing(true);
-        Promise.resolve(refresh())
-            .catch(() => undefined)
-            .finally(() => {
-                setAutoRefreshing(false);
-            });
-    }, [data, loading, refresh, sectionCacheKey]);
+        return () => window.clearInterval(timer);
+    }, [loadSection, sectionCacheKey]);
 
     useEffect(() => subscribeTenantContextChanged(() => {
         setTenantCacheScope((current) => {
@@ -223,16 +218,16 @@ export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
         });
     }), []);
 
-    const initialLoading = (loading || autoRefreshing) && data == null;
+    const refresh = useCallback(() => fetchDashboardSection(sectionCacheKey, loadSection, { force: true }), [loadSection, sectionCacheKey]);
+    const initialLoading = snapshot.loading || snapshot.data === undefined;
 
     return {
-        data,
+        data: snapshot.data ?? null,
         loading: initialLoading,
         refresh,
     };
 }
 
 export const __TEST_ONLY__ = {
-    clearResolvedSectionCache: () => resolvedSectionData.clear(),
-    clearAutoRefreshAttemptedKeys: () => autoRefreshAttemptedKeys.clear(),
+    extractDashboardSectionData,
 };

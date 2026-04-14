@@ -10,7 +10,8 @@ import {
 } from '../dashboardStore';
 import { WIDGET_REGISTRY } from '../widgets/widgetRegistry';
 import { createSystemWorkspace, deleteSystemWorkspace, getDashboardConfig } from '@/services/auto-healing/dashboard';
-import type { DashboardConfigPayload, DashboardRenameState, SaveDashboardStateFn, SaveSystemWorkspaceFn } from './dashboardWorkspaceTypes';
+import type { DashboardConfigPayload, DashboardRenameState, SaveDashboardStateFn } from './dashboardWorkspaceTypes';
+import { buildSystemWorkspacePayload } from './dashboardWorkspacePersistence';
 import { buildStateAfterSavingSystemWorkspace } from './dashboardWorkspaceState';
 import {
   addWidgetToDashboardWorkspace,
@@ -34,7 +35,6 @@ type UseDashboardWorkspaceActionsOptions = {
   notifyWorkspaceMutation: (label: string, isSystem?: boolean) => void;
   renameModal: DashboardRenameState;
   saveState: SaveDashboardStateFn;
-  saveSystemWorkspaceToBackend: SaveSystemWorkspaceFn;
   setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
   setRenameModal: React.Dispatch<React.SetStateAction<DashboardRenameState>>;
   setSaveSystemModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -82,7 +82,7 @@ export const useDashboardWorkspaceActions = ({
       ...state,
       workspaces: [...state.workspaces, nextWorkspace],
       activeWorkspaceId: nextWorkspace.id,
-    });
+    }, nextWorkspace.id);
     setIsEditing(true);
     notifyWorkspaceMutation('已创建新工作区');
   }, [canManageDashboardConfig, notifyWorkspaceMutation, saveState, setIsEditing, state]);
@@ -97,11 +97,13 @@ export const useDashboardWorkspaceActions = ({
       ...state,
       workspaces: [...state.workspaces, duplicatedWorkspace],
       activeWorkspaceId: duplicatedWorkspace.id,
-    });
+    }, duplicatedWorkspace.id);
     notifyWorkspaceMutation('已复制工作区');
   }, [canManageDashboardConfig, notifyWorkspaceMutation, saveState, state]);
 
   const handleSaveAsSystem = useCallback(async () => {
+    const trimmedName = systemWsName.trim();
+    const trimmedDescription = systemWsDesc.trim();
     if (!canManageSystemWorkspaces) {
       message.warning('你没有权限创建系统工作区');
       return;
@@ -109,19 +111,15 @@ export const useDashboardWorkspaceActions = ({
     if (!activeWorkspace.id || activeWorkspace.isSystem) {
       return;
     }
-    if (!systemWsName.trim()) {
+    if (!trimmedName) {
       message.warning('请输入工作区名称');
       return;
     }
     try {
-      const response = await createSystemWorkspace({
-        name: systemWsName.trim(),
-        description: systemWsDesc.trim(),
-        config: {
-          widgets: activeWorkspace.widgets,
-          layouts: activeWorkspace.layouts,
-        },
-      });
+      const response = await createSystemWorkspace(buildSystemWorkspacePayload(activeWorkspace, {
+        description: trimmedDescription,
+        name: trimmedName,
+      }));
       setSaveSystemModalOpen(false);
       setSystemWsName('');
       setSystemWsDesc('');
@@ -227,7 +225,7 @@ export const useDashboardWorkspaceActions = ({
           ? { ...workspace, name: renameModal.name.trim() }
           : workspace
       )),
-    });
+    }, renameModal.id);
     setRenameModal({ open: false, id: '', name: '' });
     notifyWorkspaceMutation('已重命名', targetWorkspace?.isSystem);
   }, [canManageDashboardConfig, canManageSystemWorkspaces, notifyWorkspaceMutation, renameModal, saveState, setRenameModal, state]);
@@ -237,7 +235,7 @@ export const useDashboardWorkspaceActions = ({
     if (layoutsAreEqual(activeWorkspace.layouts, currentLayout)) {
       return;
     }
-    saveState(updateDashboardWorkspaceLayouts(state, activeWorkspace.id, currentLayout));
+    saveState(updateDashboardWorkspaceLayouts(state, activeWorkspace.id, currentLayout), activeWorkspace.id);
   }, [activeWorkspace, layoutsAreEqual, saveState, state]);
 
   const handleToggleWidget = useCallback((widgetId: string) => {
@@ -252,22 +250,22 @@ export const useDashboardWorkspaceActions = ({
         activeWorkspace.id,
         existingWidget.instanceId,
         widgetId,
-      ));
+      ), activeWorkspace.id);
       message.info(`已移除「${definition.name}」`);
       return;
     }
 
-    saveState(addWidgetToDashboardWorkspace(state, activeWorkspace.id, widgetId, definition).nextState);
+    saveState(addWidgetToDashboardWorkspace(state, activeWorkspace.id, widgetId, definition).nextState, activeWorkspace.id);
     notifyWorkspaceMutation(`已添加「${definition.name}」`, activeWorkspace.isSystem);
   }, [activeWorkspace, notifyWorkspaceMutation, saveState, state]);
 
   const handleRemoveWidget = useCallback((instanceId: string) => {
-    saveState(removeWidgetFromDashboardWorkspace(state, activeWorkspace.id, instanceId));
+    saveState(removeWidgetFromDashboardWorkspace(state, activeWorkspace.id, instanceId), activeWorkspace.id);
   }, [activeWorkspace, saveState, state]);
 
   const handleAutoLayout = useCallback(() => {
     const nextLayouts = autoArrangeLayouts(activeWorkspace.widgets, activeWorkspace.layouts);
-    saveState(updateDashboardWorkspaceLayouts(state, activeWorkspace.id, nextLayouts));
+    saveState(updateDashboardWorkspaceLayouts(state, activeWorkspace.id, nextLayouts), activeWorkspace.id);
     notifyWorkspaceMutation('已自动整理布局', activeWorkspace.isSystem);
   }, [activeWorkspace, autoArrangeLayouts, notifyWorkspaceMutation, saveState, state]);
 

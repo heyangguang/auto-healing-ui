@@ -5,10 +5,11 @@
 import { BarChartOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/plots';
 import React from 'react';
-import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
+import DashboardChartFallback, { DASHBOARD_CHART_CONTAINER_STYLE } from './DashboardChartFallback';
+import { getDashboardChartMetricLabel, readMetricValue, withMetricLabel } from './dashboardChartMetricLabel';
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
@@ -24,38 +25,39 @@ interface DashboardBarChartProps extends Partial<WidgetComponentProps> {
 const DashboardBarChart: React.FC<DashboardBarChartProps> = ({ section, field, title, icon, labelMap, color, isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection(section);
     const { ref, width, height } = useContainerSize();
+    const metricLabel = React.useMemo(() => getDashboardChartMetricLabel(section, field), [field, section]);
 
     const items = Array.isArray(data?.[field]) ? (data[field] as { status: string; count: number }[]) : [];
 
     const chartData = React.useMemo(() => {
         return items
             .filter((d) => d.count > 0)
-            .map((d) => ({
+            .map((d) => withMetricLabel({
                 type: labelMap?.[d.status] ?? d.status ?? '未知',
-                value: Number(d.count),
-            }))
-            .sort((a, b) => b.value - a.value)
+            }, metricLabel, Number(d.count)))
+            .sort((left, right) => readMetricValue(right, metricLabel) - readMetricValue(left, metricLabel))
             .slice(0, 12);
-    }, [items, labelMap]);
+    }, [items, labelMap, metricLabel]);
+    const canRenderChart = width > 0 && height > 0 && chartData.length > 0;
 
     return (
         <WidgetWrapper title={title} icon={icon || <BarChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
-            <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {(width > 0 && height > 0 && chartData.length > 0) ? (
+            <div ref={ref} style={DASHBOARD_CHART_CONTAINER_STYLE}>
+                {canRenderChart ? (
                     <Column
                         width={width}
                         height={height}
                         data={chartData}
                         xField="type"
-                        yField="value"
+                        yField={metricLabel}
                         colorField="type"
                         color={color || ['#1677ff', '#52c41a', '#faad14', '#eb2f96', '#722ed1', '#13c2c2', '#fa541c', '#2f54eb']}
                         label={{
-                            content: (d: { value: number }) => `${d.value}`, // 使用 content 属性
+                            content: (datum: Record<string, unknown>) => `${readMetricValue(datum, metricLabel)}`,
                             textBaseline: 'bottom',
-                            position: 'top', // 改为 top，位于柱子上方
+                            position: 'top',
                             style: {
-                                fill: '#666', // 深色文字
+                                fill: '#666',
                                 fontSize: 10,
                                 fontWeight: 500,
                                 opacity: 0.8,
@@ -74,12 +76,10 @@ const DashboardBarChart: React.FC<DashboardBarChartProps> = ({ section, field, t
                                 label: { style: { fontSize: 10 } },
                             },
                         }}
-                        tooltip={{ title: false }}
+                        tooltip={{ title: 'type' }}
                     />
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <DashboardEmptyState minHeight="100%" />
-                    </div>
+                    <DashboardChartFallback hasData={chartData.length > 0} />
                 )}
             </div>
         </WidgetWrapper>

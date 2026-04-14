@@ -1,16 +1,18 @@
 import type { DashboardState, DashboardWorkspace } from '../dashboardStore';
+import { upgradeDashboardOverviewWorkspace } from '../dashboardDefaultWorkspace';
 import type { SystemWorkspacePayload } from './dashboardWorkspaceTypes';
 
 function toSystemWorkspace(workspace: SystemWorkspacePayload): DashboardWorkspace {
-  return {
+  return upgradeDashboardOverviewWorkspace({
     id: `sys-${workspace.id}`,
+    ...(workspace.description ? { description: workspace.description } : {}),
     name: workspace.name,
     widgets: workspace.config?.widgets || [],
     layouts: workspace.config?.layouts || [],
     isDefault: workspace.is_default,
     isSystem: true,
     isReadOnly: Boolean(workspace.is_readonly),
-  };
+  });
 }
 
 function resolveActiveWorkspaceId(

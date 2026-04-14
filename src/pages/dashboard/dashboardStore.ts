@@ -1,8 +1,8 @@
-/**
- * Dashboard Builder - 状态管理与持久化
- * 管理 Workspace 的创建/删除/重命名，Widget 的添加/删除，布局的保存/恢复
- */
 import { getActiveImpersonationSession, getCurrentAuthScopeKey, loadTenantState } from '@/utils/tenantContext';
+import {
+    createDefaultOverviewWorkspace,
+    upgradeDashboardOverviewState,
+} from './dashboardDefaultWorkspace';
 
 // ==================== 类型定义 ====================
 
@@ -29,6 +29,7 @@ export interface WidgetInstance {
 export interface DashboardWorkspace {
     id: string;
     name: string;
+    description?: string;
     widgets: WidgetInstance[];
     layouts: LayoutItem[];
     /** 是否为系统工作区（角色分配） */
@@ -54,47 +55,7 @@ const LEGACY_STORAGE_PREFIXES = [
     'auto_healing_dashboard_v4',
 ] as const;
 
-// ==================== 默认布局 ====================
-
-/**
- * 默认"运维总览"工作区 — 专业 3 行布局
- *
- * 12 列网格, rowHeight=80px
- *
- * Row 1 (y=0): 4 个 Stat 卡片 (w=3, h=2) = 160px
- * Row 2 (y=2): 2 个 Chart 并排 (w=6, h=3) = 240px — 饼图紧凑
- * Row 3 (y=5): 2 个 List 并排 (w=6, h=5) = 400px — 列表充足
- */
-const DEFAULT_WORKSPACE: DashboardWorkspace = {
-    id: 'default',
-    name: '运维总览',
-    widgets: [
-        // 第一行: 4 个核心 KPI
-        { instanceId: 'w-1', widgetId: 'stat-incident-total' },
-        { instanceId: 'w-2', widgetId: 'stat-healing-rate' },
-        { instanceId: 'w-3', widgetId: 'stat-pending-items' },
-        { instanceId: 'w-4', widgetId: 'stat-exec-success' },
-        // 第二行: 2 个 Chart
-        { instanceId: 'w-5', widgetId: 'chart-incident-status' },
-        { instanceId: 'w-6', widgetId: 'chart-instance-status' },
-        // 第三行: 2 个 List
-        { instanceId: 'w-7', widgetId: 'list-recent-instances' },
-        { instanceId: 'w-8', widgetId: 'list-pending-approvals' },
-    ],
-    layouts: [
-        // Row 1: stat cards (每个 w=3, 4 列 = 12)
-        { i: 'w-1', x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-        { i: 'w-2', x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-        { i: 'w-3', x: 6, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-        { i: 'w-4', x: 9, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-        // Row 2: charts — 紧凑
-        { i: 'w-5', x: 0, y: 2, w: 6, h: 3, minW: 4, minH: 3 },
-        { i: 'w-6', x: 6, y: 2, w: 6, h: 3, minW: 4, minH: 3 },
-        // Row 3: lists — 充足空间
-        { i: 'w-7', x: 0, y: 5, w: 6, h: 5, minW: 4, minH: 3 },
-        { i: 'w-8', x: 6, y: 5, w: 6, h: 5, minW: 4, minH: 3 },
-    ],
-};
+const DEFAULT_WORKSPACE = createDefaultOverviewWorkspace();
 
 const DEFAULT_STATE: DashboardState = {
     workspaces: [DEFAULT_WORKSPACE],
@@ -126,13 +87,17 @@ export function loadDashboardState(): DashboardState {
             const parsed = JSON.parse(raw) as DashboardState;
             // 验证基本结构
             if (Array.isArray(parsed.workspaces) && typeof parsed.activeWorkspaceId === 'string') {
-                return parsed;
+                const migratedState = upgradeDashboardOverviewState(parsed);
+                if (migratedState !== parsed) {
+                    localStorage.setItem(getDashboardStorageKey(), JSON.stringify(migratedState));
+                }
+                return migratedState;
             }
         }
     } catch (e) {
         console.warn('[Dashboard] Failed to load saved state, using defaults:', e);
     }
-    return { ...DEFAULT_STATE, workspaces: [{ ...DEFAULT_WORKSPACE }] };
+    return { ...DEFAULT_STATE, workspaces: [getDefaultWorkspace()] };
 }
 
 export function saveDashboardState(state: DashboardState): void {
@@ -190,7 +155,7 @@ export function generateWorkspaceId(): string {
 
 /** 获取默认 Workspace 配置（用于重置） */
 export function getDefaultWorkspace(): DashboardWorkspace {
-    return { ...DEFAULT_WORKSPACE, widgets: [...DEFAULT_WORKSPACE.widgets], layouts: [...DEFAULT_WORKSPACE.layouts] };
+    return createDefaultOverviewWorkspace();
 }
 
 export const __TEST_ONLY__ = {

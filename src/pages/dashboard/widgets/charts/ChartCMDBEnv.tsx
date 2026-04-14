@@ -1,11 +1,14 @@
 import { BarChartOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/plots';
 import React from 'react';
-import DashboardEmptyState from '../DashboardEmptyState';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 import { useDashboardSection } from '../useDashboardSection';
+import DashboardChartFallback, { DASHBOARD_CHART_CONTAINER_STYLE } from './DashboardChartFallback';
+import { withMetricLabel } from './dashboardChartMetricLabel';
+
+const METRIC_LABEL = '资产数';
 
 const ENV_LABELS: Record<string, string> = {
     production: '生产',
@@ -28,28 +31,28 @@ const ChartCMDBEnv: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) =
         if (!data?.by_environment) return [];
         return (data.by_environment as EnvironmentCountItem[]).map((item) => {
             const envKey = item.status || item.environment || '';
-            return {
+            return withMetricLabel({
             // dashboard overview API 使用 'status' 键, cmdb/stats API 使用 'environment' 键
             environment: ENV_LABELS[envKey] || envKey,
-            count: Number(item.count),
-            };
+            }, METRIC_LABEL, Number(item.count));
         });
     }, [data]);
+    const canRenderChart = width > 0 && height > 0 && chartData.length > 0;
 
     return (
         <WidgetWrapper title="CMDB 环境分布" icon={<BarChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
-            <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 ? (
+            <div ref={ref} style={DASHBOARD_CHART_CONTAINER_STYLE}>
+                {canRenderChart ? (
                     <Column
                         width={width}
                         height={height}
                         data={chartData}
                         xField="environment"
-                        yField="count"
+                        yField={METRIC_LABEL}
                         colorField="environment"
                         color={['#1677ff', '#52c41a', '#faad14', '#eb2f96', '#722ed1']}
                         label={{
-                            text: 'count',
+                            text: METRIC_LABEL,
                             position: 'inside',
                             style: { fill: '#fff', fontSize: 10, fontWeight: 500 },
                         }}
@@ -65,14 +68,12 @@ const ChartCMDBEnv: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) =
                                 label: { style: { fontSize: 10 } },
                             },
                         }}
-                        tooltip={{ title: false }}
+                        tooltip={{ title: 'environment' }}
                     />
-                    ) : (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <DashboardEmptyState minHeight="100%" />
-                        </div>
-                    )}
-                </div>
+                ) : (
+                    <DashboardChartFallback hasData={chartData.length > 0} />
+                )}
+            </div>
         </WidgetWrapper>
     );
 };

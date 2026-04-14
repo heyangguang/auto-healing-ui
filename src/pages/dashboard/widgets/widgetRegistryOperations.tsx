@@ -16,6 +16,7 @@ import {
   ToolOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import { getChannelTypeLabelMap } from '@/constants/notificationDicts';
 import DashboardPieChart from './charts/DashboardPieChart';
 import DashboardTrendChart from './charts/DashboardTrendChart';
 import DashboardListWidget from './lists/DashboardListWidget';
@@ -33,6 +34,7 @@ import StatPluginSyncRate from './stats/StatPluginSyncRate';
 import StatSecrets from './stats/StatSecrets';
 import StatUsers from './stats/StatUsers';
 import ChartPluginHealth from './charts/ChartPluginHealth';
+import { TALL_PIE_CHART_WIDGET_LAYOUT, WIDE_CHART_WIDGET_LAYOUT } from './widgetLayoutPresets';
 import type { WidgetComponentProps, WidgetDefinition } from './widgetRegistryTypes';
 
 export const OPERATIONS_WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
@@ -54,24 +56,24 @@ export const OPERATIONS_WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
   'chart-plugin-status': {
     id: 'chart-plugin-status', name: '插件状态分布', description: '插件按状态分组的饼图',
     category: 'chart', section: 'plugins', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="plugins" field="by_status" title="插件状态分布" {...props} />,
   },
   'chart-plugin-type': {
     id: 'chart-plugin-type', name: '插件类型分布', description: '插件按类型分组的饼图',
     category: 'chart', section: 'plugins', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="plugins" field="by_type" title="插件类型分布" {...props} />,
   },
   'chart-plugin-health': {
     id: 'chart-plugin-health', name: '插件健康状态', description: '插件按活跃/异常/停用的分布',
     category: 'chart', section: 'plugins', icon: <DashboardOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 }, component: ChartPluginHealth,
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT, component: ChartPluginHealth,
   },
   'chart-plugin-sync-trend': {
     id: 'chart-plugin-sync-trend', name: '近7天同步趋势', description: '最近7天插件同步趋势',
     category: 'chart', section: 'plugins', icon: <LineChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardTrendChart section="plugins" field="sync_trend_7d" title="近7天同步趋势" color="#52c41a" {...props} />,
   },
   'list-plugin-syncs': {
@@ -104,19 +106,19 @@ export const OPERATIONS_WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
   'chart-notif-channel-type': {
     id: 'chart-notif-channel-type', name: '渠道类型分布', description: '通知渠道按类型分组',
     category: 'chart', section: 'notifications', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
-    component: (props: WidgetComponentProps) => <DashboardPieChart section="notifications" field="by_channel_type" title="渠道类型分布" {...props} />,
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
+    component: (props: WidgetComponentProps) => <DashboardPieChart section="notifications" field="by_channel_type" title="渠道类型分布" labelMap={getChannelTypeLabelMap()} {...props} />,
   },
   'chart-notif-status': {
     id: 'chart-notif-status', name: '通知状态分布', description: '通知日志按状态分组',
     category: 'chart', section: 'notifications', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="notifications" field="by_log_status" title="通知状态分布" {...props} />,
   },
   'chart-notif-trend-7d': {
     id: 'chart-notif-trend-7d', name: '近7天通知趋势', description: '最近7天通知发送趋势',
     category: 'chart', section: 'notifications', icon: <LineChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardTrendChart section="notifications" field="trend_7d" title="近7天通知趋势" color="#eb2f96" {...props} />,
   },
   'list-recent-notifications': {
@@ -160,7 +162,7 @@ export const OPERATIONS_WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
   'chart-playbook-status': {
     id: 'chart-playbook-status', name: 'Playbook 状态分布', description: 'Playbook 按状态分组',
     category: 'chart', section: 'playbooks', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="playbooks" field="by_status" title="Playbook 状态分布" {...props} />,
   },
   'list-playbook-scans': {
@@ -177,13 +179,13 @@ export const OPERATIONS_WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
   'chart-secrets-type': {
     id: 'chart-secrets-type', name: '密钥源类型分布', description: '按类型分组的饼图',
     category: 'chart', section: 'secrets', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="secrets" field="by_type" title="密钥源类型分布" {...props} />,
   },
   'chart-secrets-auth-type': {
     id: 'chart-secrets-auth-type', name: '认证方式分布', description: '按认证方式分组的饼图',
     category: 'chart', section: 'secrets', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="secrets" field="by_auth_type" title="认证方式分布" {...props} />,
   },
   'stat-users': {

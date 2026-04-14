@@ -4,10 +4,11 @@
 import { LineChartOutlined } from '@ant-design/icons';
 import { Area, Line } from '@ant-design/plots';
 import React from 'react';
-import DashboardEmptyState from '../DashboardEmptyState';
 import { useDashboardSection, type DashboardSectionKey } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
+import DashboardChartFallback, { DASHBOARD_CHART_CONTAINER_STYLE } from './DashboardChartFallback';
+import { getDashboardChartMetricLabel, readMetricValue, withMetricLabel } from './dashboardChartMetricLabel';
 
 import type { WidgetComponentProps } from '../widgetRegistry';
 
@@ -23,6 +24,7 @@ interface DashboardTrendChartProps extends Partial<WidgetComponentProps> {
 const DashboardTrendChart: React.FC<DashboardTrendChartProps> = ({ section, field, title, icon, chartType = 'line', color, isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection(section);
     const { ref, width, height } = useContainerSize();
+    const metricLabel = React.useMemo(() => getDashboardChartMetricLabel(section, field), [field, section]);
 
     const items = Array.isArray(data?.[field]) ? (data[field] as { date: string; count: number }[]) : [];
 
@@ -32,10 +34,9 @@ const DashboardTrendChart: React.FC<DashboardTrendChartProps> = ({ section, fiel
         if (field.includes('30d')) days = 30;
 
         // 生成完整的日期序列
-        const fullData: { date: string; count: number }[] = [];
+        const fullData: Array<Record<string, unknown>> = [];
         const now = new Date();
         const dataMap = new Map(items.map(i => {
-            // 统一日期格式为 YYYY-MM-DD 以便匹配
             const d = new Date(i.date);
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             return [key, Number(i.count)];
@@ -45,37 +46,33 @@ const DashboardTrendChart: React.FC<DashboardTrendChartProps> = ({ section, fiel
             const d = new Date();
             d.setDate(now.getDate() - i);
             const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            // 如果后端返回的是 ISOString，Map 匹配可能需要更灵活，这里假设后端日期如果是 ISO 也会被 new Date 正确解析
-            // 为了匹配后端返回的 key，尝试反向查找
-            // 简单做法：直接用生成的 dateStr 作为显示，如果在 dataMap 中找到就用 count，否则 0
-
-            // 稍微复杂点：后端返回的 date string 可能是 ISO。我们已经 map 成了 YYYY-MM-DD key。
             fullData.push({
-                date: dateStr,
-                count: dataMap.get(dateStr) ?? 0,
+                ...withMetricLabel({ date: dateStr }, metricLabel, dataMap.get(dateStr) ?? 0),
             });
         }
 
-        // 如果数据完全为空（所有都是0），可能也需要显示（趋势图全0也是一种趋势），但如果 items 本身为空且非 7d/30d 模式，则可能真的无数据
         if (items.length === 0 && !field.includes('d')) return [];
 
         return fullData;
-    }, [items, field]);
+    }, [field, items, metricLabel]);
 
     const Chart = chartType === 'area' ? Area : Line;
+    const hasChartData = chartData.length > 0 && chartData.some((item) => readMetricValue(item, metricLabel) > 0);
+    const canRenderChart = width > 0 && height > 0 && hasChartData;
 
     return (
         <WidgetWrapper title={title} icon={icon || <LineChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
-            <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {(width > 0 && height > 0 && chartData.length > 0 && chartData.some(d => d.count > 0)) ? (
+            <div ref={ref} style={DASHBOARD_CHART_CONTAINER_STYLE}>
+                {canRenderChart ? (
                     <Chart
                         width={width}
                         height={height}
                         data={chartData}
                         xField="date"
-                        yField="count"
+                        yField={metricLabel}
                         color={color || '#1677ff'}
                         smooth
+                        tooltip={{ title: 'date' }}
                         axis={{
                             x: {
                                 tickCount: 5, // 限制刻度数量，防止过密
@@ -107,9 +104,7 @@ const DashboardTrendChart: React.FC<DashboardTrendChartProps> = ({ section, fiel
                         point={{ size: 2, shape: 'circle', style: { fill: '#fff', stroke: color || '#1677ff', lineWidth: 1.5 } }}
                     />
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <DashboardEmptyState minHeight="100%" />
-                    </div>
+                    <DashboardChartFallback hasData={hasChartData} />
                 )}
             </div>
         </WidgetWrapper>

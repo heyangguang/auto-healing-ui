@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { message } from 'antd';
-import { createSystemWorkspace, deleteSystemWorkspace } from '@/services/auto-healing/dashboard';
+import { createSystemWorkspace, deleteSystemWorkspace, getDashboardConfig } from '@/services/auto-healing/dashboard';
 import { useDashboardWorkspaceActions } from './useDashboardWorkspaceActions';
 
 jest.mock('../widgets/widgetRegistry', () => ({
@@ -42,7 +42,6 @@ describe('useDashboardWorkspaceActions', () => {
       notifyWorkspaceMutation: jest.fn(),
       renameModal: { id: '', name: '', open: false },
       saveState: jest.fn(),
-      saveSystemWorkspaceToBackend: jest.fn(),
       setIsEditing: jest.fn(),
       setRenameModal: jest.fn(),
       setSaveSystemModalOpen: jest.fn(),
@@ -94,7 +93,6 @@ describe('useDashboardWorkspaceActions', () => {
       notifyWorkspaceMutation: jest.fn(),
       renameModal: { id: '', name: '', open: false },
       saveState: jest.fn(),
-      saveSystemWorkspaceToBackend: jest.fn(),
       setIsEditing: jest.fn(),
       setRenameModal: jest.fn(),
       setSaveSystemModalOpen: jest.fn(),
@@ -123,5 +121,92 @@ describe('useDashboardWorkspaceActions', () => {
     });
 
     expect(message.error).toHaveBeenCalledWith('默认系统工作区不能删除');
+  });
+
+  it('sanitizes new widget layouts before creating a system workspace', async () => {
+    (createSystemWorkspace as jest.Mock).mockResolvedValue({ data: { id: 'server-1' } });
+    (getDashboardConfig as jest.Mock).mockResolvedValue({
+      data: {
+        system_workspaces: [{
+          id: 'server-1',
+          name: '系统版工作区',
+          description: '',
+          config: {
+            widgets: [
+              { instanceId: 'w-1', widgetId: 'stat-1' },
+              { instanceId: 'w-2', widgetId: 'stat-2' },
+            ],
+            layouts: [
+              { i: 'w-1', x: 0, y: 0, w: 2, h: 2 },
+              { i: 'w-2', x: 0, y: 2, w: 2, h: 2 },
+            ],
+          },
+        }],
+      },
+    });
+
+    const { result } = renderHook(() => useDashboardWorkspaceActions({
+      activeWorkspace: {
+        id: 'ws-1',
+        name: '我的工作区',
+        widgets: [
+          { instanceId: 'w-1', widgetId: 'stat-1' },
+          { instanceId: 'w-2', widgetId: 'stat-2' },
+        ],
+        layouts: [
+          { i: 'w-1', x: 0, y: 0, w: 2, h: 2 },
+          { i: 'w-2', x: 0, y: Infinity, w: 2, h: 2 },
+        ],
+      },
+      autoArrangeLayouts: jest.fn(),
+      canManageDashboardConfig: true,
+      canManageSystemWorkspaces: true,
+      layoutsAreEqual: jest.fn(),
+      notifyWorkspaceMutation: jest.fn(),
+      renameModal: { id: '', name: '', open: false },
+      saveState: jest.fn(),
+      setIsEditing: jest.fn(),
+      setRenameModal: jest.fn(),
+      setSaveSystemModalOpen: jest.fn(),
+      setState: jest.fn(),
+      setSystemWsDesc: jest.fn(),
+      setSystemWsName: jest.fn(),
+      state: {
+        activeWorkspaceId: 'ws-1',
+        workspaces: [{
+          id: 'ws-1',
+          name: '我的工作区',
+          widgets: [
+            { instanceId: 'w-1', widgetId: 'stat-1' },
+            { instanceId: 'w-2', widgetId: 'stat-2' },
+          ],
+          layouts: [
+            { i: 'w-1', x: 0, y: 0, w: 2, h: 2 },
+            { i: 'w-2', x: 0, y: Infinity, w: 2, h: 2 },
+          ],
+        }],
+      },
+      systemWsDesc: '',
+      systemWsName: '系统版工作区',
+    }));
+
+    await act(async () => {
+      await result.current.handleSaveAsSystem();
+    });
+
+    expect(createSystemWorkspace).toHaveBeenCalledWith({
+      name: '系统版工作区',
+      description: '',
+      config: {
+        widgets: [
+          { instanceId: 'w-1', widgetId: 'stat-1' },
+          { instanceId: 'w-2', widgetId: 'stat-2' },
+        ],
+        layouts: [
+          { i: 'w-1', x: 0, y: 0, w: 2, h: 2 },
+          { i: 'w-2', x: 0, y: 2, w: 2, h: 2 },
+        ],
+      },
+    });
   });
 });

@@ -29,7 +29,8 @@ describe('dashboardWorkspaceMeta', () => {
     expect(isLocalDefaultWorkspace(workspace)).toBe(true);
     expect(canEditDashboardWorkspace(workspace, fullPermissions)).toBe(true);
     expect(canDeleteDashboardWorkspace(workspace, 2, fullPermissions)).toBe(false);
-    expect(getWorkspaceBadges(workspace, fullPermissions)).toEqual([{ color: 'gold', label: '本地默认' }]);
+    expect(canDuplicateDashboardWorkspace(workspace, fullPermissions)).toBe(true);
+    expect(getWorkspaceBadges(workspace, fullPermissions)).toEqual([{ color: 'gold', label: '默认' }]);
   });
 
   it('allows workspace managers to edit system workspaces even when backend marks them readonly', () => {
@@ -43,7 +44,7 @@ describe('dashboardWorkspaceMeta', () => {
     expect(isEffectivelyReadOnlyDashboardWorkspace(workspace, fullPermissions)).toBe(false);
     expect(canEditDashboardWorkspace(workspace, fullPermissions)).toBe(true);
     expect(canDeleteDashboardWorkspace(workspace, 3, fullPermissions)).toBe(true);
-    expect(canDuplicateDashboardWorkspace(workspace, fullPermissions)).toBe(false);
+    expect(canDuplicateDashboardWorkspace(workspace, fullPermissions)).toBe(true);
     expect(getWorkspaceBadges(workspace, fullPermissions)).toEqual([
       { color: 'purple', label: '系统' },
     ]);
@@ -82,6 +83,7 @@ describe('dashboardWorkspaceMeta', () => {
 
     expect(canEditDashboardWorkspace(workspace, fullPermissions)).toBe(true);
     expect(canDeleteDashboardWorkspace(workspace, 3, fullPermissions)).toBe(false);
+    expect(canDuplicateDashboardWorkspace(workspace, fullPermissions)).toBe(true);
     expect(getWorkspaceBadges(workspace, fullPermissions)).toEqual([
       { color: 'blue', label: '默认' },
       { color: 'purple', label: '系统' },

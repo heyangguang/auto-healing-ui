@@ -10,6 +10,7 @@ import {
   type LayoutItem,
   type WidgetInstance,
 } from '../dashboardStore';
+import { upgradeDashboardOverviewState } from '../dashboardDefaultWorkspace';
 import {
   getDashboardConfig,
   updateSystemWorkspace,
@@ -22,6 +23,7 @@ import {
   canEditDashboardWorkspace,
   getWorkspaceEditDeniedMessage,
 } from './dashboardWorkspaceMeta';
+import { buildSystemWorkspacePayload } from './dashboardWorkspacePersistence';
 import { mergeSystemWorkspaces } from './dashboardWorkspaceState';
 import { useDashboardWorkspaceActions } from './useDashboardWorkspaceActions';
 
@@ -60,6 +62,16 @@ export const useDashboardWorkspaceManager = ({
 
   useEffect(() => {
     clearLegacyCache();
+  }, []);
+
+  useEffect(() => {
+    setState((previousState) => {
+      const nextState = upgradeDashboardOverviewState(previousState);
+      if (nextState !== previousState) {
+        saveDashboardState(nextState);
+      }
+      return nextState;
+    });
   }, []);
 
   const readSystemWorkspaces = useCallback((response: DashboardConfigPayload) => {
@@ -106,12 +118,8 @@ export const useDashboardWorkspaceManager = ({
     }
     const timeoutId = window.setTimeout(() => {
       systemWorkspaceSaveTimeouts.current.delete(realId);
-      updateSystemWorkspace(realId, {
-        config: {
-          widgets: workspace.widgets,
-          layouts: workspace.layouts,
-        },
-      }).catch(async (error) => {
+      const payload = buildSystemWorkspacePayload(workspace);
+      updateSystemWorkspace(realId, payload).catch(async (error) => {
         const errorMessage = extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '系统工作区保存失败');
         try {
           await syncRemoteSystemWorkspaces(realId);
@@ -124,7 +132,7 @@ export const useDashboardWorkspaceManager = ({
     systemWorkspaceSaveTimeouts.current.set(realId, timeoutId);
   }, [canManageSystemWorkspaces, syncRemoteSystemWorkspaces]);
 
-  const saveState = useCallback((nextState: DashboardState) => {
+  const saveState = useCallback((nextState: DashboardState, changedWorkspaceId?: string) => {
     setState(nextState);
     if (saveTimeout.current) {
       clearTimeout(saveTimeout.current);
@@ -132,9 +140,12 @@ export const useDashboardWorkspaceManager = ({
     saveTimeout.current = window.setTimeout(() => {
       saveDashboardState(nextState);
     }, 500);
-    const activeWorkspace = nextState.workspaces.find((workspace) => workspace.id === nextState.activeWorkspaceId);
-    if (activeWorkspace?.isSystem && canManageSystemWorkspaces) {
-      saveSystemWorkspaceToBackend(activeWorkspace);
+    if (!changedWorkspaceId) {
+      return;
+    }
+    const changedWorkspace = nextState.workspaces.find((workspace) => workspace.id === changedWorkspaceId);
+    if (changedWorkspace?.isSystem && canManageSystemWorkspaces) {
+      saveSystemWorkspaceToBackend(changedWorkspace);
     }
   }, [canManageSystemWorkspaces, saveSystemWorkspaceToBackend]);
 
@@ -197,7 +208,6 @@ export const useDashboardWorkspaceManager = ({
     notifyWorkspaceMutation,
     renameModal,
     saveState,
-    saveSystemWorkspaceToBackend,
     setIsEditing,
     setRenameModal,
     setSaveSystemModalOpen,

@@ -60,8 +60,7 @@ export function canDuplicateDashboardWorkspace(
   workspace: DashboardWorkspace,
   permissions: WorkspacePermissionOptions,
 ): boolean {
-  return isEffectivelyReadOnlyDashboardWorkspace(workspace, permissions)
-    && permissions.canManageDashboardConfig;
+  return Boolean(workspace.id) && permissions.canManageDashboardConfig;
 }
 
 export function getWorkspaceBadges(
@@ -80,7 +79,7 @@ export function getWorkspaceBadges(
   }
 
   if (isLocalDefaultWorkspace(workspace)) {
-    return [{ color: 'gold', label: '本地默认' }];
+    return [{ color: 'gold', label: '默认' }];
   }
 
   return [{ color: 'default', label: '本地' }];

@@ -31,6 +31,7 @@ import StatIncidentPending from './stats/StatIncidentPending';
 import StatIncidentToday from './stats/StatIncidentToday';
 import StatIncidentTotal from './stats/StatIncidentTotal';
 import StatIncidentUnscanned from './stats/StatIncidentUnscanned';
+import { TALL_PIE_CHART_WIDGET_LAYOUT, WIDE_CHART_WIDGET_LAYOUT } from './widgetLayoutPresets';
 import type { WidgetComponentProps, WidgetDefinition } from './widgetRegistryTypes';
 
 const SEVERITY_LABELS: Record<string, string> = {
@@ -77,43 +78,43 @@ export const INCIDENTS_CMDB_WIDGET_REGISTRY: Record<string, WidgetDefinition> = 
   'chart-incident-healing-status': {
     id: 'chart-incident-healing-status', name: '工单自愈状态分布', description: '按自愈处理状态分组的饼图',
     category: 'chart', section: 'incidents', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="incidents" field="by_healing_status" title="工单自愈状态分布" labelMap={HEALING_STATUS_LABELS} {...props} />,
   },
   'chart-incident-severity': {
     id: 'chart-incident-severity', name: '工单严重等级分布', description: '按严重等级分组的饼图',
     category: 'chart', section: 'incidents', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="incidents" field="by_severity" title="工单严重等级分布" labelMap={SEVERITY_LABELS} {...props} />,
   },
   'chart-incident-category': {
     id: 'chart-incident-category', name: '工单分类统计', description: '按分类分组的柱状图',
     category: 'chart', section: 'incidents', icon: <BarChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardBarChart section="incidents" field="by_category" title="工单分类统计" {...props} />,
   },
   'chart-incident-source': {
     id: 'chart-incident-source', name: '工单来源分布', description: '按来源插件分组的饼图',
     category: 'chart', section: 'incidents', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="incidents" field="by_source" title="工单来源分布" {...props} />,
   },
   'chart-incident-trend-7d': {
     id: 'chart-incident-trend-7d', name: '近7天工单趋势', description: '最近7天工单创建趋势',
     category: 'chart', section: 'incidents', icon: <LineChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardTrendChart section="incidents" field="trend_7d" title="近7天工单趋势" {...props} />,
   },
   'chart-incident-trend-30d': {
     id: 'chart-incident-trend-30d', name: '近30天工单趋势', description: '最近30天工单创建趋势',
     category: 'chart', section: 'incidents', icon: <FundOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardTrendChart section="incidents" field="trend_30d" title="近30天工单趋势" chartType="area" color="#fa8c16" {...props} />,
   },
   'chart-incident-status': {
     id: 'chart-incident-status', name: '工单原始状态分布', description: '按原始状态分组的饼图',
     category: 'chart', section: 'incidents', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 }, component: ChartIncidentStatus,
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT, component: ChartIncidentStatus,
   },
   'list-incident-recent': {
     id: 'list-incident-recent', name: '最近工单', description: '最新创建的工单列表',
@@ -150,35 +151,35 @@ export const INCIDENTS_CMDB_WIDGET_REGISTRY: Record<string, WidgetDefinition> = 
   'chart-cmdb-status': {
     id: 'chart-cmdb-status', name: 'CMDB 状态分布', description: '按状态分组的饼图',
     category: 'chart', section: 'cmdb', icon: <CloudServerOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 }, component: ChartCMDBStatus,
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT, component: ChartCMDBStatus,
   },
   'chart-cmdb-env': {
     id: 'chart-cmdb-env', name: 'CMDB 环境分布', description: '按环境分组的柱状图',
     category: 'chart', section: 'cmdb', icon: <BarChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 }, component: ChartCMDBEnv,
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT, component: ChartCMDBEnv,
   },
   'chart-cmdb-type': {
     id: 'chart-cmdb-type', name: '资产类型分布', description: '按设备类型分组的柱状图',
     category: 'chart', section: 'cmdb', icon: <BarChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardBarChart section="cmdb" field="by_type" title="资产类型分布" color="#722ed1" {...props} />,
   },
   'chart-cmdb-os': {
     id: 'chart-cmdb-os', name: '操作系统分布', description: '按 OS 分组的饼图',
     category: 'chart', section: 'cmdb', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="cmdb" field="by_os" title="操作系统分布" {...props} />,
   },
   'chart-cmdb-department': {
     id: 'chart-cmdb-department', name: '部门资产分布', description: '按部门分组的柱状图',
     category: 'chart', section: 'cmdb', icon: <BarChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: WIDE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardBarChart section="cmdb" field="by_department" title="部门资产分布" {...props} />,
   },
   'chart-cmdb-manufacturer': {
     id: 'chart-cmdb-manufacturer', name: '厂商分布', description: '按厂商分组的饼图',
     category: 'chart', section: 'cmdb', icon: <PieChartOutlined />,
-    defaultLayout: { w: 6, h: 5, minW: 4, minH: 4 },
+    defaultLayout: TALL_PIE_CHART_WIDGET_LAYOUT,
     component: (props: WidgetComponentProps) => <DashboardPieChart section="cmdb" field="by_manufacturer" title="厂商分布" {...props} />,
   },
   'list-cmdb-maintenance': {

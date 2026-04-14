@@ -2,41 +2,48 @@ import { PieChartOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import React from 'react';
 import { INCIDENT_CHART_COLORS } from '@/constants/incidentDicts';
-import DashboardEmptyState from '../DashboardEmptyState';
 import { buildIncidentStatusChartData } from '../dashboardOverviewHelpers';
 import { useDashboardSection } from '../useDashboardSection';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
+import DashboardChartFallback, { DASHBOARD_CHART_CONTAINER_STYLE } from './DashboardChartFallback';
+import { DASHBOARD_DONUT_INNER_RADIUS, DASHBOARD_DONUT_RADIUS } from './dashboardDonutChartConfig';
+import { readMetricValue, withMetricLabel } from './dashboardChartMetricLabel';
+
+const METRIC_LABEL = '工单数';
 
 const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }) => {
     const { data, loading, refresh } = useDashboardSection('incidents');
     const { ref, width, height } = useContainerSize();
 
-    const chartData = React.useMemo(() => buildIncidentStatusChartData(data ?? undefined), [data]);
+    const chartData = React.useMemo(() => buildIncidentStatusChartData(data ?? undefined).map((item) => withMetricLabel({
+        type: item.type,
+    }, METRIC_LABEL, item.value)), [data]);
+    const canRenderChart = width > 0 && height > 0 && chartData.length > 0;
 
     const total = React.useMemo(
-        () => Number(data?.total ?? chartData.reduce((sum, item) => sum + item.value, 0)),
+        () => Number(data?.total ?? chartData.reduce((sum, item) => sum + readMetricValue(item, METRIC_LABEL), 0)),
         [chartData, data?.total],
     );
 
     return (
         <WidgetWrapper title="工单状态分布" icon={<PieChartOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
-            <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 ? (
+            <div ref={ref} style={DASHBOARD_CHART_CONTAINER_STYLE}>
+                {canRenderChart ? (
                     <Pie
                         width={width}
                         height={height}
                         data={chartData}
-                        angleField="value"
+                        angleField={METRIC_LABEL}
                         colorField="type"
-                        radius={0.65}
-                        innerRadius={0.55}
+                        radius={DASHBOARD_DONUT_RADIUS}
+                        innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
                         color={Object.values(INCIDENT_CHART_COLORS)}
                         label={false}
                         legend={{ color: { position: 'bottom', layout: { justifyContent: 'center' } } }}
                         interaction={{ elementHighlight: true }}
-                        tooltip={{ title: false }}
+                        tooltip={{ title: 'type' }}
                         annotations={[
                             {
                                 type: 'text',
@@ -64,9 +71,7 @@ const ChartIncidentStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemo
                         ]}
                     />
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <DashboardEmptyState minHeight="100%" />
-                    </div>
+                    <DashboardChartFallback hasData={chartData.length > 0} />
                 )}
             </div>
         </WidgetWrapper>

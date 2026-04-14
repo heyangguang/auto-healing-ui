@@ -1,0 +1,2 @@
+export const DASHBOARD_DONUT_RADIUS = 0.8;
+export const DASHBOARD_DONUT_INNER_RADIUS = 0.62;

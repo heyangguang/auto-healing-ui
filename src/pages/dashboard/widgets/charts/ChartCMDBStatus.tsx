@@ -1,12 +1,16 @@
 import { CloudServerOutlined } from '@ant-design/icons';
 import { Pie } from '@ant-design/plots';
 import React from 'react';
-import DashboardEmptyState from '../DashboardEmptyState';
 import WidgetWrapper from '../WidgetWrapper';
 import type { WidgetComponentProps } from '../widgetRegistry';
 import { useContainerSize } from '../../../../hooks/useContainerSize';
 import { useDashboardSection } from '../useDashboardSection';
 import { CMDB_STATUS_LABELS, CMDB_STATUS_MAP } from '@/constants/cmdbDicts';
+import DashboardChartFallback, { DASHBOARD_CHART_CONTAINER_STYLE } from './DashboardChartFallback';
+import { DASHBOARD_DONUT_INNER_RADIUS, DASHBOARD_DONUT_RADIUS } from './dashboardDonutChartConfig';
+import { readMetricValue, withMetricLabel } from './dashboardChartMetricLabel';
+
+const METRIC_LABEL = '资产数';
 
 type StatusCountItem = {
     status?: string;
@@ -21,32 +25,32 @@ const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
         if (!data?.by_status) return [];
         return (data.by_status as StatusCountItem[]).map((item) => {
             const status = item.status ?? '';
-            return {
+            return withMetricLabel({
                 type: CMDB_STATUS_LABELS[status] || status,
-            value: Number(item.count),
-            };
+            }, METRIC_LABEL, Number(item.count));
         });
     }, [data]);
 
-    const total = React.useMemo(() => chartData.reduce((s, d) => s + d.value, 0), [chartData]);
+    const total = React.useMemo(() => chartData.reduce((sum, item) => sum + readMetricValue(item, METRIC_LABEL), 0), [chartData]);
+    const canRenderChart = width > 0 && height > 0 && chartData.length > 0;
 
     return (
         <WidgetWrapper title="CMDB 状态分布" icon={<CloudServerOutlined />} loading={loading} onRefresh={refresh} isEditing={isEditing} onRemove={onRemove}>
-            <div ref={ref} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-                {width > 0 && height > 0 && chartData.length > 0 ? (
+            <div ref={ref} style={DASHBOARD_CHART_CONTAINER_STYLE}>
+                {canRenderChart ? (
                     <Pie
                         width={width}
                         height={height}
                         data={chartData}
-                        angleField="value"
+                        angleField={METRIC_LABEL}
                         colorField="type"
-                        radius={0.7}
-                        innerRadius={0.55}
+                        radius={DASHBOARD_DONUT_RADIUS}
+                        innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
                         color={Object.values(CMDB_STATUS_MAP).map(s => s.color)}
                         label={false}
                         legend={{ color: { position: 'bottom', layout: { justifyContent: 'center' } } }}
                         interaction={{ elementHighlight: true }}
-                        tooltip={{ title: false }}
+                        tooltip={{ title: 'type' }}
                         annotations={[
                             {
                                 type: 'text',
@@ -74,9 +78,7 @@ const ChartCMDBStatus: React.FC<WidgetComponentProps> = ({ isEditing, onRemove }
                         ]}
                     />
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <DashboardEmptyState minHeight="100%" />
-                    </div>
+                    <DashboardChartFallback hasData={chartData.length > 0} />
                 )}
             </div>
         </WidgetWrapper>

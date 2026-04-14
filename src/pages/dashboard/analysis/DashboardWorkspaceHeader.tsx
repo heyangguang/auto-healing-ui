@@ -201,6 +201,14 @@ const DashboardWorkspaceHeader: React.FC<DashboardWorkspaceHeaderProps> = ({
             {isEditing ? '锁定' : '编辑'}
           </Button>
         )}
+        {Boolean(activeWorkspace.id) && canDuplicateDashboardWorkspace(activeWorkspace, {
+          canManageDashboardConfig: hasDashboardConfig,
+          canManageSystemWorkspaces: hasWsManage,
+        }) && (
+          <Button size="small" style={{ borderRadius: 0 }} onClick={() => onDuplicateWorkspace(activeWorkspace)}>
+            复制副本
+          </Button>
+        )}
         {hasWsManage && Boolean(activeWorkspace.id) && activeWorkspace.widgets.length > 0 && !activeWorkspace.isSystem && (
           <Button size="small" style={{ borderRadius: 0 }} onClick={() => onOpenSaveSystemWorkspace(activeWorkspace)}>
             保存为系统工作区
