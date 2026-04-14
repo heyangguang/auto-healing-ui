@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAccess } from '@umijs/max';
 import { Button, Empty, Spin, Tooltip, Typography } from 'antd';
-import { CodeOutlined } from '@ant-design/icons';
+import { CodeOutlined, LoadingOutlined } from '@ant-design/icons';
 import StandardTable from '@/components/StandardTable';
 import SortToolbar from '@/components/SortToolbar';
 import TemplateEditorForm from './TemplateEditorForm';
@@ -83,7 +83,10 @@ const NotificationTemplatesPage: React.FC = () => {
                 title="通知模板"
             >
                 <div className="templates-body" style={{ alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
-                    <Spin size="large" tip="加载中..."><div /></Spin>
+                    <div className="templates-loading-inline">
+                        <Spin indicator={<LoadingOutlined spin />} size="large" />
+                        <span>加载中...</span>
+                    </div>
                 </div>
             </StandardTable>
         );

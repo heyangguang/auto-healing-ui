@@ -129,6 +129,15 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+.templates-loading-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: #1677ff;
+    font-size: 18px;
+    font-weight: 500;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
     .templates-sidebar {
