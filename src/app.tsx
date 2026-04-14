@@ -6,6 +6,8 @@ import React from 'react';
 import { getCurrentUser } from '@/services/auto-healing/auth';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig, TokenManager } from './requestErrorConfig';
+import { shouldClearTokensAfterBootstrapFailure } from './utils/authBootstrap';
+import { refreshTokenDetailed } from './utils/requestAuth';
 
 import TopNavBar from '@/components/TopNavBar';
 import AppLayout from '@/components/AppLayout';
@@ -24,10 +26,6 @@ const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 
 type InitialStateUser = API.CurrentUser;
-type RefreshBootstrapResponse = {
-  access_token?: string;
-  refresh_token?: string;
-};
 
 const toInitialStateUser = (userInfo: AutoHealing.UserInfo): InitialStateUser => ({
   ...userInfo,
@@ -44,12 +42,14 @@ const toInitialStateUser = (userInfo: AutoHealing.UserInfo): InitialStateUser =>
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
  */
 export async function getInitialState(): Promise<{
+  authUnavailable?: boolean;
   settings?: Partial<LayoutSettings>;
   currentUser?: API.CurrentUser;
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
   // 注意: 字典缓存初始化延迟到确认用户身份后执行
+  let authUnavailable = false;
 
   const fetchUserInfo = async () => {
     try {
@@ -66,29 +66,28 @@ export async function getInitialState(): Promise<{
       localStorage.setItem('is-platform-admin', currentUserObj.is_platform_admin ? 'true' : 'false');
 
       return currentUserObj;
-    } catch (_error) {
+    } catch (error) {
       // Token 可能已过期，尝试用 refresh_token 刷新
       const refreshTokenValue = TokenManager.getRefreshToken();
       if (refreshTokenValue) {
-        try {
-          const refreshRes = await fetch('/api/v1/auth/refresh', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshTokenValue }),
-          });
-          if (refreshRes.ok) {
-            const refreshData = await refreshRes.json() as RefreshBootstrapResponse;
-            if (refreshData.access_token) {
-              TokenManager.setTokens(refreshData.access_token, refreshData.refresh_token);
-              console.log('[Auth] 启动时 Token 已自动刷新');
-              // 刷新成功，重新获取用户信息
-              const retryUser = await getCurrentUser({ skipErrorHandler: true });
-              const retryObj = toInitialStateUser(retryUser);
-              localStorage.setItem('is-platform-admin', retryObj.is_platform_admin ? 'true' : 'false');
-              return retryObj;
-            }
-          }
-        } catch { /* refresh 也失败了，走下面的清理逻辑 */ }
+        const refreshResult = await refreshTokenDetailed();
+        if (refreshResult.token) {
+          console.log('[Auth] 启动时 Token 已自动刷新');
+          // 刷新成功，重新获取用户信息
+          const retryUser = await getCurrentUser({ skipErrorHandler: true });
+          const retryObj = toInitialStateUser(retryUser);
+          localStorage.setItem('is-platform-admin', retryObj.is_platform_admin ? 'true' : 'false');
+          return retryObj;
+        }
+        if (!shouldClearTokensAfterBootstrapFailure(error, refreshResult.reason)) {
+          authUnavailable = true;
+          console.warn('[Auth] 启动鉴权暂时不可用，保留本地登录态', { reason: refreshResult.reason });
+          return undefined;
+        }
+      } else if (!shouldClearTokensAfterBootstrapFailure(error)) {
+        authUnavailable = true;
+        console.warn('[Auth] 启动鉴权暂时不可用，保留本地登录态');
+        return undefined;
       }
       TokenManager.clearTokens();
       history.push(loginPath);
@@ -136,6 +135,7 @@ export async function getInitialState(): Promise<{
         // getInitialState 阶段 history 可能未完全就绪，history.push 不一定生效
         window.location.href = '/platform';
         return {
+          authUnavailable,
           fetchUserInfo,
           currentUser,
           settings: defaultSettings as Partial<LayoutSettings>,
@@ -144,12 +144,14 @@ export async function getInitialState(): Promise<{
     }
 
     return {
+      authUnavailable,
       fetchUserInfo,
       currentUser,
       settings: defaultSettings as Partial<LayoutSettings>,
     };
   }
   return {
+    authUnavailable,
     fetchUserInfo,
     settings: defaultSettings as Partial<LayoutSettings>,
   };
@@ -171,8 +173,20 @@ export const layout: RunTimeLayoutConfig = ({
     footerRender: false,
     onPageChange: () => {
       const { location } = history;
+      if (!initialState?.currentUser && initialState?.authUnavailable && location.pathname !== loginPath) {
+        void initialState.fetchUserInfo?.().then((userInfo) => {
+          if (userInfo) {
+            setInitialState((state) => ({
+              ...state,
+              authUnavailable: false,
+              currentUser: userInfo,
+            }));
+          }
+        });
+        return;
+      }
       // 如果没有登录，重定向到 login
-      if (!initialState?.currentUser && location.pathname !== loginPath) {
+      if (!initialState?.currentUser && !initialState?.authUnavailable && location.pathname !== loginPath) {
         history.push(loginPath);
         return;
       }

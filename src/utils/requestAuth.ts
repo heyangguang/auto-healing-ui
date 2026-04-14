@@ -1,6 +1,7 @@
 import { hasActiveImpersonationSession } from './tenantContext';
 import { emitTenantContextChanged } from './tenantContextEvents';
 import { unwrapData } from '@/services/auto-healing/responseAdapters';
+import type { RefreshFailureReason } from './authBootstrap';
 
 const TOKEN_KEY = 'auto_healing_token';
 const REFRESH_TOKEN_KEY = 'auto_healing_refresh_token';
@@ -20,6 +21,9 @@ type RefreshTokenResponse = {
 type RefreshTokenEnvelope = {
   data?: RefreshTokenResponse;
 };
+type RefreshTokenAttempt =
+  | { reason: 'success'; token: string }
+  | { reason: RefreshFailureReason; token: null };
 
 type ResponseHeaders =
   | Headers
@@ -37,7 +41,7 @@ const getStoredValue = (key: string): string | null => (
 
 let cachedTokenExpiry: { token: string; expiry: number | null } | null = null;
 let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<RefreshTokenAttempt> | null = null;
 
 export const TokenManager = {
   getToken: () => getStoredValue(TOKEN_KEY),
@@ -116,10 +120,10 @@ function parseRefreshTokenResponse(payload: unknown): RefreshTokenResponse | nul
   return data;
 }
 
-async function doRefreshToken(): Promise<string | null> {
+async function doRefreshToken(): Promise<RefreshTokenAttempt> {
   const refreshTokenValue = TokenManager.getRefreshToken();
   if (!refreshTokenValue) {
-    return null;
+    return { reason: 'missing_refresh_token', token: null };
   }
 
   try {
@@ -129,12 +133,15 @@ async function doRefreshToken(): Promise<string | null> {
       body: JSON.stringify({ refresh_token: refreshTokenValue }),
     });
     if (!response.ok) {
-      return null;
+      if (response.status === 401) {
+        return { reason: 'unauthorized', token: null };
+      }
+      return { reason: 'server_error', token: null };
     }
 
     const data = parseRefreshTokenResponse(await response.json());
     if (!data?.access_token) {
-      return null;
+      return { reason: 'invalid_response', token: null };
     }
 
     TokenManager.setTokens(data.access_token, data.refresh_token);
@@ -162,13 +169,13 @@ async function doRefreshToken(): Promise<string | null> {
       localStorage.removeItem('tenant-storage');
       emitTenantContextChanged();
     }
-    return data.access_token;
+    return { reason: 'success', token: data.access_token };
   } catch {
-    return null;
+    return { reason: 'network_error', token: null };
   }
 }
 
-export async function refreshToken(): Promise<string | null> {
+export async function refreshTokenDetailed(): Promise<RefreshTokenAttempt> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
@@ -178,6 +185,11 @@ export async function refreshToken(): Promise<string | null> {
     refreshPromise = null;
   });
   return refreshPromise;
+}
+
+export async function refreshToken(): Promise<string | null> {
+  const result = await refreshTokenDetailed();
+  return result.token;
 }
 
 export async function ensureFreshToken(): Promise<string | null> {
