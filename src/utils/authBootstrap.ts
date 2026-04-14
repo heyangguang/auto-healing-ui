@@ -1,4 +1,5 @@
 export type RefreshFailureReason =
+  | 'success'
   | 'missing_refresh_token'
   | 'unauthorized'
   | 'server_error'
