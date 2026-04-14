@@ -1,5 +1,6 @@
 import { hasActiveImpersonationSession } from './tenantContext';
 import { emitTenantContextChanged } from './tenantContextEvents';
+import { unwrapData } from '@/services/auto-healing/responseAdapters';
 
 const TOKEN_KEY = 'auto_healing_token';
 const REFRESH_TOKEN_KEY = 'auto_healing_refresh_token';
@@ -15,6 +16,9 @@ type RefreshTokenResponse = {
   refresh_token?: string;
   tenants?: TenantSummary[];
   current_tenant_id?: string;
+};
+type RefreshTokenEnvelope = {
+  data?: RefreshTokenResponse;
 };
 
 type ResponseHeaders =
@@ -101,6 +105,17 @@ export const isTokenExpiringSoon = (token: string): boolean => {
   return Date.now() >= expiry - 5 * 60 * 1000;
 };
 
+function parseRefreshTokenResponse(payload: unknown): RefreshTokenResponse | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+  const data = unwrapData<RefreshTokenResponse>((payload as RefreshTokenEnvelope) || {});
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return null;
+  }
+  return data;
+}
+
 async function doRefreshToken(): Promise<string | null> {
   const refreshTokenValue = TokenManager.getRefreshToken();
   if (!refreshTokenValue) {
@@ -117,8 +132,8 @@ async function doRefreshToken(): Promise<string | null> {
       return null;
     }
 
-    const data = await response.json() as RefreshTokenResponse;
-    if (!data.access_token) {
+    const data = parseRefreshTokenResponse(await response.json());
+    if (!data?.access_token) {
       return null;
     }
 
@@ -194,4 +209,5 @@ export function getResponseHeaderValue(headers: ResponseHeaders, headerName: str
 export const __TEST_ONLY__ = {
   parseJwtExpiry,
   isTokenExpiringSoon,
+  parseRefreshTokenResponse,
 };

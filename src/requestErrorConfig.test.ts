@@ -59,6 +59,18 @@ describe('requestErrorConfig helpers', () => {
     expect(__TEST_ONLY__.isTokenExpiringSoon(token)).toBe(false);
   });
 
+  it('parses refresh responses from wrapped data envelopes', () => {
+    expect(__TEST_ONLY__.parseRefreshTokenResponse({
+      data: {
+        access_token: 'wrapped-access',
+        refresh_token: 'wrapped-refresh',
+      },
+    })).toEqual({
+      access_token: 'wrapped-access',
+      refresh_token: 'wrapped-refresh',
+    });
+  });
+
   it('retries a 401 request only once after refresh succeeds', async () => {
     TokenManager.setTokens('old-access', 'refresh-token');
     (global.fetch as jest.Mock).mockResolvedValue({
@@ -76,6 +88,30 @@ describe('requestErrorConfig helpers', () => {
       authRetryAttempted: true,
       headers: expect.objectContaining({
         Authorization: 'Bearer new-access',
+      }),
+      skipTokenRefresh: true,
+    }));
+  });
+
+  it('retries a 401 request when refresh succeeds with a wrapped payload', async () => {
+    TokenManager.setTokens('old-access', 'refresh-token');
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { access_token: 'wrapped-access', refresh_token: 'wrapped-refresh' },
+      }),
+    });
+    (request as jest.Mock).mockResolvedValue({ data: [] });
+
+    await errorConfig.errorConfig?.errorHandler?.({
+      config: { headers: {}, url: '/api/v1/tenant/execution-tasks' },
+      response: { status: 401 },
+    });
+
+    expect(request).toHaveBeenCalledWith('/api/v1/tenant/execution-tasks', expect.objectContaining({
+      authRetryAttempted: true,
+      headers: expect.objectContaining({
+        Authorization: 'Bearer wrapped-access',
       }),
       skipTokenRefresh: true,
     }));
