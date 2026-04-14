@@ -55,7 +55,7 @@ function PlaybookItemRow(props: {
                 <CodeOutlined style={{ color: '#8c8c8c', fontSize: 14 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: isSelected ? 600 : 400, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{playbook.name}</div>
-                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>{playbook.file_path}</div>
+                    <div style={{ fontSize: 12, color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{playbook.file_path}</div>
                 </div>
             </div>
         </div>
@@ -66,9 +66,9 @@ export default function PlaybookSidebarList(props: PlaybookSidebarListProps) {
     const { expandedKeys, flattenedList, groupedPlaybooks, initialized, parentRef, selectedPlaybook, virtualizer, onSelectPlaybook, onToggleRepo } = props;
 
     return (
-        <Card styles={{ body: { padding: 0 } }} style={{ height: '100%' }}>
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <div ref={parentRef} style={{ flex: 1, overflowY: 'auto' }}>
+        <Card styles={{ body: { padding: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' } }} style={{ height: '100%' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <div ref={parentRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                     {!initialized ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><Spin /></div>
                         : flattenedList.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 Playbook" style={{ marginTop: 40 }} />
                             : <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
