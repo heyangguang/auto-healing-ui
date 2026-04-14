@@ -16,6 +16,15 @@ import {
   INCIDENT_STATUS_MAP as STATUS_MAP,
 } from '@/constants/incidentDicts';
 
+function stripSimpleHtml(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<p>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .trim();
+}
+
 type IncidentDetailDrawerProps = {
   canResetScan: boolean;
   detailLoading: boolean;
@@ -187,7 +196,7 @@ export const IncidentDetailDrawer: React.FC<IncidentDetailDrawerProps> = ({
                 icon={<FileTextOutlined className="incidents-detail-card-header-icon" />}
                 title="描述"
               >
-                <div className="incidents-detail-desc">{incident.description}</div>
+                <div className="incidents-detail-desc">{stripSimpleHtml(incident.description)}</div>
               </DetailCard>
             )}
 
