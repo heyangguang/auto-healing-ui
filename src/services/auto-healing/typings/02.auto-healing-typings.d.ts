@@ -165,12 +165,44 @@ declare namespace AutoHealing {
         work_notes?: string;
         close_code?: string;
         close_status?: 'resolved' | 'closed';
+        solution_template_id?: UUID;
+        template_vars?: JsonObject;
     }
 
     interface CloseIncidentResponse {
         message: string;
         local_status: string;
         source_updated: boolean;
+    }
+
+    interface IncidentSolutionTemplate {
+        id: UUID;
+        name: string;
+        description?: string;
+        resolution_template: string;
+        work_notes_template: string;
+        default_close_code?: string;
+        default_close_status?: 'resolved' | 'closed' | string;
+        created_at?: string;
+        updated_at?: string;
+    }
+
+    interface CreateIncidentSolutionTemplateRequest {
+        name: string;
+        description?: string;
+        resolution_template: string;
+        work_notes_template: string;
+        default_close_code?: string;
+        default_close_status?: 'resolved' | 'closed';
+    }
+
+    interface UpdateIncidentSolutionTemplateRequest {
+        name?: string;
+        description?: string;
+        resolution_template?: string;
+        work_notes_template?: string;
+        default_close_code?: string;
+        default_close_status?: 'resolved' | 'closed';
     }
 
     // ==================== CMDB ====================

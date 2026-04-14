@@ -123,6 +123,16 @@ export default [
         navAccess: 'canViewPlugins',
       },
       {
+        path: '/resources/incident-solution-templates',
+        name: 'incident-solution-templates',
+        component: './incidents/solution-templates',
+        access: 'canViewPlugins',
+        label: '关单模板',
+        desc: '工单关闭回写模板管理',
+        navIcon: 'fileText',
+        navAccess: 'canViewPlugins',
+      },
+      {
         path: '/resources/secrets',
         name: 'secrets',
         component: './execution/secrets',
