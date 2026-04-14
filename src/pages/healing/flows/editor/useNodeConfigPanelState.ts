@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ProFormInstance } from '@ant-design/pro-form';
+import { resolveExecutionTaskTemplateName } from '@/pages/healing/executionTaskTemplateMeta';
 import { getSelectedChannelTypes } from './NodeConfigPanelShared';
 import type { ChannelInfo, NodeConfigFormValues, NodeConfigPanelProps } from './nodeConfigPanelTypes';
 
@@ -23,8 +24,7 @@ export function useNodeConfigPanelState({ node, open, onChange }: UseNodeConfigP
         }
 
         if (node && open) {
-            const taskName = typeof node.data?.task_template_name === 'string' ? node.data.task_template_name : '';
-            setSelectedTaskName(taskName);
+            setSelectedTaskName(resolveExecutionTaskTemplateName(node.data) || '');
         }
 
         if (!open) {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ProFormSelect } from '@ant-design/pro-components';
+import { formatChannelTypeDisplayList, getChannelTypeDisplayLabel } from '@/constants/notificationDicts';
 import { getChannels, getTemplates as getNotificationTemplates } from '@/services/auto-healing/notification';
 import { fetchAllPages } from '@/utils/fetchAllPages';
 import { VariableHint, getSelectedChannelTypes } from './NodeConfigPanelShared';
@@ -32,7 +33,7 @@ async function requestChannelOptions(onChannelListChange: (channels: ChannelInfo
     const fetchedChannels = await fetchAllPages<AutoHealing.NotificationChannel>((page, pageSize) => getChannels({ page, page_size: pageSize }));
     const channels = fetchedChannels.map((channel) => ({ id: channel.id, name: channel.name, type: channel.type }));
     onChannelListChange(channels);
-    return channels.map<ChannelOption>((channel) => ({ label: `${channel.name} (${channel.type})`, value: channel.id }));
+    return channels.map<ChannelOption>((channel) => ({ label: `${channel.name} (${getChannelTypeDisplayLabel(channel.type)})`, value: channel.id }));
 }
 
 async function requestTemplateOptions() {
@@ -41,7 +42,7 @@ async function requestTemplateOptions() {
     ));
 
     return templates.map<NotificationTemplateOption>((template) => ({
-        label: `${template.name}${template.supported_channels?.length ? ` (${template.supported_channels.join('/')})` : ''}`,
+        label: `${template.name}${template.supported_channels?.length ? ` (${formatChannelTypeDisplayList(template.supported_channels, '/')})` : ''}`,
         value: template.id,
         supported_channels: template.supported_channels || [],
     }));
@@ -82,7 +83,7 @@ const NotificationTemplateField: React.FC<{ selectedChannelTypes: string[] }> = 
                 filterTemplateOption(input, option, selectedChannelTypes)
             ),
         }}
-        tooltip={selectedChannelTypes.length > 0 ? `已筛选支持 ${selectedChannelTypes.join('+')} 的模板` : '请先选择渠道以筛选模板'}
+        tooltip={selectedChannelTypes.length > 0 ? `已筛选支持 ${formatChannelTypeDisplayList(selectedChannelTypes, ' + ')} 的模板` : '请先选择渠道以筛选模板'}
     />
 );
 

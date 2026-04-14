@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getChannel, getTemplate } from '@/services/auto-healing/notification';
 import { getExecutionTask } from '@/services/auto-healing/executionTasks';
 import { getExecutionRun } from '@/services/auto-healing/executionRuns';
+import { resolveExecutionRunId, resolveExecutionTaskId } from './executionNodeMeta';
 import type { SelectedNodeDataLike } from './nodeDetailTypes';
 
 type NameMap = Record<string, string>;
@@ -68,7 +69,7 @@ export const useResolvedNodeNames = (selectedNodeData?: SelectedNodeDataLike | n
             }
 
             if (nodeType === 'execution') {
-                const taskId = config.task_id || config.task_template_id || nodeState?.task_id || nodeState?.run?.task_id;
+                const taskId = resolveExecutionTaskId(selectedNodeData);
                 if (typeof taskId === 'string' && !resolvedNames[taskId] && !resolutionErrors[taskId]) {
                     try {
                         const taskResponse = await getExecutionTask(taskId);
@@ -80,7 +81,7 @@ export const useResolvedNodeNames = (selectedNodeData?: SelectedNodeDataLike | n
                     }
                 }
 
-                const runId = config.run_id || nodeState?.run?.run_id;
+                const runId = resolveExecutionRunId(selectedNodeData);
                 const runStatusKey = typeof runId === 'string' ? `run:${runId}` : '';
                 if (typeof runId === 'string' && !resolvedNames[runStatusKey] && !resolutionErrors[runStatusKey]) {
                     try {

@@ -32,6 +32,7 @@ const FlowEditorInner: React.FC = () => {
     const [reactFlowInstance, setReactFlowInstance] = useState<{ fitView: (options?: { padding?: number }) => void; project: (position: { x: number; y: number }) => { x: number; y: number } } | null>(null);
     const [flowName, setFlowName] = useState('未命名流程');
     const [flowIsActive, setFlowIsActive] = useState(true);
+    const [autoCloseSourceIncident, setAutoCloseSourceIncident] = useState(false);
     const [selectedNode, setSelectedNode] = useState<FlowEditorNode | null>(null);
     const [configOpen, setConfigOpen] = useState(false);
     const [dryRunOpen, setDryRunOpen] = useState(false);
@@ -67,6 +68,7 @@ const FlowEditorInner: React.FC = () => {
             const mapped = mapFlowResponseToGraph(response.data, () => setDryRunOpen(true));
             setFlowName(mapped.flowName);
             setFlowIsActive(mapped.flowIsActive);
+            setAutoCloseSourceIncident(mapped.autoCloseSourceIncident);
             setNodes(mapped.nodes);
             setEdges(mapped.edges);
         } finally {
@@ -84,6 +86,7 @@ const FlowEditorInner: React.FC = () => {
         setEdges(initialState.edges);
         setFlowName(initialState.flowName);
         setFlowIsActive(initialState.flowIsActive);
+        setAutoCloseSourceIncident(initialState.autoCloseSourceIncident);
     }, [fetchFlow, id, setEdges, setNodes]);
 
     useEffect(() => {
@@ -193,7 +196,7 @@ const FlowEditorInner: React.FC = () => {
             message.warning(`节点 "${executionValidation.unavailableNodeLabels.join('", "')}" 的远程模板校验暂不可用，已继续保存`);
         }
 
-        const payload = buildFlowPayload(edges, flowIsActive, flowName, nodes);
+        const payload = buildFlowPayload(autoCloseSourceIncident, edges, flowIsActive, flowName, nodes);
         if (id) {
             await updateFlow(id, payload);
             message.success('保存成功');
@@ -202,7 +205,7 @@ const FlowEditorInner: React.FC = () => {
         const response = await createFlow(payload);
         message.success('创建成功');
         history.push(`/healing/flows/editor/${response.data.id}`);
-    }, [edges, flowIsActive, flowName, id, nodes]);
+    }, [autoCloseSourceIncident, edges, flowIsActive, flowName, id, nodes]);
 
     const handleLayout = useCallback(() => {
         const layoutedNodes = applyAutoLayout(nodes, edges);
@@ -224,9 +227,11 @@ const FlowEditorInner: React.FC = () => {
                 </Sider>
                 <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex' }}>
                     <FlowEditorHeader
+                        autoCloseSourceIncident={autoCloseSourceIncident}
                         canSave={id ? access.canUpdateFlow : access.canCreateFlow}
                         flowName={flowName}
                         hasFlowId={Boolean(id)}
+                        onAutoCloseChange={setAutoCloseSourceIncident}
                         onBack={() => history.push('/healing/flows')}
                         onLayout={handleLayout}
                         onNameChange={setFlowName}

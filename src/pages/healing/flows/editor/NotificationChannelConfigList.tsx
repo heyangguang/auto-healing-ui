@@ -73,7 +73,7 @@ const ConfigRow: React.FC<ConfigRowProps> = ({
                     <Text type="secondary" style={{ fontSize: 13 }}>{getTemplateName(config.template_id)}</Text>
                 </div>
                 <Tag style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 6px' }}>
-                    {typeConfig.label}
+                    {typeConfig.labelCN}
                 </Tag>
             </Space>
             <CloseOutlined

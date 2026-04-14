@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input } from 'antd';
+import { Button, Input, Space, Switch, Typography } from 'antd';
 import {
     AppstoreOutlined,
     ArrowLeftOutlined,
@@ -9,9 +9,11 @@ import {
 } from '@ant-design/icons';
 
 type FlowEditorHeaderProps = {
+    autoCloseSourceIncident: boolean;
     canSave: boolean;
     flowName: string;
     hasFlowId: boolean;
+    onAutoCloseChange: (value: boolean) => void;
     onBack: () => void;
     onLayout: () => void;
     onNameChange: (value: string) => void;
@@ -21,9 +23,11 @@ type FlowEditorHeaderProps = {
 };
 
 export const FlowEditorHeader: React.FC<FlowEditorHeaderProps> = ({
+    autoCloseSourceIncident,
     canSave,
     flowName,
     hasFlowId,
+    onAutoCloseChange,
     onBack,
     onLayout,
     onNameChange,
@@ -48,6 +52,12 @@ export const FlowEditorHeader: React.FC<FlowEditorHeaderProps> = ({
                 bordered={false}
                 placeholder="流程名称"
             />
+            <Space size={6}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    成功后自动关单
+                </Typography.Text>
+                <Switch checked={autoCloseSourceIncident} onChange={onAutoCloseChange} />
+            </Space>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
             <Button icon={<ExperimentOutlined />} onClick={onRunDryRun} disabled={!hasFlowId}>Dry-Run</Button>

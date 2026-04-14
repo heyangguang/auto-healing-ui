@@ -3,6 +3,11 @@ import { Button, Col, Empty, Input, Row, Select, Skeleton, Space, Tag, Tooltip, 
 import { BookOutlined, CheckCircleOutlined, CodeOutlined, ExclamationCircleOutlined, FolderOutlined, LoadingOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { TaskTemplate, TaskTemplateStatusFilter } from './taskTemplateSelectorTypes';
+import {
+    buildTaskTreeBranches,
+    getTreeInventoryTasks,
+    isTaskSelectable,
+} from './taskTemplateSelectorHelpers';
 import type { useTaskTemplateSelectorState } from './useTaskTemplateSelectorState';
 
 const { Text } = Typography;
@@ -60,40 +65,59 @@ function TaskTemplateSelectorFilters({
 function TaskTemplateTreePanel({
     expandedKeys,
     handleTreeSelect,
+    inventoryTasks,
     initLoading,
     playbooks,
     repositories,
+    search,
+    selectedTask,
     selectedTreeKey,
     setExpandedKeys,
-    tasksTotal,
+    statusFilter,
+    executorType,
 }: TaskTemplateSelectorViewProps) {
+    const treeTasks = useMemo(
+        () => getTreeInventoryTasks(
+            inventoryTasks,
+            {
+                executorType,
+                search,
+                selectedTreeKey: 'all',
+                statusFilter,
+            },
+            selectedTask,
+        ),
+        [executorType, inventoryTasks, search, selectedTask, statusFilter],
+    );
     const treeData = useMemo((): DataNode[] => {
-        const repoNodes = repositories.map((repository) => {
-            const repoPlaybooks = playbooks.filter((playbook) => playbook.repository_id === repository.id);
-            return {
-                key: `repo-${repository.id}`,
+        const repoNodes = buildTaskTreeBranches(repositories, playbooks, treeTasks).map((branch) => ({
+                key: `repo-${branch.repoId}`,
                 title: (
                     <Space>
-                        {repository.name}
-                        <Tag style={{ fontSize: 10 }}>{repoPlaybooks.length}</Tag>
+                        {branch.repoName}
+                        <Tag style={{ fontSize: 10 }}>{branch.taskCount}</Tag>
                     </Space>
                 ),
                 icon: <FolderOutlined style={{ color: '#1890ff' }} />,
-                children: repoPlaybooks.map((playbook) => ({
-                    key: `playbook-${playbook.id}`,
-                    title: playbook.name,
+                children: branch.playbooks.map((playbook) => ({
+                    key: `playbook-${playbook.playbookId}`,
+                    title: (
+                        <Space>
+                            {playbook.playbookName}
+                            <Tag style={{ fontSize: 10 }}>{playbook.taskCount}</Tag>
+                        </Space>
+                    ),
                     icon: <BookOutlined style={{ color: '#52c41a' }} />,
                     isLeaf: true,
                 })),
-            };
-        });
+            }));
         return [
             {
                 key: 'all',
                 title: (
                     <Space>
                         全部任务
-                        <Tag style={{ fontSize: 10 }}>{tasksTotal}</Tag>
+                        <Tag style={{ fontSize: 10 }}>{treeTasks.length}</Tag>
                     </Space>
                 ),
                 icon: <CodeOutlined style={{ color: '#722ed1' }} />,
@@ -101,7 +125,7 @@ function TaskTemplateTreePanel({
             },
             ...repoNodes,
         ];
-    }, [playbooks, repositories, tasksTotal]);
+    }, [playbooks, repositories, treeTasks]);
 
     return (
         <Col span={8} style={{ height: '100%', borderRight: '1px solid #f0f0f0', paddingRight: 16 }}>
@@ -165,7 +189,8 @@ function TaskTemplateCard({
     selectedTaskId,
     task,
 }: Pick<TaskTemplateSelectorViewProps, 'handleTaskSelect' | 'selectedTaskId'> & { task: TaskTemplate }) {
-    const disabled = Boolean(task.needs_review);
+    const playbookKnownOffline = !!task.playbook && task.playbook.status !== 'ready';
+    const disabled = !isTaskSelectable(task);
     const selected = task.id === selectedTaskId;
     return (
         <div
@@ -186,9 +211,13 @@ function TaskTemplateCard({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     {renderStatusTag(task)}
                     <Text strong style={{ fontSize: 13 }}>{task.name}</Text>
-                    {disabled ? (
+                    {task.needs_review ? (
                         <Tooltip title="该任务正在审核中，暂时无法选择">
                             <Tag color="orange" style={{ fontSize: 10 }}>审核中</Tag>
+                        </Tooltip>
+                    ) : playbookKnownOffline ? (
+                        <Tooltip title="关联 Playbook 未上线，暂时无法选择">
+                            <Tag style={{ fontSize: 10 }}>未上线</Tag>
                         </Tooltip>
                     ) : null}
                 </div>

@@ -28,6 +28,22 @@ export type HealingInstanceQueryParams = {
     sort_order?: 'asc' | 'desc';
 };
 
+export type FlowRecoveryAttempt = {
+    id: string;
+    flow_instance_id: string;
+    trigger_source: 'manual' | 'scheduler';
+    current_node_id?: string;
+    current_node_type?: string;
+    detect_reason?: string;
+    recovery_action?: string;
+    status: 'started' | 'success' | 'failed' | 'skipped';
+    details?: Record<string, unknown>;
+    error_message?: string | null;
+    started_at: string;
+    finished_at?: string | null;
+    created_at: string;
+};
+
 /** 获取自愈实例列表 GET /api/v1/tenant/healing/instances */
 export async function getHealingInstances(
     params: HealingInstanceQueryParams,
@@ -61,6 +77,22 @@ export async function retryHealingInstance(
     return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/instances/${id}/retry`, {
         method: 'POST',
         data,
+        ...(options || {}),
+    });
+}
+
+/** 手动恢复自愈实例 POST /api/v1/tenant/healing/instances/:id/recover */
+export async function recoverHealingInstance(id: string, options?: ServiceRequestOptions) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/healing/instances/${id}/recover`, {
+        method: 'POST',
+        ...(options || {}),
+    });
+}
+
+/** 获取实例恢复记录 GET /api/v1/tenant/healing/instances/:id/recovery-logs */
+export async function getHealingInstanceRecoveryLogs(id: string, options?: ServiceRequestOptions) {
+    return request<{ data: FlowRecoveryAttempt[] }>(`/api/v1/tenant/healing/instances/${id}/recovery-logs`, {
+        method: 'GET',
         ...(options || {}),
     });
 }

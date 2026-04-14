@@ -1,6 +1,10 @@
 import type { LogEntry } from '@/components/execution/LogConsole';
 
+type ValidationHostLike = string | Record<string, unknown>;
+type ValidationSummaryLike = string | Record<string, unknown>;
+
 export type NodeStateLike = Record<string, unknown> & {
+    created_at?: string;
     activated_branch?: string;
     decision_comment?: string;
     description?: string;
@@ -11,11 +15,12 @@ export type NodeStateLike = Record<string, unknown> & {
     extracted_hosts?: string[] | string;
     finished_at?: string;
     hosts?: string[];
-    invalid_hosts?: string[];
+    invalid_hosts?: ValidationHostLike[] | string;
     matched_expression?: string;
     message?: string;
     response?: unknown;
     result?: unknown;
+    run_id?: string;
     run?: {
         exit_code?: number;
         run_id?: string;
@@ -44,10 +49,11 @@ export type NodeStateLike = Record<string, unknown> & {
     task_id?: string;
     timeout_at?: string;
     title?: string;
-    validated_hosts?: string[];
-    validation_summary?: string;
+    validated_hosts?: ValidationHostLike[] | string;
+    validation_summary?: ValidationSummaryLike;
     variables_set?: unknown;
     computed_results?: unknown;
+    updated_at?: string;
 };
 
 export type SelectedNodeDataLike = {

@@ -6,6 +6,11 @@ import {
     ProFormText,
 } from '@ant-design/pro-components';
 import { SelectOutlined } from '@ant-design/icons';
+import { getExecutionTask } from '@/services/auto-healing/execution';
+import {
+    resolveExecutionTaskTemplateId,
+    resolveExecutionTaskTemplateName,
+} from '@/pages/healing/executionTaskTemplateMeta';
 import ExtraVarsEditor from './ExtraVarsEditor';
 import NotificationChannelTemplateSelector from './NotificationChannelTemplateSelector';
 import TaskTemplateSelector from './TaskTemplateSelector';
@@ -60,9 +65,44 @@ const ExecutionSettings: React.FC<NodeDetailSettingsProps> = ({ formRef, node, o
 
     useEffect(() => {
         setTaskSelectorOpen(false);
-        setSelectedTaskName(typeof node.data?.task_template_name === 'string' ? node.data.task_template_name : '');
-        setCurrentTaskTemplateId(typeof node.data?.task_template_id === 'string' ? node.data.task_template_id : undefined);
-    }, [node.id, node.data?.task_template_id, node.data?.task_template_name]);
+        setSelectedTaskName(resolveExecutionTaskTemplateName(node.data) || '');
+        setCurrentTaskTemplateId(resolveExecutionTaskTemplateId(node.data));
+    }, [
+        node.id,
+        node.data?.task_id,
+        node.data?.task_name,
+        node.data?.task_template_id,
+        node.data?.task_template_name,
+    ]);
+
+    useEffect(() => {
+        if (!currentTaskTemplateId || selectedTaskName) {
+            return;
+        }
+
+        let active = true;
+        void getExecutionTask(currentTaskTemplateId)
+            .then((response) => {
+                const resolvedName = typeof response.data?.name === 'string' ? response.data.name : '';
+                if (!active || !resolvedName) {
+                    return;
+                }
+
+                formRef.current?.setFieldValue('task_template_name', resolvedName);
+                setSelectedTaskName(resolvedName);
+                applyNodeUpdate(node, onChange, {
+                    task_template_id: currentTaskTemplateId,
+                    task_template_name: resolvedName,
+                });
+            })
+            .catch((error) => {
+                console.error('Failed to hydrate execution task template name:', error);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [currentTaskTemplateId, formRef, node, onChange, selectedTaskName]);
 
     const handleExecutionTemplateSelect = (id: string, template: AutoHealing.ExecutionTask) => {
         const nextValues = {

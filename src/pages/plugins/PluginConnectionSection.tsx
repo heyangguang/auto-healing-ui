@@ -165,12 +165,12 @@ const PluginConnectionSection: React.FC<PluginConnectionSectionProps> = ({
             <div className="plugin-form-subsection">
                 <div className="plugin-form-subsection-header">
                     <Text strong style={{ fontSize: 13 }}>关闭工单回调</Text>
-                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>修复完成后自动调用此接口关闭外部工单</Text>
+                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>手动关闭工单或启用流程自动关单后，系统会调用此接口回写关闭源工单</Text>
                 </div>
                 <Row gutter={24}>
                     <Col span={14}>
-                        <Form.Item name="close_incident_url" tooltip="修复完成后自动调用此 URL 关闭外部工单，支持 {id} 变量" extra="示例：https://instance.service-now.com/api/now/table/incident/{id}" style={{ marginBottom: 0 }}>
-                            <Input placeholder="https://your-system.com/api/incidents/{id}/close" />
+                        <Form.Item name="close_incident_url" tooltip="关闭源工单时调用的 URL，支持 {external_id} 变量" extra="示例：https://instance.service-now.com/api/now/table/incident/{external_id}" style={{ marginBottom: 0 }}>
+                            <Input placeholder="https://your-system.com/api/incidents/{external_id}/close" />
                         </Form.Item>
                     </Col>
                     <Col span={6}>

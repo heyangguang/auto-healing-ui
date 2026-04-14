@@ -42,6 +42,7 @@ export const FlowDetailDrawer: React.FC<FlowDetailDrawerProps> = ({
   if (!flow) {
     return null;
   }
+  const flowSettings = flow as AutoHealing.HealingFlow & { auto_close_source_incident?: boolean };
 
   const nodeTypeSummary = getFlowNodeTypeSummary(flow.nodes || []);
   const functionalNodes = getFunctionalFlowNodes(flow.nodes || []);
@@ -76,6 +77,7 @@ export const FlowDetailDrawer: React.FC<FlowDetailDrawerProps> = ({
         <DetailRow label="流程名称" value={flow.name} />
         <DetailRow label="描述" value={flow.description || '-'} />
         <DetailRow label="状态" value={flow.is_active ? <Badge status="success" text="启用" /> : <Badge status="default" text="停用" />} />
+        <DetailRow label="自动关单" value={flowSettings.auto_close_source_incident ? <Badge status="processing" text="启用" /> : <Badge status="default" text="关闭" />} />
         <DetailRow label="节点总数" value={(flow.nodes || []).length} />
         <DetailRow label="连线总数" value={(flow.edges || []).length} />
         <DetailRow label="创建时间" value={dayjs(flow.created_at).format('YYYY-MM-DD HH:mm:ss')} />

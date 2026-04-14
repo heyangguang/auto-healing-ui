@@ -19,9 +19,15 @@ import {
     NodeIndexOutlined,
     TagOutlined,
 } from '@ant-design/icons';
+import {
+    resolveExecutionTaskTemplateId,
+    resolveExecutionTaskTemplateName,
+} from '@/pages/healing/executionTaskTemplateMeta';
 import JsonPrettyView from '../components/JsonPrettyView';
 import { INSTANCE_STATUS_LABELS } from '@/constants/instanceDicts';
 import { NODE_TYPE_LABELS } from '../utils/canvasBuilder';
+import { resolveExecutionRunId, resolveExecutionTaskId } from './executionNodeMeta';
+import CMDBValidationResultCard from './CMDBValidationResultCard';
 import type { SelectedNodeDataLike } from './nodeDetailTypes';
 
 type NodePrimaryCardsProps = {
@@ -87,7 +93,10 @@ const NodePrimaryCards: React.FC<NodePrimaryCardsProps> = ({
     const nodeType = selectedNodeData.type;
     const isExecution = nodeType === 'execution';
     const isApproval = nodeType === 'approval';
-    const runId = nodeState?.run?.run_id;
+    const runId = resolveExecutionRunId(selectedNodeData);
+    const taskId = resolveExecutionTaskId(selectedNodeData)
+        || resolveExecutionTaskTemplateId(selectedNodeData.config);
+    const taskTemplateName = resolveExecutionTaskTemplateName(selectedNodeData.config);
     const hosts = getHosts(selectedNodeData);
     const executionStats = nodeState?.run?.stats || nodeState?.stats;
     const notificationStatus = nodeState?.status;
@@ -117,11 +126,11 @@ const NodePrimaryCards: React.FC<NodePrimaryCardsProps> = ({
                                 : <Typography.Text copyable style={{ fontSize: 12 }}>{runId}</Typography.Text>}
                         </Descriptions.Item>
                     )}
-                    {typeof nodeState?.task_id === 'string' && (
+                    {taskId && (
                         <Descriptions.Item label="任务模板">
-                            {resolvedNames[nodeState.task_id] || resolvedNames[`task:${nodeState.task_id}`]
-                                ? <Tag color="blue" style={{ margin: 0 }}>{resolvedNames[nodeState.task_id] || resolvedNames[`task:${nodeState.task_id}`]}</Tag>
-                                : <Typography.Text copyable style={{ fontSize: 12 }}>{nodeState.task_id}</Typography.Text>}
+                            {resolvedNames[taskId] || resolvedNames[`task:${taskId}`] || taskTemplateName
+                                ? <Tag color="blue" style={{ margin: 0 }}>{resolvedNames[taskId] || resolvedNames[`task:${taskId}`] || taskTemplateName}</Tag>
+                                : <Typography.Text copyable style={{ fontSize: 12 }}>{taskId}</Typography.Text>}
                         </Descriptions.Item>
                     )}
                     {isExecution && nodeState?.run?.exit_code != null && <Descriptions.Item label="退出码">{nodeState.run.exit_code}</Descriptions.Item>}
@@ -202,22 +211,12 @@ const NodePrimaryCards: React.FC<NodePrimaryCardsProps> = ({
                 </Card>
             )}
 
-            {nodeType === 'cmdb_validator' && (nodeState?.validated_hosts || nodeState?.invalid_hosts) && (
-                <Card size="small" title={<span style={{ fontSize: 13, fontWeight: 600 }}><CheckCircleOutlined style={{ color: '#1890ff', marginRight: 6 }} />CMDB 验证结果</span>} style={{ marginBottom: 16, borderLeft: '3px solid #1890ff' }}>
-                    {nodeState.validation_summary && <div style={{ marginBottom: 10, fontSize: 13 }}>{nodeState.validation_summary}</div>}
-                    {Array.isArray(nodeState.validated_hosts) && nodeState.validated_hosts.length > 0 && (
-                        <div style={{ marginBottom: 8 }}>
-                            <span style={{ fontSize: 12, color: '#52c41a', fontWeight: 500 }}>✓ 验证通过 ({nodeState.validated_hosts.length})</span>
-                            <div style={{ marginTop: 4 }}><Space size={[4, 4]} wrap>{buildDuplicateSafeEntries(nodeState.validated_hosts).map((host) => <Tag key={host.key} color="success" style={{ margin: 0 }}>{host.value}</Tag>)}</Space></div>
-                        </div>
-                    )}
-                    {Array.isArray(nodeState.invalid_hosts) && nodeState.invalid_hosts.length > 0 && (
-                        <div>
-                            <span style={{ fontSize: 12, color: '#ff4d4f', fontWeight: 500 }}>✗ 未通过 ({nodeState.invalid_hosts.length})</span>
-                            <div style={{ marginTop: 4 }}><Space size={[4, 4]} wrap>{buildDuplicateSafeEntries(nodeState.invalid_hosts).map((host) => <Tag key={host.key} color="error" style={{ margin: 0 }}>{host.value}</Tag>)}</Space></div>
-                        </div>
-                    )}
-                </Card>
+            {nodeType === 'cmdb_validator' && (
+                <CMDBValidationResultCard
+                    invalidHosts={nodeState?.invalid_hosts}
+                    validatedHosts={nodeState?.validated_hosts}
+                    validationSummary={nodeState?.validation_summary}
+                />
             )}
 
             {(nodeType === 'condition' || nodeType === 'compute') && nodeState?.activated_branch && (

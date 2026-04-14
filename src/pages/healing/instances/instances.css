@@ -3,6 +3,155 @@
     overflow: visible;
 }
 
+.instance-recovery-code {
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    color: #595959;
+    font-size: 12px;
+    margin: 8px 0 0;
+    max-height: 220px;
+    overflow: auto;
+    padding: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* Instance context drawer — 工单详情视图 */
+.instance-context-panel {
+    background: #fff;
+    min-height: calc(100vh - 180px);
+    padding: 16px 24px 24px;
+}
+
+.instance-context-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.instance-context-summary {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    padding: 16px;
+}
+
+.instance-context-summary-top {
+    align-items: flex-start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+}
+
+.instance-context-summary-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.instance-context-summary-title {
+    color: rgba(0, 0, 0, 0.88);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.instance-context-summary-sub {
+    color: #8c8c8c;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-top: 6px;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.instance-context-summary-tags {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.instance-context-card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+}
+
+.instance-context-card-header {
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 12px 16px;
+}
+
+.instance-context-card-title {
+    color: rgba(0, 0, 0, 0.88);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.instance-context-card-body {
+    padding: 16px;
+}
+
+.instance-context-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.instance-context-field {
+    border-bottom: 1px solid #f5f5f5;
+    padding: 10px 0;
+}
+
+.instance-context-field:nth-child(odd) {
+    padding-right: 16px;
+}
+
+.instance-context-field:nth-child(even) {
+    border-left: 1px solid #f5f5f5;
+    padding-left: 16px;
+}
+
+.instance-context-field-full {
+    grid-column: 1 / -1;
+    border-left: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.instance-context-field-label,
+.instance-context-raw-key {
+    color: #8c8c8c;
+    display: block;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.instance-context-field-value,
+.instance-context-description {
+    color: rgba(0, 0, 0, 0.78);
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.instance-context-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.instance-context-chip {
+    background: #f5f5f5;
+    border-radius: 4px;
+    color: rgba(0, 0, 0, 0.65);
+    font-size: 12px;
+    padding: 2px 8px;
+}
+
 /* Node detail drawer — Tabs 自适应高度 */
 
 /* Tabs 根元素：撑满 drawer 剩余空间 */
@@ -36,4 +185,37 @@
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+@media (max-width: 1100px) {
+    .instance-recovery-panel-body {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .instance-context-panel {
+        padding: 16px;
+    }
+
+    .instance-context-summary-top {
+        flex-direction: column;
+    }
+
+    .instance-context-summary-tags,
+    .instance-recovery-attempt-meta {
+        justify-content: flex-start;
+    }
+
+    .instance-recovery-panel-header,
+    .instance-recovery-attempt-label {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .instance-context-grid,
+    .instance-recovery-attempt-grid,
+    .instance-recovery-metrics {
+        grid-template-columns: 1fr;
+    }
 }

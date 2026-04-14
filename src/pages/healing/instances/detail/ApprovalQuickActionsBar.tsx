@@ -141,11 +141,11 @@ export default function ApprovalQuickActionsBar({
         return <Card size="small" loading style={{ marginBottom: 16 }} />;
     }
     if (loadError) {
-        return <Alert showIcon type="warning" message="快速审批不可用" description={loadError} style={{ marginBottom: 16 }} />;
+        return <Alert showIcon type="warning" title="快速审批不可用" description={loadError} style={{ marginBottom: 16 }} />;
     }
     if (!approvalTask) {
         return isWaitingApproval(selectedNodeData)
-            ? <Alert showIcon type="info" message="当前节点暂无可处理审批" description="这条待审批记录可能已经被其他审批人处理，请刷新实例详情后再查看。" style={{ marginBottom: 16 }} />
+            ? <Alert showIcon type="info" title="当前节点暂无可处理审批" description="这条待审批记录可能已经被其他审批人处理，请刷新实例详情后再查看。" style={{ marginBottom: 16 }} />
             : null;
     }
 

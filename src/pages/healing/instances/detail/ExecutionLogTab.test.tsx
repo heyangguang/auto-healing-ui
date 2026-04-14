@@ -1,10 +1,12 @@
 import * as React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import ExecutionLogTab from './ExecutionLogTab';
-import { getExecutionLogs } from '@/services/auto-healing/execution';
+import { createLogStream, getExecutionLogs, getExecutionRun } from '@/services/auto-healing/execution';
 
 jest.mock('@/services/auto-healing/execution', () => ({
+  createLogStream: jest.fn(),
   getExecutionLogs: jest.fn(),
+  getExecutionRun: jest.fn(),
 }));
 
 jest.mock('@/components/execution/LogConsole', () => ({
@@ -16,10 +18,33 @@ jest.mock('@/components/execution/LogConsole', () => ({
       ))}
     </div>
   ),
+  toLogEntries: (logs: Array<{ id: string; message: string; sequence: number; created_at?: string; log_level?: string }>) => logs,
+  toLogEntry: (log: { id: string; message: string; sequence: number; created_at?: string; log_level?: string }) => log,
 }));
 
 describe('ExecutionLogTab', () => {
-  it('reloads execution logs when runId changes', async () => {
+  const runningRun = {
+    id: 'run-1',
+    status: 'running',
+    created_at: '2026-04-14T10:00:00Z',
+    started_at: '2026-04-14T10:00:00Z',
+  } as AutoHealing.ExecutionRun;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-04-14T10:00:10Z'));
+    (createLogStream as jest.Mock).mockReturnValue(jest.fn());
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.resetAllMocks();
+  });
+
+  it('reloads execution logs while the run is active', async () => {
+    (getExecutionRun as jest.Mock)
+      .mockResolvedValueOnce({ data: runningRun })
+      .mockResolvedValue({ data: runningRun });
     (getExecutionLogs as jest.Mock)
       .mockResolvedValueOnce({
         data: [{
@@ -38,16 +63,27 @@ describe('ExecutionLogTab', () => {
         }],
       });
 
-    const { rerender } = render(<ExecutionLogTab runId="run-1" fallbackLogs={[]} />);
+    render(<ExecutionLogTab runId="run-1" fallbackLogs={[]} hasStarted />);
 
     expect(await screen.findByText('first run log')).toBeTruthy();
+    expect(getExecutionRun).toHaveBeenNthCalledWith(1, 'run-1');
     expect(getExecutionLogs).toHaveBeenNthCalledWith(1, 'run-1');
 
-    rerender(<ExecutionLogTab runId="run-2" fallbackLogs={[]} />);
+    await act(async () => {
+      jest.advanceTimersByTime(2_000);
+    });
 
     await waitFor(() => {
-      expect(getExecutionLogs).toHaveBeenNthCalledWith(2, 'run-2');
+      expect(getExecutionLogs).toHaveBeenNthCalledWith(2, 'run-1');
     });
     expect(await screen.findByText('second run log')).toBeTruthy();
+  });
+
+  it('shows the waiting state once execution has started but run id is not ready yet', async () => {
+    render(<ExecutionLogTab fallbackLogs={[]} hasStarted />);
+
+    expect(await screen.findByText('已进入执行节点，等待执行记录与日志输出...')).toBeTruthy();
+    expect(getExecutionRun).not.toHaveBeenCalled();
+    expect(getExecutionLogs).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   AlertOutlined,
+  CheckCircleOutlined,
   CodeOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
@@ -15,6 +16,8 @@ import {
   INCIDENT_SEVERITY_MAP as SEVERITY_MAP,
   INCIDENT_STATUS_MAP as STATUS_MAP,
 } from '@/constants/incidentDicts';
+import type { IncidentWritebackLog } from '@/services/auto-healing/incidents';
+import { IncidentWritebackLogsCard } from './IncidentWritebackLogsCard';
 
 function stripSimpleHtml(value: string) {
   return value
@@ -26,12 +29,17 @@ function stripSimpleHtml(value: string) {
 }
 
 type IncidentDetailDrawerProps = {
+  canCloseIncident: boolean;
   canResetScan: boolean;
+  closeSubmitting: boolean;
   detailLoading: boolean;
   incident: AutoHealing.Incident | null;
   onClose: () => void;
+  onOpenCloseModal: (incident: AutoHealing.Incident) => void;
   onResetScan: (incident: AutoHealing.Incident) => void;
   open: boolean;
+  writebackLogs: IncidentWritebackLog[];
+  writebackLogsLoading: boolean;
 };
 
 type DetailField = {
@@ -97,13 +105,25 @@ function hasRawData(rawData: AutoHealing.Incident['raw_data']) {
   return Boolean(rawData && Object.keys(rawData as Record<string, unknown>).length > 0);
 }
 
+function canShowCloseAction(incident: AutoHealing.Incident | null, canCloseIncident: boolean) {
+  if (!incident || !canCloseIncident) {
+    return false;
+  }
+  return !['resolved', 'closed'].includes(incident.status || '');
+}
+
 export const IncidentDetailDrawer: React.FC<IncidentDetailDrawerProps> = ({
+  canCloseIncident,
   canResetScan,
+  closeSubmitting,
   detailLoading,
   incident,
   onClose,
+  onOpenCloseModal,
   onResetScan,
   open,
+  writebackLogs,
+  writebackLogsLoading,
 }) => {
   const basicFields: DetailField[] = incident
     ? [
@@ -174,6 +194,16 @@ export const IncidentDetailDrawer: React.FC<IncidentDetailDrawerProps> = ({
             <Space size="small">
               <Button
                 size="small"
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                disabled={!canShowCloseAction(incident, canCloseIncident)}
+                loading={closeSubmitting}
+                onClick={() => onOpenCloseModal(incident)}
+              >
+                关闭工单
+              </Button>
+              <Button
+                size="small"
                 icon={<UndoOutlined />}
                 disabled={!canResetScan}
                 onClick={() => onResetScan(incident)}
@@ -213,6 +243,11 @@ export const IncidentDetailDrawer: React.FC<IncidentDetailDrawerProps> = ({
             >
               <DetailGrid fields={sourceFields} />
             </DetailCard>
+
+            <IncidentWritebackLogsCard
+              logs={writebackLogs}
+              loading={writebackLogsLoading}
+            />
 
             {hasRawData(incident.raw_data) && (
               <div className="incidents-detail-card">

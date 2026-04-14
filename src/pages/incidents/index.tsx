@@ -3,9 +3,17 @@ import { useAccess } from '@umijs/max';
 import { message, Modal } from 'antd';
 import StandardTable from '@/components/StandardTable';
 import {
-    getIncidents, getIncident, getIncidentStats, resetIncidentScan, batchResetIncidentScan,
+    closeIncident,
+    getIncidentWritebackLogs,
+    getIncidents,
+    getIncident,
+    getIncidentStats,
+    resetIncidentScan,
+    batchResetIncidentScan,
+    type IncidentWritebackLog,
 } from '@/services/auto-healing/incidents';
 import { IncidentBatchToolbar } from './IncidentBatchToolbar';
+import { IncidentCloseModal } from './IncidentCloseModal';
 import { IncidentDetailDrawer } from './IncidentDetailDrawer';
 import { IncidentStatsBar } from './IncidentStatsBar';
 import {
@@ -21,6 +29,7 @@ import './index.css';
 /* ========== 组件 ========== */
 const IncidentList: React.FC = () => {
     const access = useAccess();
+    const canCloseIncident = Boolean(access.canSyncPlugin);
     const canResetScan = Boolean(access.canSyncPlugin);
     const detailRequestSequenceRef = useRef(0);
     /* ---- 统计 ---- */
@@ -35,8 +44,24 @@ const IncidentList: React.FC = () => {
 
     /* ---- 详情 Drawer ---- */
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [closeModalOpen, setCloseModalOpen] = useState(false);
+    const [closeSubmitting, setCloseSubmitting] = useState(false);
     const [detailLoading, setDetailLoading] = useState(false);
     const [currentRow, setCurrentRow] = useState<AutoHealing.Incident | null>(null);
+    const [writebackLogs, setWritebackLogs] = useState<IncidentWritebackLog[]>([]);
+    const [writebackLogsLoading, setWritebackLogsLoading] = useState(false);
+
+    const loadWritebackLogs = useCallback(async (incidentId: string) => {
+        setWritebackLogsLoading(true);
+        try {
+            const logs = await getIncidentWritebackLogs(incidentId);
+            setWritebackLogs(logs);
+        } catch {
+            setWritebackLogs([]);
+        } finally {
+            setWritebackLogsLoading(false);
+        }
+    }, []);
 
     const reloadCurrentDetail = useCallback(async (incidentId: string) => {
         const requestSequence = detailRequestSequenceRef.current + 1;
@@ -48,6 +73,7 @@ const IncidentList: React.FC = () => {
                 return;
             }
             setCurrentRow(detail);
+            void loadWritebackLogs(incidentId);
         } catch {
             if (requestSequence !== detailRequestSequenceRef.current) {
                 return;
@@ -57,12 +83,13 @@ const IncidentList: React.FC = () => {
                 setDetailLoading(false);
             }
         }
-    }, []);
+    }, [loadWritebackLogs]);
 
     const openDetail = useCallback(async (record: AutoHealing.Incident) => {
         const requestSequence = detailRequestSequenceRef.current + 1;
         detailRequestSequenceRef.current = requestSequence;
         setCurrentRow(record);
+        setWritebackLogs([]);
         setDrawerOpen(true);
         setDetailLoading(true);
         try {
@@ -71,6 +98,7 @@ const IncidentList: React.FC = () => {
                 return;
             }
             setCurrentRow(detail);
+            void loadWritebackLogs(record.id);
         } catch {
             if (requestSequence !== detailRequestSequenceRef.current) {
                 return;
@@ -80,7 +108,7 @@ const IncidentList: React.FC = () => {
                 setDetailLoading(false);
             }
         }
-    }, []);
+    }, [loadWritebackLogs]);
 
     /* ---- 选中行（批量操作 — 跨页保持） ---- */
     const [selectedRowMap, setSelectedRowMap] = useState<Map<string, AutoHealing.Incident>>(new Map());
@@ -124,6 +152,32 @@ const IncidentList: React.FC = () => {
             },
         });
     }, [currentRow?.id, loadStats, reloadCurrentDetail, selectedRows, triggerRefresh]);
+
+    const handleOpenCloseModal = useCallback((incident: AutoHealing.Incident) => {
+        setCurrentRow(incident);
+        setCloseModalOpen(true);
+    }, []);
+
+    const handleCloseIncident = useCallback(async (values: AutoHealing.CloseIncidentRequest) => {
+        if (!currentRow) {
+            return;
+        }
+        setCloseSubmitting(true);
+        try {
+            const result = await closeIncident(currentRow.id, values);
+            if (result.source_updated) {
+                message.success('工单已关闭并回写到源系统');
+            } else {
+                message.success('工单已关闭，本次未回写源系统');
+            }
+            setCloseModalOpen(false);
+            await reloadCurrentDetail(currentRow.id);
+            triggerRefresh();
+            void loadStats();
+        } finally {
+            setCloseSubmitting(false);
+        }
+    }, [currentRow, loadStats, reloadCurrentDetail, triggerRefresh]);
 
     const columns = useMemo(
         () => createIncidentColumns({
@@ -194,16 +248,30 @@ const IncidentList: React.FC = () => {
             />
 
             <IncidentDetailDrawer
+                canCloseIncident={canCloseIncident}
                 canResetScan={canResetScan}
+                closeSubmitting={closeSubmitting}
                 detailLoading={detailLoading}
                 incident={currentRow}
                 onClose={() => {
                     detailRequestSequenceRef.current += 1;
+                    setCloseModalOpen(false);
                     setDrawerOpen(false);
+                    setWritebackLogs([]);
                     setCurrentRow(null);
                 }}
+                onOpenCloseModal={handleOpenCloseModal}
                 onResetScan={handleResetScan}
                 open={drawerOpen}
+                writebackLogs={writebackLogs}
+                writebackLogsLoading={writebackLogsLoading}
+            />
+
+            <IncidentCloseModal
+                loading={closeSubmitting}
+                open={closeModalOpen}
+                onCancel={() => setCloseModalOpen(false)}
+                onSubmit={handleCloseIncident}
             />
         </>
     );

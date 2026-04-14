@@ -9,6 +9,7 @@ import {
   deleteFlow,
   dryRunFlow,
   getApproval,
+  getApprovalHistory,
   getApprovals,
   getFlow,
   getFlows,
@@ -77,6 +78,10 @@ jest.mock('@/services/generated/auto-healing/healingRules', () => ({
 }));
 
 describe('auto-healing healing service', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('delegates stable healing flow wrappers to the generated healing-flow client', async () => {
     await getFlows({ page: 1, page_size: 20, is_active: true, search: 'restart' });
     await getFlow('flow-1');
@@ -142,6 +147,30 @@ describe('auto-healing healing service', () => {
       { id: 'approval-1' },
       {},
     );
+  });
+
+  it('aggregates historical approval states through the tenant approvals endpoint', async () => {
+    (request as jest.Mock)
+      .mockResolvedValueOnce({ data: [{ id: 'approved-1', created_at: '2026-04-10T10:00:00Z' }], total: 1 })
+      .mockResolvedValueOnce({ data: [{ id: 'rejected-1', created_at: '2026-04-11T10:00:00Z' }], total: 1 })
+      .mockResolvedValueOnce({ data: [{ id: 'expired-1', created_at: '2026-04-09T10:00:00Z' }], total: 1 });
+
+    const response = await getApprovalHistory({ page: 1, page_size: 20 });
+
+    expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tenant/healing/approvals', {
+      method: 'GET',
+      params: { page: 1, page_size: 20, status: 'approved' },
+    });
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tenant/healing/approvals', {
+      method: 'GET',
+      params: { page: 1, page_size: 20, status: 'rejected' },
+    });
+    expect(request).toHaveBeenNthCalledWith(3, '/api/v1/tenant/healing/approvals', {
+      method: 'GET',
+      params: { page: 1, page_size: 20, status: 'expired' },
+    });
+    expect(response.total).toBe(3);
+    expect(response.data?.map((item) => item.id)).toEqual(['rejected-1', 'approved-1', 'expired-1']);
   });
 
   it('delegates stable healing rule and instance wrappers to generated clients', async () => {

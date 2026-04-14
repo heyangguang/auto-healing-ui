@@ -1,6 +1,11 @@
 import React from 'react';
 import { Tag, Typography } from 'antd';
 import { getExecutorConfig } from '@/constants/executionDicts';
+import {
+  resolveExecutionTaskTemplateId,
+  resolveExecutionTaskTemplateName,
+} from '@/pages/healing/executionTaskTemplateMeta';
+import { useResolvedExecutionTemplateNames } from './useResolvedExecutionTemplateNames';
 import { FLOW_NODE_VISUALS, getFlowNodeIcon } from './flowNodeVisuals';
 
 const { Text } = Typography;
@@ -24,6 +29,8 @@ type FlowNodeConfigLike = AutoHealing.FlowNodeConfig & {
   split_by?: string;
   task_template_id?: string;
   task_template_name?: string;
+  task_id?: string;
+  task_name?: string;
   template_id?: string;
   template_name?: string;
   timeout_hours?: number;
@@ -46,8 +53,14 @@ const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label,
   </div>
 );
 
-function renderExecutionDetails(config: FlowNodeConfigLike, onEditExecutionTemplate: (taskTemplateId: string) => void) {
-  const taskTemplateId = config.task_template_id;
+function renderExecutionDetails(
+  config: FlowNodeConfigLike,
+  resolvedNames: Record<string, string>,
+  onEditExecutionTemplate: (taskTemplateId: string) => void,
+) {
+  const taskTemplateId = resolveExecutionTaskTemplateId(config);
+  const taskTemplateName = resolveExecutionTaskTemplateName(config)
+    || (taskTemplateId ? resolvedNames[taskTemplateId] : undefined);
   const executor = config.executor_type ? getExecutorConfig(config.executor_type) : null;
   if (!taskTemplateId) {
     return <DetailRow label="任务模板" value={<span style={{ color: '#faad14', fontSize: 11 }}>⚠ 未配置</span>} />;
@@ -57,12 +70,14 @@ function renderExecutionDetails(config: FlowNodeConfigLike, onEditExecutionTempl
     <>
       <DetailRow
         label="任务模板"
-        value={config.task_template_name ? (
+        value={taskTemplateName ? (
           <a onClick={(event) => { event.stopPropagation(); onEditExecutionTemplate(taskTemplateId); }} style={{ cursor: 'pointer' }}>
-            {config.task_template_name}
+            {taskTemplateName}
           </a>
         ) : (
-          <Tag color="error" style={{ margin: 0, fontSize: 10 }}>已删除</Tag>
+          <a onClick={(event) => { event.stopPropagation(); onEditExecutionTemplate(taskTemplateId); }} style={{ cursor: 'pointer' }}>
+            <Text code style={{ fontSize: 11 }}>{taskTemplateId}</Text>
+          </a>
         )}
       />
       {executor && <DetailRow label="执行器类型" value={executor.label} />}
@@ -206,12 +221,13 @@ function renderSimpleDetails(config: FlowNodeConfigLike, type: string) {
 function renderNodeSpecificDetails(
   node: AutoHealing.FlowNode,
   config: FlowNodeConfigLike,
+  resolvedExecutionTemplateNames: Record<string, string>,
   onEditExecutionTemplate: (taskTemplateId: string) => void,
   onOpenNotificationTemplates: () => void,
 ) {
   switch (node.type) {
     case 'execution':
-      return renderExecutionDetails(config, onEditExecutionTemplate);
+      return renderExecutionDetails(config, resolvedExecutionTemplateNames, onEditExecutionTemplate);
     case 'approval':
       return renderApprovalDetails(config);
     case 'notification':
@@ -226,6 +242,8 @@ export const FlowNodeDetails: React.FC<FlowNodeDetailsProps> = ({
   onEditExecutionTemplate,
   onOpenNotificationTemplates,
 }) => {
+  const resolvedExecutionTemplateNames = useResolvedExecutionTemplateNames(nodes);
+
   if (nodes.length === 0) {
     return <Text type="secondary" style={{ fontSize: 12 }}>暂无功能节点</Text>;
   }
@@ -250,7 +268,13 @@ export const FlowNodeDetails: React.FC<FlowNodeDetailsProps> = ({
               </div>
             </div>
             <div className="flow-node-detail-content">
-              {renderNodeSpecificDetails(node, config, onEditExecutionTemplate, onOpenNotificationTemplates)}
+              {renderNodeSpecificDetails(
+                node,
+                config,
+                resolvedExecutionTemplateNames,
+                onEditExecutionTemplate,
+                onOpenNotificationTemplates,
+              )}
             </div>
           </div>
         );

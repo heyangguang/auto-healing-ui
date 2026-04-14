@@ -1,12 +1,15 @@
 import {
     cancelHealingInstance,
+    getHealingInstanceRecoveryLogs,
     getHealingInstanceDetail,
+    recoverHealingInstance,
     retryHealingInstance,
+    type FlowRecoveryAttempt,
 } from '@/services/auto-healing/instances';
 import { history, useParams, useRequest, useAccess } from '@umijs/max';
 import { Button, Empty, Space, Spin, message } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
     Background,
     BackgroundVariant,
@@ -43,6 +46,9 @@ const HealingInstanceDetail: React.FC = () => {
     } = useInstanceCanvasState();
     const [contextDrawerVisible, setContextDrawerVisible] = useState(false);
     const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
+    const [recoverySubmitting, setRecoverySubmitting] = useState(false);
+    const [recoveryAttempts, setRecoveryAttempts] = useState<FlowRecoveryAttempt[]>([]);
+    const [recoveryAttemptsLoading, setRecoveryAttemptsLoading] = useState(false);
     const [selectedNodeData, setSelectedNodeData] = useState<SelectedNodeDataLike | null>(null);
     const selectedNodeDataRef = useRef<SelectedNodeDataLike | null>(null);
     const [contextData, setContextData] = useState<Record<string, unknown>>({});
@@ -51,6 +57,22 @@ const HealingInstanceDetail: React.FC = () => {
 
     const [ruleDrawerVisible, setRuleDrawerVisible] = useState(false);
     const [incidentDrawerVisible, setIncidentDrawerVisible] = useState(false);
+
+    const loadRecoveryAttempts = useCallback(async (instanceId?: string) => {
+        if (!instanceId) {
+            setRecoveryAttempts([]);
+            return;
+        }
+        setRecoveryAttemptsLoading(true);
+        try {
+            const response = await getHealingInstanceRecoveryLogs(instanceId);
+            setRecoveryAttempts(response.data || []);
+        } catch {
+            setRecoveryAttempts([]);
+        } finally {
+            setRecoveryAttemptsLoading(false);
+        }
+    }, []);
 
     // Fetch initial instance data
     const { data: instance, loading, refresh } = useRequest(
@@ -68,6 +90,7 @@ const HealingInstanceDetail: React.FC = () => {
                     setContextData(data.context || {});
                     hydrateCanvasFromInstance(data);
                 }
+                void loadRecoveryAttempts(data?.id);
             },
         },
     );
@@ -122,6 +145,28 @@ const HealingInstanceDetail: React.FC = () => {
         }
     };
 
+    const handleRecover = async () => {
+        if (!id) {
+            return;
+        }
+        setRecoverySubmitting(true);
+        try {
+            await recoverHealingInstance(id);
+            message.success('已开始恢复实例');
+            setInstanceStatus('running');
+            void loadRecoveryAttempts(id);
+            void refresh();
+            window.setTimeout(() => {
+                void refresh();
+                void loadRecoveryAttempts(id);
+            }, 1500);
+        } catch (_error) {
+            /* global error handler */
+        } finally {
+            setRecoverySubmitting(false);
+        }
+    };
+
     const handleApprovalActionSuccess = useCallback(() => {
         setNodeDetailVisible(false);
         void refresh();
@@ -147,6 +192,16 @@ const HealingInstanceDetail: React.FC = () => {
                         <Button icon={<EyeOutlined />} onClick={() => setContextDrawerVisible(true)}>执行概况</Button>
                         {(instanceStatus === 'running' || instanceStatus === 'waiting_approval' || instanceStatus === 'pending') && (
                             <Button danger onClick={handleCancel} disabled={!access.canUpdateFlow}>取消执行</Button>
+                        )}
+                        {['running', 'waiting_approval', 'failed'].includes(instanceStatus) && (
+                            <Button
+                                icon={<ReloadOutlined />}
+                                loading={recoverySubmitting}
+                                onClick={handleRecover}
+                                disabled={!access.canUpdateFlow}
+                            >
+                                恢复实例
+                            </Button>
                         )}
                         {instanceStatus === 'failed' && (
                             <Button type="primary" onClick={handleRetry} disabled={!access.canUpdateFlow}>重试</Button>
@@ -188,7 +243,12 @@ const HealingInstanceDetail: React.FC = () => {
                 instance={instanceData}
                 instanceStatus={instanceStatus}
                 onClose={() => setContextDrawerVisible(false)}
+                onRecover={handleRecover}
                 open={contextDrawerVisible}
+                recoverSubmitting={recoverySubmitting}
+                recoveryAttempts={recoveryAttempts}
+                recoveryAttemptsLoading={recoveryAttemptsLoading}
+                showRecoverAction={['running', 'waiting_approval', 'failed'].includes(instanceStatus) && Boolean(access.canUpdateFlow)}
             />
 
             <InstanceIncidentDrawer

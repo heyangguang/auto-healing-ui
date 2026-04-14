@@ -2,8 +2,17 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import type { Dispatch, Key, MutableRefObject, UIEvent } from 'react';
 import { getExecutionTask } from '@/services/auto-healing/execution';
 import { createRequestSequence } from '@/utils/requestSequence';
-import { getCachedGitRepoInventory, getCachedPlaybookInventory } from '@/utils/selectorInventoryCache';
-import { filterTasksByTree, getDefaultExpandedKeys, isMultiPlaybookRepoSelection } from './taskTemplateSelectorHelpers';
+import {
+    getCachedExecutionTaskInventory,
+    getCachedGitRepoInventory,
+    getCachedPlaybookInventory,
+} from '@/utils/selectorInventoryCache';
+import {
+    filterTasksByTree,
+    getDefaultExpandedKeys,
+    isMultiPlaybookRepoSelection,
+    isTaskSelectable,
+} from './taskTemplateSelectorHelpers';
 import { createInitialState, EMPTY_INVENTORY, fetchTaskPage, FILTER_DEBOUNCE_MS, getFiltersSnapshot, reducer, SCROLL_THRESHOLD_PX } from './taskTemplateSelectorStateHelpers';
 import type { LoadTasksOptions, SelectorAction, TaskPageState } from './taskTemplateSelectorStateHelpers';
 import type { TaskTemplate, TaskTemplateFilters, TaskTemplateInventory, TaskTemplateSelectorState, TaskTemplateStatusFilter } from './taskTemplateSelectorTypes';
@@ -24,14 +33,20 @@ interface SelectorRefs {
 
 function useSelectorCore(value?: string) {
     const [state, dispatch] = useReducer(reducer, value, createInitialState);
-    const refs: SelectorRefs = {
-        inventoryRef: useRef<TaskTemplateInventory>(EMPTY_INVENTORY),
-        filtersRef: useRef<TaskTemplateFilters>(getFiltersSnapshot(createInitialState(value))),
-        selectedValueRef: useRef<string | undefined>(value),
-        tasksLoadingRef: useRef(false),
-        tasksRequestSequenceRef: useRef(createRequestSequence()),
-        baseDataSequenceRef: useRef(createRequestSequence()),
-    };
+    const inventoryRef = useRef<TaskTemplateInventory>(EMPTY_INVENTORY);
+    const filtersRef = useRef<TaskTemplateFilters>(getFiltersSnapshot(createInitialState(value)));
+    const selectedValueRef = useRef<string | undefined>(value);
+    const tasksLoadingRef = useRef(false);
+    const tasksRequestSequenceRef = useRef(createRequestSequence());
+    const baseDataSequenceRef = useRef(createRequestSequence());
+    const refs = useRef<SelectorRefs>({
+        inventoryRef,
+        filtersRef,
+        selectedValueRef,
+        tasksLoadingRef,
+        tasksRequestSequenceRef,
+        baseDataSequenceRef,
+    }).current;
     const patchState = useCallback((patch: Partial<TaskTemplateSelectorState>) => { dispatch({ type: 'patch', patch }); }, []);
     return { dispatch, patchState, refs, state };
 }
@@ -130,14 +145,15 @@ function useBaseDataLoader(
         const token = refs.baseDataSequenceRef.current.next();
         patchState({ initLoading: true });
         try {
-            const [playbooks, repositories] = await Promise.all([
+            const [inventoryTasks, playbooks, repositories] = await Promise.all([
+                getCachedExecutionTaskInventory({ forceRefresh }),
                 getCachedPlaybookInventory({ forceRefresh }),
                 getCachedGitRepoInventory({ forceRefresh }),
             ]);
             if (!refs.baseDataSequenceRef.current.isCurrent(token)) {
                 return;
             }
-            const inventory = { repositories, playbooks };
+            const inventory = { inventoryTasks, repositories, playbooks };
             refs.inventoryRef.current = inventory;
             patchState({ ...inventory, expandedKeys: getDefaultExpandedKeys(repositories) });
             await loadTasks(1, {
@@ -224,6 +240,10 @@ function useSelectorHandlers(
     loadBaseData: (forceRefresh?: boolean) => Promise<void>,
     loadTasks: (pageNum: number, options?: LoadTasksOptions) => Promise<void>,
 ) {
+    const patchFilterState = useCallback((patch: Partial<TaskTemplateSelectorState>) => {
+        patchState({ tasksLoading: true, ...patch });
+    }, [patchState]);
+
     const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = event.currentTarget;
         const nearBottom = scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD_PX;
@@ -231,15 +251,21 @@ function useSelectorHandlers(
             void loadTasks(state.page + 1);
         }
     }, [loadTasks, state.hasMore, state.page, state.tasksLoading]);
+
     const handleTreeSelect = useCallback((keys: Key[]) => {
         const selectedKey = keys[0];
-        if (selectedKey) {
-            patchState({ selectedTreeKey: String(selectedKey) });
+        if (!selectedKey) {
+            return;
         }
-    }, [patchState]);
+        const nextSelectedTreeKey = String(selectedKey);
+        if (nextSelectedTreeKey === state.selectedTreeKey) {
+            return;
+        }
+        patchFilterState({ selectedTreeKey: nextSelectedTreeKey });
+    }, [patchFilterState, state.selectedTreeKey]);
 
     const handleTaskSelect = useCallback((task: TaskTemplate) => {
-        if (!task.needs_review) {
+        if (isTaskSelectable(task)) {
             patchState({ selectedTaskId: task.id, selectedTask: task });
         }
     }, [patchState]);
@@ -249,12 +275,25 @@ function useSelectorHandlers(
         handleTaskSelect,
         handleTreeSelect,
         refresh: useCallback(() => { void loadBaseData(true); }, [loadBaseData]),
-        setExecutorType: useCallback((executorType?: string) => { patchState({ executorType }); }, [patchState]),
+        setExecutorType: useCallback((executorType?: string) => {
+            if (executorType === state.executorType) {
+                return;
+            }
+            patchFilterState({ executorType });
+        }, [patchFilterState, state.executorType]),
         setExpandedKeys: useCallback((expandedKeys: string[]) => { patchState({ expandedKeys }); }, [patchState]),
-        setSearch: useCallback((search: string) => { patchState({ search }); }, [patchState]),
+        setSearch: useCallback((search: string) => {
+            if (search === state.search) {
+                return;
+            }
+            patchFilterState({ search });
+        }, [patchFilterState, state.search]),
         setStatusFilter: useCallback((statusFilter?: TaskTemplateStatusFilter) => {
-            patchState({ statusFilter });
-        }, [patchState]),
+            if (statusFilter === state.statusFilter) {
+                return;
+            }
+            patchFilterState({ statusFilter });
+        }, [patchFilterState, state.statusFilter]),
     };
 }
 
@@ -273,6 +312,7 @@ export function useTaskTemplateSelectorState({ open, value }: UseTaskTemplateSel
         ...state,
         ...useSelectorHandlers(state, patchState, loadBaseData, loadTasks),
         canConfirm: Boolean(state.selectedTaskId && state.selectedTask && !state.initLoading),
-        displayTasks: filterTasksByTree(state.tasks, state.selectedTreeKey, state.playbooks),
+        displayTasks: filterTasksByTree(state.tasks, state.selectedTreeKey, state.playbooks)
+            .filter((task) => state.statusFilter === 'review' || isTaskSelectable(task)),
     };
 }

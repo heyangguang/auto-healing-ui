@@ -21,6 +21,27 @@ export type IncidentQueryParams = {
     sort_order?: 'asc' | 'desc';
 };
 
+export type IncidentWritebackLog = {
+    action: string;
+    created_at: string;
+    error_message?: string | null;
+    execution_run_id?: string | null;
+    external_id: string;
+    finished_at?: string | null;
+    flow_instance_id?: string | null;
+    id: string;
+    operator_name?: string | null;
+    operator_user_id?: string | null;
+    request_method?: string | null;
+    request_payload?: Record<string, unknown>;
+    request_url?: string | null;
+    response_body?: string | null;
+    response_status_code?: number | null;
+    started_at?: string | null;
+    status: string;
+    trigger_source: string;
+};
+
 /**
  * 获取工单列表
  */
@@ -38,6 +59,23 @@ export async function getIncident(id: string) {
     return unwrapData(await request<{ code: number; message: string; data: AutoHealing.Incident }>(
         `/api/v1/tenant/incidents/${id}`,
         { method: 'GET' }
+    ));
+}
+
+export async function getIncidentWritebackLogs(id: string) {
+    return unwrapData(await request<{ code: number; message: string; data: IncidentWritebackLog[] }>(
+        `/api/v1/tenant/incidents/${id}/writeback-logs`,
+        { method: 'GET' },
+    ));
+}
+
+export async function closeIncident(id: string, data: AutoHealing.CloseIncidentRequest) {
+    return unwrapData(await request<{ code: number; message: string; data: AutoHealing.CloseIncidentResponse & { writeback_log_id?: string | null } }>(
+        `/api/v1/tenant/incidents/${id}/close`,
+        {
+            method: 'POST',
+            data,
+        },
     ));
 }
 

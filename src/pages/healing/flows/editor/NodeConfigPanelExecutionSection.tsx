@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button, Input, Space, Typography } from 'antd';
 import { ProFormDependency, ProFormSelect, ProFormText } from '@ant-design/pro-components';
 import { SelectOutlined } from '@ant-design/icons';
+import { getExecutionTask } from '@/services/auto-healing/execution';
+import {
+    resolveExecutionTaskTemplateId,
+    resolveExecutionTaskTemplateName,
+} from '@/pages/healing/executionTaskTemplateMeta';
 import ExtraVarsEditor from './ExtraVarsEditor';
 import TaskTemplateSelector from './TaskTemplateSelector';
 import { VariableHint } from './NodeConfigPanelShared';
@@ -108,8 +113,44 @@ export const NodeConfigExecutionSection: React.FC<NodeConfigExecutionSectionProp
     selectedTaskName,
     taskSelectorOpen,
 }) => {
-    const taskTemplateId = typeof node.data?.task_template_id === 'string' ? node.data.task_template_id : undefined;
-    const taskTemplateName = typeof node.data?.task_template_name === 'string' ? node.data.task_template_name : undefined;
+    const taskTemplateId = resolveExecutionTaskTemplateId(node.data);
+    const taskTemplateName = resolveExecutionTaskTemplateName(node.data);
+
+    useEffect(() => {
+        if (!taskTemplateId || selectedTaskName || taskTemplateName) {
+            return;
+        }
+
+        let active = true;
+        void getExecutionTask(taskTemplateId)
+            .then((response) => {
+                const resolvedName = typeof response.data?.name === 'string' ? response.data.name : '';
+                if (!active || !resolvedName) {
+                    return;
+                }
+
+                updateExecutionValues(formRef, node.id, onChange, {
+                    task_template_id: taskTemplateId,
+                    task_template_name: resolvedName,
+                });
+                onSelectedTaskNameChange(resolvedName);
+            })
+            .catch((error) => {
+                console.error('Failed to hydrate execution task template name:', error);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [
+        formRef,
+        node.id,
+        onChange,
+        onSelectedTaskNameChange,
+        selectedTaskName,
+        taskTemplateId,
+        taskTemplateName,
+    ]);
 
     const handleTemplateSelect = (id: string, template: AutoHealing.ExecutionTask) => {
         updateExecutionValues(formRef, node.id, onChange, {

@@ -1,5 +1,6 @@
 import LogConsole, { type LogEntry } from '@/components/execution/LogConsole';
 import { CodeOutlined } from '@ant-design/icons';
+import { mergeLogEntries } from '@/pages/execution/logs/logStreamHelpers';
 import { Alert, Drawer, Tabs } from 'antd';
 import React from 'react';
 import ApprovalQuickActionsBar from './ApprovalQuickActionsBar';
@@ -8,6 +9,7 @@ import NodeDetailDrawerHeader from './NodeDetailDrawerHeader';
 import NodeDeveloperTab from './NodeDeveloperTab';
 import NodePrimaryCards from './NodePrimaryCards';
 import type { SelectedNodeDataLike } from './nodeDetailTypes';
+import { hasExecutionStarted, resolveExecutionRunId, shouldShowExecutionLogTab } from './executionNodeMeta';
 import ExecutionLogTab from './ExecutionLogTab';
 
 type NodeDetailDrawerProps = {
@@ -87,6 +89,7 @@ function buildDrawerTabs({
     canApprove,
     contextEntries,
     configEntries,
+    fallbackLogs,
     flowInstanceId,
     liveLogs,
     nodeState,
@@ -99,6 +102,7 @@ function buildDrawerTabs({
     canApprove: boolean;
     contextEntries: [string, unknown][];
     configEntries: [string, unknown][];
+    fallbackLogs: LogEntry[];
     flowInstanceId?: string;
     liveLogs: LogEntry[];
     nodeState: SelectedNodeDataLike['state'];
@@ -125,10 +129,16 @@ function buildDrawerTabs({
                 />
             ),
         },
-        ...((runId || stdoutLogs.length > 0) ? [{
+        ...(shouldShowExecutionLogTab(selectedNodeData, fallbackLogs) ? [{
             key: 'execution_log',
             label: '执行日志',
-            children: <ExecutionLogTab runId={runId} fallbackLogs={stdoutLogs} />,
+            children: (
+                <ExecutionLogTab
+                    runId={runId}
+                    fallbackLogs={fallbackLogs}
+                    hasStarted={hasExecutionStarted(selectedNodeData)}
+                />
+            ),
         }] : []),
         ...(liveLogs.length > 0 ? [{
             key: 'live_logs',
@@ -161,9 +171,10 @@ const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
     selectedNodeData,
 }) => {
     const nodeState = selectedNodeData?.state;
-    const runId = nodeState?.run?.run_id;
+    const runId = resolveExecutionRunId(selectedNodeData);
     const stdoutLogs = buildStdoutLogs(nodeState?.stdout, nodeState?.started_at);
     const liveLogs = selectedNodeData ? (nodeLogs[selectedNodeData.id] || selectedNodeData.logs || []) : [];
+    const fallbackLogs = mergeLogEntries(stdoutLogs, liveLogs);
     const configData = isPlainObject(selectedNodeData?.config) ? selectedNodeData.config : {};
     const filteredConfig = Object.fromEntries(
         Object.entries(configData).filter(([key]) => !NODE_STATUS_KEYS.includes(key as (typeof NODE_STATUS_KEYS)[number])),
@@ -202,6 +213,7 @@ const NodeDetailDrawer: React.FC<NodeDetailDrawerProps> = ({
                             canApprove,
                             contextEntries,
                             configEntries,
+                            fallbackLogs,
                             flowInstanceId,
                             liveLogs,
                             nodeState,

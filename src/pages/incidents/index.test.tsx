@@ -5,7 +5,9 @@ import IncidentList from './index';
 import { useAccess } from '@umijs/max';
 import {
   batchResetIncidentScan,
+  closeIncident,
   getIncident,
+  getIncidentWritebackLogs,
   getIncidentStats,
   getIncidents,
   resetIncidentScan,
@@ -17,7 +19,9 @@ jest.mock('@umijs/max', () => ({
 
 jest.mock('@/services/auto-healing/incidents', () => ({
   batchResetIncidentScan: jest.fn(),
+  closeIncident: jest.fn(),
   getIncident: jest.fn(),
+  getIncidentWritebackLogs: jest.fn(),
   getIncidentStats: jest.fn(),
   getIncidents: jest.fn(),
   resetIncidentScan: jest.fn(),
@@ -132,6 +136,8 @@ describe('IncidentList integration', () => {
       .mockResolvedValueOnce({ ...incident, scanned: true, healing_status: 'triggered' });
     (resetIncidentScan as jest.Mock).mockResolvedValue({});
     (batchResetIncidentScan as jest.Mock).mockResolvedValue({ affected_count: 1 });
+    (getIncidentWritebackLogs as jest.Mock).mockResolvedValue([]);
+    (closeIncident as jest.Mock).mockResolvedValue({ local_status: 'healed', source_updated: true });
   });
 
   afterEach(() => {

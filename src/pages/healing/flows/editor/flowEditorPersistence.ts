@@ -1,5 +1,6 @@
 import { getExecutionTask } from '@/services/auto-healing/execution';
 import { getPlaybook } from '@/services/auto-healing/playbooks';
+import { resolveExecutionTaskTemplateId } from '@/pages/healing/executionTaskTemplateMeta';
 import type { FlowEditorEdge, FlowEditorNode } from './flowEditorTypes';
 
 type FlowValidationResult =
@@ -94,8 +95,8 @@ export async function validateExecutionNodes(
     const unavailableNodeLabels = new Set<string>();
 
     for (const node of executionNodes) {
-        const taskTemplateId = node.data?.task_template_id;
-        if (!taskTemplateId || typeof taskTemplateId !== 'string') {
+        const taskTemplateId = resolveExecutionTaskTemplateId(node.data);
+        if (!taskTemplateId) {
             return { issue: { missingVars: ['task_template_id'], node }, unavailableNodeLabels: [] };
         }
 
@@ -152,11 +153,12 @@ export async function validateExecutionNodes(
 }
 
 export function buildFlowPayload(
+    autoCloseSourceIncident: boolean,
     edges: FlowEditorEdge[],
     flowIsActive: boolean,
     flowName: string,
     nodes: FlowEditorNode[],
-): AutoHealing.CreateFlowRequest {
+): AutoHealing.CreateFlowRequest & { auto_close_source_incident: boolean } {
     const apiNodes = nodes.map((node) => {
         const { dryRunMessage, dryRunOutput, logs, onRetry, status, ...config } = node.data;
         return {
@@ -178,6 +180,7 @@ export function buildFlowPayload(
     });
 
     return {
+        auto_close_source_incident: autoCloseSourceIncident,
         edges: edges.map((edge) => ({
             id: edge.id,
             source: edge.source,

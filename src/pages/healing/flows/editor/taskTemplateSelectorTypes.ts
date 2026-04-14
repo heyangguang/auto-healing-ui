@@ -23,6 +23,7 @@ export type TaskTemplateSelectorFilters = TaskTemplateFilters;
 export interface TaskTemplateInventory {
     repositories: AutoHealing.GitRepository[];
     playbooks: AutoHealing.Playbook[];
+    inventoryTasks: TaskTemplate[];
 }
 
 export interface TaskTemplateSelectorState extends TaskTemplateInventory, TaskTemplateFilters {

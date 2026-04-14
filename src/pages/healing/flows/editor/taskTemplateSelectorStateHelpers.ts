@@ -39,6 +39,7 @@ export type SelectorAction =
     | { type: 'reset'; value?: string };
 
 export const EMPTY_INVENTORY: TaskTemplateInventory = {
+    inventoryTasks: [],
     repositories: [],
     playbooks: [],
 };

@@ -83,6 +83,25 @@ describe('validateExecutionNodes', () => {
     expect(result.unavailableNodeLabels).toEqual([]);
   });
 
+  it('accepts legacy task_id when validating execution nodes', async () => {
+    (getExecutionTask as jest.Mock).mockResolvedValueOnce({
+      data: {
+        id: 'task-legacy',
+        extra_vars: {},
+      },
+    });
+
+    const result = await validateExecutionNodes([
+      createExecutionNode('node-legacy', { task_id: 'task-legacy' }),
+    ]);
+
+    expect(result).toEqual({
+      issue: null,
+      unavailableNodeLabels: [],
+    });
+    expect(getExecutionTask).toHaveBeenCalledWith('task-legacy');
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });

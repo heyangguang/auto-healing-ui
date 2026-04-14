@@ -1,6 +1,7 @@
 import dagre from 'dagre';
 import type { Connection, XYPosition } from 'reactflow';
 import { MarkerType } from 'reactflow';
+import { normalizeExecutionTaskTemplateFields } from '@/pages/healing/executionTaskTemplateMeta';
 import {
     createNodeId,
     DEFAULT_END_NODE_ID,
@@ -15,6 +16,7 @@ import type {
 } from './flowEditorTypes';
 
 type FlowGraphState = {
+    autoCloseSourceIncident: boolean;
     edges: FlowEditorEdge[];
     flowIsActive: boolean;
     flowName: string;
@@ -28,6 +30,7 @@ const LAYOUT_PADDING_Y = 30;
 
 export function createDefaultFlowGraph(onRetry: () => void): FlowGraphState {
     return {
+        autoCloseSourceIncident: false,
         edges: [],
         flowIsActive: true,
         flowName: DEFAULT_FLOW_NAME,
@@ -52,7 +55,9 @@ export function mapFlowResponseToGraph(
     flow: AutoHealing.HealingFlow,
     onRetry: () => void,
 ): FlowGraphState {
+    const flowSettings = flow as AutoHealing.HealingFlow & { auto_close_source_incident?: boolean };
     return {
+        autoCloseSourceIncident: flowSettings.auto_close_source_incident === true,
         edges: (flow.edges || []).map((edge, index) => ({
             id: edge.id || `e${index}`,
             label: edge.label,
@@ -70,7 +75,9 @@ export function mapFlowResponseToGraph(
             type: getReactFlowNodeType(node.type),
             position: node.position || { x: 100, y: 100 },
             data: {
-                ...node.config,
+                ...(node.type === 'execution'
+                    ? normalizeExecutionTaskTemplateFields(node.config || {})
+                    : node.config),
                 label: node.name || node.type,
                 onRetry,
                 type: node.type,

@@ -1,5 +1,6 @@
 import { message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getChannelTypeDisplayLabel } from '@/constants/notificationDicts';
 import {
     getCachedNotificationChannelInventory,
     getCachedNotificationTemplateInventory,
@@ -161,7 +162,8 @@ const useNotificationSelectorCollections = ({
         const keyword = channelSearch.toLowerCase();
         return typeMatched.filter(channel =>
             channel.name.toLowerCase().includes(keyword) ||
-            channel.type.toLowerCase().includes(keyword),
+            channel.type.toLowerCase().includes(keyword) ||
+            getChannelTypeDisplayLabel(channel.type).toLowerCase().includes(keyword),
         );
     }, [channelSearch, channelTypeFilter, channels]);
     const filteredTemplates = useMemo(() => {
