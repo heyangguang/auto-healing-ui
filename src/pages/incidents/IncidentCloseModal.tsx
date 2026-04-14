@@ -2,6 +2,7 @@ import React from 'react';
 import { history } from '@umijs/max';
 import { Alert, Button, Form, Input, Modal, Select, Space, Typography } from 'antd';
 import { getIncidentSolutionTemplates } from '@/services/auto-healing/incidentSolutionTemplates';
+import { solutionTemplateSummary } from './solution-templates/solutionTemplateHelpers';
 
 type IncidentCloseModalProps = {
   loading: boolean;
@@ -138,11 +139,13 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
         >
           <Select
             allowClear
+            showSearch
             loading={templatesLoading}
             options={templates.map((template) => ({
               label: template.name,
               value: template.id,
             }))}
+            optionFilterProp="label"
             placeholder="可选：选择一个关单模板"
             onChange={(templateId) => {
               const template = templates.find((item) => item.id === templateId);
@@ -162,7 +165,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
             type="info"
             showIcon
             message={selectedTemplate.name}
-            description={selectedTemplate.description || '当前模板会使用系统自动注入的 incident / operator / system 变量，并允许你通过模板变量补充自定义字段。'}
+            description={selectedTemplate.description || solutionTemplateSummary(selectedTemplate) || '当前模板会使用系统自动注入的 incident / operator / system 变量，并允许你通过模板变量补充自定义字段。'}
           />
         ) : null}
         <Form.Item

@@ -179,6 +179,13 @@ declare namespace AutoHealing {
         id: UUID;
         name: string;
         description?: string;
+        problem_template?: string;
+        solution_template?: string;
+        verification_template?: string;
+        conclusion_template?: string;
+        steps_render_mode?: 'summary' | 'detailed' | string;
+        steps_max_count?: number;
+        step_output_max_length?: number;
         resolution_template: string;
         work_notes_template: string;
         default_close_code?: string;
@@ -190,8 +197,15 @@ declare namespace AutoHealing {
     interface CreateIncidentSolutionTemplateRequest {
         name: string;
         description?: string;
-        resolution_template: string;
-        work_notes_template: string;
+        problem_template?: string;
+        solution_template?: string;
+        verification_template?: string;
+        conclusion_template?: string;
+        steps_render_mode?: 'summary' | 'detailed';
+        steps_max_count?: number;
+        step_output_max_length?: number;
+        resolution_template?: string;
+        work_notes_template?: string;
         default_close_code?: string;
         default_close_status?: 'resolved' | 'closed';
     }
@@ -199,6 +213,13 @@ declare namespace AutoHealing {
     interface UpdateIncidentSolutionTemplateRequest {
         name?: string;
         description?: string;
+        problem_template?: string;
+        solution_template?: string;
+        verification_template?: string;
+        conclusion_template?: string;
+        steps_render_mode?: 'summary' | 'detailed';
+        steps_max_count?: number;
+        step_output_max_length?: number;
         resolution_template?: string;
         work_notes_template?: string;
         default_close_code?: string;

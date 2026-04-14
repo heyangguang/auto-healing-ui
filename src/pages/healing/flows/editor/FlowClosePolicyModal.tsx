@@ -2,6 +2,7 @@ import React from 'react';
 import { history } from '@umijs/max';
 import { Alert, Button, Form, Input, Modal, Select, Space, Typography } from 'antd';
 import { getIncidentSolutionTemplates } from '@/services/auto-healing/incidentSolutionTemplates';
+import { solutionTemplateSummary } from '@/pages/incidents/solution-templates/solutionTemplateHelpers';
 
 type FlowClosePolicyModalProps = {
   onCancel: () => void;
@@ -113,11 +114,13 @@ const FlowClosePolicyModal: React.FC<FlowClosePolicyModalProps> = ({
           )}
         >
           <Select
+            showSearch
             loading={loading}
             options={templates.map((template) => ({
               label: template.name,
               value: template.id,
             }))}
+            optionFilterProp="label"
             placeholder="选择自动关单使用的解决方案模板"
             onChange={(templateId) => {
               const template = templates.find((item) => item.id === templateId);
@@ -137,7 +140,7 @@ const FlowClosePolicyModal: React.FC<FlowClosePolicyModalProps> = ({
             showIcon
             style={{ marginBottom: 16 }}
             message={selectedTemplate.name}
-            description={selectedTemplate.description || '该模板会使用 flow.*、execution.*、incident.* 等上下文变量自动生成回写内容。'}
+            description={selectedTemplate.description || solutionTemplateSummary(selectedTemplate) || '该模板会使用 flow.*、execution.*、incident.* 等上下文变量自动生成回写内容。'}
           />
         ) : null}
         <Space size={16} style={{ display: 'flex' }} align="start">
