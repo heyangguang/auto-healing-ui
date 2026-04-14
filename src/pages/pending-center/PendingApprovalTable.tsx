@@ -1,14 +1,11 @@
 import React, { useCallback, useMemo } from 'react';
-import { Button, Space, Tag } from 'antd';
-import { ClockCircleOutlined } from '@ant-design/icons';
-import StandardTable, { type AdvancedSearchField, type StandardColumnDef } from '@/components/StandardTable';
-import { getApprovalStatusConfig } from '@/constants/instanceDicts';
+import StandardTable, { type AdvancedSearchField } from '@/components/StandardTable';
 import { getPendingApprovals } from '@/services/auto-healing/healing';
 import type { PendingApprovalRecord } from './types';
+import { createPendingApprovalColumns } from './approvalTableColumns';
 import {
   approvalSearchFields,
   buildPendingApprovalParams,
-  formatPendingCenterTime,
   pendingCenterHeaderIcon,
   type ApprovalTableRequestParams,
 } from './shared';
@@ -30,105 +27,7 @@ export interface PendingApprovalTableProps {
   onReject: (record: PendingApprovalRecord) => void;
   onRowClick: (record: PendingApprovalRecord) => void;
   preferenceKey: string;
-}
-
-function createNodeNameColumn(): StandardColumnDef<PendingApprovalRecord> {
-  return {
-    columnKey: 'node_name',
-    columnTitle: '节点名称',
-    dataIndex: 'node_name',
-    ellipsis: true,
-    fixedColumn: true,
-    render: (_, record) => record.node_name || record.node_id || '审批节点',
-  };
-}
-
-function createFlowInstanceColumn(): StandardColumnDef<PendingApprovalRecord> {
-  return {
-    columnKey: 'flow_instance_id',
-    columnTitle: '流程实例',
-    dataIndex: 'flow_instance_id',
-    width: 200,
-    render: (_, record) => <Tag>FLOW-{record.flow_instance_id?.substring(0, 8)}</Tag>,
-  };
-}
-
-function createStatusColumn(): StandardColumnDef<PendingApprovalRecord> {
-  const status = getApprovalStatusConfig('pending');
-  return {
-    columnKey: 'status',
-    columnTitle: '状态',
-    dataIndex: 'status',
-    width: 100,
-    render: () => <Tag color={status.color} icon={<ClockCircleOutlined />}>{status.text}</Tag>,
-  };
-}
-
-function createApproversColumn(
-  resolveApprovers: (record: PendingApprovalRecord) => string,
-): StandardColumnDef<PendingApprovalRecord> {
-  return {
-    columnKey: 'approvers',
-    columnTitle: '审批人',
-    dataIndex: 'approvers',
-    width: 200,
-    render: (_, record) => resolveApprovers(record),
-  };
-}
-
-function createCreatedAtColumn(): StandardColumnDef<PendingApprovalRecord> {
-  return {
-    columnKey: 'created_at',
-    columnTitle: '创建时间',
-    dataIndex: 'created_at',
-    width: 180,
-    sorter: true,
-    render: (_, record) => formatPendingCenterTime(record.created_at),
-  };
-}
-
-function createActionColumn(
-  canApprove: boolean,
-  onApprove: (record: PendingApprovalRecord) => void,
-  onReject: (record: PendingApprovalRecord) => void,
-): StandardColumnDef<PendingApprovalRecord> {
-  return {
-    columnKey: 'actions',
-    columnTitle: '操作',
-    width: 160,
-    fixedColumn: true,
-    fixed: 'right',
-    render: (_, record) => (
-      <Space>
-        <Button type="primary" size="small" disabled={!canApprove} onClick={() => onApprove(record)}>
-          批准
-        </Button>
-        <Button danger size="small" disabled={!canApprove} onClick={() => onReject(record)}>
-          拒绝
-        </Button>
-      </Space>
-    ),
-  };
-}
-
-type PendingApprovalColumnsOptions = {
-  canApprove: boolean;
-  resolveApprovers: (record: PendingApprovalRecord) => string;
-  onApprove: (record: PendingApprovalRecord) => void;
-  onReject: (record: PendingApprovalRecord) => void;
-};
-
-function createPendingApprovalColumns(
-  options: PendingApprovalColumnsOptions,
-): StandardColumnDef<PendingApprovalRecord>[] {
-  return [
-    createNodeNameColumn(),
-    createFlowInstanceColumn(),
-    createStatusColumn(),
-    createApproversColumn(options.resolveApprovers),
-    createCreatedAtColumn(),
-    createActionColumn(options.canApprove, options.onApprove, options.onReject),
-  ];
+  refreshTrigger?: number;
 }
 
 export default function PendingApprovalTable({
@@ -144,6 +43,7 @@ export default function PendingApprovalTable({
   onReject,
   onRowClick,
   preferenceKey,
+  refreshTrigger,
 }: PendingApprovalTableProps) {
   const columns = useMemo(
     () => createPendingApprovalColumns({ canApprove, resolveApprovers, onApprove, onReject }),
@@ -175,6 +75,7 @@ export default function PendingApprovalTable({
       request={handleRequest}
       defaultPageSize={10}
       preferenceKey={preferenceKey}
+      refreshTrigger={refreshTrigger}
     />
   );
 }

@@ -5,12 +5,81 @@ import {
     postTenantHealingApprovalsIdReject,
 } from '@/services/generated/auto-healing/approvals';
 
+type ApprovalHistoryStatus = Exclude<AutoHealing.ApprovalStatus, 'pending'>;
+type ApprovalHistoryParams = {
+    page?: number;
+    page_size?: number;
+    flow_instance_id?: string;
+    status?: ApprovalHistoryStatus;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
+};
+
+const APPROVAL_HISTORY_STATUSES: ApprovalHistoryStatus[] = ['approved', 'rejected', 'expired'];
+
+function getApprovalSortValue(
+    item: AutoHealing.ApprovalTask,
+    sortBy?: string,
+) {
+    if (sortBy === 'decided_at') {
+        return Date.parse(item.decided_at || '') || 0;
+    }
+    return Date.parse(item.created_at || '') || 0;
+}
+
+function sortApprovalHistoryItems(
+    items: AutoHealing.ApprovalTask[],
+    sortBy?: string,
+    sortOrder: 'asc' | 'desc' = 'desc',
+) {
+    return [...items].sort((left, right) => {
+        const delta = getApprovalSortValue(left, sortBy) - getApprovalSortValue(right, sortBy);
+        return sortOrder === 'asc' ? delta : -delta;
+    });
+}
+
 export async function getApprovals(params?: {
     page?: number;
     page_size?: number;
+    flow_instance_id?: string;
     status?: AutoHealing.ApprovalStatus;
 }) {
     return getTenantHealingApprovals((params || {}) as GeneratedAutoHealing.getTenantHealingApprovalsParams) as Promise<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>;
+}
+
+export async function getApprovalHistory(params?: ApprovalHistoryParams) {
+    if (params?.status) {
+        return request<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>('/api/v1/tenant/healing/approvals', {
+            method: 'GET',
+            params,
+        });
+    }
+
+    const page = params?.page ?? 1;
+    const pageSize = params?.page_size ?? 20;
+    const mergedPageSize = page * pageSize;
+    const responses = await Promise.all(APPROVAL_HISTORY_STATUSES.map((status) => (
+        request<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>('/api/v1/tenant/healing/approvals', {
+            method: 'GET',
+            params: {
+                ...params,
+                page: 1,
+                page_size: mergedPageSize,
+                status,
+            },
+        })
+    )));
+    const mergedItems = sortApprovalHistoryItems(
+        responses.flatMap((response) => response.data || []),
+        params?.sort_by,
+        params?.sort_order,
+    );
+    const startIndex = (page - 1) * pageSize;
+
+    return {
+        data: mergedItems.slice(startIndex, startIndex + pageSize),
+        total: responses.reduce((sum, response) => sum + Number(response.total ?? response.data?.length ?? 0), 0),
+    } as AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>;
 }
 
 export async function getPendingApprovals(params?: {

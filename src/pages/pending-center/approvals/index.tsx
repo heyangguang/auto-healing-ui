@@ -1,47 +1,42 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useAccess } from '@umijs/max';
 import type { PendingApprovalRecord } from '../types';
-import PendingApprovalTable from '../PendingApprovalTable';
 import PendingApprovalDrawer from '../PendingApprovalDrawer';
 import { resolveApprovalApprovers } from '../shared';
+import { resolveApprovalActor } from '../taskApprovalShared';
+import TaskApprovalTable from '../TaskApprovalTable';
 import usePendingCenterUsers from '../usePendingCenterUsers';
 import useRefreshTrigger from '../useRefreshTrigger';
 import usePendingTaskActions from '../usePendingTaskActions';
+import useTabbedDetailState from '../useTabbedDetailState';
+
+type ApprovalTab = 'pending' | 'history';
 
 export default function PendingApprovals() {
   const access = useAccess();
-  const { refreshTrigger: refreshKey, triggerRefresh } = useRefreshTrigger();
   const userMap = usePendingCenterUsers();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [detail, setDetail] = useState<PendingApprovalRecord | null>(null);
+  const { activeTab, drawerOpen, detail, openDetail, closeDrawer, handleTabChange } = useTabbedDetailState<PendingApprovalRecord, ApprovalTab>('pending');
+  const { refreshTrigger, triggerRefresh } = useRefreshTrigger();
   const { handleApprove, handleReject } = usePendingTaskActions(triggerRefresh);
-
   const resolvedApprovers = useCallback((record: PendingApprovalRecord) => (
     resolveApprovalApprovers(record, userMap)
   ), [userMap]);
-
-  const openDetail = useCallback((record: PendingApprovalRecord) => {
-    setDetail(record);
-    setDrawerOpen(true);
-  }, []);
-
-  const closeDrawer = useCallback(() => {
-    setDrawerOpen(false);
-    setDetail(null);
-  }, []);
+  const resolvedActor = useCallback((actorId?: string | null) => (
+    resolveApprovalActor(actorId, userMap)
+  ), [userMap]);
 
   return (
     <>
-      <PendingApprovalTable
-        tableKey={`approvals-${refreshKey}`}
-        title="待审批任务"
-        description="查看待审批任务，执行批准或拒绝操作。"
+      <TaskApprovalTable
+        activeTab={activeTab}
         canApprove={access.canApprove}
+        onTabChange={handleTabChange}
+        refreshTrigger={refreshTrigger}
+        resolveActor={resolvedActor}
         resolveApprovers={resolvedApprovers}
         onApprove={handleApprove}
         onReject={handleReject}
         onRowClick={openDetail}
-        preferenceKey="pending_approvals_only"
       />
 
       <PendingApprovalDrawer
@@ -51,6 +46,7 @@ export default function PendingApprovals() {
         onClose={closeDrawer}
         onApprove={handleApprove}
         onReject={handleReject}
+        resolveActor={resolvedActor}
         resolveApprovers={resolvedApprovers}
       />
     </>

@@ -10,6 +10,7 @@ export interface PendingApprovalDrawerProps {
   onClose: () => void;
   onApprove: (record: PendingApprovalRecord) => void;
   onReject: (record: PendingApprovalRecord) => void;
+  resolveActor?: (actorId?: string | null) => string;
   resolveApprovers: (record: PendingApprovalRecord) => string;
 }
 
@@ -20,26 +21,29 @@ export default function PendingApprovalDrawer({
   onClose,
   onApprove,
   onReject,
+  resolveActor,
   resolveApprovers,
 }: PendingApprovalDrawerProps) {
+  const actionableDetail = detail && detail.status === 'pending' ? detail : null;
+
   return (
     <Drawer
       title="审批任务详情"
       open={open}
       onClose={onClose}
       size={600}
-      extra={detail ? (
+      extra={actionableDetail ? (
         <Space>
-          <Button type="primary" disabled={!canApprove} onClick={() => { onClose(); onApprove(detail); }}>
+          <Button type="primary" disabled={!canApprove} onClick={() => { onClose(); onApprove(actionableDetail); }}>
             批准
           </Button>
-          <Button danger disabled={!canApprove} onClick={() => { onClose(); onReject(detail); }}>
+          <Button danger disabled={!canApprove} onClick={() => { onClose(); onReject(actionableDetail); }}>
             拒绝
           </Button>
         </Space>
       ) : undefined}
     >
-      {detail ? <PendingApprovalDetailPanel detail={detail} resolveApprovers={resolveApprovers} /> : null}
+      {detail ? <PendingApprovalDetailPanel detail={detail} resolveActor={resolveActor} resolveApprovers={resolveApprovers} /> : null}
     </Drawer>
   );
 }

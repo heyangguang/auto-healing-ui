@@ -15,6 +15,7 @@ export interface PendingCenterDrawersProps {
   onReject: (record: PendingApprovalRecord) => void;
   onTrigger: (record: PendingTriggerRecord) => void;
   onDismiss: (record: PendingTriggerRecord) => void;
+  resolveActor: (actorId?: string | null) => string;
   resolveApprovers: (record: PendingApprovalRecord) => string;
 }
 
@@ -29,6 +30,7 @@ export default function PendingCenterDrawers({
   onReject,
   onTrigger,
   onDismiss,
+  resolveActor,
   resolveApprovers,
 }: PendingCenterDrawersProps) {
   if (activeTab === 'triggers') {
@@ -52,6 +54,7 @@ export default function PendingCenterDrawers({
       onClose={onClose}
       onApprove={onApprove}
       onReject={onReject}
+      resolveActor={resolveActor}
       resolveApprovers={resolveApprovers}
     />
   );

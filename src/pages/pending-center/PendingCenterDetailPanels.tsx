@@ -10,6 +10,7 @@ const { Text } = Typography;
 
 export interface PendingApprovalDetailPanelProps {
   detail: PendingApprovalRecord;
+  resolveActor?: (actorId?: string | null) => string;
   resolveApprovers: (record: PendingApprovalRecord) => string;
 }
 
@@ -23,12 +24,26 @@ function PendingRecordFooter({ id }: { id: string }) {
   );
 }
 
-function PendingApprovalBanner() {
-  const status = getApprovalStatusConfig('pending');
+function getApprovalBannerStyles(status?: string) {
+  if (status === 'approved') {
+    return { background: '#f6ffed', border: '#b7eb8f', color: '#389e0d' };
+  }
+  if (status === 'rejected') {
+    return { background: '#fff2f0', border: '#ffccc7', color: '#cf1322' };
+  }
+  if (status === 'expired') {
+    return { background: '#fafafa', border: '#d9d9d9', color: '#595959' };
+  }
+  return { background: '#fff7e6', border: '#ffd591', color: '#d46b08' };
+}
+
+function PendingApprovalBanner({ status: approvalStatus }: { status?: string }) {
+  const status = getApprovalStatusConfig(approvalStatus);
+  const styles = getApprovalBannerStyles(approvalStatus);
   return (
-    <div style={{ padding: '12px 16px', marginBottom: 16, background: '#fff7e6', border: '1px solid #ffd591', display: 'flex', alignItems: 'center', gap: 8 }}>
-      <ClockCircleOutlined style={{ color: '#fa8c16' }} />
-      <Text strong style={{ color: '#d46b08' }}>{status.text}</Text>
+    <div style={{ padding: '12px 16px', marginBottom: 16, background: styles.background, border: `1px solid ${styles.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <ClockCircleOutlined style={{ color: styles.color }} />
+      <Text strong style={{ color: styles.color }}>{status.text}</Text>
     </div>
   );
 }
@@ -37,7 +52,7 @@ function PendingApprovalSummary({
   detail,
   resolveApprovers,
 }: PendingApprovalDetailPanelProps) {
-  const status = getApprovalStatusConfig('pending');
+  const status = getApprovalStatusConfig(detail.status);
   return (
     <Descriptions column={2} size="small" labelStyle={{ color: '#8c8c8c', width: 90 }} style={{ marginBottom: 16 }}>
       <Descriptions.Item label="节点名称" span={2}>
@@ -51,19 +66,59 @@ function PendingApprovalSummary({
       </Descriptions.Item>
       <Descriptions.Item label="审批人">{resolveApprovers(detail)}</Descriptions.Item>
       <Descriptions.Item label="创建时间">{formatPendingCenterTime(detail.created_at)}</Descriptions.Item>
-      <Descriptions.Item label="更新时间">{formatPendingCenterTime(detail.updated_at)}</Descriptions.Item>
+      <Descriptions.Item label="更新时间">{formatPendingCenterTime(detail.updated_at || detail.decided_at)}</Descriptions.Item>
+    </Descriptions>
+  );
+}
+
+function PendingApprovalContent({ detail }: { detail: PendingApprovalRecord }) {
+  if (!detail.title && !detail.timeout_at && !detail.description) {
+    return null;
+  }
+
+  return (
+    <Descriptions column={2} size="small" bordered labelStyle={{ color: '#8c8c8c', width: 90 }} style={{ marginBottom: 16 }}>
+      {detail.title ? <Descriptions.Item label="审批标题">{detail.title}</Descriptions.Item> : null}
+      {detail.timeout_at ? <Descriptions.Item label="超时期限">{formatPendingCenterTime(detail.timeout_at)}</Descriptions.Item> : null}
+      {detail.description ? <Descriptions.Item label="说明备注" span={2}>{detail.description}</Descriptions.Item> : null}
+    </Descriptions>
+  );
+}
+
+function PendingApprovalDecision({
+  detail,
+  resolveActor,
+}: {
+  detail: PendingApprovalRecord;
+  resolveActor?: (actorId?: string | null) => string;
+}) {
+  if (detail.status === 'pending' && !detail.decided_at && !detail.decided_by && !detail.decision_comment) {
+    return null;
+  }
+
+  return (
+    <Descriptions title="审批结果" column={2} size="small" bordered labelStyle={{ color: '#8c8c8c', width: 90 }} style={{ marginBottom: 16 }}>
+      <Descriptions.Item label="审批状态">
+        <Tag color={getApprovalStatusConfig(detail.status).color}>{getApprovalStatusConfig(detail.status).text}</Tag>
+      </Descriptions.Item>
+      <Descriptions.Item label="审批时间">{formatPendingCenterTime(detail.decided_at)}</Descriptions.Item>
+      <Descriptions.Item label="审批人">{resolveActor?.(detail.decided_by) || detail.decided_by || '-'}</Descriptions.Item>
+      <Descriptions.Item label="审批意见">{detail.decision_comment || '-'}</Descriptions.Item>
     </Descriptions>
   );
 }
 
 export function PendingApprovalDetailPanel({
   detail,
+  resolveActor,
   resolveApprovers,
 }: PendingApprovalDetailPanelProps) {
   return (
     <>
-      <PendingApprovalBanner />
+      <PendingApprovalBanner status={detail.status} />
       <PendingApprovalSummary detail={detail} resolveApprovers={resolveApprovers} />
+      <PendingApprovalContent detail={detail} />
+      <PendingApprovalDecision detail={detail} resolveActor={resolveActor} />
       <PendingRecordFooter id={detail.id} />
     </>
   );

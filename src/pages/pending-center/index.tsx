@@ -4,6 +4,7 @@ import type { PendingApprovalRecord } from './types';
 import PendingCenterContent from './PendingCenterContent';
 import PendingCenterDrawers from './PendingCenterDrawers';
 import { resolveApprovalApprovers } from './shared';
+import { resolveApprovalActor } from './taskApprovalShared';
 import usePendingCenterUsers from './usePendingCenterUsers';
 import usePendingCenterViewState from './usePendingCenterViewState';
 import useRefreshTrigger from './useRefreshTrigger';
@@ -18,6 +19,7 @@ export default function PendingCenter() {
   const { handleApprove, handleReject } = usePendingTaskActions(triggerRefresh);
   const { handleTrigger, handleDismiss } = usePendingTriggerActions(triggerRefresh);
   const resolvedApprovers = useCallback((record: PendingApprovalRecord) => resolveApprovalApprovers(record, userMap), [userMap]);
+  const resolvedActor = useCallback((actorId?: string | null) => resolveApprovalActor(actorId, userMap), [userMap]);
 
   return (
     <>
@@ -45,6 +47,7 @@ export default function PendingCenter() {
         onReject={handleReject}
         onTrigger={handleTrigger}
         onDismiss={handleDismiss}
+        resolveActor={resolvedActor}
         resolveApprovers={resolvedApprovers}
       />
     </>

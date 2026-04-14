@@ -122,6 +122,11 @@ const HealingInstanceDetail: React.FC = () => {
         }
     };
 
+    const handleApprovalActionSuccess = useCallback(() => {
+        setNodeDetailVisible(false);
+        void refresh();
+    }, [refresh]);
+
     return (
         <div style={{ padding: 0, minHeight: 'calc(100vh - 120px)', background: '#f5f5f5' }}>
             {/* ==================== SubPageHeader（跟添加代码仓库页面对齐）==================== */}
@@ -199,8 +204,11 @@ const HealingInstanceDetail: React.FC = () => {
             />
 
             <NodeDetailDrawer
+                canApprove={Boolean(access.canApprove)}
+                flowInstanceId={id}
                 nodeLogs={nodeLogs}
                 onClose={() => setNodeDetailVisible(false)}
+                onApprovalActionSuccess={handleApprovalActionSuccess}
                 open={nodeDetailVisible}
                 resolvedNames={resolvedNames}
                 resolutionErrors={resolutionErrors}
