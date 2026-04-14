@@ -1,10 +1,11 @@
 import React from 'react';
-import { Button, Input, Space, Switch, Typography } from 'antd';
+import { Badge, Button, Input, Space, Switch, Typography } from 'antd';
 import {
     AppstoreOutlined,
     ArrowLeftOutlined,
     ClearOutlined,
     ExperimentOutlined,
+    SettingOutlined,
     SaveOutlined,
 } from '@ant-design/icons';
 
@@ -12,9 +13,11 @@ type FlowEditorHeaderProps = {
     autoCloseSourceIncident: boolean;
     canSave: boolean;
     flowName: string;
+    hasConfiguredCloseTemplate: boolean;
     hasFlowId: boolean;
     onAutoCloseChange: (value: boolean) => void;
     onBack: () => void;
+    onConfigureAutoClose: () => void;
     onLayout: () => void;
     onNameChange: (value: string) => void;
     onResetState: () => void;
@@ -26,9 +29,11 @@ export const FlowEditorHeader: React.FC<FlowEditorHeaderProps> = ({
     autoCloseSourceIncident,
     canSave,
     flowName,
+    hasConfiguredCloseTemplate,
     hasFlowId,
     onAutoCloseChange,
     onBack,
+    onConfigureAutoClose,
     onLayout,
     onNameChange,
     onResetState,
@@ -57,6 +62,16 @@ export const FlowEditorHeader: React.FC<FlowEditorHeaderProps> = ({
                     成功后自动关单
                 </Typography.Text>
                 <Switch checked={autoCloseSourceIncident} onChange={onAutoCloseChange} />
+                <Badge dot={autoCloseSourceIncident && !hasConfiguredCloseTemplate}>
+                    <Button
+                        icon={<SettingOutlined />}
+                        onClick={onConfigureAutoClose}
+                        size="small"
+                        type={hasConfiguredCloseTemplate ? 'default' : 'primary'}
+                    >
+                        配置策略
+                    </Button>
+                </Badge>
             </Space>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

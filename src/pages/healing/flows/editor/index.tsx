@@ -15,6 +15,7 @@ import {
 } from './flowEditorGraph';
 import { buildFlowPayload, validateExecutionNodes, validateFlowStructure } from './flowEditorPersistence';
 import { flowEditorNodeTypes } from './flowEditorConstants';
+import FlowClosePolicyModal from './FlowClosePolicyModal';
 import { FlowEditorHeader } from './FlowEditorHeader';
 import { FlowEditorWorkspace } from './FlowEditorWorkspace';
 import { useFlowDryRun } from './useFlowDryRun';
@@ -33,6 +34,8 @@ const FlowEditorInner: React.FC = () => {
     const [flowName, setFlowName] = useState('未命名流程');
     const [flowIsActive, setFlowIsActive] = useState(true);
     const [autoCloseSourceIncident, setAutoCloseSourceIncident] = useState(false);
+    const [closePolicy, setClosePolicy] = useState<AutoHealing.FlowClosePolicy | undefined>();
+    const [closePolicyOpen, setClosePolicyOpen] = useState(false);
     const [selectedNode, setSelectedNode] = useState<FlowEditorNode | null>(null);
     const [configOpen, setConfigOpen] = useState(false);
     const [dryRunOpen, setDryRunOpen] = useState(false);
@@ -69,6 +72,7 @@ const FlowEditorInner: React.FC = () => {
             setFlowName(mapped.flowName);
             setFlowIsActive(mapped.flowIsActive);
             setAutoCloseSourceIncident(mapped.autoCloseSourceIncident);
+            setClosePolicy(mapped.closePolicy);
             setNodes(mapped.nodes);
             setEdges(mapped.edges);
         } finally {
@@ -87,6 +91,7 @@ const FlowEditorInner: React.FC = () => {
         setFlowName(initialState.flowName);
         setFlowIsActive(initialState.flowIsActive);
         setAutoCloseSourceIncident(initialState.autoCloseSourceIncident);
+        setClosePolicy(initialState.closePolicy);
     }, [fetchFlow, id, setEdges, setNodes]);
 
     useEffect(() => {
@@ -196,7 +201,13 @@ const FlowEditorInner: React.FC = () => {
             message.warning(`节点 "${executionValidation.unavailableNodeLabels.join('", "')}" 的远程模板校验暂不可用，已继续保存`);
         }
 
-        const payload = buildFlowPayload(autoCloseSourceIncident, edges, flowIsActive, flowName, nodes);
+        if (autoCloseSourceIncident && !closePolicy?.solution_template_id) {
+            message.error('请先配置自动关单模板');
+            setClosePolicyOpen(true);
+            return;
+        }
+
+        const payload = buildFlowPayload(autoCloseSourceIncident, closePolicy, edges, flowIsActive, flowName, nodes);
         if (id) {
             await updateFlow(id, payload);
             message.success('保存成功');
@@ -205,7 +216,7 @@ const FlowEditorInner: React.FC = () => {
         const response = await createFlow(payload);
         message.success('创建成功');
         history.push(`/healing/flows/editor/${response.data.id}`);
-    }, [autoCloseSourceIncident, edges, flowIsActive, flowName, id, nodes]);
+    }, [autoCloseSourceIncident, closePolicy, edges, flowIsActive, flowName, id, nodes]);
 
     const handleLayout = useCallback(() => {
         const layoutedNodes = applyAutoLayout(nodes, edges);
@@ -230,9 +241,16 @@ const FlowEditorInner: React.FC = () => {
                         autoCloseSourceIncident={autoCloseSourceIncident}
                         canSave={id ? access.canUpdateFlow : access.canCreateFlow}
                         flowName={flowName}
+                        hasConfiguredCloseTemplate={Boolean(closePolicy?.solution_template_id)}
                         hasFlowId={Boolean(id)}
-                        onAutoCloseChange={setAutoCloseSourceIncident}
+                        onAutoCloseChange={(value) => {
+                            setAutoCloseSourceIncident(value);
+                            if (value && !closePolicy?.solution_template_id) {
+                                setClosePolicyOpen(true);
+                            }
+                        }}
                         onBack={() => history.push('/healing/flows')}
+                        onConfigureAutoClose={() => setClosePolicyOpen(true)}
                         onLayout={handleLayout}
                         onNameChange={setFlowName}
                         onResetState={handleResetState}
@@ -281,6 +299,16 @@ const FlowEditorInner: React.FC = () => {
                     />
                 </div>
             </Layout>
+            <FlowClosePolicyModal
+                open={closePolicyOpen}
+                value={closePolicy}
+                onCancel={() => setClosePolicyOpen(false)}
+                onSubmit={(value) => {
+                    setClosePolicy(value);
+                    setAutoCloseSourceIncident(true);
+                    setClosePolicyOpen(false);
+                }}
+            />
         </div>
     );
 };

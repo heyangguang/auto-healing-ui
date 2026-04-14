@@ -17,6 +17,7 @@ import type {
 
 type FlowGraphState = {
     autoCloseSourceIncident: boolean;
+    closePolicy?: AutoHealing.FlowClosePolicy;
     edges: FlowEditorEdge[];
     flowIsActive: boolean;
     flowName: string;
@@ -31,6 +32,7 @@ const LAYOUT_PADDING_Y = 30;
 export function createDefaultFlowGraph(onRetry: () => void): FlowGraphState {
     return {
         autoCloseSourceIncident: false,
+        closePolicy: undefined,
         edges: [],
         flowIsActive: true,
         flowName: DEFAULT_FLOW_NAME,
@@ -58,6 +60,7 @@ export function mapFlowResponseToGraph(
     const flowSettings = flow as AutoHealing.HealingFlow & { auto_close_source_incident?: boolean };
     return {
         autoCloseSourceIncident: flowSettings.auto_close_source_incident === true,
+        closePolicy: flow.close_policy,
         edges: (flow.edges || []).map((edge, index) => ({
             id: edge.id || `e${index}`,
             label: edge.label,

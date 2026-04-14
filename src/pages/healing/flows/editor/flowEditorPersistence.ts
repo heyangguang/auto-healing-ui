@@ -154,6 +154,7 @@ export async function validateExecutionNodes(
 
 export function buildFlowPayload(
     autoCloseSourceIncident: boolean,
+    closePolicy: AutoHealing.FlowClosePolicy | undefined,
     edges: FlowEditorEdge[],
     flowIsActive: boolean,
     flowName: string,
@@ -181,6 +182,7 @@ export function buildFlowPayload(
 
     return {
         auto_close_source_incident: autoCloseSourceIncident,
+        close_policy: autoCloseSourceIncident ? closePolicy : undefined,
         edges: edges.map((edge) => ({
             id: edge.id,
             source: edge.source,

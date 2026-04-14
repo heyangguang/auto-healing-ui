@@ -107,9 +107,19 @@ declare namespace AutoHealing {
         nodes: FlowNode[];
         edges: FlowEdge[];
         is_active: boolean;
+        auto_close_source_incident?: boolean;
+        close_policy?: FlowClosePolicy;
         created_by: UUID;
         created_at: string;
         updated_at?: string;
+    }
+
+    interface FlowClosePolicy {
+        enabled?: boolean;
+        trigger_on?: 'flow_success';
+        solution_template_id?: UUID;
+        default_close_status?: 'resolved' | 'closed';
+        default_close_code?: string;
     }
 
     interface FlowNode {
@@ -140,6 +150,8 @@ declare namespace AutoHealing {
         nodes?: FlowNode[];
         edges?: FlowEdge[];
         is_active?: boolean;
+        auto_close_source_incident?: boolean;
+        close_policy?: FlowClosePolicy;
     }
 
     interface UpdateFlowRequest {
@@ -148,6 +160,8 @@ declare namespace AutoHealing {
         nodes?: FlowNode[];
         edges?: FlowEdge[];
         is_active?: boolean;
+        auto_close_source_incident?: boolean;
+        close_policy?: FlowClosePolicy;
     }
 
     // ==================== Dry-Run ====================

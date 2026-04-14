@@ -1,4 +1,4 @@
-import { validateExecutionNodes } from './flowEditorPersistence';
+import { buildFlowPayload, validateExecutionNodes } from './flowEditorPersistence';
 import { getExecutionTask } from '@/services/auto-healing/execution';
 import { getPlaybook } from '@/services/auto-healing/playbooks';
 
@@ -104,5 +104,31 @@ describe('validateExecutionNodes', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+});
+
+describe('buildFlowPayload', () => {
+  it('includes close policy only when auto close is enabled', () => {
+    const payload = buildFlowPayload(
+      true,
+      {
+        enabled: true,
+        solution_template_id: 'template-1',
+        default_close_status: 'resolved',
+        default_close_code: 'auto_healed',
+      },
+      [],
+      true,
+      '自动关单流程',
+      [],
+    );
+
+    expect(payload.auto_close_source_incident).toBe(true);
+    expect(payload.close_policy).toEqual({
+      enabled: true,
+      solution_template_id: 'template-1',
+      default_close_status: 'resolved',
+      default_close_code: 'auto_healed',
+    });
   });
 });

@@ -22,4 +22,29 @@ describe('mapFlowResponseToGraph', () => {
         expect(mapped.nodes[0]?.data.task_template_id).toBe('task-1');
         expect(mapped.nodes[0]?.data.task_template_name).toBe('磁盘恢复模板');
     });
+
+    it('maps close policy from flow response', () => {
+        const mapped = mapFlowResponseToGraph({
+            id: 'flow-2',
+            name: '自动关单流程',
+            is_active: true,
+            auto_close_source_incident: true,
+            close_policy: {
+                enabled: true,
+                solution_template_id: 'template-1',
+                default_close_status: 'resolved',
+                default_close_code: 'auto_healed',
+            },
+            nodes: [],
+            edges: [],
+        } as unknown as AutoHealing.HealingFlow, jest.fn());
+
+        expect(mapped.autoCloseSourceIncident).toBe(true);
+        expect(mapped.closePolicy).toEqual({
+            enabled: true,
+            solution_template_id: 'template-1',
+            default_close_status: 'resolved',
+            default_close_code: 'auto_healed',
+        });
+    });
 });
