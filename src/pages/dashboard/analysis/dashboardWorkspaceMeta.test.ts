@@ -29,7 +29,7 @@ describe('dashboardWorkspaceMeta', () => {
     expect(isLocalDefaultWorkspace(workspace)).toBe(true);
     expect(canEditDashboardWorkspace(workspace, fullPermissions)).toBe(true);
     expect(canDeleteDashboardWorkspace(workspace, 2, fullPermissions)).toBe(false);
-    expect(getWorkspaceBadges(workspace)).toEqual([{ color: 'gold', label: '本地默认' }]);
+    expect(getWorkspaceBadges(workspace, fullPermissions)).toEqual([{ color: 'gold', label: '本地默认' }]);
   });
 
   it('allows workspace managers to edit system workspaces even when backend marks them readonly', () => {
