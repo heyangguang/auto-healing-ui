@@ -27,9 +27,10 @@ const ChannelRetrySection: React.FC<ChannelRetrySectionProps> = ({ channelType }
             )}
 
             <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                     <Form.Item<ChannelFormValues> label="最大重试次数" name="max_retries" initialValue={3}>
                         <Select
+                            className="channel-form-control-md"
                             options={[
                                 { value: 0, label: '不重试' },
                                 { value: 1, label: '1 次' },
@@ -39,9 +40,9 @@ const ChannelRetrySection: React.FC<ChannelRetrySectionProps> = ({ channelType }
                         />
                     </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} md={12}>
                     <Form.Item<ChannelFormValues> label="速率限制 (条/分)" name="rate_limit_per_minute">
-                        <InputNumber min={1} style={{ width: '100%' }} placeholder="默认无限制" />
+                        <InputNumber className="channel-form-control-md" min={1} placeholder="默认无限制" />
                     </Form.Item>
                 </Col>
             </Row>
@@ -55,10 +56,10 @@ const ChannelRetrySection: React.FC<ChannelRetrySectionProps> = ({ channelType }
 
                     return (
                         <Form.Item label="重试间隔配置 (分钟)">
-                            <div style={{ display: 'flex', gap: 16 }}>
+                            <div className="channel-retry-intervals">
                                 {Array.from({ length: count }).map((_, index) => (
-                                    <div key={`retry-${index + 1}`} style={{ display: 'flex', alignItems: 'center' }}>
-                                        <span style={{ marginRight: 8, fontSize: 12, color: '#8c8c8c', whiteSpace: 'nowrap' }}>
+                                    <div key={`retry-${index + 1}`} className="channel-retry-interval">
+                                        <span className="channel-retry-interval-label">
                                             第 {index + 1} 次:
                                         </span>
                                         <Form.Item<ChannelFormValues>
@@ -67,7 +68,7 @@ const ChannelRetrySection: React.FC<ChannelRetrySectionProps> = ({ channelType }
                                             rules={[{ required: true, message: '必填' }]}
                                             noStyle
                                         >
-                                            <InputNumber min={1} max={1440} style={{ width: 110 }} />
+                                            <InputNumber className="channel-form-control-sm" min={1} max={1440} />
                                         </Form.Item>
                                     </div>
                                 ))}

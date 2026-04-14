@@ -1,33 +1,6 @@
 import React from 'react';
-import { AppstoreOutlined, FlagOutlined, ThunderboltOutlined } from '@ant-design/icons';
-
-export type EventTypeConfig = {
-    bg: string;
-    color: string;
-    icon: React.ReactNode;
-    label: string;
-};
-
-export const EVENT_TYPE_CONFIG: Record<AutoHealing.EventType, EventTypeConfig> = {
-    execution_result: {
-        icon: <ThunderboltOutlined />,
-        color: '#faad14',
-        label: 'EXECUTION',
-        bg: '#fffbe6',
-    },
-    alert: {
-        icon: <FlagOutlined />,
-        color: '#ff4d4f',
-        label: 'ALERT',
-        bg: '#fff1f0',
-    },
-    execution_started: {
-        icon: <AppstoreOutlined />,
-        color: '#13c2c2',
-        label: 'STARTED',
-        bg: '#e6fffb',
-    },
-};
+import { getChannelTypeOptions } from '@/constants/notificationDicts';
+import { getNotificationEventTypeConfig, getNotificationEventTypeOptions } from '@/constants/notificationEventDicts';
 
 export const FORMAT_COLORS: Record<string, string> = {
     text: 'default',
@@ -53,10 +26,7 @@ export const NOTIFICATION_TEMPLATE_COLUMNS = [
         columnKey: 'event_type',
         columnTitle: '事件类型',
         dataIndex: 'event_type',
-        headerFilters: (Object.keys(EVENT_TYPE_CONFIG) as AutoHealing.EventType[]).map((key) => ({
-            label: EVENT_TYPE_CONFIG[key].label,
-            value: key,
-        })),
+        headerFilters: getNotificationEventTypeOptions(),
     },
     {
         columnKey: 'status',
@@ -81,11 +51,7 @@ export const NOTIFICATION_TEMPLATE_COLUMNS = [
         columnKey: 'channel_type',
         columnTitle: '渠道类型',
         dataIndex: 'channel_type',
-        headerFilters: [
-            { label: 'Webhook', value: 'webhook' },
-            { label: 'Email', value: 'email' },
-            { label: 'DingTalk', value: 'dingtalk' },
-        ],
+        headerFilters: getChannelTypeOptions('filter'),
     },
 ];
 
@@ -95,15 +61,12 @@ export const TEMPLATE_SORT_OPTIONS = [
     { value: 'name', label: '名称' },
 ];
 
-export const EVENT_TYPE_OPTIONS = (Object.keys(EVENT_TYPE_CONFIG) as AutoHealing.EventType[]).map((key) => ({
-    label: EVENT_TYPE_CONFIG[key].label,
-    value: key,
-}));
+export const EVENT_TYPE_OPTIONS = getNotificationEventTypeOptions();
+
+export const getTemplateEventTypeConfig = getNotificationEventTypeConfig;
 
 export const CHANNEL_OPTIONS = [
-    { label: 'Webhook', value: 'webhook' },
-    { label: 'Email 邮件', value: 'email' },
-    { label: 'DingTalk 钉钉', value: 'dingtalk' },
+    ...getChannelTypeOptions('template'),
 ];
 
 export const FORMAT_OPTIONS = [

@@ -71,6 +71,38 @@ describe('channel form helpers', () => {
     });
   });
 
+  it('builds wecom and slack payloads with their dedicated config fields', () => {
+    expect(buildChannelPayload({
+      isEdit: false,
+      originalConfig: {},
+      webhookAuthType: 'headers',
+      values: {
+        name: 'wecom',
+        type: 'wecom',
+        webhook_url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test',
+      },
+    }).config).toEqual({
+      webhook_url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test',
+    });
+
+    expect(buildChannelPayload({
+      isEdit: false,
+      originalConfig: {},
+      webhookAuthType: 'headers',
+      values: {
+        name: 'slack',
+        type: 'slack',
+        webhook_url: 'https://hooks.slack.com/services/a/b/c',
+        channel: '#ops',
+        icon_emoji: ':robot_face:',
+      },
+    }).config).toEqual({
+      webhook_url: 'https://hooks.slack.com/services/a/b/c',
+      channel: '#ops',
+      icon_emoji: ':robot_face:',
+    });
+  });
+
   it('blocks risky config edits when required email config is missing', () => {
     const touched = new Set(['smtp_host']);
     const form: MockForm = {

@@ -13,6 +13,22 @@ import {
 
 const { Text } = Typography;
 
+const getEmptyRecipientText = (channelType?: string) => {
+    switch (channelType) {
+        case 'webhook':
+            return '远程终端';
+        case 'dingtalk':
+        case 'wecom':
+            return '群组机器人';
+        case 'slack':
+            return '工作区频道';
+        case 'teams':
+            return '团队频道';
+        default:
+            return '无指定接收者';
+    }
+};
+
 interface NotificationRecordDetailDrawerProps {
     open: boolean;
     record: NotificationRecord | null;
@@ -66,7 +82,7 @@ const NotificationRecordDetailDrawer: React.FC<NotificationRecordDetailDrawerPro
                         <Descriptions.Item label="接收者" span={2}>
                             {record.recipients && record.recipients.length > 0
                                 ? record.recipients.join(', ')
-                                : <Text type="secondary">{record.channel?.type === 'webhook' ? '远程终端' : record.channel?.type === 'dingtalk' ? '群组机器人' : '无指定接收者'}</Text>}
+                                : <Text type="secondary">{getEmptyRecipientText(record.channel?.type)}</Text>}
                         </Descriptions.Item>
                         <Descriptions.Item label="通知主题" span={2}><Text strong>{record.subject || '(无主题)'}</Text></Descriptions.Item>
                         {record.sent_at && <Descriptions.Item label="发送时间" span={2}>{formatFullTime(record.sent_at)}</Descriptions.Item>}

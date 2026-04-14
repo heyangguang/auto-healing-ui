@@ -16,6 +16,8 @@ export const buildNotificationRecordColumns = (options: {
     channels: AutoHealing.NotificationChannel[];
     onOpenDetail: (record: NotificationRecord) => void;
     onOpenExecution: (runId: string) => void;
+    onOpenFlow: (flowInstanceId: string) => void;
+    onOpenIncident: (incidentId: string) => void;
 }): StandardColumnDef<NotificationRecord>[] => [
     {
         columnKey: 'status',
@@ -47,7 +49,7 @@ export const buildNotificationRecordColumns = (options: {
                     <Avatar size={28} style={{ background: config.bg, color: config.color }} icon={config.icon} />
                     <div style={{ lineHeight: 1.3 }}>
                         <div style={{ fontWeight: 500 }}>{record.channel?.name || '未知渠道'}</div>
-                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>{config.label}</div>
+                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>{config.labelCN}</div>
                     </div>
                 </Space>
             );
@@ -55,30 +57,78 @@ export const buildNotificationRecordColumns = (options: {
     },
     {
         columnKey: 'task',
-        columnTitle: '关联任务',
+        columnTitle: '关联对象',
         width: 180,
         render: (_value, record) => {
             const executionRun = record.execution_run;
             const executionRunId = record.execution_run_id;
-            if (!executionRun?.task?.name || !executionRunId) return <Text type="secondary">-</Text>;
-            const triggeredByConfig = getTriggeredByConfig(executionRun.triggered_by);
-            return (
-                <div style={{ lineHeight: 1.4 }}>
-                    <Tooltip title="点击查看执行详情">
-                        <a
-                            onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                options.onOpenExecution(executionRunId);
-                            }}
-                            style={{ fontWeight: 500, cursor: 'pointer' }}
-                        >
-                            {executionRun.task.name}
-                        </a>
-                    </Tooltip>
-                    <div><Tag style={{ margin: 0, fontSize: 10 }} color={triggeredByConfig.color}>{triggeredByConfig.label}</Tag></div>
-                </div>
-            );
+            if (executionRun?.task?.name && executionRunId) {
+                const triggeredByConfig = getTriggeredByConfig(executionRun.triggered_by);
+                return (
+                    <div style={{ lineHeight: 1.4 }}>
+                        <Tooltip title="点击查看执行详情">
+                            <a
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    options.onOpenExecution(executionRunId);
+                                }}
+                                style={{ fontWeight: 500, cursor: 'pointer' }}
+                            >
+                                {executionRun.task.name}
+                            </a>
+                        </Tooltip>
+                        <div><Tag style={{ margin: 0, fontSize: 10 }} color={triggeredByConfig.color}>{triggeredByConfig.label}</Tag></div>
+                    </div>
+                );
+            }
+            if (record.workflow_instance_id) {
+                const label = record.workflow_instance?.flow_name || `流程实例 ${record.workflow_instance_id.slice(0, 8)}`;
+                return (
+                    <div style={{ lineHeight: 1.4 }}>
+                        <Tooltip title="点击查看流程实例详情">
+                            <a
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    options.onOpenFlow(record.workflow_instance_id as unknown as string);
+                                }}
+                                style={{ fontWeight: 500, cursor: 'pointer' }}
+                            >
+                                {label}
+                            </a>
+                        </Tooltip>
+                        <div><Tag style={{ margin: 0, fontSize: 10 }} color="purple">自愈流程</Tag></div>
+                    </div>
+                );
+            }
+            if (record.incident_id) {
+                const label = record.incident?.title || `工单 ${record.incident_id.slice(0, 8)}`;
+                return (
+                    <div style={{ lineHeight: 1.4 }}>
+                        <Tooltip title="点击查看工单详情">
+                            <a
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    options.onOpenIncident(record.incident_id as unknown as string);
+                                }}
+                                style={{ fontWeight: 500, cursor: 'pointer' }}
+                            >
+                                {label}
+                            </a>
+                        </Tooltip>
+                        <div><Tag style={{ margin: 0, fontSize: 10 }} color="orange">工单事件</Tag></div>
+                    </div>
+                );
+            }
+            if (record.template?.event_type === 'flow_result' || record.template?.event_type === 'approval_required') {
+                return <Tag style={{ margin: 0, fontSize: 10 }} color="purple">自愈流程</Tag>;
+            }
+            if (record.template?.event_type === 'manual_notification' || !record.template_id) {
+                return <Text type="secondary">手动通知</Text>;
+            }
+            return <Text type="secondary">系统通知</Text>;
         },
     },
     {

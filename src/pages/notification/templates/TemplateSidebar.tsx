@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Empty, Spin, Tag, Typography } from 'antd';
-import { EVENT_TYPE_CONFIG } from './notificationTemplateConstants';
+import { getTemplateEventTypeConfig } from './notificationTemplateConstants';
 
 const { Text } = Typography;
 
@@ -42,7 +42,7 @@ const TemplateSidebar: React.FC<TemplateSidebarProps> = ({
                 <>
                     <div>
                         {templates.map((template) => {
-                            const typeConfig = EVENT_TYPE_CONFIG[template.event_type] || {};
+                            const typeConfig = getTemplateEventTypeConfig(template.event_type || '');
                             const isSelected = template.id === selectedId;
 
                             return (
@@ -52,8 +52,8 @@ const TemplateSidebar: React.FC<TemplateSidebarProps> = ({
                                     onClick={() => onSelect(template.id)}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                                        <Text
-                                            ellipsis
+                                            <Text
+                                                ellipsis
                                             strong
                                             style={{ color: isSelected ? '#1890ff' : '#262626', maxWidth: 180 }}
                                         >
@@ -66,7 +66,7 @@ const TemplateSidebar: React.FC<TemplateSidebarProps> = ({
                                             <span style={{ color: typeConfig.color, fontSize: 12 }}>{typeConfig.icon}</span>
                                         )}
                                         <Tag style={{ margin: 0, fontSize: 10, padding: '0 4px' }} variant="filled">
-                                            {typeConfig.label || template.event_type}
+                                            {typeConfig.labelCN || template.event_type}
                                         </Tag>
                                         <Tag color="default" style={{ margin: 0, fontSize: 10, padding: '0 4px' }} variant="filled">
                                             {template.format}

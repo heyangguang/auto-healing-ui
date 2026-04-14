@@ -1,6 +1,7 @@
 import React from 'react';
 import { Empty, Input, Tabs, Tag, Typography } from 'antd';
 import { SearchOutlined, SendOutlined } from '@ant-design/icons';
+import { formatChannelTypeDisplayList, getChannelTypeDisplayLabel } from '@/constants/notificationDicts';
 import type { ChannelOption, TemplateOption } from './types';
 
 const { Text } = Typography;
@@ -43,7 +44,7 @@ const SelectorModalContent: React.FC<SelectorModalContentProps> = ({
             { key: 'all', label: `全部 (${channels.length})` },
             ...channelTypes.map((type) => ({
                 key: type,
-                label: `${type} (${channels.filter((c) => c.type === type).length})`,
+                label: `${getChannelTypeDisplayLabel(type)} (${channels.filter((c) => c.type === type).length})`,
             })),
         ];
 
@@ -90,11 +91,11 @@ const SelectorModalContent: React.FC<SelectorModalContentProps> = ({
                                     <div>
                                         <div style={{ fontWeight: 500 }}>{c.name}</div>
                                         <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
-                                            {c.type}
+                                            {getChannelTypeDisplayLabel(c.type)}
                                         </div>
                                     </div>
                                 </div>
-                                <Tag style={{ margin: 0 }}>{c.type}</Tag>
+                                <Tag style={{ margin: 0 }}>{getChannelTypeDisplayLabel(c.type)}</Tag>
                             </div>
                         ))
                     )}
@@ -108,7 +109,7 @@ const SelectorModalContent: React.FC<SelectorModalContentProps> = ({
             <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                     已选渠道：<Text strong>{getChannelName(selectedChannel || '')}</Text>
-                    <Tag style={{ marginLeft: 8, fontSize: 10 }}>{getChannelType(selectedChannel || '')}</Tag>
+                    <Tag style={{ marginLeft: 8, fontSize: 10 }}>{getChannelTypeDisplayLabel(getChannelType(selectedChannel || ''))}</Tag>
                 </Text>
             </div>
             <Input
@@ -144,7 +145,7 @@ const SelectorModalContent: React.FC<SelectorModalContentProps> = ({
                                 <div style={{ fontWeight: 500 }}>{t.name}</div>
                                 {t.supported_channels?.length ? (
                                     <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
-                                        支持: {t.supported_channels.join(', ')}
+                                        支持: {formatChannelTypeDisplayList(t.supported_channels, ', ')}
                                     </div>
                                 ) : null}
                             </div>

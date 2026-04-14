@@ -133,7 +133,7 @@ describe('auto-healing notification service', () => {
       .mockResolvedValueOnce({ ok: true })
       .mockResolvedValueOnce({ ok: true })
       .mockResolvedValueOnce({ ok: true })
-      .mockResolvedValueOnce({ subject: 'Preview', body: 'Body' })
+      .mockResolvedValueOnce({ data: { subject: 'Preview', body: 'Body' } })
       .mockResolvedValueOnce({ sent_count: 1, failed_count: 0, results: [] })
       .mockResolvedValueOnce({ ok: true })
       .mockResolvedValueOnce({ ok: true });

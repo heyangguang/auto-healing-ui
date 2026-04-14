@@ -17,7 +17,7 @@ import {
     getChannels, deleteChannel, testChannel, updateChannel
 } from '@/services/auto-healing/notification';
 import './index.css';
-import { getChannelTypeConfig } from '@/constants/notificationDicts';
+import { getChannelTypeConfig, getChannelTypeOptions } from '@/constants/notificationDicts';
 import NotificationChannelCard from './NotificationChannelCard';
 import NotificationChannelDetailDrawer from './NotificationChannelDetailDrawer';
 
@@ -178,11 +178,7 @@ const NotificationChannelsPage: React.FC = () => {
                     columnKey: 'type',
                     columnTitle: '渠道类型',
                     dataIndex: 'type',
-                    headerFilters: [
-                        { label: 'Webhook', value: 'webhook' },
-                        { label: '邮件', value: 'email' },
-                        { label: '钉钉', value: 'dingtalk' },
-                    ],
+                    headerFilters: getChannelTypeOptions('filter'),
                 },
             ]}
             onSearch={handleSearchChange}

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { Button, Modal, Space, Tag, message } from 'antd';
+import { getChannelTypeDisplayLabel } from '@/constants/notificationDicts';
 import SelectorModalContent from './SelectorModalContent';
 import TriggerCard from './TriggerCard';
 import { TRIGGERS } from './constants';
@@ -82,7 +83,11 @@ const NotificationSelector: React.FC<NotificationSelectorProps> = ({
         if (activeTab !== 'all') list = list.filter((c) => c.type === activeTab);
         if (searchText) {
             const lower = searchText.toLowerCase();
-            list = list.filter((c) => c.name.toLowerCase().includes(lower) || c.type.toLowerCase().includes(lower));
+            list = list.filter((c) => (
+                c.name.toLowerCase().includes(lower)
+                || c.type.toLowerCase().includes(lower)
+                || getChannelTypeDisplayLabel(c.type).toLowerCase().includes(lower)
+            ));
         }
         return list;
     }, [channels, activeTab, searchText]);

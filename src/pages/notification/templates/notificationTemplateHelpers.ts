@@ -1,3 +1,6 @@
+import { isKnownNotificationChannelType } from '@/constants/notificationDicts';
+import { isKnownNotificationEventType } from '@/constants/notificationEventDicts';
+
 export type NotificationTemplateStatusFilter = 'all' | 'active' | 'inactive';
 
 type NotificationTemplateAdvancedSearch = {
@@ -36,9 +39,51 @@ export const DEFAULT_TEMPLATE_FORM_VALUES = {
 } as const;
 
 export const buildPreviewTemplateVariables = () => ({
-    execution: { status: 'success', status_emoji: '✅', duration: '1m 20s' },
-    task: { name: 'Demo Task', target_hosts: '192.168.1.10', host_count: 5 },
+    execution: {
+        run_id: 'run-demo-001',
+        status: 'success',
+        status_emoji: '✅',
+        duration: '1m 20s',
+        duration_seconds: 80,
+        triggered_by: 'manual',
+        trigger_type: 'manual',
+        started_at: '2026-04-14 23:20:00',
+        completed_at: '2026-04-14 23:21:20',
+        exit_code: 0,
+    },
+    task: {
+        id: 'task-demo-001',
+        name: 'Demo Task',
+        target_hosts: '192.168.1.10',
+        host_count: 5,
+        executor_type: 'local',
+    },
+    repository: {
+        id: 'repo-demo-001',
+        name: 'Fault Recovery Suite',
+        url: 'https://git.example.com/ops/fault-recovery-suite.git',
+        branch: 'main',
+        playbook: 'playbooks/recover.yml',
+    },
+    stats: {
+        ok: 5,
+        changed: 2,
+        failed: 0,
+        unreachable: 0,
+        skipped: 1,
+    },
+    error: {
+        message: '示例错误信息',
+        host: '192.168.1.10',
+    },
+    system: {
+        name: 'Auto-Healing',
+        url: 'http://192.168.31.66:8000',
+        version: 'v1',
+    },
     timestamp: new Date().toLocaleString(),
+    date: '2026-04-14',
+    time: '23:20:00',
 });
 
 export const hasFormErrorFields = (error: unknown): error is { errorFields: unknown[] } =>
@@ -77,7 +122,7 @@ export const buildTemplateFilterParams = (options: {
     if (options.searchText.trim()) {
         params.name = options.searchText.trim();
     }
-    if (options.filterEventType === 'execution_result' || options.filterEventType === 'execution_started' || options.filterEventType === 'alert') {
+    if (isKnownNotificationEventType(options.filterEventType)) {
         params.event_type = options.filterEventType;
     }
     if (options.filterStatus === 'active' || options.filterStatus === 'inactive') {
@@ -86,7 +131,7 @@ export const buildTemplateFilterParams = (options: {
     if (options.filterFormat === 'text' || options.filterFormat === 'markdown' || options.filterFormat === 'html') {
         params.format = options.filterFormat;
     }
-    if (options.filterChannel === 'webhook' || options.filterChannel === 'dingtalk' || options.filterChannel === 'email') {
+    if (isKnownNotificationChannelType(options.filterChannel)) {
         params.supported_channel = options.filterChannel;
     }
 

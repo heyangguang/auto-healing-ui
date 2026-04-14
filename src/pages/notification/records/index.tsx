@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { message } from 'antd';
+import { history } from '@umijs/max';
 import { getNotifications } from '@/services/auto-healing/notification';
-import { getExecutionRun } from '@/services/auto-healing/execution';
+import { getExecutionRun } from '@/services/auto-healing/executionRuns';
 import StandardTable from '@/components/StandardTable';
 import { extractErrorMsg } from '@/utils/errorMsg';
 import './index.css';
@@ -79,6 +80,8 @@ const NotificationRecords: React.FC = () => {
         channels,
         onOpenDetail: handleViewDetail,
         onOpenExecution: handleOpenExecution,
+        onOpenFlow: (flowInstanceId) => history.push(`/healing/instances/${flowInstanceId}`),
+        onOpenIncident: (incidentId) => history.push(`/incidents/${incidentId}`),
     });
 
     return (

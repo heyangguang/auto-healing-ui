@@ -55,7 +55,7 @@ const NotificationChannelDetailDrawer: React.FC<NotificationChannelDetailDrawerP
             <Card size="small" style={{ marginBottom: 16 }}>
                 <Descriptions column={2} size="small" bordered>
                     <Descriptions.Item label="类型">
-                        <Tag color={typeConfig.color}>{typeConfig.label}</Tag>
+                        <Tag color={typeConfig.color}>{typeConfig.labelCN}</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="状态">
                         <Tag color={channel.is_active ? 'success' : 'error'}>

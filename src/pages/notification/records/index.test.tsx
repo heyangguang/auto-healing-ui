@@ -16,7 +16,7 @@ jest.mock('@/services/auto-healing/notification', () => ({
   getNotificationStats: jest.fn(),
 }));
 
-jest.mock('@/services/auto-healing/execution', () => ({
+jest.mock('@/services/auto-healing/executionRuns', () => ({
   getExecutionRun: jest.fn(),
 }));
 

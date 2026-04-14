@@ -21,6 +21,10 @@ export type ChannelFormValues = IntervalFields & {
     username?: string;
     password?: string;
     headers?: string;
+    channel?: string;
+    icon_emoji?: string;
+    icon_url?: string;
+    theme_color?: string;
     smtp_host?: string;
     smtp_port?: number;
     from_address?: string;
@@ -40,12 +44,10 @@ const parseWebhookHeaders = (headersText?: string) => {
     if (!headersText) {
         return undefined;
     }
-
     const parsed = JSON.parse(headersText) as unknown;
     if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
         throw new Error('自定义 Headers 必须是 JSON 对象');
     }
-
     return parsed as Record<string, string>;
 };
 
@@ -60,19 +62,15 @@ const buildWebhookConfig = (
         method: pickExistingValue(values.method, originalConfig.method, isEdit),
         timeout_seconds: pickExistingValue(values.timeout_seconds, originalConfig.timeout_seconds, isEdit),
     };
-
     if (webhookAuthType === 'headers') {
         const headers = values.headers
             ? parseWebhookHeaders(values.headers)
             : pickExistingValue(undefined, originalConfig.headers, isEdit);
-
         if (headers) {
             config.headers = headers;
         }
-
         return config;
     }
-
     config.username = pickExistingValue(values.username, originalConfig.username, isEdit);
     config.password = pickExistingValue(values.password, originalConfig.password, isEdit);
     return config;
@@ -92,6 +90,23 @@ const buildDingTalkConfig = (values: ChannelFormValues, originalConfig: ChannelC
     secret: pickExistingValue(values.secret, originalConfig.secret, isEdit),
 });
 
+const buildWeComConfig = (values: ChannelFormValues, originalConfig: ChannelConfig, isEdit: boolean) => ({
+    webhook_url: pickExistingValue(values.webhook_url, originalConfig.webhook_url, isEdit),
+});
+
+const buildSlackConfig = (values: ChannelFormValues, originalConfig: ChannelConfig, isEdit: boolean) => ({
+    webhook_url: pickExistingValue(values.webhook_url, originalConfig.webhook_url, isEdit),
+    channel: pickExistingValue(values.channel, originalConfig.channel, isEdit),
+    username: pickExistingValue(values.username, originalConfig.username, isEdit),
+    icon_emoji: pickExistingValue(values.icon_emoji, originalConfig.icon_emoji, isEdit),
+    icon_url: pickExistingValue(values.icon_url, originalConfig.icon_url, isEdit),
+});
+
+const buildTeamsConfig = (values: ChannelFormValues, originalConfig: ChannelConfig, isEdit: boolean) => ({
+    webhook_url: pickExistingValue(values.webhook_url, originalConfig.webhook_url, isEdit),
+    theme_color: pickExistingValue(values.theme_color, originalConfig.theme_color, isEdit),
+});
+
 const compactConfig = (config: ChannelConfig) =>
     Object.fromEntries(
         Object.entries(config).filter(([, value]) => value !== undefined),
@@ -101,10 +116,8 @@ export const validateEmailRecipients = async (_rule: unknown, value?: string[]) 
     if (!value?.length) {
         return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const invalidEmails = value.filter((item) => !emailRegex.test(item));
-
     if (invalidEmails.length > 0) {
         throw new Error(`格式无效: ${invalidEmails.join(', ')}`);
     }
@@ -128,6 +141,10 @@ export const applyChannelToForm = (
         timeout_seconds: originalConfig.timeout_seconds,
         username: originalConfig.username,
         headers: undefined,
+        channel: originalConfig.channel,
+        icon_emoji: originalConfig.icon_emoji,
+        icon_url: originalConfig.icon_url,
+        theme_color: originalConfig.theme_color,
         smtp_host: originalConfig.smtp_host,
         smtp_port: originalConfig.smtp_port,
         from_address: originalConfig.from_address,
@@ -158,6 +175,9 @@ export const buildChannelPayload = (options: {
         webhook: () => buildWebhookConfig(values, originalConfig, isEdit, webhookAuthType),
         email: () => buildEmailConfig(values, originalConfig, isEdit),
         dingtalk: () => buildDingTalkConfig(values, originalConfig, isEdit),
+        wecom: () => buildWeComConfig(values, originalConfig, isEdit),
+        slack: () => buildSlackConfig(values, originalConfig, isEdit),
+        teams: () => buildTeamsConfig(values, originalConfig, isEdit),
     };
 
     const maxRetries = values.max_retries ?? 3;
@@ -229,9 +249,14 @@ export const assertSafeChannelConfigUpdate = (options: {
         return;
     }
 
-    ensureKnownValues('钉钉渠道配置不完整', [
+    const channelLabels: Record<Exclude<AutoHealing.ChannelType, 'webhook' | 'email'>, string> = {
+        dingtalk: '钉钉',
+        wecom: '企业微信',
+        slack: 'Slack',
+        teams: 'Teams',
+    };
+    ensureKnownValues(`${channelLabels[channelType]}渠道配置不完整`, [
         { field: 'Webhook URL', value: values.webhook_url ?? originalConfig.webhook_url },
-        { field: '加签密钥', value: values.secret ?? originalConfig.secret },
     ]);
 };
 
@@ -240,6 +265,13 @@ export const hasTouchedChannelConfigFields = (
     channelType: AutoHealing.ChannelType,
     webhookAuthType: WebhookAuthType,
 ) => {
+    const channelFields: Partial<Record<AutoHealing.ChannelType, Array<keyof ChannelFormValues>>> = {
+        email: ['smtp_host', 'smtp_port', 'username', 'password', 'from_address', 'use_tls'],
+        dingtalk: ['webhook_url', 'secret'],
+        wecom: ['webhook_url'],
+        slack: ['webhook_url', 'channel', 'username', 'icon_emoji', 'icon_url'],
+        teams: ['webhook_url', 'theme_color'],
+    };
     if (channelType === 'webhook') {
         const baseFields: Array<keyof ChannelFormValues> = ['webhook_url', 'method', 'timeout_seconds'];
         const authFields: Array<keyof ChannelFormValues> = webhookAuthType === 'headers'
@@ -248,13 +280,7 @@ export const hasTouchedChannelConfigFields = (
         return [...baseFields, ...authFields].some((field) => form.isFieldTouched(field));
     }
 
-    if (channelType === 'email') {
-        return ['smtp_host', 'smtp_port', 'username', 'password', 'from_address', 'use_tls']
-            .some((field) => form.isFieldTouched(field as keyof ChannelFormValues));
-    }
-
-    return ['webhook_url', 'secret']
-        .some((field) => form.isFieldTouched(field as keyof ChannelFormValues));
+    return (channelFields[channelType] || []).some((field) => form.isFieldTouched(field));
 };
 
 export const getLoadedWebhookAuthType = (channel: ChannelDetail): WebhookAuthType => {

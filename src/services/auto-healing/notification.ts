@@ -24,9 +24,13 @@ export type NotificationChannelConfig = {
     webhook_url?: string;
     method?: string;
     timeout_seconds?: number;
+    channel?: string;
     username?: string;
     password?: string;
     headers?: Record<string, string>;
+    icon_emoji?: string;
+    icon_url?: string;
+    theme_color?: string;
     smtp_host?: string;
     smtp_port?: number;
     from_address?: string;
@@ -69,6 +73,8 @@ export type NotificationListParams = {
 
 export type NotificationRecordResponse = AutoHealing.Notification & {
     execution_run?: AutoHealing.ExecutionRun;
+    workflow_instance?: AutoHealing.FlowInstance;
+    incident?: AutoHealing.Incident;
     external_message_id?: string;
 };
 
@@ -195,10 +201,12 @@ export async function deleteTemplate(id: string) {
  * 预览模板
  */
 export async function previewTemplate(id: string, data?: AutoHealing.PreviewTemplateRequest) {
-    return request<AutoHealing.PreviewTemplateResponse>(`/api/v1/tenant/templates/${id}/preview`, {
-        method: 'POST',
-        data,
-    });
+    return unwrapData(
+        await request<DataEnvelope<AutoHealing.PreviewTemplateResponse>>(`/api/v1/tenant/templates/${id}/preview`, {
+            method: 'POST',
+            data,
+        })
+    ) as AutoHealing.PreviewTemplateResponse;
 }
 
 // ==================== 模板变量 ====================

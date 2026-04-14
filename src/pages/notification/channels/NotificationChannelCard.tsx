@@ -53,12 +53,36 @@ const renderRecipientInfo = (channel: AutoHealing.NotificationChannel) => {
         );
     }
 
+    if (channel.type === 'wecom') {
+        return (
+            <Tooltip title="企业微信群机器人推送">
+                <Space size={4} style={{ cursor: 'help' }}>
+                    <RobotOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
+                    <Text type="secondary" style={{ fontSize: 11 }}>群机器人</Text>
+                </Space>
+            </Tooltip>
+        );
+    }
+
     if (channel.type === 'webhook') {
         return (
             <Tooltip title="通过 Webhook 推送数据">
                 <Space size={4} style={{ cursor: 'help' }}>
                     <ApiOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
                     <Text type="secondary" style={{ fontSize: 11 }}>远程终端</Text>
+                </Space>
+            </Tooltip>
+        );
+    }
+
+    if (channel.type === 'slack' || channel.type === 'teams') {
+        return (
+            <Tooltip title={channel.type === 'slack' ? '通过 Slack Incoming Webhook 推送' : '通过 Teams Incoming Webhook 推送'}>
+                <Space size={4} style={{ cursor: 'help' }}>
+                    <SendOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                        {channel.type === 'slack' ? '工作区频道' : '团队频道'}
+                    </Text>
                 </Space>
             </Tooltip>
         );
@@ -119,7 +143,7 @@ const NotificationChannelCard: React.FC<NotificationChannelCardProps> = ({
                             className="channel-card-type-label"
                             style={{ color: channel.is_active ? typeConfig.color : '#8c8c8c' }}
                         >
-                            {typeConfig.label}
+                            {typeConfig.labelCN}
                         </div>
                     </div>
 

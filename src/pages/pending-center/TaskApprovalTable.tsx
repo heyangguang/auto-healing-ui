@@ -3,10 +3,10 @@ import type { AdvancedSearchField } from '@/components/StandardTable';
 import StandardTable from '@/components/StandardTable';
 import { getApprovalHistory, getPendingApprovals } from '@/services/auto-healing/healing';
 import {
-  ApprovalActorResolver,
   createApprovalHistoryColumns,
   createPendingApprovalColumns,
 } from './approvalTableColumns';
+import type { ApprovalActorResolver } from './approvalTableColumns';
 import {
   approvalSearchFields,
   buildPendingApprovalParams,

@@ -22,12 +22,54 @@ import {
     type ChannelFormValues,
     type WebhookAuthType,
 } from './channelFormHelpers';
+import { getChannelTypeConfig, getChannelTypeOptions } from '@/constants/notificationDicts';
 import './ChannelForm.css';
 
 const { TextArea } = Input;
 
 const hasFormErrorFields = (error: unknown): error is { errorFields: unknown[] } =>
     typeof error === 'object' && error !== null && 'errorFields' in error;
+
+const CHANNEL_TYPE_DESCRIPTIONS: Partial<Record<AutoHealing.ChannelType, string>> = {
+    webhook: '适合任意 HTTP 回调或自定义终端',
+    email: '通过 SMTP 向邮箱投递通知',
+    dingtalk: '钉钉群机器人通知，支持加签',
+    wecom: '企业微信群机器人通知，适合内网团队',
+    slack: 'Slack Incoming Webhook，推送到工作区频道',
+    teams: 'Microsoft Teams Incoming Webhook，推送到团队频道',
+};
+
+const renderChannelTypeBadge = (type?: string, compact = false) => {
+    const typeConfig = getChannelTypeConfig(type || '');
+    return (
+        <span
+            className={`channel-type-badge${compact ? ' channel-type-badge--compact' : ''}`}
+            style={{ background: typeConfig.bg, color: typeConfig.color }}
+        >
+            {React.cloneElement(
+                typeConfig.icon as React.ReactElement<{ style?: React.CSSProperties }>,
+                { style: { fontSize: compact ? 14 : 16 } },
+            )}
+        </span>
+    );
+};
+
+const renderChannelTypeLabel = (type?: string, label?: string) => (
+    <div className="channel-type-select-label">
+        {renderChannelTypeBadge(type, true)}
+        <span>{label || getChannelTypeConfig(type || '').labelCN}</span>
+    </div>
+);
+
+const renderChannelTypeOption = (type?: string, label?: string) => (
+    <div className="channel-type-option">
+        {renderChannelTypeBadge(type)}
+        <div className="channel-type-option__content">
+            <div className="channel-type-option__title">{label || getChannelTypeConfig(type || '').labelCN}</div>
+            <div className="channel-type-option__desc">{CHANNEL_TYPE_DESCRIPTIONS[type as AutoHealing.ChannelType] || '通知渠道'}</div>
+        </div>
+    </div>
+);
 
 const ChannelFormPage: React.FC = () => {
     const access = useAccess();
@@ -150,73 +192,84 @@ const ChannelFormPage: React.FC = () => {
                 }
             />
 
-            <div className="channel-form-card">
-                <Spin spinning={loading}>
-                    <Form<ChannelFormValues> form={form} layout="vertical">
-                        {isEdit && (
-                            <Alert
-                                title="敏感配置保护中"
-                                description="出于安全考虑，URL、密码和密钥等敏感信息不会回显。如需修改，请直接输入新值覆盖；留空则保持原有配置不变。"
-                                type="info"
-                                showIcon
-                                style={{ marginBottom: 24 }}
-                            />
-                        )}
-                        {loadFailed && (
-                            <Alert
-                                title="渠道详情加载失败"
-                                description="当前未拿到后端返回的渠道详情，已阻止保存，请返回列表后重试。"
-                                type="error"
-                                showIcon
-                                style={{ marginBottom: 24 }}
-                            />
-                        )}
+            <Spin spinning={loading}>
+                <Form<ChannelFormValues>
+                    form={form}
+                    layout="vertical"
+                    requiredMark={false}
+                    size="large"
+                    className="channel-form-cards"
+                >
+                    {isEdit && (
+                        <Alert
+                            className="channel-form-alert"
+                            title="敏感配置保护中"
+                            description="出于安全考虑，URL、密码和密钥等敏感信息不会回显。如需修改，请直接输入新值覆盖；留空则保持原有配置不变。"
+                            type="info"
+                            showIcon
+                        />
+                    )}
+                    {loadFailed && (
+                        <Alert
+                            className="channel-form-alert"
+                            title="渠道详情加载失败"
+                            description="当前未拿到后端返回的渠道详情，已阻止保存，请返回列表后重试。"
+                            type="error"
+                            showIcon
+                        />
+                    )}
 
-                        {/* 基本信息 */}
-                        <Card type="inner" title="基本信息" size="small" style={{ marginBottom: 16 }}>
-                            <Row gutter={16}>
-                                <Col span={12}>
-                                    <Form.Item<ChannelFormValues> label="渠道名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
-                                        <Input placeholder="例如：运维告警群" />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item<ChannelFormValues> label="渠道类型" name="type" rules={[{ required: true, message: '请选择类型' }]}>
-                                        <Select
-                                            onChange={(value) => setChannelType(value)}
-                                            disabled={isEdit}
-                                            options={[
-                                                { label: 'Webhook (通用)', value: 'webhook' },
-                                                { label: '邮件 (Email)', value: 'email' },
-                                                { label: '钉钉 (DingTalk)', value: 'dingtalk' },
-                                            ]}
-                                        />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-                            <Form.Item<ChannelFormValues> label="描述" name="description" style={{ marginBottom: 0 }}>
-                                <TextArea rows={2} placeholder="可选的描述信息" />
-                            </Form.Item>
-                        </Card>
+                    <Card className="channel-form-section-card" title="基本信息" size="small">
+                        <Row gutter={16}>
+                            <Col xs={24} md={14}>
+                                <Form.Item<ChannelFormValues> label="渠道名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
+                                    <Input placeholder="例如：运维告警群" />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={10}>
+                                <Form.Item<ChannelFormValues> label="渠道类型" name="type" rules={[{ required: true, message: '请选择类型' }]}>
+                                    <Select
+                                        className="channel-form-control-lg"
+                                        onChange={(value) => setChannelType(value)}
+                                        disabled={isEdit}
+                                        optionFilterProp="label"
+                                        optionRender={(option) => renderChannelTypeOption(
+                                            option.value === undefined ? undefined : String(option.value),
+                                            option.label as string,
+                                        )}
+                                        labelRender={(option) => renderChannelTypeLabel(
+                                            option.value === undefined ? undefined : String(option.value),
+                                            option.label as string,
+                                        )}
+                                        options={getChannelTypeOptions('form')}
+                                    />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Form.Item<ChannelFormValues> label="描述" name="description">
+                            <TextArea rows={3} placeholder="可选的描述信息" />
+                        </Form.Item>
+                    </Card>
 
-                        {/* 连接配置 */}
-                        <Card type="inner" title="连接配置" size="small" style={{ marginBottom: 16 }}>
-                            <ChannelConnectionFields
-                                channelType={channelType}
-                                isEdit={isEdit}
-                                loadedWebhookAuthType={loadedWebhookAuthType}
-                                onWebhookAuthTypeChange={setWebhookAuthType}
-                                webhookAuthType={webhookAuthType}
-                            />
-                        </Card>
+                    <Card className="channel-form-section-card" title="连接配置" size="small">
+                        <ChannelConnectionFields
+                            channelType={channelType}
+                            isEdit={isEdit}
+                            loadedWebhookAuthType={loadedWebhookAuthType}
+                            onWebhookAuthTypeChange={setWebhookAuthType}
+                            webhookAuthType={webhookAuthType}
+                        />
+                    </Card>
 
-                        {/* 策略与接收人 */}
-                        <Card type="inner" title={channelType === 'email' ? '重试策略与收件人' : '重试策略'} size="small">
-                            <ChannelRetrySection channelType={channelType} />
-                        </Card>
-                    </Form>
-                </Spin>
-            </div>
+                    <Card
+                        className="channel-form-section-card"
+                        title={channelType === 'email' ? '重试策略与收件人' : '重试策略'}
+                        size="small"
+                    >
+                        <ChannelRetrySection channelType={channelType} />
+                    </Card>
+                </Form>
+            </Spin>
         </div>
     );
 };

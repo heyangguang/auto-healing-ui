@@ -1,7 +1,6 @@
 import { Empty, Spin, Tag, Typography } from 'antd';
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { marked } from 'marked';
 import { renderSanitizedHtml } from '@/utils/safeHtml';
 
 const { Text } = Typography;
@@ -11,6 +10,21 @@ type TemplatePreviewPaneProps = {
     previewData: AutoHealing.PreviewTemplateResponse | null;
     previewLoading: boolean;
 };
+
+const WECHAT_FONT_TONE_CLASS: Record<string, string> = {
+    warning: 'templates-inline-tone--warning',
+    comment: 'templates-inline-tone--comment',
+    info: 'templates-inline-tone--info',
+};
+
+function normalizeWeChatToneTags(value: string) {
+    return value
+        .replace(/<font\s+color=["']?(warning|comment|info)["']?\s*>([\s\S]*?)<\/font>/gi, (_match, tone: string, content: string) => {
+            const toneClass = WECHAT_FONT_TONE_CLASS[tone.toLowerCase()] || '';
+            return `<span class="templates-inline-tone ${toneClass}">${content}</span>`;
+        })
+        .replace(/<\/?font[^>]*>/gi, '');
+}
 
 const renderPreviewBody = (format: AutoHealing.TemplateFormat | undefined, body: string) => {
     if (format === 'html') {
@@ -24,11 +38,15 @@ const renderPreviewBody = (format: AutoHealing.TemplateFormat | undefined, body:
         );
     }
     if (format === 'markdown') {
+        const normalizedBody = normalizeWeChatToneTags(body);
+        const renderedHtml = marked.parse(normalizedBody, {
+            async: false,
+            breaks: true,
+            gfm: true,
+        }) as string;
         return (
             <div className="markdown-preview" style={{ lineHeight: 1.6, fontSize: 14 }}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {body}
-                </ReactMarkdown>
+                {renderSanitizedHtml(renderedHtml)}
             </div>
         );
     }
@@ -72,7 +90,9 @@ const TemplatePreviewPane: React.FC<TemplatePreviewPaneProps> = ({
                             <Text type="secondary" style={{ fontSize: 12 }}>消息正文</Text>
                             <Tag>{format || 'text'}</Tag>
                         </div>
-                        {renderPreviewBody(format, previewData.body || '')}
+                        {previewData.body
+                            ? renderPreviewBody(format, previewData.body)
+                            : <Empty description="当前模板预览为空" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
                     </div>
                 </div>
             ) : (
