@@ -16,6 +16,8 @@ import type {
 
 const PLAYBOOK_FETCH_BATCH_SIZE = 5;
 const SIMULATION_DEBOUNCE_MS = 500;
+const hasGitRepoFileContent = (response: Awaited<ReturnType<typeof getGitRepoFiles>>): response is { content: string; path: string } =>
+    'content' in response;
 
 const loadPlaybookFiles = async (
     repositoryId: string,
@@ -28,11 +30,12 @@ const loadPlaybookFiles = async (
         const batchResults = await Promise.allSettled(
             batch.map(async (file) => {
                 const response = await getGitRepoFiles(repositoryId, file.path);
+                const content = hasGitRepoFileContent(response) ? response.content || '' : '';
                 return {
                     path: file.path,
                     type: file.type,
-                    content: response.content || '',
-                    size: (response.content || '').length,
+                    content,
+                    size: content.length,
                     checked: true,
                 } satisfies LoadedFile;
             }),

@@ -117,6 +117,26 @@ function fallbackMeta(key?: string): ExecutionDictMeta {
   };
 }
 
+function normalizeTriggeredByKey(value?: string) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.startsWith('manual')) {
+    return 'manual';
+  }
+  if (normalized.startsWith('scheduler:cron')) {
+    return 'scheduler:cron';
+  }
+  if (normalized.startsWith('scheduler:once')) {
+    return 'scheduler:once';
+  }
+  if (normalized.startsWith('healing') || normalized.startsWith('workflow')) {
+    return 'healing';
+  }
+  return normalized;
+}
+
 function toOptions(map: Record<string, ExecutionDictMeta>) {
   return Object.entries(map).map(([value, meta]) => ({ label: meta.label, value }));
 }
@@ -136,10 +156,11 @@ export function getRunStatusConfig(status?: string): ExecutionDictMeta {
 }
 
 export function getExecutionTriggeredByConfig(value?: string): ExecutionDictMeta {
-  if (!value) {
+  const normalized = normalizeTriggeredByKey(value);
+  if (!normalized) {
     return fallbackMeta();
   }
-  return EXECUTION_TRIGGERED_BY_CONFIG[value] || fallbackMeta(value);
+  return EXECUTION_TRIGGERED_BY_CONFIG[normalized] || fallbackMeta(normalized);
 }
 
 export function getExecutorOptions() {

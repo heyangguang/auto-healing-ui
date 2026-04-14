@@ -6,6 +6,7 @@ import {
     CheckCircleOutlined, CloseCircleOutlined
 } from '@ant-design/icons';
 import { getExecutionRun, getExecutionLogs, cancelExecutionRun, createLogStream } from '@/services/auto-healing/execution';
+import { getExecutionTriggeredByConfig } from '@/constants/executionDicts';
 import LogConsole, { type LogEntry, toLogEntries, toLogEntry } from './LogConsole';
 import StatusBadge from './StatusBadge';
 import dayjs from 'dayjs';
@@ -141,7 +142,11 @@ const ExecutionDrawer: React.FC<ExecutionDrawerProps> = ({ runId, open, onClose,
                                 <Statistic title="开始时间" value={run.started_at ? dayjs(run.started_at).format('HH:mm:ss') : '-'} />
                             </Col>
                             <Col span={6}>
-                                <Statistic title="触发人/方式" value={run.triggered_by === 'scheduler' ? '定时调度' : (run.triggered_by || '系统')} prefix={<UserOutlined />} />
+                                <Statistic
+                                    title="触发人/方式"
+                                    value={run.triggered_by ? getExecutionTriggeredByConfig(run.triggered_by).label : '系统'}
+                                    prefix={<UserOutlined />}
+                                />
                             </Col>
                         </Row>
                         {run.error_message && (

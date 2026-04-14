@@ -3,6 +3,8 @@ import { useCallback, useRef, useState } from 'react';
 import { getFiles } from '@/services/auto-healing/git-repos';
 
 const FILE_LOAD_ERROR_CONTENT = '// 无法加载文件内容';
+const hasGitRepoFileContent = (response: Awaited<ReturnType<typeof getFiles>>): response is { content: string; path: string } =>
+    'content' in response;
 
 type UsePlaybookFileContentStateOptions = {
     selectedPlaybook?: AutoHealing.Playbook;
@@ -36,7 +38,7 @@ export function usePlaybookFileContentState(options: UsePlaybookFileContentState
         try {
             const response = await getFiles(selectedPlaybook.repository_id, filePath);
             if (fileContentRequestIdRef.current === requestId) {
-                setFileContent(response.content || '');
+                setFileContent(hasGitRepoFileContent(response) ? response.content || '' : '');
             }
         } catch {
             if (fileContentRequestIdRef.current === requestId) {

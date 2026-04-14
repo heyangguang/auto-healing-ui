@@ -1,10 +1,14 @@
 import { message } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { useCallback, useRef, useState } from 'react';
-import { getFiles } from '@/services/auto-healing/git-repos';
+import { getFiles, type GitRepoFileNode } from '@/services/auto-healing/git-repos';
 import { buildGitFileTreeData, getErrorMessage } from './gitRepoListMeta';
 
 const FILE_LOAD_ERROR_CONTENT = '// 无法加载文件内容';
+const hasFileTree = (response: Awaited<ReturnType<typeof getFiles>>): response is { files: GitRepoFileNode[] } =>
+    'files' in response;
+const hasFileContent = (response: Awaited<ReturnType<typeof getFiles>>): response is { content: string; path: string } =>
+    'content' in response;
 
 export function useGitRepoFileBrowserState() {
     const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
@@ -40,7 +44,7 @@ export function useGitRepoFileBrowserState() {
         try {
             const response = await getFiles(id);
             if (fileTreeRequestIdRef.current === requestId) {
-                setFileTree(buildGitFileTreeData(response.files || []));
+                setFileTree(buildGitFileTreeData(hasFileTree(response) ? response.files || [] : []));
             }
         } catch (error) {
             if (fileTreeRequestIdRef.current === requestId) {
@@ -62,7 +66,7 @@ export function useGitRepoFileBrowserState() {
         try {
             const response = await getFiles(id, path);
             if (fileContentRequestIdRef.current === requestId) {
-                setFileContent(response.content || '');
+                setFileContent(hasFileContent(response) ? response.content || '' : '');
             }
         } catch (error) {
             if (fileContentRequestIdRef.current === requestId) {

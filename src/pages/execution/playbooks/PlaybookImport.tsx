@@ -3,7 +3,7 @@ import { Divider, message } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { history, useAccess } from '@umijs/max';
 import SubPageHeader from '@/components/SubPageHeader';
-import { getFiles } from '@/services/auto-healing/git-repos';
+import { getFiles, type GitRepoFileNode } from '@/services/auto-healing/git-repos';
 import { createPlaybook } from '@/services/auto-healing/playbooks';
 import { getCachedGitRepoInventory, invalidateSelectorInventory, selectorInventoryKeys } from '@/utils/selectorInventoryCache';
 import PlaybookImportConfigSection from './PlaybookImportConfigSection';
@@ -12,6 +12,9 @@ import PlaybookImportRepoSection from './PlaybookImportRepoSection';
 import { buildImportFileTree, buildPlaybookImportItems, collectDirKeys, type PlaybookImportItem } from './playbookImportUtils';
 import './index.css';
 import '@/pages/plugins/PluginForm.css';
+
+const hasGitRepoFileTree = (response: Awaited<ReturnType<typeof getFiles>>): response is { files: GitRepoFileNode[] } =>
+    'files' in response;
 
 const PlaybookImport: React.FC = () => {
     const access = useAccess();
@@ -55,7 +58,7 @@ const PlaybookImport: React.FC = () => {
             if (fileRequestIdRef.current !== requestId) {
                 return;
             }
-            const tree = buildImportFileTree(response.files || []);
+            const tree = buildImportFileTree(hasGitRepoFileTree(response) ? response.files || [] : []);
             setFileTree(tree);
             setExpandedKeys(collectDirKeys(tree));
         } catch {
