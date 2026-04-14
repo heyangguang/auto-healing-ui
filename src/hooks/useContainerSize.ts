@@ -1,29 +1,69 @@
-import { useEffect, useState, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+
+const INITIAL_REMEASURE_ATTEMPTS = 20;
+const INITIAL_REMEASURE_INTERVAL_MS = 120;
+const EMPTY_SIZE = { width: 0, height: 0 };
+
+function readElementSize(element: HTMLElement) {
+    const rect = element.getBoundingClientRect();
+    return { width: Math.round(rect.width), height: Math.round(rect.height) };
+}
 
 export function useContainerSize<T extends HTMLElement = HTMLDivElement>() {
     const ref = useRef<T>(null);
-    const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+    const retryTimerRef = useRef<number | null>(null);
+    const [size, setSize] = useState<{ width: number; height: number }>(EMPTY_SIZE);
 
-    useEffect(() => {
-        if (!ref.current) return;
-
+    useLayoutEffect(() => {
         const observeTarget = ref.current;
+        if (!observeTarget) return;
+
+        let remainingAttempts = INITIAL_REMEASURE_ATTEMPTS;
+        const updateSize = (nextSize: { width: number; height: number }) => setSize((currentSize) => (
+            currentSize.width === nextSize.width && currentSize.height === nextSize.height ? currentSize : nextSize
+        ));
+        const clearRetryTimer = () => {
+            if (retryTimerRef.current != null) {
+                window.clearInterval(retryTimerRef.current);
+                retryTimerRef.current = null;
+            }
+        };
+        const measure = () => {
+            const nextSize = readElementSize(observeTarget);
+            if (nextSize.width > 0 && nextSize.height > 0) {
+                updateSize(nextSize);
+                clearRetryTimer();
+                return true;
+            }
+            return false;
+        };
+        const scheduleMeasure = () => {
+            if (retryTimerRef.current != null || remainingAttempts <= 0) return;
+            retryTimerRef.current = window.setInterval(() => {
+                remainingAttempts -= 1;
+                if (measure() || remainingAttempts <= 0) {
+                    clearRetryTimer();
+                }
+            }, INITIAL_REMEASURE_INTERVAL_MS);
+        };
+
         const resizeObserver = new ResizeObserver((entries) => {
             entries.forEach((entry) => {
-                // 使用 contentRect 获取内容区域尺寸（不包含 padding/border），
-                // 这正是图表需要的绘制区域
                 const { width, height } = entry.contentRect;
-                // 只有当尺寸发生显著变化时才更新，且忽略 0 尺寸
                 if (width > 0 && height > 0) {
-                    setSize({ width, height });
+                    updateSize({ width, height });
+                } else {
+                    scheduleMeasure();
                 }
             });
         });
 
         resizeObserver.observe(observeTarget);
+        if (!measure()) scheduleMeasure();
 
         return () => {
-            resizeObserver.unobserve(observeTarget);
+            resizeObserver.disconnect();
+            clearRetryTimer();
         };
     }, []);
 

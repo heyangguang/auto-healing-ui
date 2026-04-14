@@ -15,7 +15,7 @@ describe('useDashboardSection', () => {
   beforeEach(() => {
     mockUseRequest.mockReset();
     localStorage.clear();
-    __TEST_ONLY__.clearResolvedSectionKeys();
+    __TEST_ONLY__.clearResolvedSectionCache();
   });
 
   it('only exposes loading during the first unresolved request', () => {
@@ -35,7 +35,7 @@ describe('useDashboardSection', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it('does not re-expose loading after the section has already resolved once', async () => {
+  it('reuses the last resolved section data while a later request is still loading', async () => {
     let requestState: {
       data: { data: { incidents: { total: number } } } | undefined;
       loading: boolean;
@@ -65,10 +65,11 @@ describe('useDashboardSection', () => {
       rerender();
     });
 
+    expect(result.current.data).toEqual({ total: 3 });
     expect(result.current.loading).toBe(false);
   });
 
-  it('reuses the resolved section state across widget mounts in the same section', () => {
+  it('reuses the resolved section data across widget mounts in the same section', () => {
     const firstState = {
       data: {
         data: {
@@ -92,6 +93,7 @@ describe('useDashboardSection', () => {
     expect(first.result.current.loading).toBe(false);
 
     const second = renderHook(() => useDashboardSection('healing'));
+    expect(second.result.current.data).toEqual({ instances_total: 0 });
     expect(second.result.current.loading).toBe(false);
   });
 });

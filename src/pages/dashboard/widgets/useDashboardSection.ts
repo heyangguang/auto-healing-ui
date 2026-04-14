@@ -1,8 +1,8 @@
 import { useRequest } from '@umijs/max';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { getDashboardOverview } from '@/services/auto-healing/dashboard';
 
-const resolvedSectionKeys = new Set<string>();
+const resolvedSectionData = new Map<string, DashboardSectionMap[DashboardSectionKey]>();
 const DASHBOARD_LOADING_DELAY_MS = 200;
 
 const getTenantCacheScope = () => {
@@ -197,7 +197,6 @@ export type DashboardSectionKey = keyof DashboardSectionMap;
 export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
     const tenantCacheScope = getTenantCacheScope();
     const sectionCacheKey = `dashboard-section-${tenantCacheScope}-${section}`;
-    const [hasResolvedOnce, setHasResolvedOnce] = useState(() => resolvedSectionKeys.has(sectionCacheKey));
     type DashboardOverviewResult = Record<string, unknown> & {
         data?: Record<string, unknown>;
     };
@@ -213,21 +212,20 @@ export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
         }
     );
 
-    // 后端返回结构为 { code: 0, data: { [section]: { ... } } }
-    // umi request 返回完整 body，需要先访问 .data
-    const data =
+    const sectionData =
         (rawData?.data?.[section] as DashboardSectionMap[S] | undefined)
         ?? (rawData?.[section] as DashboardSectionMap[S] | undefined)
         ?? null;
+    const cachedData = (resolvedSectionData.get(sectionCacheKey) as DashboardSectionMap[S] | undefined) ?? null;
+    const data = sectionData ?? cachedData;
 
     useEffect(() => {
-        if (rawData != null) {
-            resolvedSectionKeys.add(sectionCacheKey);
-            setHasResolvedOnce(true);
+        if (sectionData != null) {
+            resolvedSectionData.set(sectionCacheKey, sectionData);
         }
-    }, [rawData, sectionCacheKey]);
+    }, [sectionCacheKey, sectionData]);
 
-    const initialLoading = loading && rawData == null && !hasResolvedOnce;
+    const initialLoading = loading && data == null;
 
     return {
         data,
@@ -237,5 +235,5 @@ export function useDashboardSection<S extends DashboardSectionKey>(section: S) {
 }
 
 export const __TEST_ONLY__ = {
-    clearResolvedSectionKeys: () => resolvedSectionKeys.clear(),
+    clearResolvedSectionCache: () => resolvedSectionData.clear(),
 };
