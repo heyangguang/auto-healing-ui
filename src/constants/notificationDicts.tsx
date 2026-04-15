@@ -18,6 +18,7 @@ const ICON_REGISTRY: Record<string, React.ReactNode> = {
     MailOutlined: <MailOutlined />,
     DingdingOutlined: <DingdingOutlined />,
     WechatWorkOutlined: <WechatWorkOutlined />,
+    WecomOutlined: <WechatWorkOutlined />,
     SlackOutlined: <SlackOutlined />,
     WindowsOutlined: <WindowsOutlined />,
     BellOutlined: <BellOutlined />,

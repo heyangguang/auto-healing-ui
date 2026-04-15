@@ -11,16 +11,16 @@ type TemplatePreviewPaneProps = {
     previewLoading: boolean;
 };
 
-const WECHAT_FONT_TONE_CLASS: Record<string, string> = {
+const WECOM_FONT_TONE_CLASS: Record<string, string> = {
     warning: 'templates-inline-tone--warning',
     comment: 'templates-inline-tone--comment',
     info: 'templates-inline-tone--info',
 };
 
-function normalizeWeChatToneTags(value: string) {
+function normalizeWeComToneTags(value: string) {
     return value
         .replace(/<font\s+color=["']?(warning|comment|info)["']?\s*>([\s\S]*?)<\/font>/gi, (_match, tone: string, content: string) => {
-            const toneClass = WECHAT_FONT_TONE_CLASS[tone.toLowerCase()] || '';
+            const toneClass = WECOM_FONT_TONE_CLASS[tone.toLowerCase()] || '';
             return `<span class="templates-inline-tone ${toneClass}">${content}</span>`;
         })
         .replace(/<\/?font[^>]*>/gi, '');
@@ -38,7 +38,7 @@ const renderPreviewBody = (format: AutoHealing.TemplateFormat | undefined, body:
         );
     }
     if (format === 'markdown') {
-        const normalizedBody = normalizeWeChatToneTags(body);
+        const normalizedBody = normalizeWeComToneTags(body);
         const renderedHtml = marked.parse(normalizedBody, {
             async: false,
             breaks: true,
