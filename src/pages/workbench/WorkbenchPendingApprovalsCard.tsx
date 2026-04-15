@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Card, Empty, Spin, Tag } from 'antd';
 import { RightOutlined, ScheduleOutlined } from '@ant-design/icons';
 import { INCIDENT_SEVERITY_MAP } from '@/constants/incidentDicts';
-import type { PendingWorkbenchState } from './workbenchTypes';
+import type { PendingWorkbenchItem, PendingWorkbenchState } from './workbenchTypes';
 
 type PendingApprovalsCardProps = {
     canViewApprovals: boolean;
@@ -10,8 +10,8 @@ type PendingApprovalsCardProps = {
     canViewPendingTrigger: boolean;
     loading: boolean;
     onOpenPendingCenter: () => void;
+    onOpenPendingItem: (item: PendingWorkbenchItem) => void;
     pendingApprovals: PendingWorkbenchState;
-    pendingCenterPath: string;
     styles: Record<string, string>;
 };
 
@@ -21,6 +21,7 @@ const WorkbenchPendingApprovalsCard: React.FC<PendingApprovalsCardProps> = ({
     canViewPendingTrigger,
     loading,
     onOpenPendingCenter,
+    onOpenPendingItem,
     pendingApprovals,
     styles,
 }) => (
@@ -57,7 +58,7 @@ const WorkbenchPendingApprovalsCard: React.FC<PendingApprovalsCardProps> = ({
                         <div
                             key={item.id}
                             className={styles.pendingItem}
-                            onClick={() => canViewPendingCenter && onOpenPendingCenter()}
+                            onClick={() => canViewPendingCenter && onOpenPendingItem(item)}
                             style={!canViewPendingCenter ? { cursor: 'default' } : undefined}
                         >
                             <span className={styles.pendingDot} style={{ background: severity?.color || '#1677ff' }} />

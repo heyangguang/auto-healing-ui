@@ -25,6 +25,7 @@ import WorkbenchResourceOverviewCard from './WorkbenchResourceOverviewCard';
 import WorkbenchScheduleCard from './WorkbenchScheduleCard';
 import WorkbenchSystemHealthCard from './WorkbenchSystemHealthCard';
 import WorkbenchUserCard from './WorkbenchUserCard';
+import type { PendingWorkbenchItem } from './workbenchTypes';
 
 const GuideDrawer = lazy(() => import('./GuideDrawer'));
 
@@ -79,6 +80,9 @@ const WorkbenchPage: React.FC = () => {
     }, [handleCalendarMonthChange]);
 
     const pendingCenterPath = getPendingHomePath(access);
+    const handleOpenPendingItem = useCallback((item: PendingWorkbenchItem) => {
+        history.push(item._pendingType === 'trigger' ? '/pending/triggers' : '/pending/approvals');
+    }, []);
     const platformStats = buildPlatformStats(
         overview?.resource_overview,
         access as Record<string, unknown>,
@@ -117,6 +121,7 @@ const WorkbenchPage: React.FC = () => {
                             canViewPendingTrigger={!!access.canViewPendingTrigger}
                             loading={loading}
                             onOpenPendingCenter={() => history.push(pendingCenterPath)}
+                            onOpenPendingItem={handleOpenPendingItem}
                             pendingApprovals={{
                                 total: pendingApprovals.total,
                                 items: pendingApprovals.items.map((item) => ({
@@ -124,7 +129,6 @@ const WorkbenchPage: React.FC = () => {
                                     created_at: item.created_at ? formatRelativeTime(item.created_at) : '',
                                 })),
                             }}
-                            pendingCenterPath={pendingCenterPath}
                             styles={styles}
                         />
                     </div>
