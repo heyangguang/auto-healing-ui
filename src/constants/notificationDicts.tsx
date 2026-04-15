@@ -76,7 +76,7 @@ const FB_CONFIG: Record<string, ChannelTypeConfig> = {
     webhook: { icon: <ApiOutlined />, color: '#722ed1', label: 'WEBHOOK', labelCN: 'Webhook', bg: '#f9f0ff' },
     email: { icon: <MailOutlined />, color: '#1890ff', label: 'EMAIL', labelCN: '邮件', bg: '#e6f7ff' },
     dingtalk: { icon: <DingdingOutlined />, color: '#0079f2', label: 'DINGTALK', labelCN: '钉钉', bg: '#f0f5ff' },
-    wecom: { icon: <WechatWorkOutlined />, color: '#07c160', label: 'WECHAT', labelCN: '企业微信', bg: '#f6ffed' },
+    wecom: { icon: <WechatWorkOutlined />, color: '#07c160', label: 'WECOM', labelCN: '企业微信', bg: '#f6ffed' },
     slack: { icon: <SlackOutlined />, color: '#4a154b', label: 'SLACK', labelCN: 'Slack', bg: '#fff0f6' },
     teams: { icon: <WindowsOutlined />, color: '#6264a7', label: 'TEAMS', labelCN: 'Teams', bg: '#f0f5ff' },
 };
