@@ -1,6 +1,40 @@
 import { buildCanvasElements } from './canvasBuilder';
 
 describe('buildCanvasElements', () => {
+    it('兼容实例详情接口返回的 from/to 边格式', () => {
+        const { edges, nodes } = buildCanvasElements({
+            flowNodes: [
+                { id: 'start', type: 'start', name: '开始', position: { x: 0, y: 0 }, config: {} },
+                { id: 'extract', type: 'host_extractor', name: '提取工单主机', position: { x: 0, y: 80 }, config: {} },
+                { id: 'exec', type: 'execution', name: '执行恢复', position: { x: 0, y: 160 }, config: {} },
+                { id: 'end', type: 'end', name: '结束', position: { x: 0, y: 240 }, config: {} },
+            ],
+            flowEdges: [
+                { from: 'start', to: 'extract' } as AutoHealing.FlowEdge,
+                { from: 'extract', to: 'exec' } as AutoHealing.FlowEdge,
+                { from: 'exec', sourceHandle: 'success', to: 'end' } as AutoHealing.FlowEdge,
+            ],
+            nodeStates: {
+                end: { status: 'completed' },
+                exec: { status: 'completed' },
+                extract: { status: 'completed' },
+                start: { status: 'completed' },
+            },
+            currentNodeId: 'end',
+        });
+
+        expect(edges).toEqual(expect.arrayContaining([
+            expect.objectContaining({ source: 'start', target: 'extract' }),
+            expect.objectContaining({ source: 'extract', target: 'exec' }),
+            expect.objectContaining({ source: 'exec', sourceHandle: 'success', target: 'end' }),
+        ]));
+        expect(edges.every((edge) => edge.source && edge.target)).toBe(true);
+
+        const nodeMap = Object.fromEntries(nodes.map((node) => [node.id, node]));
+        expect(nodeMap.start?.data.activeHandles).toContain('default');
+        expect(nodeMap.exec?.data.activeHandles).toContain('success');
+    });
+
     it('高亮带 default sourceHandle 的线性前置路径', () => {
         const { edges, nodes } = buildCanvasElements({
             flowNodes: [

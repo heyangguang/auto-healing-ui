@@ -56,10 +56,37 @@ type CanvasNodeData = AutoHealing.FlowNodeConfig & {
 type CanvasNode = Node<CanvasNodeData>;
 type CanvasEdge = Edge;
 const DEFAULT_HANDLE_ID = 'default';
+type FlowEdgeLike = AutoHealing.FlowEdge & {
+    source?: string;
+    source_handle?: string;
+    target?: string;
+    target_handle?: string;
+};
 
-function getCanvasEdgeId(edge: AutoHealing.FlowEdge) {
+function getCanvasEdgeId(edge: FlowEdgeLike) {
     return edge.id
-        || `edge-${edge.source}-${edge.target}-${edge.sourceHandle || DEFAULT_HANDLE_ID}-${edge.targetHandle || DEFAULT_HANDLE_ID}`;
+        || `edge-${edge.source || edge.from}-${edge.target || edge.to}-${edge.sourceHandle || edge.source_handle || DEFAULT_HANDLE_ID}-${edge.targetHandle || edge.target_handle || DEFAULT_HANDLE_ID}`;
+}
+
+function normalizeFlowEdge(edge: FlowEdgeLike): AutoHealing.FlowEdge | null {
+    const source = edge.source || edge.from;
+    const target = edge.target || edge.to;
+    if (!source || !target) return null;
+
+    return {
+        ...edge,
+        id: getCanvasEdgeId(edge),
+        source,
+        target,
+        sourceHandle: edge.sourceHandle || edge.source_handle || undefined,
+        targetHandle: edge.targetHandle || edge.target_handle || undefined,
+    };
+}
+
+function normalizeFlowEdges(flowEdges: AutoHealing.FlowEdge[]) {
+    return flowEdges
+        .map((edge) => normalizeFlowEdge(edge as FlowEdgeLike))
+        .filter((edge): edge is AutoHealing.FlowEdge => Boolean(edge));
 }
 
 export function normalizeNodeState(raw: unknown): FlowNodeStateLike | null {
@@ -222,9 +249,10 @@ interface CanvasBuildResult {
  */
 export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult {
     const { flowNodes, flowEdges, nodeStates, currentNodeId, rule } = input;
+    const normalizedFlowEdges = normalizeFlowEdges(flowEdges);
     const { nodeTypeMap, nodeRawStatus } = buildNodeMaps(flowNodes, nodeStates);
-    const outgoingEdges = buildOutgoingEdges(flowEdges);
-    const candidateNodeIds = collectCandidateNodeIds(flowEdges, nodeStates, currentNodeId);
+    const outgoingEdges = buildOutgoingEdges(normalizedFlowEdges);
+    const candidateNodeIds = collectCandidateNodeIds(normalizedFlowEdges, nodeStates, currentNodeId);
     const executedNodeIds = collectExecutedNodeIds(
         flowNodes,
         outgoingEdges,
@@ -239,7 +267,7 @@ export function buildCanvasElements(input: CanvasBuildInput): CanvasBuildResult 
         executedNodeIds,
         outgoingEdges,
     );
-    const edges = buildCanvasEdges(flowEdges, executedNodeIds, nodeTypeMap, nodeEffectiveStatus);
+    const edges = buildCanvasEdges(normalizedFlowEdges, executedNodeIds, nodeTypeMap, nodeEffectiveStatus);
     const withRuleTrigger = injectRuleTrigger(nodes, edges, rule);
     return {
         nodes: attachActiveHandles(withRuleTrigger.nodes, withRuleTrigger.edges),
