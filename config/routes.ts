@@ -123,6 +123,16 @@ export default [
         navAccess: 'canViewPlugins',
       },
       {
+        path: '/resources/demo-lab',
+        name: 'demo-lab',
+        component: './demo-lab',
+        access: 'canViewPlugins',
+        label: '演示造单',
+        desc: 'iTop 场景工单生成',
+        navIcon: 'carryOut',
+        navAccess: 'canViewPlugins',
+      },
+      {
         path: '/resources/incident-solution-templates',
         name: 'incident-solution-templates',
         component: './incidents/solution-templates',
@@ -510,7 +520,6 @@ export default [
       },
     ],
   },
-
 
   // ==================== 平台功能 (Platform Features) ====================
   {

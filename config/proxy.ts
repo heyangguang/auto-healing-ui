@@ -10,6 +10,11 @@ const proxyConfig = {
     target: proxyTarget,
     changeOrigin: true,
   },
+  '/lab-adapter/': {
+    target: process.env.LAB_ADAPTER_PROXY_TARGET || 'http://127.0.0.1:18085',
+    changeOrigin: true,
+    pathRewrite: { '^/lab-adapter': '' },
+  },
 };
 
 export default {
