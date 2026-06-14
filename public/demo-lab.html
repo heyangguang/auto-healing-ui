@@ -115,6 +115,94 @@
         gap: 14px;
       }
 
+      .stage {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        margin-bottom: 14px;
+        padding: 16px;
+      }
+
+      .stage-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .stage-title {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .stage-time {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .stage-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stage-item {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px;
+        min-height: 128px;
+      }
+
+      .stage-item-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .stage-name {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .state-pill {
+        border-radius: 999px;
+        padding: 5px 9px;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .state-pill.ready {
+        background: var(--green);
+      }
+
+      .state-pill.cleared {
+        background: #697386;
+      }
+
+      .state-pill.error {
+        background: var(--red);
+      }
+
+      .stage-metrics {
+        display: grid;
+        grid-template-columns: 72px minmax(0, 1fr);
+        gap: 8px 10px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .stage-metrics strong {
+        color: var(--text);
+        overflow-wrap: anywhere;
+      }
+
       .card {
         min-height: 292px;
         border: 1px solid var(--border);
@@ -261,6 +349,10 @@
           grid-template-columns: 1fr;
         }
 
+        .stage-grid {
+          grid-template-columns: 1fr;
+        }
+
         .card {
           min-height: 0;
         }
@@ -302,6 +394,39 @@
           <a class="link-button" href="http://118.196.22.79:13000/" target="_blank" rel="noreferrer">Gitea</a>
         </nav>
       </header>
+
+      <section class="stage" aria-label="target state">
+        <div class="stage-head">
+          <h2 class="stage-title">目标机现场</h2>
+          <span id="stage-time" class="stage-time">读取中...</span>
+        </div>
+        <div id="stage-grid" class="stage-grid">
+          <article class="stage-item">
+            <div class="stage-item-top">
+              <span class="stage-name">日志大文件</span>
+              <span class="state-pill cleared">读取中</span>
+            </div>
+            <div class="stage-metrics">
+              <span>大小</span>
+              <strong>-</strong>
+              <span>目录</span>
+              <strong>-</strong>
+            </div>
+          </article>
+          <article class="stage-item">
+            <div class="stage-item-top">
+              <span class="stage-name">异常进程</span>
+              <span class="state-pill cleared">读取中</span>
+            </div>
+            <div class="stage-metrics">
+              <span>数量</span>
+              <strong>-</strong>
+              <span>进程名</span>
+              <strong>-</strong>
+            </div>
+          </article>
+        </div>
+      </section>
 
       <section class="grid" aria-label="demo scenarios">
         <article class="card">
@@ -376,7 +501,56 @@
       const resultTitle = document.getElementById('result-title');
       const resultBadge = document.getElementById('result-badge');
       const resultJson = document.getElementById('result-json');
+      const stageGrid = document.getElementById('stage-grid');
+      const stageTime = document.getElementById('stage-time');
       const buttons = Array.from(document.querySelectorAll('button[data-scenario]'));
+
+      function renderStageItem(item) {
+        const readyClass = item.ready ? 'ready' : 'cleared';
+        return `
+          <article class="stage-item">
+            <div class="stage-item-top">
+              <span class="stage-name">${item.title}</span>
+              <span class="state-pill ${readyClass}">${item.state_label}</span>
+            </div>
+            <div class="stage-metrics">
+              <span>${item.metric_label}</span>
+              <strong>${item.metric_value || '-'}</strong>
+              <span>${item.path_label}</span>
+              <strong>${item.path_value || '-'}</strong>
+            </div>
+          </article>
+        `;
+      }
+
+      async function refreshFaultStatus() {
+        try {
+          const response = await fetch('/lab-adapter/api/demo/fault-status', {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.message || `HTTP ${response.status}`);
+          }
+          stageGrid.innerHTML = (payload.items || []).map(renderStageItem).join('');
+          stageTime.textContent = `${payload.target || '目标机'} · ${payload.updated_at || ''}`;
+        } catch (error) {
+          stageGrid.innerHTML = `
+            <article class="stage-item">
+              <div class="stage-item-top">
+                <span class="stage-name">目标机现场</span>
+                <span class="state-pill error">读取失败</span>
+              </div>
+              <div class="stage-metrics">
+                <span>原因</span>
+                <strong>${error instanceof Error ? error.message : String(error)}</strong>
+              </div>
+            </article>
+          `;
+          stageTime.textContent = '状态不可用';
+        }
+      }
 
       function setResult(state, title, badge, payload) {
         result.hidden = false;
@@ -425,6 +599,7 @@
             payload.scenario || scenario,
             payload,
           );
+          await refreshFaultStatus();
         } catch (error) {
           setResult('error', '创建工单失败', scenario, {
             scenario,
@@ -441,6 +616,8 @@
       buttons.forEach((button) => {
         button.addEventListener('click', () => createIncident(button.dataset.scenario));
       });
+      refreshFaultStatus();
+      window.setInterval(refreshFaultStatus, 5000);
     </script>
   </body>
 </html>
