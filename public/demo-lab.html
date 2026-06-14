@@ -522,37 +522,58 @@
       const refreshStatusButton = document.getElementById('refresh-status');
       const buttons = Array.from(document.querySelectorAll('button[data-scenario]'));
 
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
       function renderStageItem(item) {
         const readyClass = item.ready ? 'ready' : 'cleared';
         return `
           <article class="stage-item">
             <div class="stage-item-top">
-              <span class="stage-name">${item.title}</span>
-              <span class="state-pill ${readyClass}">${item.state_label}</span>
+              <span class="stage-name">${escapeHtml(item.title)}</span>
+              <span class="state-pill ${readyClass}">${escapeHtml(item.state_label)}</span>
             </div>
             <div class="stage-metrics">
-              <span>${item.metric_label}</span>
-              <strong>${item.metric_value || '-'}</strong>
-              <span>${item.path_label}</span>
-              <strong>${item.path_value || '-'}</strong>
+              <span>${escapeHtml(item.metric_label)}</span>
+              <strong>${escapeHtml(item.metric_value || '-')}</strong>
+              <span>${escapeHtml(item.path_label)}</span>
+              <strong>${escapeHtml(item.path_value || '-')}</strong>
             </div>
           </article>
         `;
       }
 
       async function refreshFaultStatus() {
+        stageTime.textContent = '正在刷新...';
         try {
           const response = await fetch('/lab-adapter/api/demo/fault-status', {
             headers: { Accept: 'application/json' },
             cache: 'no-store',
           });
-          const payload = await response.json();
+          const text = await response.text();
+          let payload;
+          try {
+            payload = text ? JSON.parse(text) : {};
+          } catch (error) {
+            throw new Error(`状态接口返回异常：${text.slice(0, 120)}`);
+          }
           if (!response.ok) {
             throw new Error(payload.message || `HTTP ${response.status}`);
           }
-          stageGrid.innerHTML = (payload.items || []).map(renderStageItem).join('');
-          stageTime.textContent = `${payload.target || '目标机'} · ${payload.updated_at || ''}`;
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          if (!items.length) {
+            throw new Error('状态接口没有返回目标项');
+          }
+          stageGrid.innerHTML = items.map(renderStageItem).join('');
+          stageTime.textContent = `${payload.target || '目标机'} · ${payload.updated_at || '刚刚'}`;
         } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           stageGrid.innerHTML = `
             <article class="stage-item">
               <div class="stage-item-top">
@@ -561,7 +582,7 @@
               </div>
               <div class="stage-metrics">
                 <span>原因</span>
-                <strong>${error instanceof Error ? error.message : String(error)}</strong>
+                <strong>${escapeHtml(message)}</strong>
               </div>
             </article>
           `;
@@ -638,6 +659,10 @@
         await refreshFaultStatus();
       });
       refreshStatusButton.addEventListener('click', refreshFaultStatus);
+      window.addEventListener('pageshow', refreshFaultStatus);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshFaultStatus();
+      });
       refreshFaultStatus();
       window.setInterval(refreshFaultStatus, 5000);
     </script>
