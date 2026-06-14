@@ -23,18 +23,45 @@ export type SolutionTemplateFormValues = {
   default_close_status?: 'resolved' | 'closed';
 };
 
-export const DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES: SolutionTemplateFormValues = {
-  conclusion_template: '',
-  default_close_code: 'auto_healed',
-  default_close_status: 'resolved',
-  description: '',
-  problem_template: '',
-  solution_template: '',
-  step_output_max_length: 240,
-  steps_max_count: 6,
-  steps_render_mode: 'summary',
-  verification_template: '',
-};
+export const SOLUTION_TEMPLATE_CLOSE_STATUS_META = {
+  closed: { color: 'default', label: '已关闭' },
+  resolved: { color: 'blue', label: '已解决' },
+} as const;
+
+export const SOLUTION_TEMPLATE_STEPS_MODE_META = {
+  detailed: { color: 'geekblue', label: '详细步骤' },
+  summary: { color: 'default', label: '摘要步骤' },
+} as const;
+
+export const DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES: SolutionTemplateFormValues =
+  {
+    conclusion_template: '',
+    default_close_code: 'auto_healed',
+    default_close_status: 'resolved',
+    description: '',
+    problem_template: '',
+    solution_template: '',
+    step_output_max_length: 240,
+    steps_max_count: 6,
+    steps_render_mode: 'summary',
+    verification_template: '',
+  };
+
+export function getSolutionTemplateCloseStatusMeta(status?: string) {
+  return (
+    SOLUTION_TEMPLATE_CLOSE_STATUS_META[
+      (status || 'resolved') as keyof typeof SOLUTION_TEMPLATE_CLOSE_STATUS_META
+    ] || { color: 'default', label: status || '已解决' }
+  );
+}
+
+export function getSolutionTemplateStepsModeMeta(mode?: string) {
+  return (
+    SOLUTION_TEMPLATE_STEPS_MODE_META[
+      (mode || 'summary') as keyof typeof SOLUTION_TEMPLATE_STEPS_MODE_META
+    ] || { color: 'default', label: mode || '摘要步骤' }
+  );
+}
 
 export const SOLUTION_TEMPLATE_SEARCH_FIELDS = [
   { key: 'name', label: '模板名称' },
@@ -68,34 +95,76 @@ export const SOLUTION_TEMPLATE_SORT_OPTIONS = [
   { value: 'name', label: '模板名称' },
 ];
 
-export const buildTemplatePayload = (values: SolutionTemplateFormValues): AutoHealing.CreateIncidentSolutionTemplateRequest => ({
-  ...values,
-  name: values.name || '',
-  resolution_template: values.resolution_template?.trim() || values.conclusion_template?.trim() || '',
-  work_notes_template: values.work_notes_template?.trim() || values.solution_template?.trim() || '',
+export const buildTemplatePayload = (
+  values: SolutionTemplateFormValues,
+): AutoHealing.CreateIncidentSolutionTemplateRequest => ({
+  conclusion_template: values.conclusion_template?.trim() || '',
+  default_close_code:
+    values.default_close_code?.trim() ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_code,
+  default_close_status:
+    values.default_close_status ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_status,
+  description: values.description?.trim() || '',
+  name: values.name?.trim() || '',
+  problem_template: values.problem_template?.trim() || '',
+  resolution_template:
+    values.resolution_template?.trim() ||
+    values.conclusion_template?.trim() ||
+    '',
+  solution_template: values.solution_template?.trim() || '',
+  step_output_max_length:
+    values.step_output_max_length ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.step_output_max_length,
+  steps_max_count:
+    values.steps_max_count ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_max_count,
+  steps_render_mode:
+    values.steps_render_mode ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_render_mode,
+  verification_template: values.verification_template?.trim() || '',
+  work_notes_template:
+    values.work_notes_template?.trim() ||
+    values.solution_template?.trim() ||
+    '',
 });
 
 export const buildTemplateEditorValues = (
   template?: AutoHealing.IncidentSolutionTemplate | null,
 ): SolutionTemplateFormValues => ({
   ...DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES,
-  conclusion_template: template?.conclusion_template || template?.resolution_template || '',
-  default_close_code: template?.default_close_code || DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_code,
-  default_close_status: (template?.default_close_status as 'resolved' | 'closed' | undefined) || DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_status,
+  conclusion_template:
+    template?.conclusion_template || template?.resolution_template || '',
+  default_close_code:
+    template?.default_close_code ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_code,
+  default_close_status:
+    (template?.default_close_status as 'resolved' | 'closed' | undefined) ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_status,
   description: template?.description || '',
   problem_template: template?.problem_template || '',
   resolution_template: template?.resolution_template || '',
-  solution_template: template?.solution_template || template?.work_notes_template || '',
-  step_output_max_length: template?.step_output_max_length || DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.step_output_max_length,
-  steps_max_count: template?.steps_max_count || DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_max_count,
-  steps_render_mode: (template?.steps_render_mode as 'summary' | 'detailed' | undefined) || DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_render_mode,
+  solution_template:
+    template?.solution_template || template?.work_notes_template || '',
+  step_output_max_length:
+    template?.step_output_max_length ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.step_output_max_length,
+  steps_max_count:
+    template?.steps_max_count ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_max_count,
+  steps_render_mode:
+    (template?.steps_render_mode as 'summary' | 'detailed' | undefined) ||
+    DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_render_mode,
   verification_template: template?.verification_template || '',
   work_notes_template: template?.work_notes_template || '',
 });
 
-export const parseSolutionTemplateSearchParams = (params: SolutionTemplateSearchParams) => {
+export const parseSolutionTemplateSearchParams = (
+  params: SolutionTemplateSearchParams,
+) => {
   const filters = params.filters || [];
-  const findFilterValue = (field: string) => filters.find((item) => item.field === field)?.value;
+  const findFilterValue = (field: string) =>
+    filters.find((item) => item.field === field)?.value;
   return {
     searchField: params.searchField || 'name',
     searchText: params.searchValue?.trim() || '',
@@ -104,12 +173,17 @@ export const parseSolutionTemplateSearchParams = (params: SolutionTemplateSearch
   };
 };
 
-export const buildSolutionTemplatePreview = (values: SolutionTemplateFormValues) => {
+export const buildSolutionTemplatePreview = (
+  values: SolutionTemplateFormValues,
+) => {
   const context = buildPreviewVariables();
   const problem = renderTemplate(values.problem_template, context);
   const solution = renderTemplate(values.solution_template, context);
   const verification = renderTemplate(values.verification_template, context);
-  const conclusion = renderTemplate(values.conclusion_template || values.resolution_template, context);
+  const conclusion = renderTemplate(
+    values.conclusion_template || values.resolution_template,
+    context,
+  );
   const steps = buildPreviewSteps(values, context);
   return {
     conclusion,
@@ -127,47 +201,78 @@ export const sortSolutionTemplates = (
   templates: AutoHealing.IncidentSolutionTemplate[],
   sortBy: SolutionTemplateSortField,
   sortOrder: SolutionTemplateSortOrder,
-) => [...templates].sort((left, right) => {
-  const leftValue = solutionTemplateSortValue(left, sortBy);
-  const rightValue = solutionTemplateSortValue(right, sortBy);
-  const result = leftValue.localeCompare(rightValue, 'zh-CN');
-  return sortOrder === 'asc' ? result : -result;
-});
+) =>
+  [...templates].sort((left, right) => {
+    const leftValue = solutionTemplateSortValue(left, sortBy);
+    const rightValue = solutionTemplateSortValue(right, sortBy);
+    const result = leftValue.localeCompare(rightValue, 'zh-CN');
+    return sortOrder === 'asc' ? result : -result;
+  });
 
 export const filterSolutionTemplates = (
   templates: AutoHealing.IncidentSolutionTemplate[],
-  options: { searchField: string; searchText: string; closeStatus: string; stepsMode: string },
-) => templates.filter((template) => {
-  if (options.closeStatus !== 'all' && template.default_close_status !== options.closeStatus) {
-    return false;
-  }
-  if (options.stepsMode !== 'all' && (template.steps_render_mode || 'summary') !== options.stepsMode) {
-    return false;
-  }
-  if (!options.searchText) {
-    return true;
-  }
-  const normalized = options.searchText.toLowerCase();
-  const candidates = solutionTemplateSearchCandidates(template, options.searchField);
-  return candidates.some((candidate) => candidate.toLowerCase().includes(normalized));
-});
+  options: {
+    searchField: string;
+    searchText: string;
+    closeStatus: string;
+    stepsMode: string;
+  },
+) =>
+  templates.filter((template) => {
+    if (
+      options.closeStatus !== 'all' &&
+      template.default_close_status !== options.closeStatus
+    ) {
+      return false;
+    }
+    if (
+      options.stepsMode !== 'all' &&
+      (template.steps_render_mode || 'summary') !== options.stepsMode
+    ) {
+      return false;
+    }
+    if (!options.searchText) {
+      return true;
+    }
+    const normalized = options.searchText.toLowerCase();
+    const candidates = solutionTemplateSearchCandidates(
+      template,
+      options.searchField,
+    );
+    return candidates.some((candidate) =>
+      candidate.toLowerCase().includes(normalized),
+    );
+  });
 
-export const solutionTemplateSummary = (template?: AutoHealing.IncidentSolutionTemplate | null) => {
+export const solutionTemplateSummary = (
+  template?: AutoHealing.IncidentSolutionTemplate | null,
+) => {
   if (!template) {
     return '';
   }
   const segments = [
     template.problem_template ? '问题说明' : '',
-    template.solution_template || template.work_notes_template ? '解决方案' : '',
+    template.solution_template || template.work_notes_template
+      ? '解决方案'
+      : '',
     template.verification_template ? '验证结果' : '',
-    template.conclusion_template || template.resolution_template ? '最终结论' : '',
+    template.conclusion_template || template.resolution_template
+      ? '最终结论'
+      : '',
   ].filter(Boolean);
   return segments.join(' / ');
 };
 
-function solutionTemplateSearchCandidates(template: AutoHealing.IncidentSolutionTemplate, searchField: string) {
+function solutionTemplateSearchCandidates(
+  template: AutoHealing.IncidentSolutionTemplate,
+  searchField: string,
+) {
   if (searchField === 'description') {
-    return [template.description || '', template.solution_template || '', template.problem_template || ''];
+    return [
+      template.description || '',
+      template.solution_template || '',
+      template.problem_template || '',
+    ];
   }
   return [
     template.name || '',
@@ -178,19 +283,27 @@ function solutionTemplateSearchCandidates(template: AutoHealing.IncidentSolution
   ];
 }
 
-function solutionTemplateSortValue(template: AutoHealing.IncidentSolutionTemplate, sortBy: SolutionTemplateSortField) {
+function solutionTemplateSortValue(
+  template: AutoHealing.IncidentSolutionTemplate,
+  sortBy: SolutionTemplateSortField,
+) {
   if (sortBy === 'name') {
     return template.name || '';
   }
   return template[sortBy] || '';
 }
 
-function buildPreviewSteps(values: SolutionTemplateFormValues, context: Record<string, unknown>) {
+function buildPreviewSteps(
+  values: SolutionTemplateFormValues,
+  context: Record<string, unknown>,
+) {
   const rendered = renderTemplate('{{ steps_text }}', {
     ...context,
     steps_text: sampleStepsText(values.steps_render_mode || 'summary'),
   });
-  return rendered === '{{ steps_text }}' ? sampleStepsText(values.steps_render_mode || 'summary') : rendered;
+  return rendered === '{{ steps_text }}'
+    ? sampleStepsText(values.steps_render_mode || 'summary')
+    : rendered;
 }
 
 function sampleStepsText(mode: string) {
@@ -229,7 +342,8 @@ function buildPreviewVariables() {
       affected_ci: 'real-host-100',
       affected_service: 'auto-healing-lab-http',
       external_id: 'R-000999',
-      title: '[high] service_health_check_failed on real-host-100 | demo incident',
+      title:
+        '[high] service_health_check_failed on real-host-100 | demo incident',
     },
     operator: {
       name: 'system:auto-close',
@@ -242,10 +356,12 @@ function buildPreviewVariables() {
 }
 
 function renderTemplate(template = '', context: Record<string, unknown>) {
-  return template.replace(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g, (_match, path) => {
-    const resolved = resolvePreviewPath(context, path as string);
-    return resolved == null ? `{{ ${path} }}` : String(resolved);
-  }).trim();
+  return template
+    .replace(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g, (_match, path) => {
+      const resolved = resolvePreviewPath(context, path as string);
+      return resolved == null ? `{{ ${path} }}` : String(resolved);
+    })
+    .trim();
 }
 
 function resolvePreviewPath(context: Record<string, unknown>, path: string) {

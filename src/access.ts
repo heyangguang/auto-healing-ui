@@ -1,4 +1,8 @@
-import { createPermissionHelpers, hasActiveImpersonationSession, resolvePlatformAdminFlag } from './accessHelpers';
+import {
+  createPermissionHelpers,
+  hasActiveImpersonationSession,
+  resolvePlatformAdminFlag,
+} from './accessHelpers';
 
 export default function access(
   initialState: { currentUser?: API.CurrentUser } | undefined,
@@ -6,19 +10,23 @@ export default function access(
   const { currentUser } = initialState ?? {};
   const permissions = currentUser?.permissions ?? [];
   const impersonating = hasActiveImpersonationSession();
-  const { hasPermission, hasAnyPermission } = createPermissionHelpers(permissions);
+  const { hasPermission, hasAnyPermission } =
+    createPermissionHelpers(permissions);
 
-  const canViewImpersonationApprovals = !currentUser?.is_platform_admin
-    && !impersonating
-    && hasPermission('tenant:impersonation:view');
-  const canApproveImpersonation = !currentUser?.is_platform_admin
-    && !impersonating
-    && hasPermission('tenant:impersonation:approve');
-  const canViewPendingCenter = hasAnyPermission(
-    'healing:approvals:view',
-    'healing:trigger:view',
-    'security:exemption:approve',
-  ) || canViewImpersonationApprovals;
+  const canViewImpersonationApprovals =
+    !currentUser?.is_platform_admin &&
+    !impersonating &&
+    hasPermission('tenant:impersonation:view');
+  const canApproveImpersonation =
+    !currentUser?.is_platform_admin &&
+    !impersonating &&
+    hasPermission('tenant:impersonation:approve');
+  const canViewPendingCenter =
+    hasAnyPermission(
+      'healing:approvals:view',
+      'healing:trigger:view',
+      'security:exemption:approve',
+    ) || canViewImpersonationApprovals;
 
   return {
     // ===============================
@@ -33,7 +41,10 @@ export default function access(
     // ===============================
     // 平台管理 (platform:*)
     // ===============================
-    canViewPlatformTenants: hasAnyPermission('platform:tenants:manage', 'platform:tenants:list'),
+    canViewPlatformTenants: hasAnyPermission(
+      'platform:tenants:manage',
+      'platform:tenants:list',
+    ),
     canManagePlatformTenants: hasPermission('platform:tenants:manage'),
     canViewPlatformUsers: hasPermission('platform:users:list'),
     canCreatePlatformUser: hasPermission('platform:users:create'),
@@ -88,7 +99,11 @@ export default function access(
     ),
     canViewPlaybooks: hasPermission('playbook:list'),
     canViewRepositories: hasPermission('repository:list'),
-    canViewResources: hasAnyPermission('plugin:list', 'plugin:create', 'plugin:update'),
+    canViewResources: hasAnyPermission(
+      'plugin:list',
+      'plugin:create',
+      'plugin:update',
+    ),
     canViewAuditLogs: hasPermission('audit:list'),
     canExportAuditLogs: hasPermission('audit:export'),
     canViewDashboard: hasPermission('dashboard:view'),
@@ -132,6 +147,11 @@ export default function access(
     canSyncPlugin: hasPermission('plugin:sync'),
     canActivatePlugin: hasPermission('plugin:update'),
 
+    // 工单解决方案模板当前由后端复用 plugin:* 权限保护。
+    canCreateSolutionTemplate: hasPermission('plugin:create'),
+    canUpdateSolutionTemplate: hasPermission('plugin:update'),
+    canDeleteSolutionTemplate: hasPermission('plugin:delete'),
+
     // ===============================
     // 任务/执行模块 (task:*)
     // ===============================
@@ -148,15 +168,23 @@ export default function access(
     canCreatePlaybook: hasPermission('playbook:create'),
     canUpdatePlaybook: hasPermission('playbook:update'),
     canDeletePlaybook: hasPermission('playbook:delete'),
-    canManagePlaybook: hasAnyPermission('playbook:create', 'playbook:update', 'playbook:delete'),
-    canImportPlaybook: hasPermission('playbook:create') && hasPermission('repository:list'),
+    canManagePlaybook: hasAnyPermission(
+      'playbook:create',
+      'playbook:update',
+      'playbook:delete',
+    ),
+    canImportPlaybook:
+      hasPermission('playbook:create') && hasPermission('repository:list'),
 
     // ===============================
     // Git 仓库 (repository:*)
     // ===============================
     canCreateGitRepo: hasPermission('repository:create'),
     canUpdateGitRepo: hasPermission('repository:update'),
-    canManageGitRepo: hasAnyPermission('repository:create', 'repository:update'),
+    canManageGitRepo: hasAnyPermission(
+      'repository:create',
+      'repository:update',
+    ),
     canSyncRepo: hasPermission('repository:sync'),
     canDeleteRepo: hasPermission('repository:delete'),
 
@@ -242,7 +270,10 @@ export default function access(
     canCreateBlacklist: hasPermission('security:blacklist:create'),
     canUpdateBlacklist: hasPermission('security:blacklist:update'),
     canDeleteBlacklist: hasPermission('security:blacklist:delete'),
-    canManageBlacklist: hasAnyPermission('security:blacklist:create', 'security:blacklist:update'),
+    canManageBlacklist: hasAnyPermission(
+      'security:blacklist:create',
+      'security:blacklist:update',
+    ),
     // 安全豁免
     canViewExemptions: hasPermission('security:exemption:view'),
     canCreateExemption: hasPermission('security:exemption:create'),

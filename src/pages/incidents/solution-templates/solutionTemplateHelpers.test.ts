@@ -1,6 +1,9 @@
 import {
   buildSolutionTemplatePreview,
+  buildTemplatePayload,
   filterSolutionTemplates,
+  getSolutionTemplateCloseStatusMeta,
+  getSolutionTemplateStepsModeMeta,
   solutionTemplateSummary,
   sortSolutionTemplates,
 } from './solutionTemplateHelpers';
@@ -26,17 +29,22 @@ describe('solution template helpers', () => {
   ] as AutoHealing.IncidentSolutionTemplate[];
 
   it('filters by search and enum filters', () => {
-    expect(filterSolutionTemplates(templates, {
-      searchField: 'name',
-      searchText: '服务',
-      closeStatus: 'resolved',
-      stepsMode: 'summary',
-    })).toHaveLength(1);
+    expect(
+      filterSolutionTemplates(templates, {
+        searchField: 'name',
+        searchText: '服务',
+        closeStatus: 'resolved',
+        stepsMode: 'summary',
+      }),
+    ).toHaveLength(1);
   });
 
   it('sorts templates by name asc', () => {
     const sorted = sortSolutionTemplates(templates, 'name', 'asc');
-    expect(sorted.map((item) => item.name)).toEqual(['磁盘恢复模板', '服务恢复模板']);
+    expect(sorted.map((item) => item.name)).toEqual([
+      '磁盘恢复模板',
+      '服务恢复模板',
+    ]);
   });
 
   it('builds structured preview sections', () => {
@@ -49,20 +57,54 @@ describe('solution template helpers', () => {
       verification_template: '验证：{{ execution.status }}',
     });
 
-    expect(preview.sections.map((item) => item.title)).toEqual(['问题说明', '解决方案', '执行步骤', '验证结果', '最终结论']);
+    expect(preview.sections.map((item) => item.title)).toEqual([
+      '问题说明',
+      '解决方案',
+      '执行步骤',
+      '验证结果',
+      '最终结论',
+    ]);
     expect(preview.sections[2].content).toContain('1. 提取工单主机');
   });
 
   it('summarizes template segments', () => {
-    expect(solutionTemplateSummary({
-      id: 'template-a',
-      name: '服务恢复模板',
-      problem_template: '问题',
-      solution_template: '方案',
-      verification_template: '验证',
-      conclusion_template: '结论',
-      resolution_template: '',
-      work_notes_template: '',
-    } as AutoHealing.IncidentSolutionTemplate)).toBe('问题说明 / 解决方案 / 验证结果 / 最终结论');
+    expect(
+      solutionTemplateSummary({
+        id: 'template-a',
+        name: '服务恢复模板',
+        problem_template: '问题',
+        solution_template: '方案',
+        verification_template: '验证',
+        conclusion_template: '结论',
+        resolution_template: '',
+        work_notes_template: '',
+      } as AutoHealing.IncidentSolutionTemplate),
+    ).toBe('问题说明 / 解决方案 / 验证结果 / 最终结论');
+  });
+
+  it('formats backend enum values for display', () => {
+    expect(getSolutionTemplateCloseStatusMeta('resolved').label).toBe('已解决');
+    expect(getSolutionTemplateStepsModeMeta('detailed').label).toBe('详细步骤');
+  });
+
+  it('builds structured payload and fills compatibility fields', () => {
+    expect(
+      buildTemplatePayload({
+        conclusion_template: '  已完成  ',
+        name: '  模板  ',
+        solution_template: '  已处理  ',
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        conclusion_template: '已完成',
+        default_close_code: 'auto_healed',
+        default_close_status: 'resolved',
+        name: '模板',
+        resolution_template: '已完成',
+        solution_template: '已处理',
+        steps_render_mode: 'summary',
+        work_notes_template: '已处理',
+      }),
+    );
   });
 });
