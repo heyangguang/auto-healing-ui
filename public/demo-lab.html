@@ -132,6 +132,12 @@
         margin-bottom: 12px;
       }
 
+      .stage-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
       .stage-title {
         margin: 0;
         font-size: 18px;
@@ -377,6 +383,11 @@
           min-width: 0;
           padding: 0 8px;
         }
+
+        .stage-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
       }
     </style>
   </head>
@@ -388,6 +399,7 @@
           <p class="subtitle">独立造单入口：生成真实 iTop 工单，并按场景注入演示故障。</p>
         </div>
         <nav class="links" aria-label="demo links">
+          <button class="link-button" id="show-status" type="button">目标状态</button>
           <a class="link-button" href="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
           <a class="link-button" href="/execution/tasks" target="_blank" rel="noreferrer">执行任务</a>
           <a class="link-button" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop</a>
@@ -395,10 +407,13 @@
         </nav>
       </header>
 
-      <section class="stage" aria-label="target state">
+      <section class="stage" id="target-status" aria-label="target state">
         <div class="stage-head">
           <h2 class="stage-title">目标机现场</h2>
-          <span id="stage-time" class="stage-time">读取中...</span>
+          <div class="stage-actions">
+            <span id="stage-time" class="stage-time">读取中...</span>
+            <button class="link-button" id="refresh-status" type="button">刷新状态</button>
+          </div>
         </div>
         <div id="stage-grid" class="stage-grid">
           <article class="stage-item">
@@ -503,6 +518,8 @@
       const resultJson = document.getElementById('result-json');
       const stageGrid = document.getElementById('stage-grid');
       const stageTime = document.getElementById('stage-time');
+      const showStatusButton = document.getElementById('show-status');
+      const refreshStatusButton = document.getElementById('refresh-status');
       const buttons = Array.from(document.querySelectorAll('button[data-scenario]'));
 
       function renderStageItem(item) {
@@ -616,6 +633,11 @@
       buttons.forEach((button) => {
         button.addEventListener('click', () => createIncident(button.dataset.scenario));
       });
+      showStatusButton.addEventListener('click', async () => {
+        document.getElementById('target-status').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        await refreshFaultStatus();
+      });
+      refreshStatusButton.addEventListener('click', refreshFaultStatus);
       refreshFaultStatus();
       window.setInterval(refreshFaultStatus, 5000);
     </script>
