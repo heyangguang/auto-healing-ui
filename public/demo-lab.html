@@ -138,6 +138,16 @@
         gap: 8px;
       }
 
+      .refresh-select {
+        min-height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--panel);
+        color: var(--text);
+        padding: 0 10px;
+        font-size: 14px;
+      }
+
       .stage-title {
         margin: 0;
         font-size: 18px;
@@ -160,6 +170,20 @@
         border-radius: 8px;
         padding: 14px;
         min-height: 128px;
+        transition:
+          border-color 160ms ease,
+          box-shadow 160ms ease,
+          background-color 160ms ease;
+      }
+
+      .stage.refreshing .stage-item {
+        border-color: #9dbbf3;
+      }
+
+      .stage.updated .stage-item {
+        border-color: #53b98e;
+        background: #f2fbf7;
+        box-shadow: 0 0 0 2px rgba(22, 132, 91, 0.12);
       }
 
       .stage-item-top {
@@ -401,7 +425,7 @@
         <nav class="links" aria-label="demo links">
           <button class="link-button" id="show-status" type="button">目标状态</button>
           <a class="link-button" href="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
-          <a class="link-button" href="/execution/tasks" target="_blank" rel="noreferrer">执行任务</a>
+          <a class="link-button" href="/execution/templates" target="_blank" rel="noreferrer">执行任务</a>
           <a class="link-button" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop</a>
           <a class="link-button" href="http://118.196.22.79:13000/" target="_blank" rel="noreferrer">Gitea</a>
         </nav>
@@ -412,6 +436,11 @@
           <h2 class="stage-title">目标机现场</h2>
           <div class="stage-actions">
             <span id="stage-time" class="stage-time">读取中...</span>
+            <select class="refresh-select" id="auto-refresh" aria-label="自动刷新">
+              <option value="0">自动刷新：关</option>
+              <option value="1000">自动刷新：1秒</option>
+              <option value="5000" selected>自动刷新：5秒</option>
+            </select>
             <button class="link-button" id="refresh-status" type="button">刷新状态</button>
           </div>
         </div>
@@ -518,9 +547,14 @@
       const resultJson = document.getElementById('result-json');
       const stageGrid = document.getElementById('stage-grid');
       const stageTime = document.getElementById('stage-time');
+      const targetStatus = document.getElementById('target-status');
       const showStatusButton = document.getElementById('show-status');
       const refreshStatusButton = document.getElementById('refresh-status');
+      const autoRefreshSelect = document.getElementById('auto-refresh');
       const buttons = Array.from(document.querySelectorAll('button[data-scenario]'));
+      let autoRefreshTimer = null;
+      let refreshResetTimer = null;
+      let isRefreshingStatus = false;
 
       function escapeHtml(value) {
         return String(value ?? '')
@@ -550,6 +584,13 @@
       }
 
       async function refreshFaultStatus() {
+        if (isRefreshingStatus) return;
+        isRefreshingStatus = true;
+        window.clearTimeout(refreshResetTimer);
+        targetStatus.classList.remove('updated');
+        targetStatus.classList.add('refreshing');
+        refreshStatusButton.disabled = true;
+        refreshStatusButton.textContent = '刷新中...';
         stageTime.textContent = '正在刷新...';
         try {
           const response = await fetch('/lab-adapter/api/demo/fault-status', {
@@ -572,6 +613,12 @@
           }
           stageGrid.innerHTML = items.map(renderStageItem).join('');
           stageTime.textContent = `${payload.target || '目标机'} · ${payload.updated_at || '刚刚'}`;
+          targetStatus.classList.add('updated');
+          refreshStatusButton.textContent = '已刷新';
+          refreshResetTimer = window.setTimeout(() => {
+            targetStatus.classList.remove('updated');
+            refreshStatusButton.textContent = '刷新状态';
+          }, 900);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           stageGrid.innerHTML = `
@@ -587,6 +634,25 @@
             </article>
           `;
           stageTime.textContent = '状态不可用';
+          refreshStatusButton.textContent = '刷新失败';
+          refreshResetTimer = window.setTimeout(() => {
+            refreshStatusButton.textContent = '刷新状态';
+          }, 1200);
+        } finally {
+          targetStatus.classList.remove('refreshing');
+          refreshStatusButton.disabled = false;
+          isRefreshingStatus = false;
+        }
+      }
+
+      function applyAutoRefresh() {
+        if (autoRefreshTimer) {
+          window.clearInterval(autoRefreshTimer);
+          autoRefreshTimer = null;
+        }
+        const interval = Number(autoRefreshSelect.value || 0);
+        if (interval > 0) {
+          autoRefreshTimer = window.setInterval(refreshFaultStatus, interval);
         }
       }
 
@@ -659,12 +725,16 @@
         await refreshFaultStatus();
       });
       refreshStatusButton.addEventListener('click', refreshFaultStatus);
+      autoRefreshSelect.addEventListener('change', () => {
+        applyAutoRefresh();
+        refreshFaultStatus();
+      });
       window.addEventListener('pageshow', refreshFaultStatus);
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) refreshFaultStatus();
       });
       refreshFaultStatus();
-      window.setInterval(refreshFaultStatus, 5000);
+      applyAutoRefresh();
     </script>
   </body>
 </html>
