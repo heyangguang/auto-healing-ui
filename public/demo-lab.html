@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AHS Demo Lab</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --text: #17212b;
+        --muted: #66758a;
+        --border: #dbe3ef;
+        --blue: #2167d9;
+        --blue-dark: #174ea6;
+        --green: #16845b;
+        --red: #c4362e;
+        --yellow: #966600;
+        --shadow: 0 12px 30px rgba(23, 33, 43, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        letter-spacing: 0;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 24px 0 34px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      .subtitle {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .link-button,
+      button {
+        min-height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 13px;
+        font-size: 14px;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      button.primary {
+        width: 100%;
+        border-color: var(--blue);
+        background: var(--blue);
+        color: #ffffff;
+        font-weight: 600;
+      }
+
+      button.primary:hover,
+      button.primary:focus {
+        background: var(--blue-dark);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        min-height: 292px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        padding: 18px;
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 32px;
+      }
+
+      .mark {
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: #ffffff;
+        flex: 0 0 auto;
+      }
+
+      .mark.clean {
+        background: var(--green);
+      }
+
+      .mark.kill {
+        background: var(--blue);
+      }
+
+      .mark.block {
+        background: var(--red);
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.25;
+      }
+
+      .desc {
+        min-height: 45px;
+        margin: 12px 0 14px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: 9px 10px;
+        margin-bottom: 16px;
+        font-size: 13px;
+      }
+
+      .meta span {
+        color: var(--muted);
+      }
+
+      .meta strong {
+        color: var(--text);
+        font-weight: 650;
+        overflow-wrap: anywhere;
+      }
+
+      .card-actions {
+        margin-top: auto;
+      }
+
+      .result {
+        margin-top: 16px;
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--blue);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 16px;
+      }
+
+      .result.success {
+        border-left-color: var(--green);
+      }
+
+      .result.error {
+        border-left-color: var(--red);
+      }
+
+      .result.pending {
+        border-left-color: var(--yellow);
+      }
+
+      .result-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .badge {
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        padding: 4px 9px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      pre {
+        max-height: 320px;
+        margin: 0;
+        overflow: auto;
+        border-radius: 6px;
+        background: #101823;
+        color: #e9eef7;
+        padding: 12px;
+        font-size: 12px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      @media (max-width: 980px) {
+        .topbar {
+          display: block;
+        }
+
+        .links {
+          justify-content: flex-start;
+          margin-top: 14px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .card {
+          min-height: 0;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .page {
+          width: min(100% - 20px, 1180px);
+          padding-top: 16px;
+        }
+
+        h1 {
+          font-size: 23px;
+        }
+
+        .links {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .link-button {
+          min-width: 0;
+          padding: 0 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <h1>AHS Demo Lab</h1>
+          <p class="subtitle">独立造单入口：生成真实 iTop 工单，并按场景注入演示故障。</p>
+        </div>
+        <nav class="links" aria-label="demo links">
+          <a class="link-button" href="/resources/incidents">AHS 工单</a>
+          <a class="link-button" href="/execution/tasks">执行任务</a>
+          <a class="link-button" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop</a>
+          <a class="link-button" href="http://118.196.22.79:13000/" target="_blank" rel="noreferrer">Gitea</a>
+        </nav>
+      </header>
+
+      <section class="grid" aria-label="demo scenarios">
+        <article class="card">
+          <div class="card-header">
+            <span class="mark clean">L</span>
+            <h2>清理日志</h2>
+          </div>
+          <p class="desc">生成日志膨胀工单，在 SSH 靶机注入可清理日志文件，适合手动执行任务演示。</p>
+          <div class="meta">
+            <span>模式</span>
+            <strong>手动执行</strong>
+            <span>任务</span>
+            <strong>Demo Clean Logs Task</strong>
+            <span>仓库</span>
+            <strong>fault-playbooks</strong>
+          </div>
+          <div class="card-actions">
+            <button class="primary" data-scenario="clean-logs">生成工单</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <span class="mark kill">P</span>
+            <h2>杀死异常进程</h2>
+          </div>
+          <p class="desc">生成异常进程工单，并启动目标进程，适合演示 ITSM 同步后的全自动自愈流程。</p>
+          <div class="meta">
+            <span>模式</span>
+            <strong>自动自愈</strong>
+            <span>任务</span>
+            <strong>Demo Kill Process Task</strong>
+            <span>仓库</span>
+            <strong>fault-playbooks</strong>
+          </div>
+          <div class="card-actions">
+            <button class="primary" data-scenario="kill-process">生成工单</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <span class="mark block">B</span>
+            <h2>黑名单指令</h2>
+          </div>
+          <p class="desc">生成高危指令验证工单，执行任务时应被安全扫描拦截，用于演示防御能力。</p>
+          <div class="meta">
+            <span>模式</span>
+            <strong>手动执行</strong>
+            <span>任务</span>
+            <strong>Demo Blacklist Interception Task</strong>
+            <span>仓库</span>
+            <strong>blacklist-demo-playbooks</strong>
+          </div>
+          <div class="card-actions">
+            <button class="primary" data-scenario="blacklist">生成工单</button>
+          </div>
+        </article>
+      </section>
+
+      <section id="result" class="result pending" hidden>
+        <div class="result-title">
+          <span id="result-title">等待操作</span>
+          <span id="result-badge" class="badge">ready</span>
+        </div>
+        <pre id="result-json"></pre>
+      </section>
+    </main>
+
+    <script>
+      const result = document.getElementById('result');
+      const resultTitle = document.getElementById('result-title');
+      const resultBadge = document.getElementById('result-badge');
+      const resultJson = document.getElementById('result-json');
+      const buttons = Array.from(document.querySelectorAll('button[data-scenario]'));
+
+      function setResult(state, title, badge, payload) {
+        result.hidden = false;
+        result.className = `result ${state}`;
+        resultTitle.textContent = title;
+        resultBadge.textContent = badge;
+        resultJson.textContent =
+          typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+      }
+
+      async function createIncident(scenario) {
+        buttons.forEach((button) => {
+          button.disabled = true;
+          if (button.dataset.scenario === scenario) {
+            button.textContent = '生成中...';
+          }
+        });
+        setResult('pending', '正在创建 iTop 工单', scenario, { scenario });
+
+        try {
+          const response = await fetch('/lab-adapter/api/demo/incidents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              scenario,
+              inject_fault: scenario !== 'blacklist',
+            }),
+          });
+          const text = await response.text();
+          let payload;
+          try {
+            payload = text ? JSON.parse(text) : {};
+          } catch (error) {
+            payload = text;
+          }
+          if (!response.ok) {
+            throw new Error(
+              typeof payload === 'string'
+                ? payload
+                : payload.detail || payload.message || `HTTP ${response.status}`,
+            );
+          }
+          setResult(
+            'success',
+            `已创建工单 ${payload.external_id || ''}`.trim(),
+            payload.scenario || scenario,
+            payload,
+          );
+        } catch (error) {
+          setResult('error', '创建工单失败', scenario, {
+            scenario,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        } finally {
+          buttons.forEach((button) => {
+            button.disabled = false;
+            button.textContent = '生成工单';
+          });
+        }
+      }
+
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => createIncident(button.dataset.scenario));
+      });
+    </script>
+  </body>
+</html>
