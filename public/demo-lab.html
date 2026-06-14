@@ -148,6 +148,19 @@
         font-size: 14px;
       }
 
+      .link-button:focus,
+      .refresh-select:focus,
+      button:focus {
+        outline: none;
+      }
+
+      .link-button:focus-visible,
+      .refresh-select:focus-visible,
+      button:focus-visible {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 2px rgba(33, 103, 217, 0.16);
+      }
+
       .stage-title {
         margin: 0;
         font-size: 18px;
@@ -170,20 +183,6 @@
         border-radius: 8px;
         padding: 14px;
         min-height: 128px;
-        transition:
-          border-color 160ms ease,
-          box-shadow 160ms ease,
-          background-color 160ms ease;
-      }
-
-      .stage.refreshing .stage-item {
-        border-color: #9dbbf3;
-      }
-
-      .stage.updated .stage-item {
-        border-color: #53b98e;
-        background: #f2fbf7;
-        box-shadow: 0 0 0 2px rgba(22, 132, 91, 0.12);
       }
 
       .stage-item-top {
@@ -583,17 +582,18 @@
         `;
       }
 
-      async function refreshFaultStatus() {
+      async function refreshFaultStatus(options = {}) {
+        const { feedback = false } = options;
         if (isRefreshingStatus) return;
         isRefreshingStatus = true;
         window.clearTimeout(refreshResetTimer);
-        targetStatus.classList.remove('updated');
-        targetStatus.classList.add('refreshing');
-        refreshStatusButton.disabled = true;
-        refreshStatusButton.textContent = '刷新中...';
-        stageTime.textContent = '正在刷新...';
+        if (feedback) {
+          refreshStatusButton.disabled = true;
+          refreshStatusButton.textContent = '刷新中...';
+          stageTime.textContent = '正在刷新...';
+        }
         try {
-          const response = await fetch('/lab-adapter/api/demo/fault-status', {
+          const response = await fetch(`/lab-adapter/api/demo/fault-status?t=${Date.now()}`, {
             headers: { Accept: 'application/json' },
             cache: 'no-store',
           });
@@ -613,12 +613,12 @@
           }
           stageGrid.innerHTML = items.map(renderStageItem).join('');
           stageTime.textContent = `${payload.target || '目标机'} · ${payload.updated_at || '刚刚'}`;
-          targetStatus.classList.add('updated');
-          refreshStatusButton.textContent = '已刷新';
-          refreshResetTimer = window.setTimeout(() => {
-            targetStatus.classList.remove('updated');
+          if (feedback) {
             refreshStatusButton.textContent = '刷新状态';
-          }, 900);
+            refreshResetTimer = window.setTimeout(() => {
+              refreshStatusButton.textContent = '刷新状态';
+            }, 300);
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           stageGrid.innerHTML = `
@@ -634,26 +634,37 @@
             </article>
           `;
           stageTime.textContent = '状态不可用';
-          refreshStatusButton.textContent = '刷新失败';
-          refreshResetTimer = window.setTimeout(() => {
-            refreshStatusButton.textContent = '刷新状态';
-          }, 1200);
+          if (feedback) {
+            refreshStatusButton.textContent = '刷新失败';
+            refreshResetTimer = window.setTimeout(() => {
+              refreshStatusButton.textContent = '刷新状态';
+            }, 1200);
+          }
         } finally {
-          targetStatus.classList.remove('refreshing');
-          refreshStatusButton.disabled = false;
+          if (feedback) {
+            refreshStatusButton.disabled = false;
+          }
           isRefreshingStatus = false;
         }
       }
 
-      function applyAutoRefresh() {
+      function scheduleAutoRefresh() {
         if (autoRefreshTimer) {
-          window.clearInterval(autoRefreshTimer);
+          window.clearTimeout(autoRefreshTimer);
           autoRefreshTimer = null;
         }
         const interval = Number(autoRefreshSelect.value || 0);
-        if (interval > 0) {
-          autoRefreshTimer = window.setInterval(refreshFaultStatus, interval);
+        if (interval <= 0) {
+          return;
         }
+        autoRefreshTimer = window.setTimeout(async () => {
+          await refreshFaultStatus();
+          scheduleAutoRefresh();
+        }, interval);
+      }
+
+      function applyAutoRefresh() {
+        scheduleAutoRefresh();
       }
 
       function setResult(state, title, badge, payload) {
@@ -703,7 +714,7 @@
             payload.scenario || scenario,
             payload,
           );
-          await refreshFaultStatus();
+          await refreshFaultStatus({ feedback: true });
         } catch (error) {
           setResult('error', '创建工单失败', scenario, {
             scenario,
@@ -722,10 +733,14 @@
       });
       showStatusButton.addEventListener('click', async () => {
         document.getElementById('target-status').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        await refreshFaultStatus();
+        await refreshFaultStatus({ feedback: true });
       });
-      refreshStatusButton.addEventListener('click', refreshFaultStatus);
+      refreshStatusButton.addEventListener('click', () => {
+        refreshStatusButton.blur();
+        refreshFaultStatus({ feedback: true });
+      });
       autoRefreshSelect.addEventListener('change', () => {
+        autoRefreshSelect.blur();
         applyAutoRefresh();
         refreshFaultStatus();
       });

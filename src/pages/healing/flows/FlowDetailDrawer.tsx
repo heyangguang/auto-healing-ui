@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   BranchesOutlined,
   DeploymentUnitOutlined,
@@ -7,8 +6,12 @@ import {
 } from '@ant-design/icons';
 import { Badge, Button, Drawer, Space, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
+import React from 'react';
 import { FlowNodeDetails } from './FlowNodeDetails';
-import { getFunctionalFlowNodes, getFlowNodeTypeSummary } from './FlowNodePreview';
+import {
+  getFlowNodeTypeSummary,
+  getFunctionalFlowNodes,
+} from './FlowNodePreview';
 import { FLOW_NODE_VISUALS, getFlowNodeIcon } from './flowNodeVisuals';
 
 const { Text } = Typography;
@@ -23,12 +26,25 @@ type FlowDetailDrawerProps = {
   onOpenNotificationTemplates: () => void;
 };
 
-const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = ({
+  label,
+  value,
+}) => (
   <div className="flow-detail-row">
     <span className="flow-detail-label">{label}</span>
     <span className="flow-detail-value">{value}</span>
   </div>
 );
+
+function isAutoCloseEnabled(flow: AutoHealing.HealingFlow) {
+  const flowSettings = flow as AutoHealing.HealingFlow & {
+    auto_close_source_incident?: boolean;
+  };
+  return (
+    flowSettings.auto_close_source_incident === true ||
+    flow.close_policy?.enabled === true
+  );
+}
 
 export const FlowDetailDrawer: React.FC<FlowDetailDrawerProps> = ({
   canUpdateFlow,
@@ -42,27 +58,31 @@ export const FlowDetailDrawer: React.FC<FlowDetailDrawerProps> = ({
   if (!flow) {
     return null;
   }
-  const flowSettings = flow as AutoHealing.HealingFlow & { auto_close_source_incident?: boolean };
-
+  const autoCloseEnabled = isAutoCloseEnabled(flow);
   const nodeTypeSummary = getFlowNodeTypeSummary(flow.nodes || []);
   const functionalNodes = getFunctionalFlowNodes(flow.nodes || []);
 
   return (
     <Drawer
-      title={(
+      title={
         <Space>
           <DeploymentUnitOutlined />
           {flow.name}
-          {flow.is_active
-            ? <Badge status="processing" text={<Text style={{ fontSize: 12 }}>运行中</Text>} />
-            : <Tag>已停用</Tag>}
+          {flow.is_active ? (
+            <Badge
+              status="processing"
+              text={<Text style={{ fontSize: 12 }}>运行中</Text>}
+            />
+          ) : (
+            <Tag>已停用</Tag>
+          )}
         </Space>
-      )}
+      }
       size={600}
       open={open}
       onClose={onClose}
       destroyOnHidden
-      extra={(
+      extra={
         <Button
           icon={<EditOutlined />}
           disabled={!canUpdateFlow}
@@ -70,28 +90,66 @@ export const FlowDetailDrawer: React.FC<FlowDetailDrawerProps> = ({
         >
           编辑
         </Button>
-      )}
+      }
     >
       <div className="flow-detail-card">
-        <h4><DeploymentUnitOutlined />基础信息</h4>
+        <h4>
+          <DeploymentUnitOutlined />
+          基础信息
+        </h4>
         <DetailRow label="流程名称" value={flow.name} />
         <DetailRow label="描述" value={flow.description || '-'} />
-        <DetailRow label="状态" value={flow.is_active ? <Badge status="success" text="启用" /> : <Badge status="default" text="停用" />} />
-        <DetailRow label="自动关单" value={flowSettings.auto_close_source_incident ? <Badge status="processing" text="启用" /> : <Badge status="default" text="关闭" />} />
+        <DetailRow
+          label="状态"
+          value={
+            flow.is_active ? (
+              <Badge status="success" text="启用" />
+            ) : (
+              <Badge status="default" text="停用" />
+            )
+          }
+        />
+        <DetailRow
+          label="自动关单"
+          value={
+            autoCloseEnabled ? (
+              <Badge status="processing" text="启用" />
+            ) : (
+              <Badge status="default" text="关闭" />
+            )
+          }
+        />
         <DetailRow label="节点总数" value={(flow.nodes || []).length} />
         <DetailRow label="连线总数" value={(flow.edges || []).length} />
-        <DetailRow label="创建时间" value={dayjs(flow.created_at).format('YYYY-MM-DD HH:mm:ss')} />
-        {flow.updated_at && <DetailRow label="更新时间" value={dayjs(flow.updated_at).format('YYYY-MM-DD HH:mm:ss')} />}
+        <DetailRow
+          label="创建时间"
+          value={dayjs(flow.created_at).format('YYYY-MM-DD HH:mm:ss')}
+        />
+        {flow.updated_at && (
+          <DetailRow
+            label="更新时间"
+            value={dayjs(flow.updated_at).format('YYYY-MM-DD HH:mm:ss')}
+          />
+        )}
       </div>
 
       <div className="flow-detail-card">
-        <h4><PartitionOutlined />节点类型概要</h4>
+        <h4>
+          <PartitionOutlined />
+          节点类型概要
+        </h4>
         {Object.keys(nodeTypeSummary).length === 0 ? (
-          <Text type="secondary" style={{ fontSize: 12 }}>无功能节点</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            无功能节点
+          </Text>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {Object.entries(nodeTypeSummary).map(([type, count]) => (
-              <Tag key={type} icon={getFlowNodeIcon(type)} style={{ margin: 0 }}>
+              <Tag
+                key={type}
+                icon={getFlowNodeIcon(type)}
+                style={{ margin: 0 }}
+              >
                 {FLOW_NODE_VISUALS[type]?.label || type} × {count}
               </Tag>
             ))}
@@ -100,7 +158,10 @@ export const FlowDetailDrawer: React.FC<FlowDetailDrawerProps> = ({
       </div>
 
       <div className="flow-detail-card">
-        <h4><BranchesOutlined />节点详情 ({functionalNodes.length})</h4>
+        <h4>
+          <BranchesOutlined />
+          节点详情 ({functionalNodes.length})
+        </h4>
         <FlowNodeDetails
           nodes={functionalNodes}
           onEditExecutionTemplate={onOpenExecutionTemplate}
