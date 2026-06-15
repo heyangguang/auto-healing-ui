@@ -132,11 +132,11 @@ const SolutionTemplatePage: React.FC = () => {
         <div className="solution-templates-sidebar">
           <div className="solution-templates-sidebar-list">
             {loading ? (
-              <div style={{ padding: 32, textAlign: 'center' }}>
+              <div className="solution-templates-sidebar-empty">
                 <Spin />
               </div>
             ) : templates.length === 0 ? (
-              <div style={{ padding: 32 }}>
+              <div className="solution-templates-sidebar-empty">
                 <Empty description="没有匹配的模板" />
               </div>
             ) : (
@@ -184,14 +184,7 @@ const SolutionTemplatePage: React.FC = () => {
 
         <div className="solution-templates-editor">
           {!selectedTemplate && !isCreating ? (
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+            <div className="solution-templates-empty-pane">
               <Empty description="从左侧选择模板，或创建新模板" />
             </div>
           ) : (

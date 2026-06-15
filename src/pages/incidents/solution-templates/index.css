@@ -11,7 +11,7 @@
   width: 300px;
   min-width: 300px;
   border-right: 1px solid #eef1f5;
-  background: #fff;
+  background: #fafafa;
   display: flex;
   flex-direction: column;
 }
@@ -19,6 +19,24 @@
 .solution-templates-sidebar-list {
   flex: 1;
   overflow-y: auto;
+}
+
+.solution-templates-empty-pane,
+.solution-templates-sidebar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.solution-templates-empty-pane {
+  flex: 1;
+  background: #fafafa;
+}
+
+.solution-templates-sidebar-empty {
+  height: 100%;
+  min-height: 360px;
+  padding: 32px;
 }
 
 .solution-templates-sidebar-item {
