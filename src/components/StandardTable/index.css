@@ -301,11 +301,11 @@
 
 /* 有数据时：列宽按定义值，不被容器自动撑开
    注意：当有自定义列宽（tableLayout=fixed）时，不使用 max-content，否则窄列会被内容撑开 */
-.standard-table-has-data .ant-table-content > table {
+.standard-table-scroll-x .ant-table-content > table {
   min-width: max-content;
 }
 
-.standard-table-has-data.standard-table-fixed-layout
+.standard-table-scroll-x.standard-table-fixed-layout
   .ant-table-content
   > table {
   min-width: 0;

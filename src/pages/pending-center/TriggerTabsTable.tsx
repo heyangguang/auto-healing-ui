@@ -44,7 +44,9 @@ function getTriggerTableMeta(isPending: boolean) {
     description: isPending
       ? '查看待人工确认触发的自愈工单，确认后启动自愈流程。'
       : '查看已确认触发或已忽略的工单处理记录。',
-    preferenceKey: isPending ? 'pending_triggers' : 'trigger_records',
+    preferenceKey: isPending
+      ? 'pending_triggers_compact'
+      : 'trigger_records_compact',
   };
 }
 

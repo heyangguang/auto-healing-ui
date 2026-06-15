@@ -26,6 +26,12 @@ export async function dismissIncident(id: string) {
     });
 }
 
+export async function restorePendingTrigger(id: string) {
+    return request<AutoHealing.SuccessResponse>(`/api/v1/tenant/incidents/${id}/restore-trigger`, {
+        method: 'POST',
+    });
+}
+
 export async function getTriggerRecords(params?: {
     page?: number;
     page_size?: number;

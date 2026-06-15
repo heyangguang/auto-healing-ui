@@ -322,7 +322,7 @@ function StandardTable<T extends object>({
           {/* ===== 数据表格 ===== */}
           <div
             ref={tableBodyRef}
-            className={`standard-table-body${data.length > 0 ? ' standard-table-has-data' : ''}${Object.keys(columnWidths).length > 0 ? ' standard-table-fixed-layout' : ''}`}
+            className={`standard-table-body${data.length > 0 ? ' standard-table-has-data' : ''}${tableScroll ? ' standard-table-scroll-x' : ''}${Object.keys(columnWidths).length > 0 ? ' standard-table-fixed-layout' : ''}`}
           >
             <Table<T>
               columns={visibleColumns}

@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { Modal, message } from 'antd';
-import { approveTask, dismissIncident, resetIncidentScan } from '@/services/auto-healing/healing';
+import {
+  approveTask,
+  dismissIncident,
+  restorePendingTrigger,
+} from '@/services/auto-healing/healing';
 import usePendingTaskActions from './usePendingTaskActions';
 import usePendingTriggerActions from './usePendingTriggerActions';
 import useResetIncidentScanAction from './useResetIncidentScanAction';
@@ -16,7 +20,7 @@ type ApprovalDecisionConfig = {
 jest.mock('@/services/auto-healing/healing', () => ({
   approveTask: jest.fn(),
   dismissIncident: jest.fn(),
-  resetIncidentScan: jest.fn(),
+  restorePendingTrigger: jest.fn(),
 }));
 
 jest.mock('./shared', () => ({
@@ -36,7 +40,9 @@ function getLatestDecisionConfig() {
   const { openApprovalDecisionModal } = jest.requireMock('./shared') as {
     openApprovalDecisionModal: jest.Mock;
   };
-  return openApprovalDecisionModal.mock.calls.at(-1)?.[0] as ApprovalDecisionConfig;
+  return openApprovalDecisionModal.mock.calls.at(
+    -1,
+  )?.[0] as ApprovalDecisionConfig;
 }
 
 function getLatestConfirmConfig() {
@@ -55,10 +61,15 @@ describe('pending-center action hooks', () => {
     const { result } = renderHook(() => usePendingTaskActions(triggerRefresh));
 
     act(() => {
-      result.current.handleApprove({ id: 'approval-1', node_name: '节点 A' } as never);
+      result.current.handleApprove({
+        id: 'approval-1',
+        node_name: '节点 A',
+      } as never);
     });
 
-    await expect(getLatestDecisionConfig().onSubmit('审批意见')).rejects.toThrow('审批失败');
+    await expect(
+      getLatestDecisionConfig().onSubmit('审批意见'),
+    ).rejects.toThrow('审批失败');
     expect(triggerRefresh).not.toHaveBeenCalled();
     expect(message.success).not.toHaveBeenCalled();
   });
@@ -66,10 +77,15 @@ describe('pending-center action hooks', () => {
   it('keeps the dismiss confirm pending when dismissIncident fails', async () => {
     const triggerRefresh = jest.fn();
     (dismissIncident as jest.Mock).mockRejectedValueOnce(new Error('忽略失败'));
-    const { result } = renderHook(() => usePendingTriggerActions(triggerRefresh));
+    const { result } = renderHook(() =>
+      usePendingTriggerActions(triggerRefresh),
+    );
 
     act(() => {
-      result.current.handleDismiss({ id: 'trigger-1', external_id: 'INC-1' } as never);
+      result.current.handleDismiss({
+        id: 'trigger-1',
+        external_id: 'INC-1',
+      } as never);
     });
 
     await expect(getLatestConfirmConfig().onOk?.()).rejects.toThrow('忽略失败');
@@ -77,10 +93,14 @@ describe('pending-center action hooks', () => {
     expect(message.success).not.toHaveBeenCalled();
   });
 
-  it('keeps the reset confirm pending when resetIncidentScan fails', async () => {
+  it('keeps the restore confirm pending when restorePendingTrigger fails', async () => {
     const triggerRefresh = jest.fn();
-    (resetIncidentScan as jest.Mock).mockRejectedValueOnce(new Error('恢复失败'));
-    const { result } = renderHook(() => useResetIncidentScanAction(triggerRefresh));
+    (restorePendingTrigger as jest.Mock).mockRejectedValueOnce(
+      new Error('恢复失败'),
+    );
+    const { result } = renderHook(() =>
+      useResetIncidentScanAction(triggerRefresh),
+    );
 
     act(() => {
       result.current({ id: 'trigger-2', external_id: 'INC-2' } as never);

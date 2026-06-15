@@ -7,7 +7,7 @@ import {
   UndoOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { Button, Space, Tag } from 'antd';
+import { Button, Space, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import React from 'react';
 import type {
@@ -192,11 +192,11 @@ export function formatTriggerTime(value: string | null | undefined) {
 }
 
 function getTriggerRecordActionTag(record: PendingTriggerRecord) {
-  if (record.healing_status === 'dismissed') {
-    return <Tag color="default">已忽略</Tag>;
-  }
   if (record.healing_flow_instance_id) {
     return <Tag color="processing">已触发</Tag>;
+  }
+  if (record.healing_status === 'dismissed') {
+    return <Tag color="default">已忽略</Tag>;
   }
   return <Tag color="default">-</Tag>;
 }
@@ -207,6 +207,34 @@ function getTriggerRecordHealingTag(record: PendingTriggerRecord) {
     return <Tag color="default">{record.healing_status || '-'}</Tag>;
   }
   return <Tag color={config.badge}>{config.text}</Tag>;
+}
+
+function getTriggerRecordStateCell(record: PendingTriggerRecord) {
+  return (
+    <Space direction="vertical" size={2}>
+      {getTriggerRecordActionTag(record)}
+      {getTriggerRecordHealingTag(record)}
+    </Space>
+  );
+}
+
+function getTriggerRecordTimeCell(record: PendingTriggerRecord) {
+  return (
+    <Space direction="vertical" size={2}>
+      <Typography.Text type="secondary">
+        创建 {formatTriggerTime(record.created_at)}
+      </Typography.Text>
+      <Typography.Text>
+        处理 {formatTriggerTime(record.updated_at)}
+      </Typography.Text>
+    </Space>
+  );
+}
+
+function canRestoreTriggerRecord(record: PendingTriggerRecord) {
+  return (
+    record.healing_status === 'dismissed' && !record.healing_flow_instance_id
+  );
 }
 
 function setTriggerFilter(
@@ -263,20 +291,20 @@ const sharedColumns: StandardColumnDef<PendingTriggerRecord>[] = [
     columnKey: 'title',
     columnTitle: '工单标题',
     dataIndex: 'title',
+    width: 292,
     ellipsis: true,
-    fixedColumn: true,
   },
   {
     columnKey: 'external_id',
     columnTitle: '工单ID',
     dataIndex: 'external_id',
-    width: 200,
+    width: 112,
   },
   {
     columnKey: 'severity',
     columnTitle: '等级',
     dataIndex: 'severity',
-    width: 100,
+    width: 82,
     render: (_, record) => getTriggerSeverityTag(record.severity),
     headerFilters: [
       { label: '严重', value: 'critical' },
@@ -289,14 +317,14 @@ const sharedColumns: StandardColumnDef<PendingTriggerRecord>[] = [
     columnKey: 'affected_ci',
     columnTitle: '影响CI',
     dataIndex: 'affected_ci',
-    width: 150,
+    width: 130,
     ellipsis: true,
   },
   {
     columnKey: 'affected_service',
     columnTitle: '影响服务',
     dataIndex: 'affected_service',
-    width: 150,
+    width: 140,
     ellipsis: true,
   },
 ];
@@ -312,16 +340,14 @@ export function createPendingTriggerColumns({
       columnKey: 'created_at',
       columnTitle: '创建时间',
       dataIndex: 'created_at',
-      width: 180,
+      width: 162,
       sorter: true,
       render: (_, record) => formatTriggerTime(record.created_at),
     },
     {
       columnKey: 'actions',
       columnTitle: '操作',
-      width: 150,
-      fixedColumn: true,
-      fixed: 'right',
+      width: 136,
       render: (_, record) => (
         <Space size={4}>
           <Button
@@ -355,42 +381,25 @@ export function createTriggerRecordColumns({
   return [
     ...sharedColumns,
     {
-      columnKey: 'record_action',
-      columnTitle: '处理结果',
-      width: 100,
-      render: (_, record) => getTriggerRecordActionTag(record),
+      columnKey: 'record_state',
+      columnTitle: '处理/状态',
+      width: 128,
+      render: (_, record) => getTriggerRecordStateCell(record),
     },
     {
-      columnKey: 'healing_status',
-      columnTitle: '自愈状态',
-      dataIndex: 'healing_status',
-      width: 110,
-      render: (_, record) => getTriggerRecordHealingTag(record),
-    },
-    {
-      columnKey: 'created_at',
-      columnTitle: '创建时间',
-      dataIndex: 'created_at',
-      width: 180,
-      sorter: true,
-      render: (_, record) => formatTriggerTime(record.created_at),
-    },
-    {
-      columnKey: 'updated_at',
-      columnTitle: '处理时间',
+      columnKey: 'record_times',
+      columnTitle: '时间',
       dataIndex: 'updated_at',
-      width: 180,
+      width: 210,
       sorter: true,
-      render: (_, record) => formatTriggerTime(record.updated_at),
+      render: (_, record) => getTriggerRecordTimeCell(record),
     },
     {
       columnKey: 'actions',
       columnTitle: '操作',
-      width: 100,
-      fixedColumn: true,
-      fixed: 'right',
+      width: 76,
       render: (_, record) =>
-        record.healing_status === 'dismissed' ? (
+        canRestoreTriggerRecord(record) ? (
           <Button
             size="small"
             icon={<UndoOutlined />}

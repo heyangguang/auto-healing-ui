@@ -24,7 +24,7 @@ jest.mock('@/services/auto-healing/healing', () => ({
   dismissIncident: jest.fn(),
   getPendingTriggers: jest.fn(),
   getTriggerRecords: jest.fn(),
-  resetIncidentScan: jest.fn(),
+  restorePendingTrigger: jest.fn(),
   triggerHealing: jest.fn(),
 }));
 

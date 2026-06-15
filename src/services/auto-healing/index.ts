@@ -39,7 +39,7 @@ export * from './notification';
 export {
     getFlows, getFlow, createFlow, updateFlow, deleteFlow, dryRunFlow,
     getNodeSchema as getNodeSchemas, retryInstance,
-    getPendingTriggers, triggerHealing, dismissIncident, getTriggerRecords,
+    getPendingTriggers, triggerHealing, dismissIncident, restorePendingTrigger, getTriggerRecords,
     getRules as getHealingRules, getRule as getHealingRule,
     createRule as createHealingRule, updateRule as updateHealingRule,
     deleteRule as deleteHealingRule, activateRule, deactivateRule,
