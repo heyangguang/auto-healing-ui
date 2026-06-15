@@ -10,7 +10,9 @@ import {
 describe('executePageHelpers', () => {
   it('maps launchpad template status filters consistently', () => {
     expect(getExecutionTemplateStatusFilter('ready', false)).toBe('ready');
-    expect(getExecutionTemplateStatusFilter('review', false)).toBe('pending_review');
+    expect(getExecutionTemplateStatusFilter('review', false)).toBe(
+      'pending_review',
+    );
     expect(getExecutionTemplateStatusFilter('', true)).toBe('ready');
     expect(getExecutionTemplateStatusFilter('', false)).toBe('');
   });
@@ -60,6 +62,24 @@ describe('executePageHelpers', () => {
     });
   });
 
+  it('deduplicates exact runtime hosts before execution', () => {
+    expect(
+      buildExecuteTaskPayload({
+        additionalHosts: ['10.0.0.2', '10.0.0.3', '10.0.0.3'],
+        additionalSecretIds: [],
+        extraVars: {},
+        selectedTemplate: {
+          secrets_source_ids: [],
+          target_hosts: '10.0.0.1,10.0.0.2',
+        } as Pick<
+          AutoHealing.ExecutionTask,
+          'secrets_source_ids' | 'target_hosts'
+        >,
+        skipNotification: false,
+      }).target_hosts,
+    ).toBe('10.0.0.1,10.0.0.2,10.0.0.3');
+  });
+
   it('extracts missing required variable names and validates execute response ids', () => {
     const playbook = {
       variables: [
@@ -73,6 +93,8 @@ describe('executePageHelpers', () => {
       getMissingRequiredVariableNames(playbook, { env: 'prod', region: '' }),
     ).toEqual(['region']);
     expect(getExecutionRunIdOrThrow({ data: { id: 'run-1' } })).toBe('run-1');
-    expect(() => getExecutionRunIdOrThrow({ data: {} })).toThrow(EXECUTION_RUN_ID_MISSING_ERROR);
+    expect(() => getExecutionRunIdOrThrow({ data: {} })).toThrow(
+      EXECUTION_RUN_ID_MISSING_ERROR,
+    );
   });
 });
