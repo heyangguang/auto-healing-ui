@@ -1,5 +1,5 @@
 import { Pagination, Table } from 'antd';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ColumnSettingsModal, {
   type ColumnSettingItem,
 } from './ColumnSettingsModal';
@@ -135,6 +135,39 @@ function StandardTable<T extends object>({
     updateColumnWidths,
     tableBodyRef,
   });
+  const [tableBodyWidth, setTableBodyWidth] = useState(0);
+  const visibleColumnsWidth = useMemo(
+    () =>
+      visibleColumns.reduce((sum, col) => sum + (Number(col.width) || 120), 0),
+    [visibleColumns],
+  );
+  const tableScroll =
+    data.length > 0 &&
+    tableBodyWidth > 0 &&
+    visibleColumnsWidth > tableBodyWidth + 1
+      ? { x: visibleColumnsWidth }
+      : undefined;
+
+  useEffect(() => {
+    const tableBody = tableBodyRef.current;
+    if (!tableBody) {
+      return undefined;
+    }
+
+    const updateWidth = () => {
+      setTableBodyWidth(tableBody.clientWidth);
+    };
+
+    updateWidth();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(tableBody);
+    return () => observer.disconnect();
+  }, []);
 
   const containerClassName = [
     'standard-table-container',
@@ -303,19 +336,7 @@ function StandardTable<T extends object>({
               onChange={handleTableChange}
               components={{ header: { cell: ResizableTitle } }}
               rowSelection={rowSelection}
-              scroll={
-                data.length > 0
-                  ? {
-                      x: Math.max(
-                        visibleColumns.reduce(
-                          (sum, col) => sum + (Number(col.width) || 120),
-                          0,
-                        ),
-                        800,
-                      ),
-                    }
-                  : undefined
-              }
+              scroll={tableScroll}
               onRow={
                 onRowClick
                   ? (record) => ({
