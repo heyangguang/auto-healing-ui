@@ -41,14 +41,14 @@ declare namespace AutoHealing {
     }
 
     interface SyncFilter {
-        logic: 'and' | 'or';
-        rules: SyncFilterRule[];
+        logic?: 'and' | 'or';
+        rules?: SyncFilterRule[];
         [key: string]: unknown;
     }
 
     interface SyncFilterRule {
         field: string;
-        operator: 'equals' | 'contains' | 'in' | 'regex' | 'gt' | 'lt' | 'gte' | 'lte';
+        operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'starts_with' | 'ends_with' | 'regex' | 'in' | 'not_in';
         value: JsonValue;
     }
 

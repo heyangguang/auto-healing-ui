@@ -114,7 +114,7 @@ describe('plugin form helpers', () => {
       }),
     ).toMatchObject({
       max_failures: DEFAULT_PLUGIN_MAX_FAILURES,
-      sync_filter: { logic: 'and', rules: [] },
+      sync_filter: {},
     });
 
     expect(
