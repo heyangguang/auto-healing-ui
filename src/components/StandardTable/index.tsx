@@ -303,15 +303,19 @@ function StandardTable<T extends object>({
               onChange={handleTableChange}
               components={{ header: { cell: ResizableTitle } }}
               rowSelection={rowSelection}
-              scroll={{
-                x: Math.max(
-                  visibleColumns.reduce(
-                    (sum, col) => sum + (Number(col.width) || 120),
-                    0,
-                  ),
-                  800,
-                ),
-              }}
+              scroll={
+                data.length > 0
+                  ? {
+                      x: Math.max(
+                        visibleColumns.reduce(
+                          (sum, col) => sum + (Number(col.width) || 120),
+                          0,
+                        ),
+                        800,
+                      ),
+                    }
+                  : undefined
+              }
               onRow={
                 onRowClick
                   ? (record) => ({
