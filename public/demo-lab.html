@@ -111,7 +111,7 @@
 
       .grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 14px;
       }
 
@@ -272,6 +272,14 @@
 
       .mark.block {
         background: var(--red);
+      }
+
+      .mark.approval {
+        background: #8a5a00;
+      }
+
+      .mark.review {
+        background: #7c3aed;
       }
 
       h2 {
@@ -497,6 +505,7 @@
           <button class="link-button" id="show-status" type="button">目标状态</button>
           <a class="link-button" href="/user/login?demo=tenant&amp;redirect=%2Fresources%2Fincidents" data-ahs-target="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
           <a class="link-button" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Ftemplates" data-ahs-target="/execution/templates" target="_blank" rel="noreferrer">执行任务</a>
+          <a class="link-button" href="/user/login?demo=tenant&amp;redirect=%2Fnotification%2Frecords" data-ahs-target="/notification/records" target="_blank" rel="noreferrer">通知记录</a>
           <a class="link-button" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop</a>
           <a class="link-button" href="http://118.196.22.79:13000/" data-credential-label="Gitea" data-credential-username="gitadmin" data-credential-password="GitAdmin123!" target="_blank" rel="noreferrer">Gitea</a>
         </nav>
@@ -615,6 +624,56 @@
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fhealing%2Finstances" data-ahs-target="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fruns" data-ahs-target="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fsecurity%2Fcommand-blacklist" data-ahs-target="/security/command-blacklist" target="_blank" rel="noreferrer">黑名单规则</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <span class="mark approval">A</span>
+            <h2>自愈审批</h2>
+          </div>
+          <p class="desc">生成需要审批的异常进程工单，ITSM 同步后先通知审批人，审批通过才执行自愈任务。</p>
+          <div class="meta">
+            <span>模式</span>
+            <strong>审批后自愈</strong>
+            <span>任务</span>
+            <strong>Demo Approval Kill Process Task</strong>
+            <span>通知</span>
+            <strong>等待审批 + 流程结果</strong>
+          </div>
+          <div class="card-actions">
+            <button class="primary" data-scenario="approval">生成工单</button>
+            <div class="watch-links" aria-label="自愈审批观察入口">
+              <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fhealing%2Finstances" data-ahs-target="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fpending%2Fapprovals" data-ahs-target="/pending/approvals" target="_blank" rel="noreferrer">待审批</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fnotification%2Frecords" data-ahs-target="/notification/records" target="_blank" rel="noreferrer">通知记录</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <span class="mark review">R</span>
+            <h2>任务审批</h2>
+          </div>
+          <p class="desc">生成任务审核演示工单，同时向 Gitea 注入变量变更，让 AHS 真实标记任务模板待审核。</p>
+          <div class="meta">
+            <span>模式</span>
+            <strong>变量审核后执行</strong>
+            <span>任务</span>
+            <strong>Demo Task Approval Clean Logs Task</strong>
+            <span>通知</span>
+            <strong>审核提醒 + 执行结果</strong>
+          </div>
+          <div class="card-actions">
+            <button class="primary" data-scenario="task-approval">生成工单</button>
+            <div class="watch-links" aria-label="任务审批观察入口">
+              <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Ftemplates%3Fneeds_review%3Dtrue" data-ahs-target="/execution/templates?needs_review=true" target="_blank" rel="noreferrer">待审核任务</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fexecute" data-ahs-target="/execution/execute" target="_blank" rel="noreferrer">执行入口</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fnotification%2Frecords" data-ahs-target="/notification/records" target="_blank" rel="noreferrer">通知记录</a>
             </div>
           </div>
         </article>
