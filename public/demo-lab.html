@@ -515,7 +515,7 @@
       <header class="topbar">
         <div>
           <h1>AHS Demo Lab</h1>
-          <p class="subtitle">独立造单入口：生成真实 iTop 工单，并按场景注入演示故障。</p>
+          <p class="subtitle">独立演示入口：生成真实 iTop 工单，并按场景注入演示故障。</p>
         </div>
         <nav class="links" aria-label="demo links">
           <button class="link-button" id="show-status" type="button">目标状态</button>
@@ -572,12 +572,12 @@
         <article class="card scenario-trigger">
           <div class="card-header">
             <span class="mark clean">T</span>
-            <h2>自愈触发</h2>
+            <h2>自愈触发审核</h2>
           </div>
-          <p class="desc">生成日志膨胀工单，在 SSH 靶机注入可清理日志文件，ITSM 同步后进入待触发工单池。</p>
+          <p class="desc">生成日志膨胀工单并注入大文件，ITSM 同步后进入待触发工单池，人工确认后才执行清理。</p>
           <div class="meta">
             <span>模式</span>
-            <strong>手动确认自愈</strong>
+            <strong>触发审核后执行</strong>
             <span>任务</span>
             <strong>Demo Clean Logs Task</strong>
             <span>仓库</span>
@@ -590,7 +590,7 @@
             <div class="watch-links" aria-label="自愈触发观察入口">
               <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fresources%2Fincidents" data-ahs-target="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
-              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fpending%2Ftriggers" data-ahs-target="/pending/triggers" target="_blank" rel="noreferrer">自愈触发</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fpending%2Ftriggers" data-ahs-target="/pending/triggers" target="_blank" rel="noreferrer">待触发审核</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fruns" data-ahs-target="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fnotification%2Frecords" data-ahs-target="/notification/records" target="_blank" rel="noreferrer">通知记录</a>
             </div>
@@ -656,12 +656,12 @@
         <article class="card scenario-approval">
           <div class="card-header">
             <span class="mark approval">A</span>
-            <h2>自愈审批</h2>
+            <h2>自愈流程审批</h2>
           </div>
           <p class="desc">生成需要审批的异常进程工单，ITSM 同步后先通知审批人，审批通过才执行自愈任务。</p>
           <div class="meta">
             <span>模式</span>
-            <strong>审批后自愈</strong>
+            <strong>流程节点审批</strong>
             <span>任务</span>
             <strong>Demo Approval Kill Process Task</strong>
             <span>通知</span>
@@ -669,35 +669,10 @@
           </div>
           <div class="card-actions">
             <button class="primary" data-scenario="approval">生成工单</button>
-            <div class="watch-links" aria-label="自愈审批观察入口">
+            <div class="watch-links" aria-label="自愈流程审批观察入口">
               <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fhealing%2Finstances" data-ahs-target="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fpending%2Fapprovals" data-ahs-target="/pending/approvals" target="_blank" rel="noreferrer">待审批</a>
-              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fnotification%2Frecords" data-ahs-target="/notification/records" target="_blank" rel="noreferrer">通知记录</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card scenario-review">
-          <div class="card-header">
-            <span class="mark review">R</span>
-            <h2>任务模板审核</h2>
-          </div>
-          <p class="desc">生成任务审核演示工单，同时向 Gitea 注入变量变更，让 AHS 真实标记任务模板待审核；它不是自愈触发入口。</p>
-          <div class="meta">
-            <span>模式</span>
-            <strong>变量审核后执行</strong>
-            <span>任务</span>
-            <strong>Demo Task Approval Clean Logs Task</strong>
-            <span>通知</span>
-            <strong>审核提醒 + 执行结果</strong>
-          </div>
-          <div class="card-actions">
-            <button class="primary" data-scenario="task-approval">生成工单</button>
-            <div class="watch-links" aria-label="任务模板审核观察入口">
-              <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
-              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Ftemplates%3Fneeds_review%3Dtrue" data-ahs-target="/execution/templates?needs_review=true" target="_blank" rel="noreferrer">待审核任务</a>
-              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fexecute" data-ahs-target="/execution/execute" target="_blank" rel="noreferrer">执行入口</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fnotification%2Frecords" data-ahs-target="/notification/records" target="_blank" rel="noreferrer">通知记录</a>
             </div>
           </div>
@@ -731,6 +706,10 @@
       let refreshResetTimer = null;
       let toastTimer = null;
       let isRefreshingStatus = false;
+
+      buttons.forEach((button) => {
+        button.dataset.defaultLabel = button.textContent.trim();
+      });
 
       function hasAhsLoginToken() {
         return Boolean(
@@ -956,7 +935,7 @@
         } finally {
           buttons.forEach((button) => {
             button.disabled = false;
-            button.textContent = '生成工单';
+            button.textContent = button.dataset.defaultLabel || '生成工单';
           });
         }
       }
