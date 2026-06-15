@@ -107,7 +107,6 @@ declare namespace AutoHealing {
         nodes: FlowNode[];
         edges: FlowEdge[];
         is_active: boolean;
-        auto_close_source_incident?: boolean;
         close_policy?: FlowClosePolicy;
         created_by: UUID;
         created_at: string;

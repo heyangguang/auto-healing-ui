@@ -169,7 +169,7 @@ export async function validateExecutionNodes(
 }
 
 export function buildFlowPayload(
-  autoCloseSourceIncident: boolean,
+  autoCloseEnabled: boolean,
   closePolicy: AutoHealing.FlowClosePolicy | undefined,
   edges: FlowEditorEdge[],
   flowIsActive: boolean,
@@ -200,7 +200,7 @@ export function buildFlowPayload(
   });
 
   const effectiveClosePolicy =
-    autoCloseSourceIncident && closePolicy
+    autoCloseEnabled && closePolicy
       ? { ...closePolicy, enabled: true }
       : undefined;
 

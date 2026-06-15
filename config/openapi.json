@@ -101,9 +101,7 @@
   "paths": {
     "/auth/login": {
       "post": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "用户登录",
         "description": "所有登录尝试都会写入平台认证审计，未知用户名失败也会保留尝试用户名与失败原因。",
         "security": [],
@@ -113,10 +111,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "username",
-                  "password"
-                ],
+                "required": ["username", "password"],
                 "properties": {
                   "username": {
                     "type": "string",
@@ -163,9 +158,7 @@
     },
     "/auth/logout": {
       "post": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "用户登出",
         "description": "登出事件统一记录为平台认证审计（category=auth, action=logout）。",
         "responses": {
@@ -178,9 +171,7 @@
     },
     "/auth/refresh": {
       "post": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "刷新令牌",
         "security": [],
         "requestBody": {
@@ -189,9 +180,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "refresh_token"
-                ],
+                "required": ["refresh_token"],
                 "properties": {
                   "refresh_token": {
                     "type": "string"
@@ -230,9 +219,7 @@
     },
     "/auth/me": {
       "get": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "获取当前用户信息",
         "responses": {
           "200": {
@@ -263,9 +250,7 @@
     },
     "/auth/password": {
       "put": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "修改密码",
         "requestBody": {
           "required": true,
@@ -273,10 +258,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "old_password",
-                  "new_password"
-                ],
+                "required": ["old_password", "new_password"],
                 "properties": {
                   "old_password": {
                     "type": "string"
@@ -299,9 +281,7 @@
     },
     "/auth/profile": {
       "get": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "获取当前用户资料",
         "responses": {
           "200": {
@@ -329,9 +309,7 @@
         "operationId": "getAuthProfile"
       },
       "put": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "更新当前用户资料",
         "requestBody": {
           "required": true,
@@ -383,9 +361,7 @@
     },
     "/auth/profile/login-history": {
       "get": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "获取当前用户登录历史",
         "description": "读取当前用户的认证历史，数据源统一来自平台认证审计，不依赖当前租户上下文。",
         "parameters": [
@@ -408,9 +384,7 @@
     },
     "/auth/profile/activities": {
       "get": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "获取当前用户近期活动",
         "parameters": [
           {
@@ -432,9 +406,7 @@
     },
     "/auth/invitation/{token}": {
       "get": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "校验邀请令牌",
         "parameters": [
           {
@@ -456,9 +428,7 @@
     },
     "/auth/register": {
       "post": {
-        "tags": [
-          "认证"
-        ],
+        "tags": ["认证"],
         "summary": "通过邀请注册用户",
         "description": "邀请注册成功或失败都会记录为平台认证审计事件（category=auth, action=register）。",
         "requestBody": {
@@ -482,9 +452,7 @@
     },
     "/common/search": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "全局搜索",
         "parameters": [
           {
@@ -532,9 +500,7 @@
     },
     "/common/user/preferences": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取用户偏好",
         "responses": {
           "200": {
@@ -544,9 +510,7 @@
         "operationId": "getCommonUserPreferences"
       },
       "put": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "全量更新用户偏好",
         "responses": {
           "200": {
@@ -556,9 +520,7 @@
         "operationId": "putCommonUserPreferences"
       },
       "patch": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "局部更新用户偏好",
         "responses": {
           "200": {
@@ -570,9 +532,7 @@
     },
     "/common/user/favorites": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取用户收藏菜单",
         "responses": {
           "200": {
@@ -582,9 +542,7 @@
         "operationId": "getCommonUserFavorites"
       },
       "post": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "添加用户收藏菜单",
         "responses": {
           "200": {
@@ -596,9 +554,7 @@
     },
     "/common/user/favorites/{menu_key}": {
       "delete": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "删除用户收藏菜单",
         "parameters": [
           {
@@ -620,9 +576,7 @@
     },
     "/common/user/recents": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取最近访问菜单",
         "responses": {
           "200": {
@@ -632,9 +586,7 @@
         "operationId": "getCommonUserRecents"
       },
       "post": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "记录最近访问菜单",
         "responses": {
           "200": {
@@ -646,9 +598,7 @@
     },
     "/common/user/tenants": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取当前用户可访问租户",
         "responses": {
           "200": {
@@ -660,9 +610,7 @@
     },
     "/common/workbench/overview": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取工作台概览",
         "responses": {
           "200": {
@@ -693,9 +641,7 @@
     },
     "/common/workbench/activities": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取工作台近期活动",
         "responses": {
           "200": {
@@ -707,9 +653,7 @@
     },
     "/common/workbench/schedule-calendar": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取工作台日历",
         "responses": {
           "200": {
@@ -743,9 +687,7 @@
     },
     "/common/workbench/announcements": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取工作台公告",
         "responses": {
           "200": {
@@ -757,9 +699,7 @@
     },
     "/common/workbench/favorites": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取工作台快捷入口",
         "responses": {
           "200": {
@@ -771,9 +711,7 @@
     },
     "/common/site-messages/categories": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取站内信分类字典",
         "responses": {
           "200": {
@@ -807,9 +745,7 @@
     },
     "/common/dictionaries": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取字典值",
         "responses": {
           "200": {
@@ -821,9 +757,7 @@
     },
     "/common/dictionaries/types": {
       "get": {
-        "tags": [
-          "公共能力"
-        ],
+        "tags": ["公共能力"],
         "summary": "获取字典类型列表",
         "responses": {
           "200": {
@@ -835,9 +769,7 @@
     },
     "/platform/users": {
       "get": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "获取平台用户列表",
         "parameters": [
           {
@@ -877,9 +809,7 @@
         "operationId": "getPlatformUsers"
       },
       "post": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "创建平台用户",
         "responses": {
           "201": {
@@ -898,9 +828,7 @@
     },
     "/platform/users/simple": {
       "get": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "获取平台简要用户列表",
         "parameters": [
           {
@@ -951,9 +879,7 @@
     },
     "/platform/users/{id}": {
       "get": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "获取平台用户详情",
         "parameters": [
           {
@@ -975,9 +901,7 @@
         "operationId": "getPlatformUsersById"
       },
       "put": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "更新平台用户",
         "parameters": [
           {
@@ -999,9 +923,7 @@
         "operationId": "putPlatformUsersById"
       },
       "delete": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "删除平台用户",
         "parameters": [
           {
@@ -1018,9 +940,7 @@
     },
     "/platform/users/{id}/reset-password": {
       "post": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "重置平台用户密码",
         "parameters": [
           {
@@ -1037,9 +957,7 @@
     },
     "/platform/users/{id}/roles": {
       "put": {
-        "tags": [
-          "平台用户管理"
-        ],
+        "tags": ["平台用户管理"],
         "summary": "分配平台用户角色",
         "parameters": [
           {
@@ -1056,9 +974,7 @@
     },
     "/platform/roles": {
       "get": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "获取平台角色列表",
         "responses": {
           "200": {
@@ -1083,9 +999,7 @@
         "operationId": "getPlatformRoles"
       },
       "post": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "创建平台角色",
         "responses": {
           "201": {
@@ -1104,9 +1018,7 @@
     },
     "/platform/roles/{id}": {
       "get": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "获取平台角色详情",
         "parameters": [
           {
@@ -1128,9 +1040,7 @@
         "operationId": "getPlatformRolesById"
       },
       "put": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "更新平台角色",
         "parameters": [
           {
@@ -1152,9 +1062,7 @@
         "operationId": "putPlatformRolesById"
       },
       "delete": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "删除平台角色",
         "parameters": [
           {
@@ -1171,9 +1079,7 @@
     },
     "/platform/roles/{id}/permissions": {
       "put": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "分配平台角色权限",
         "parameters": [
           {
@@ -1190,9 +1096,7 @@
     },
     "/platform/roles/{id}/users": {
       "get": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "获取平台角色成员",
         "parameters": [
           {
@@ -1237,9 +1141,7 @@
     },
     "/platform/permissions": {
       "get": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "获取平台权限列表",
         "responses": {
           "200": {
@@ -1266,9 +1168,7 @@
     },
     "/platform/permissions/tree": {
       "get": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "获取平台权限树",
         "responses": {
           "200": {
@@ -1298,9 +1198,7 @@
     },
     "/platform/impersonation/requests": {
       "post": {
-        "tags": [
-          "平台提权"
-        ],
+        "tags": ["平台提权"],
         "summary": "创建提权请求",
         "responses": {
           "200": {
@@ -1310,9 +1208,7 @@
         "operationId": "postPlatformImpersonationRequests"
       },
       "get": {
-        "tags": [
-          "平台提权"
-        ],
+        "tags": ["平台提权"],
         "summary": "获取我的提权请求",
         "responses": {
           "200": {
@@ -1324,9 +1220,7 @@
     },
     "/platform/impersonation/requests/{id}": {
       "get": {
-        "tags": [
-          "平台提权"
-        ],
+        "tags": ["平台提权"],
         "summary": "获取提权请求详情",
         "parameters": [
           {
@@ -1343,9 +1237,7 @@
     },
     "/platform/impersonation/requests/{id}/enter": {
       "post": {
-        "tags": [
-          "平台提权"
-        ],
+        "tags": ["平台提权"],
         "summary": "进入租户提权视角",
         "parameters": [
           {
@@ -1362,9 +1254,7 @@
     },
     "/platform/impersonation/requests/{id}/exit": {
       "post": {
-        "tags": [
-          "平台提权"
-        ],
+        "tags": ["平台提权"],
         "summary": "退出租户提权视角",
         "parameters": [
           {
@@ -1381,9 +1271,7 @@
     },
     "/platform/impersonation/requests/{id}/terminate": {
       "post": {
-        "tags": [
-          "平台提权"
-        ],
+        "tags": ["平台提权"],
         "summary": "终止提权会话",
         "parameters": [
           {
@@ -1400,9 +1288,7 @@
     },
     "/platform/impersonation/requests/{id}/cancel": {
       "post": {
-        "tags": [
-          "平台提权"
-        ],
+        "tags": ["平台提权"],
         "summary": "取消提权请求",
         "parameters": [
           {
@@ -1419,9 +1305,7 @@
     },
     "/platform/tenant-roles": {
       "get": {
-        "tags": [
-          "平台角色管理"
-        ],
+        "tags": ["平台角色管理"],
         "summary": "获取系统租户角色模板",
         "responses": {
           "200": {
@@ -1448,9 +1332,7 @@
     },
     "/platform/settings": {
       "get": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "获取平台设置",
         "responses": {
           "200": {
@@ -1462,9 +1344,7 @@
     },
     "/platform/settings/{key}": {
       "put": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "更新单个平台设置",
         "parameters": [
           {
@@ -1486,9 +1366,7 @@
     },
     "/platform/tenants": {
       "get": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "获取租户列表",
         "parameters": [
           {
@@ -1529,9 +1407,7 @@
         "operationId": "getPlatformTenants"
       },
       "post": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "创建租户",
         "responses": {
           "201": {
@@ -1543,9 +1419,7 @@
     },
     "/platform/tenants/stats": {
       "get": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "获取租户统计",
         "responses": {
           "200": {
@@ -1557,9 +1431,7 @@
     },
     "/platform/tenants/trends": {
       "get": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "获取租户趋势",
         "responses": {
           "200": {
@@ -1571,9 +1443,7 @@
     },
     "/platform/tenants/{id}": {
       "get": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "获取租户详情",
         "parameters": [
           {
@@ -1588,9 +1458,7 @@
         "operationId": "getPlatformTenantsById"
       },
       "put": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "更新租户",
         "parameters": [
           {
@@ -1605,9 +1473,7 @@
         "operationId": "putPlatformTenantsById"
       },
       "delete": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "删除租户",
         "parameters": [
           {
@@ -1624,9 +1490,7 @@
     },
     "/platform/tenants/{id}/members": {
       "get": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "获取租户成员",
         "parameters": [
           {
@@ -1641,9 +1505,7 @@
         "operationId": "getPlatformTenantsByIdMembers"
       },
       "post": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "添加租户成员",
         "parameters": [
           {
@@ -1660,9 +1522,7 @@
     },
     "/platform/tenants/{id}/members/{userId}": {
       "delete": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "移除租户成员",
         "parameters": [
           {
@@ -1688,9 +1548,7 @@
     },
     "/platform/tenants/{id}/members/{userId}/role": {
       "put": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "更新租户成员角色",
         "parameters": [
           {
@@ -1716,9 +1574,7 @@
     },
     "/platform/tenants/{id}/invitations": {
       "post": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "邀请用户加入租户",
         "parameters": [
           {
@@ -1733,9 +1589,7 @@
         "operationId": "postPlatformTenantsByIdInvitations"
       },
       "get": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "获取租户邀请列表",
         "parameters": [
           {
@@ -1752,9 +1606,7 @@
     },
     "/platform/tenants/{id}/invitations/{invId}": {
       "delete": {
-        "tags": [
-          "平台租户管理"
-        ],
+        "tags": ["平台租户管理"],
         "summary": "取消租户邀请",
         "parameters": [
           {
@@ -1780,9 +1632,7 @@
     },
     "/platform/site-messages": {
       "post": {
-        "tags": [
-          "平台站内信"
-        ],
+        "tags": ["平台站内信"],
         "summary": "创建站内信",
         "responses": {
           "200": {
@@ -1794,9 +1644,7 @@
     },
     "/platform/site-messages/settings": {
       "get": {
-        "tags": [
-          "平台站内信"
-        ],
+        "tags": ["平台站内信"],
         "summary": "获取站内信设置",
         "responses": {
           "200": {
@@ -1806,9 +1654,7 @@
         "operationId": "getPlatformSiteMessagesSettings"
       },
       "put": {
-        "tags": [
-          "平台站内信"
-        ],
+        "tags": ["平台站内信"],
         "summary": "更新站内信设置",
         "responses": {
           "200": {
@@ -1820,9 +1666,7 @@
     },
     "/platform/audit-logs": {
       "get": {
-        "tags": [
-          "平台审计"
-        ],
+        "tags": ["平台审计"],
         "summary": "获取平台审计日志列表",
         "description": "返回平台操作审计与全局认证安全事件。category=auth 表示全局认证事件；category=login 为兼容别名，仅返回认证事件中的 login/logout。",
         "parameters": [
@@ -1837,11 +1681,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "operation",
-                "auth",
-                "login"
-              ]
+              "enum": ["operation", "auth", "login"]
             }
           },
           {
@@ -1872,10 +1712,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "success",
-                "failed"
-              ]
+              "enum": ["success", "failed"]
             }
           }
         ],
@@ -1912,9 +1749,7 @@
     },
     "/platform/audit-logs/stats": {
       "get": {
-        "tags": [
-          "平台审计"
-        ],
+        "tags": ["平台审计"],
         "summary": "获取平台审计统计",
         "parameters": [
           {
@@ -1922,11 +1757,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "operation",
-                "auth",
-                "login"
-              ]
+              "enum": ["operation", "auth", "login"]
             }
           }
         ],
@@ -1940,9 +1771,7 @@
     },
     "/platform/audit-logs/trend": {
       "get": {
-        "tags": [
-          "平台审计"
-        ],
+        "tags": ["平台审计"],
         "summary": "获取平台审计趋势",
         "parameters": [
           {
@@ -1958,11 +1787,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "operation",
-                "auth",
-                "login"
-              ]
+              "enum": ["operation", "auth", "login"]
             }
           }
         ],
@@ -1999,9 +1824,7 @@
     },
     "/platform/audit-logs/user-ranking": {
       "get": {
-        "tags": [
-          "平台审计"
-        ],
+        "tags": ["平台审计"],
         "summary": "获取平台审计用户排行",
         "responses": {
           "200": {
@@ -2036,9 +1859,7 @@
     },
     "/platform/audit-logs/high-risk": {
       "get": {
-        "tags": [
-          "平台审计"
-        ],
+        "tags": ["平台审计"],
         "summary": "获取平台高危审计日志",
         "parameters": [
           {
@@ -2081,9 +1902,7 @@
     },
     "/platform/audit-logs/{id}": {
       "get": {
-        "tags": [
-          "平台审计"
-        ],
+        "tags": ["平台审计"],
         "summary": "获取平台审计日志详情",
         "parameters": [
           {
@@ -2100,9 +1919,7 @@
     },
     "/platform/dictionaries": {
       "post": {
-        "tags": [
-          "平台字典"
-        ],
+        "tags": ["平台字典"],
         "summary": "创建字典项",
         "responses": {
           "200": {
@@ -2114,9 +1931,7 @@
     },
     "/platform/dictionaries/{id}": {
       "put": {
-        "tags": [
-          "平台字典"
-        ],
+        "tags": ["平台字典"],
         "summary": "更新字典项",
         "parameters": [
           {
@@ -2131,9 +1946,7 @@
         "operationId": "putPlatformDictionariesById"
       },
       "delete": {
-        "tags": [
-          "平台字典"
-        ],
+        "tags": ["平台字典"],
         "summary": "删除字典项",
         "parameters": [
           {
@@ -2150,9 +1963,7 @@
     },
     "/tenant/users": {
       "get": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "获取用户列表",
         "parameters": [
           {
@@ -2201,9 +2012,7 @@
         "operationId": "getTenantUsers"
       },
       "post": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "创建用户",
         "requestBody": {
           "required": true,
@@ -2211,11 +2020,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "username",
-                  "email",
-                  "password"
-                ],
+                "required": ["username", "email", "password"],
                 "properties": {
                   "username": {
                     "type": "string"
@@ -2261,9 +2066,7 @@
     },
     "/tenant/users/{id}": {
       "get": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "获取用户详情",
         "parameters": [
           {
@@ -2285,9 +2088,7 @@
         "operationId": "getTenantUsersById"
       },
       "put": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "更新用户",
         "parameters": [
           {
@@ -2332,9 +2133,7 @@
         "operationId": "putTenantUsersById"
       },
       "delete": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "删除用户",
         "parameters": [
           {
@@ -2351,9 +2150,7 @@
     },
     "/tenant/users/{id}/reset-password": {
       "post": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "重置用户密码",
         "parameters": [
           {
@@ -2366,9 +2163,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "new_password"
-                ],
+                "required": ["new_password"],
                 "properties": {
                   "new_password": {
                     "type": "string"
@@ -2388,9 +2183,7 @@
     },
     "/tenant/users/{id}/roles": {
       "put": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "分配用户角色",
         "parameters": [
           {
@@ -2403,9 +2196,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "role_ids"
-                ],
+                "required": ["role_ids"],
                 "properties": {
                   "role_ids": {
                     "type": "array",
@@ -2429,9 +2220,7 @@
     },
     "/tenant/roles": {
       "get": {
-        "tags": [
-          "角色管理"
-        ],
+        "tags": ["角色管理"],
         "summary": "获取角色列表",
         "responses": {
           "200": {
@@ -2456,9 +2245,7 @@
         "operationId": "getTenantRoles"
       },
       "post": {
-        "tags": [
-          "角色管理"
-        ],
+        "tags": ["角色管理"],
         "summary": "创建角色",
         "requestBody": {
           "required": true,
@@ -2466,10 +2253,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "display_name"
-                ],
+                "required": ["name", "display_name"],
                 "properties": {
                   "name": {
                     "type": "string"
@@ -2502,9 +2286,7 @@
     },
     "/tenant/roles/{id}": {
       "get": {
-        "tags": [
-          "角色管理"
-        ],
+        "tags": ["角色管理"],
         "summary": "获取角色详情",
         "parameters": [
           {
@@ -2526,9 +2308,7 @@
         "operationId": "getTenantRolesById"
       },
       "put": {
-        "tags": [
-          "角色管理"
-        ],
+        "tags": ["角色管理"],
         "summary": "更新角色",
         "parameters": [
           {
@@ -2568,9 +2348,7 @@
         "operationId": "putTenantRolesById"
       },
       "delete": {
-        "tags": [
-          "角色管理"
-        ],
+        "tags": ["角色管理"],
         "summary": "删除角色",
         "parameters": [
           {
@@ -2587,9 +2365,7 @@
     },
     "/tenant/roles/{id}/permissions": {
       "put": {
-        "tags": [
-          "角色管理"
-        ],
+        "tags": ["角色管理"],
         "summary": "分配角色权限",
         "parameters": [
           {
@@ -2602,9 +2378,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "permission_ids"
-                ],
+                "required": ["permission_ids"],
                 "properties": {
                   "permission_ids": {
                     "type": "array",
@@ -2628,9 +2402,7 @@
     },
     "/tenant/permissions": {
       "get": {
-        "tags": [
-          "权限"
-        ],
+        "tags": ["权限"],
         "summary": "获取权限列表",
         "responses": {
           "200": {
@@ -2657,9 +2429,7 @@
     },
     "/tenant/permissions/tree": {
       "get": {
-        "tags": [
-          "权限"
-        ],
+        "tags": ["权限"],
         "summary": "获取权限树（按模块分组）",
         "responses": {
           "200": {
@@ -2689,9 +2459,7 @@
     },
     "/tenant/impersonation/history": {
       "get": {
-        "tags": [
-          "租户身份代入"
-        ],
+        "tags": ["租户身份代入"],
         "summary": "获取审批历史",
         "parameters": [
           {
@@ -2757,9 +2525,7 @@
     },
     "/tenant/impersonation/pending": {
       "get": {
-        "tags": [
-          "租户身份代入"
-        ],
+        "tags": ["租户身份代入"],
         "summary": "获取待审批列表",
         "responses": {
           "200": {
@@ -2794,9 +2560,7 @@
     },
     "/tenant/settings/impersonation-approvers": {
       "get": {
-        "tags": [
-          "租户设置"
-        ],
+        "tags": ["租户设置"],
         "summary": "获取身份代入审批人",
         "responses": {
           "200": {
@@ -2829,9 +2593,7 @@
         "operationId": "getTenantSettingsImpersonationApprovers"
       },
       "put": {
-        "tags": [
-          "租户设置"
-        ],
+        "tags": ["租户设置"],
         "summary": "设置身份代入审批人",
         "requestBody": {
           "required": true,
@@ -2862,9 +2624,7 @@
     },
     "/tenant/users/simple": {
       "get": {
-        "tags": [
-          "用户管理"
-        ],
+        "tags": ["用户管理"],
         "summary": "获取简要用户列表",
         "parameters": [
           {
@@ -2916,9 +2676,7 @@
     },
     "/tenant/roles/{id}/users": {
       "get": {
-        "tags": [
-          "角色管理"
-        ],
+        "tags": ["角色管理"],
         "summary": "获取角色关联用户",
         "parameters": [
           {
@@ -2971,9 +2729,7 @@
     },
     "/tenant/dashboard/roles/{roleId}/workspaces": {
       "get": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "获取角色关联工作区",
         "parameters": [
           {
@@ -3022,9 +2778,7 @@
         "operationId": "getTenantDashboardRolesByRoleIdWorkspaces"
       },
       "put": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "设置角色关联工作区",
         "parameters": [
           {
@@ -3043,9 +2797,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "workspace_ids"
-                ],
+                "required": ["workspace_ids"],
                 "properties": {
                   "workspace_ids": {
                     "type": "array",
@@ -3089,9 +2841,7 @@
     },
     "/tenant/impersonation/{id}/approve": {
       "post": {
-        "tags": [
-          "租户身份代入"
-        ],
+        "tags": ["租户身份代入"],
         "summary": "批准身份代入申请",
         "parameters": [
           {
@@ -3108,9 +2858,7 @@
     },
     "/tenant/impersonation/{id}/reject": {
       "post": {
-        "tags": [
-          "租户身份代入"
-        ],
+        "tags": ["租户身份代入"],
         "summary": "拒绝身份代入申请",
         "parameters": [
           {
@@ -3127,9 +2875,7 @@
     },
     "/tenant/execution-tasks": {
       "get": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "获取任务模板列表",
         "description": "获取任务模板列表，支持多条件筛选。\n- **search**: 模糊搜索任务名称或描述\n- **executor_type**: 筛选执行器类型\n- **status**: 筛选任务状态（pending_review = 需审核，ready = 就绪）\n- **playbook_id**: 筛选关联的 Playbook\n",
         "parameters": [
@@ -3163,10 +2909,7 @@
             "description": "状态筛选（pending_review = 需审核，ready = 就绪）",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending_review",
-                "ready"
-              ]
+              "enum": ["pending_review", "ready"]
             }
           },
           {
@@ -3260,9 +3003,7 @@
         "operationId": "getTenantExecutionTasks"
       },
       "post": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "创建任务模板",
         "requestBody": {
           "required": true,
@@ -3270,10 +3011,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "playbook_id",
-                  "target_hosts"
-                ],
+                "required": ["playbook_id", "target_hosts"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -3294,10 +3032,7 @@
                   },
                   "executor_type": {
                     "type": "string",
-                    "enum": [
-                      "local",
-                      "docker"
-                    ],
+                    "enum": ["local", "docker"],
                     "default": "local"
                   },
                   "notification_config": {
@@ -3335,9 +3070,7 @@
     },
     "/tenant/execution-tasks/stats": {
       "get": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "获取任务模板统计",
         "responses": {
           "200": {
@@ -3368,9 +3101,7 @@
     },
     "/tenant/execution-tasks/search-schema": {
       "get": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "获取任务模板搜索字段定义",
         "responses": {
           "201": {
@@ -3414,9 +3145,7 @@
     },
     "/tenant/execution-tasks/{id}": {
       "get": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "获取任务模板详情",
         "parameters": [
           {
@@ -3438,9 +3167,7 @@
         "operationId": "getTenantExecutionTasksById"
       },
       "delete": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "删除任务模板（级联删除执行记录和日志）",
         "parameters": [
           {
@@ -3455,9 +3182,7 @@
         "operationId": "deleteTenantExecutionTasksById"
       },
       "put": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "更新任务模板",
         "parameters": [
           {
@@ -3470,11 +3195,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "playbook_id",
-                  "target_hosts"
-                ],
+                "required": ["name", "playbook_id", "target_hosts"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -3495,10 +3216,7 @@
                   },
                   "executor_type": {
                     "type": "string",
-                    "enum": [
-                      "local",
-                      "docker"
-                    ],
+                    "enum": ["local", "docker"],
                     "default": "local"
                   },
                   "description": {
@@ -3546,9 +3264,7 @@
     },
     "/tenant/execution-tasks/{id}/execute": {
       "post": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "执行任务（创建执行记录并运行）",
         "description": "如果任务模板的 needs_review = true，将返回错误，必须先调用确认审核接口。\n",
         "parameters": [
@@ -3618,9 +3334,7 @@
     },
     "/tenant/execution-tasks/{id}/confirm-review": {
       "post": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "确认审核变量变更",
         "description": "当 Playbook 变量变更后，关联的任务模板会被标记为 needs_review = true。\n调用此接口确认审核完成，清除 needs_review 状态并更新变量快照。\n",
         "parameters": [
@@ -3645,9 +3359,7 @@
     },
     "/tenant/execution-tasks/{id}/runs": {
       "get": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "获取任务的执行历史",
         "parameters": [
           {
@@ -3688,9 +3400,7 @@
     },
     "/tenant/execution-schedules": {
       "get": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "获取定时任务调度列表",
         "description": "获取定时任务调度列表，支持多条件筛选。\n- **search**: 模糊搜索调度名称或描述\n- **task_id**: 按关联的任务模板筛选\n- **enabled**: 按启用状态筛选\n- **is_recurring**: 按是否循环执行筛选\n",
         "parameters": [
@@ -3764,9 +3474,7 @@
         "operationId": "getTenantExecutionSchedules"
       },
       "post": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "创建定时任务调度",
         "description": "创建定时任务调度，支持配置执行参数覆盖（与手动执行保持一致）。\n覆盖参数为可选，不填则使用任务模板的默认配置。\n",
         "requestBody": {
@@ -3775,11 +3483,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "task_id",
-                  "schedule_expr"
-                ],
+                "required": ["name", "task_id", "schedule_expr"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -3843,9 +3547,7 @@
     },
     "/tenant/execution-schedules/{id}": {
       "get": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "获取定时任务调度详情",
         "parameters": [
           {
@@ -3867,9 +3569,7 @@
         "operationId": "getTenantExecutionSchedulesById"
       },
       "put": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "更新定时任务调度",
         "description": "更新定时任务调度配置，支持修改执行参数覆盖。\n",
         "parameters": [
@@ -3936,9 +3636,7 @@
         "operationId": "putTenantExecutionSchedulesById"
       },
       "delete": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "删除定时任务调度",
         "parameters": [
           {
@@ -3955,9 +3653,7 @@
     },
     "/tenant/execution-schedules/{id}/enable": {
       "post": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "启用定时任务调度",
         "parameters": [
           {
@@ -3974,9 +3670,7 @@
     },
     "/tenant/execution-schedules/{id}/disable": {
       "post": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "禁用定时任务调度",
         "parameters": [
           {
@@ -3993,9 +3687,7 @@
     },
     "/tenant/execution-runs": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取执行记录列表",
         "parameters": [
           {
@@ -4097,9 +3789,7 @@
     },
     "/tenant/execution-runs/search-schema": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取执行记录搜索字段定义",
         "responses": {
           "200": {
@@ -4133,9 +3823,7 @@
     },
     "/tenant/execution-runs/stats": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取执行记录统计概览",
         "responses": {
           "200": {
@@ -4166,9 +3854,7 @@
     },
     "/tenant/execution-runs/trend": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取执行趋势",
         "parameters": [
           {
@@ -4214,9 +3900,7 @@
     },
     "/tenant/execution-runs/trigger-distribution": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取触发方式分布",
         "responses": {
           "200": {
@@ -4250,9 +3934,7 @@
     },
     "/tenant/execution-runs/top-failed": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取失败率最高的任务",
         "parameters": [
           {
@@ -4298,9 +3980,7 @@
     },
     "/tenant/execution-runs/top-active": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取最活跃的任务",
         "parameters": [
           {
@@ -4346,9 +4026,7 @@
     },
     "/tenant/execution-runs/{id}": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取执行记录详情",
         "parameters": [
           {
@@ -4372,9 +4050,7 @@
     },
     "/tenant/execution-runs/{id}/logs": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "获取执行日志",
         "parameters": [
           {
@@ -4413,9 +4089,7 @@
     },
     "/tenant/execution-runs/{id}/cancel": {
       "post": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "取消执行",
         "parameters": [
           {
@@ -4432,9 +4106,7 @@
     },
     "/tenant/execution-runs/{id}/stream": {
       "get": {
-        "tags": [
-          "执行记录"
-        ],
+        "tags": ["执行记录"],
         "summary": "SSE 实时日志流",
         "description": "Server-Sent Events (SSE) 实时日志推送。\n- `event: log` - 新日志条目\n- `event: done` - 执行完成（status, exit_code, stats）\n",
         "parameters": [
@@ -4460,9 +4132,7 @@
     },
     "/tenant/healing/flows": {
       "get": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "获取自愈流程列表",
         "parameters": [
           {
@@ -4509,9 +4179,7 @@
         "operationId": "getTenantHealingFlows"
       },
       "post": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "创建自愈流程",
         "requestBody": {
           "required": true,
@@ -4540,9 +4208,7 @@
     },
     "/tenant/healing/flows/{id}": {
       "get": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "获取自愈流程详情",
         "parameters": [
           {
@@ -4570,9 +4236,7 @@
         "operationId": "getTenantHealingFlowsById"
       },
       "put": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "更新自愈流程",
         "parameters": [
           {
@@ -4610,9 +4274,7 @@
         "operationId": "putTenantHealingFlowsById"
       },
       "delete": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "删除自愈流程",
         "parameters": [
           {
@@ -4635,9 +4297,7 @@
     },
     "/tenant/healing/rules": {
       "get": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "获取自愈规则列表",
         "parameters": [
           {
@@ -4692,9 +4352,7 @@
         "operationId": "getTenantHealingRules"
       },
       "post": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "创建自愈规则",
         "requestBody": {
           "required": true,
@@ -4723,9 +4381,7 @@
     },
     "/tenant/healing/rules/{id}": {
       "get": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "获取自愈规则详情",
         "parameters": [
           {
@@ -4753,9 +4409,7 @@
         "operationId": "getTenantHealingRulesById"
       },
       "put": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "更新自愈规则",
         "parameters": [
           {
@@ -4793,9 +4447,7 @@
         "operationId": "putTenantHealingRulesById"
       },
       "delete": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "删除自愈规则",
         "description": "删除规则时，如果有关联的流程实例：\n- 不带 `force` 参数：返回 409 Conflict\n- 带 `force=true`：将关联实例的 rule_id 设为 NULL，然后删除规则\n",
         "parameters": [
@@ -4846,9 +4498,7 @@
     },
     "/tenant/healing/rules/{id}/activate": {
       "post": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "启用自愈规则",
         "parameters": [
           {
@@ -4871,9 +4521,7 @@
     },
     "/tenant/healing/rules/{id}/deactivate": {
       "post": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "停用自愈规则",
         "parameters": [
           {
@@ -4896,9 +4544,7 @@
     },
     "/tenant/healing/instances": {
       "get": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "获取流程实例列表",
         "parameters": [
           {
@@ -5112,10 +4758,7 @@
             "description": "排序方向",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -5151,9 +4794,7 @@
     },
     "/tenant/healing/instances/stats": {
       "get": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "获取流程实例统计",
         "responses": {
           "200": {
@@ -5214,9 +4855,7 @@
     },
     "/tenant/healing/instances/{id}": {
       "get": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "获取流程实例详情",
         "parameters": [
           {
@@ -5246,9 +4885,7 @@
     },
     "/tenant/healing/instances/{id}/cancel": {
       "post": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "取消流程实例",
         "parameters": [
           {
@@ -5271,9 +4908,7 @@
     },
     "/tenant/healing/instances/{id}/recover": {
       "post": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "手动恢复流程实例",
         "description": "对卡住或异常中断的流程实例触发一次恢复尝试。",
         "parameters": [
@@ -5297,9 +4932,7 @@
     },
     "/tenant/healing/instances/{id}/retry": {
       "post": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "重试流程实例",
         "parameters": [
           {
@@ -5338,9 +4971,7 @@
     },
     "/tenant/healing/instances/{id}/recovery-logs": {
       "get": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "获取实例恢复记录",
         "parameters": [
           {
@@ -5385,9 +5016,7 @@
     },
     "/tenant/healing/instances/{id}/events": {
       "get": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "流程实例事件流",
         "description": "Server-Sent Events (SSE) 实时推送流程实例状态与节点事件。\n",
         "parameters": [
@@ -5419,9 +5048,7 @@
     },
     "/tenant/healing/approvals": {
       "get": {
-        "tags": [
-          "审批任务"
-        ],
+        "tags": ["审批任务"],
         "summary": "获取审批任务列表",
         "parameters": [
           {
@@ -5443,12 +5070,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "approved",
-                "rejected",
-                "expired"
-              ]
+              "enum": ["pending", "approved", "rejected", "expired"]
             }
           }
         ],
@@ -5484,9 +5106,7 @@
     },
     "/tenant/healing/approvals/pending": {
       "get": {
-        "tags": [
-          "审批任务"
-        ],
+        "tags": ["审批任务"],
         "summary": "获取待审批任务列表",
         "parameters": [
           {
@@ -5552,9 +5172,7 @@
     },
     "/tenant/healing/pending/trigger": {
       "get": {
-        "tags": [
-          "待触发工单"
-        ],
+        "tags": ["待触发工单"],
         "summary": "获取待触发工单列表",
         "parameters": [
           {
@@ -5576,12 +5194,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "critical",
-                "high",
-                "medium",
-                "low"
-              ]
+              "enum": ["critical", "high", "medium", "low"]
             }
           },
           {
@@ -5633,9 +5246,7 @@
     },
     "/tenant/healing/pending/dismissed": {
       "get": {
-        "tags": [
-          "待触发工单"
-        ],
+        "tags": ["待触发工单"],
         "summary": "获取已忽略工单列表",
         "parameters": [
           {
@@ -5657,12 +5268,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "critical",
-                "high",
-                "medium",
-                "low"
-              ]
+              "enum": ["critical", "high", "medium", "low"]
             }
           },
           {
@@ -5714,9 +5320,7 @@
     },
     "/tenant/healing/approvals/{id}": {
       "get": {
-        "tags": [
-          "审批任务"
-        ],
+        "tags": ["审批任务"],
         "summary": "获取审批任务详情",
         "parameters": [
           {
@@ -5746,9 +5350,7 @@
     },
     "/tenant/healing/approvals/{id}/approve": {
       "post": {
-        "tags": [
-          "审批任务"
-        ],
+        "tags": ["审批任务"],
         "summary": "批准审批任务",
         "parameters": [
           {
@@ -5786,9 +5388,7 @@
     },
     "/tenant/healing/approvals/{id}/reject": {
       "post": {
-        "tags": [
-          "审批任务"
-        ],
+        "tags": ["审批任务"],
         "summary": "拒绝审批任务",
         "parameters": [
           {
@@ -5826,9 +5426,7 @@
     },
     "/tenant/execution-schedules/stats": {
       "get": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "获取定时任务统计",
         "responses": {
           "200": {
@@ -5860,9 +5458,7 @@
     },
     "/tenant/execution-schedules/timeline": {
       "get": {
-        "tags": [
-          "定时调度"
-        ],
+        "tags": ["定时调度"],
         "summary": "获取调度时间线",
         "parameters": [
           {
@@ -5923,9 +5519,7 @@
     },
     "/tenant/execution-tasks/batch-confirm-review": {
       "post": {
-        "tags": [
-          "执行任务"
-        ],
+        "tags": ["执行任务"],
         "summary": "批量确认审核",
         "requestBody": {
           "required": true,
@@ -5987,9 +5581,7 @@
     },
     "/tenant/healing/flows/node-schema": {
       "get": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "获取节点类型 Schema",
         "responses": {
           "200": {
@@ -6020,9 +5612,7 @@
     },
     "/tenant/healing/flows/search-schema": {
       "get": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "获取流程搜索字段定义",
         "responses": {
           "200": {
@@ -6056,9 +5646,7 @@
     },
     "/tenant/healing/flows/stats": {
       "get": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "获取流程统计",
         "responses": {
           "200": {
@@ -6090,9 +5678,7 @@
     },
     "/tenant/healing/rules/search-schema": {
       "get": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "获取规则搜索字段定义",
         "responses": {
           "200": {
@@ -6126,9 +5712,7 @@
     },
     "/tenant/healing/rules/stats": {
       "get": {
-        "tags": [
-          "自愈规则"
-        ],
+        "tags": ["自愈规则"],
         "summary": "获取规则统计",
         "responses": {
           "200": {
@@ -6160,9 +5744,7 @@
     },
     "/tenant/healing/instances/search-schema": {
       "get": {
-        "tags": [
-          "流程实例"
-        ],
+        "tags": ["流程实例"],
         "summary": "获取流程实例搜索字段定义",
         "responses": {
           "200": {
@@ -6196,9 +5778,7 @@
     },
     "/tenant/healing/flows/{id}/dry-run": {
       "post": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "试运行流程",
         "parameters": [
           {
@@ -6246,9 +5826,7 @@
     },
     "/tenant/healing/flows/{id}/dry-run-stream": {
       "post": {
-        "tags": [
-          "自愈流程"
-        ],
+        "tags": ["自愈流程"],
         "summary": "流式试运行流程",
         "parameters": [
           {
@@ -6283,9 +5861,7 @@
     },
     "/tenant/channels": {
       "get": {
-        "tags": [
-          "通知渠道"
-        ],
+        "tags": ["通知渠道"],
         "summary": "获取渠道列表",
         "parameters": [
           {
@@ -6334,9 +5910,7 @@
         "operationId": "getTenantChannels"
       },
       "post": {
-        "tags": [
-          "通知渠道"
-        ],
+        "tags": ["通知渠道"],
         "summary": "创建渠道",
         "requestBody": {
           "required": true,
@@ -6365,9 +5939,7 @@
     },
     "/tenant/channels/{id}": {
       "get": {
-        "tags": [
-          "通知渠道"
-        ],
+        "tags": ["通知渠道"],
         "summary": "获取渠道详情",
         "parameters": [
           {
@@ -6389,9 +5961,7 @@
         "operationId": "getTenantChannelsById"
       },
       "put": {
-        "tags": [
-          "通知渠道"
-        ],
+        "tags": ["通知渠道"],
         "summary": "更新渠道",
         "parameters": [
           {
@@ -6416,9 +5986,7 @@
         "operationId": "putTenantChannelsById"
       },
       "delete": {
-        "tags": [
-          "通知渠道"
-        ],
+        "tags": ["通知渠道"],
         "summary": "删除渠道",
         "parameters": [
           {
@@ -6435,9 +6003,7 @@
     },
     "/tenant/channels/{id}/test": {
       "post": {
-        "tags": [
-          "通知渠道"
-        ],
+        "tags": ["通知渠道"],
         "summary": "测试渠道连接",
         "parameters": [
           {
@@ -6454,9 +6020,7 @@
     },
     "/tenant/templates": {
       "get": {
-        "tags": [
-          "通知模板"
-        ],
+        "tags": ["通知模板"],
         "summary": "获取模板列表",
         "parameters": [
           {
@@ -6511,11 +6075,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "name",
-                "created_at",
-                "updated_at"
-              ]
+              "enum": ["name", "created_at", "updated_at"]
             }
           },
           {
@@ -6523,10 +6083,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -6560,9 +6117,7 @@
         "operationId": "getTenantTemplates"
       },
       "post": {
-        "tags": [
-          "通知模板"
-        ],
+        "tags": ["通知模板"],
         "summary": "创建模板",
         "description": "创建通知模板，支持 40+ 变量进行模板替换。\n变量使用 `{{变量名}}` 格式引用。\n",
         "requestBody": {
@@ -6592,9 +6147,7 @@
     },
     "/tenant/templates/{id}": {
       "get": {
-        "tags": [
-          "通知模板"
-        ],
+        "tags": ["通知模板"],
         "summary": "获取模板详情",
         "parameters": [
           {
@@ -6616,9 +6169,7 @@
         "operationId": "getTenantTemplatesById"
       },
       "put": {
-        "tags": [
-          "通知模板"
-        ],
+        "tags": ["通知模板"],
         "summary": "更新模板",
         "parameters": [
           {
@@ -6643,9 +6194,7 @@
         "operationId": "putTenantTemplatesById"
       },
       "delete": {
-        "tags": [
-          "通知模板"
-        ],
+        "tags": ["通知模板"],
         "summary": "删除模板",
         "parameters": [
           {
@@ -6662,9 +6211,7 @@
     },
     "/tenant/templates/{id}/preview": {
       "post": {
-        "tags": [
-          "通知模板"
-        ],
+        "tags": ["通知模板"],
         "summary": "预览模板",
         "description": "使用示例数据渲染模板，预览效果",
         "parameters": [
@@ -6715,9 +6262,7 @@
     },
     "/tenant/template-variables": {
       "get": {
-        "tags": [
-          "模板变量"
-        ],
+        "tags": ["模板变量"],
         "summary": "获取所有可用模板变量",
         "description": "返回所有支持的 40 个模板变量，包含变量名、分类和描述。\n变量分类包括：timestamp, execution, task, repository, stats, system, error\n",
         "responses": {
@@ -6752,9 +6297,7 @@
     },
     "/tenant/notifications/send": {
       "post": {
-        "tags": [
-          "通知记录"
-        ],
+        "tags": ["通知记录"],
         "summary": "发送通知",
         "description": "手动发送通知到指定渠道",
         "requestBody": {
@@ -6859,9 +6402,7 @@
     },
     "/tenant/notifications": {
       "get": {
-        "tags": [
-          "通知记录"
-        ],
+        "tags": ["通知记录"],
         "summary": "获取通知发送记录",
         "parameters": [
           {
@@ -6956,12 +6497,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "created_at",
-                "status",
-                "subject",
-                "sent_at"
-              ]
+              "enum": ["created_at", "status", "subject", "sent_at"]
             }
           },
           {
@@ -6969,10 +6505,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -7008,9 +6541,7 @@
     },
     "/tenant/notifications/stats": {
       "get": {
-        "tags": [
-          "通知记录"
-        ],
+        "tags": ["通知记录"],
         "summary": "获取通知统计",
         "responses": {
           "200": {
@@ -7041,9 +6572,7 @@
     },
     "/tenant/notifications/{id}": {
       "get": {
-        "tags": [
-          "通知记录"
-        ],
+        "tags": ["通知记录"],
         "summary": "获取通知详情",
         "parameters": [
           {
@@ -7067,9 +6596,7 @@
     },
     "/tenant/dashboard/overview": {
       "get": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "获取 Dashboard 概览",
         "parameters": [
           {
@@ -7110,9 +6637,7 @@
     },
     "/tenant/dashboard/config": {
       "get": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "获取 Dashboard 配置",
         "responses": {
           "200": {
@@ -7141,9 +6666,7 @@
         "operationId": "getTenantDashboardConfig"
       },
       "put": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "更新 Dashboard 配置",
         "requestBody": {
           "required": true,
@@ -7166,9 +6689,7 @@
     },
     "/tenant/dashboard/workspaces": {
       "get": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "获取当前用户可见的系统工作区列表",
         "responses": {
           "200": {
@@ -7200,9 +6721,7 @@
         "operationId": "getTenantDashboardWorkspaces"
       },
       "post": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "创建系统工作区",
         "requestBody": {
           "required": true,
@@ -7211,10 +6730,7 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "name",
-                  "config"
-                ],
+                "required": ["name", "config"],
                 "properties": {
                   "name": {
                     "type": "string"
@@ -7259,9 +6775,7 @@
     },
     "/tenant/site-messages": {
       "get": {
-        "tags": [
-          "站内信"
-        ],
+        "tags": ["站内信"],
         "summary": "查询站内信列表",
         "parameters": [
           {
@@ -7354,9 +6868,7 @@
     },
     "/tenant/site-messages/unread-count": {
       "get": {
-        "tags": [
-          "站内信"
-        ],
+        "tags": ["站内信"],
         "summary": "获取未读消息数",
         "responses": {
           "200": {
@@ -7387,9 +6899,7 @@
     },
     "/tenant/site-messages/read": {
       "put": {
-        "tags": [
-          "站内信"
-        ],
+        "tags": ["站内信"],
         "summary": "批量标记已读",
         "requestBody": {
           "required": true,
@@ -7397,9 +6907,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "ids"
-                ],
+                "required": ["ids"],
                 "properties": {
                   "ids": {
                     "type": "array",
@@ -7423,9 +6931,7 @@
     },
     "/tenant/site-messages/read-all": {
       "put": {
-        "tags": [
-          "站内信"
-        ],
+        "tags": ["站内信"],
         "summary": "标记全部已读",
         "responses": {
           "200": {
@@ -7456,9 +6962,7 @@
     },
     "/tenant/site-messages/events": {
       "get": {
-        "tags": [
-          "站内信"
-        ],
+        "tags": ["站内信"],
         "summary": "站内信实时事件流",
         "responses": {
           "200": {
@@ -7477,9 +6981,7 @@
     },
     "/tenant/dashboard/workspaces/{id}": {
       "put": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "更新系统工作区",
         "parameters": [
           {
@@ -7536,9 +7038,7 @@
         "operationId": "putTenantDashboardWorkspacesById"
       },
       "delete": {
-        "tags": [
-          "Dashboard"
-        ],
+        "tags": ["Dashboard"],
         "summary": "删除系统工作区",
         "parameters": [
           {
@@ -7555,9 +7055,7 @@
     },
     "/tenant/plugins": {
       "get": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "获取插件列表",
         "parameters": [
           {
@@ -7615,9 +7113,7 @@
         "operationId": "getTenantPlugins"
       },
       "post": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "创建插件",
         "requestBody": {
           "required": true,
@@ -7625,11 +7121,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "name",
-                  "type",
-                  "config"
-                ],
+                "required": ["name", "type", "config"],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -7677,10 +7169,7 @@
                         {
                           "field": "priority",
                           "operator": "in",
-                          "value": [
-                            "1",
-                            "2"
-                          ]
+                          "value": ["1", "2"]
                         }
                       ]
                     }
@@ -7716,9 +7205,7 @@
     },
     "/tenant/plugins/search-schema": {
       "get": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "获取插件搜索字段定义",
         "responses": {
           "200": {
@@ -7752,9 +7239,7 @@
     },
     "/tenant/plugins/stats": {
       "get": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "获取插件统计",
         "description": "返回插件的总数、类型分布、状态分布、同步配置统计等信息",
         "responses": {
@@ -7786,9 +7271,7 @@
     },
     "/tenant/plugins/{id}": {
       "get": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "获取插件详情",
         "parameters": [
           {
@@ -7810,9 +7293,7 @@
         "operationId": "getTenantPluginsById"
       },
       "put": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "更新插件",
         "description": "更新插件配置。只需传递需要修改的字段。\n**可更新字段：** description, version, config, field_mapping, sync_filter, sync_enabled, sync_interval_minutes\n**不可修改：** name, type\n",
         "parameters": [
@@ -7860,10 +7341,7 @@
                     {
                       "field": "priority",
                       "operator": "in",
-                      "value": [
-                        "1",
-                        "2"
-                      ]
+                      "value": ["1", "2"]
                     }
                   ]
                 },
@@ -7888,9 +7366,7 @@
         "operationId": "putTenantPluginsById"
       },
       "delete": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "删除插件",
         "parameters": [
           {
@@ -7907,9 +7383,7 @@
     },
     "/tenant/plugins/{id}/test": {
       "post": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "测试插件连接",
         "description": "只测试连接，不改变插件状态",
         "parameters": [
@@ -7950,9 +7424,7 @@
     },
     "/tenant/plugins/{id}/activate": {
       "post": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "激活插件",
         "description": "测试连接成功后激活插件。只有激活状态的插件才会参与定时同步。",
         "parameters": [
@@ -7993,9 +7465,7 @@
     },
     "/tenant/plugins/{id}/deactivate": {
       "post": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "停用插件",
         "description": "直接停用插件，不需要测试。停用后插件不再参与定时同步。",
         "parameters": [
@@ -8026,9 +7496,7 @@
     },
     "/tenant/plugins/{id}/sync": {
       "post": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "触发手动同步",
         "parameters": [
           {
@@ -8052,9 +7520,7 @@
     },
     "/tenant/plugins/{id}/logs": {
       "get": {
-        "tags": [
-          "插件管理"
-        ],
+        "tags": ["插件管理"],
         "summary": "获取插件同步日志",
         "parameters": [
           {
@@ -8099,9 +7565,7 @@
     },
     "/tenant/incidents/stats": {
       "get": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "获取工单统计",
         "description": "返回工单的各状态统计数据",
         "responses": {
@@ -8186,9 +7650,7 @@
     },
     "/tenant/incidents/search-schema": {
       "get": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "获取工单搜索字段定义",
         "responses": {
           "200": {
@@ -8222,9 +7684,7 @@
     },
     "/tenant/incidents": {
       "get": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "获取工单列表",
         "parameters": [
           {
@@ -8309,10 +7769,7 @@
             "description": "排序字段",
             "schema": {
               "type": "string",
-              "enum": [
-                "created_at",
-                "severity"
-              ]
+              "enum": ["created_at", "severity"]
             }
           },
           {
@@ -8321,10 +7778,7 @@
             "description": "排序方向",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -8360,9 +7814,7 @@
     },
     "/tenant/incidents/{id}": {
       "get": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "获取工单详情",
         "parameters": [
           {
@@ -8386,9 +7838,7 @@
     },
     "/tenant/incidents/{id}/close": {
       "post": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "关闭工单",
         "parameters": [
           {
@@ -8422,9 +7872,7 @@
     },
     "/tenant/incidents/{id}/writeback-logs": {
       "get": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "获取工单回写日志",
         "parameters": [
           {
@@ -8451,9 +7899,7 @@
     },
     "/tenant/incident-solution-templates": {
       "get": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "获取解决方案模板列表",
         "responses": {
           "200": {
@@ -8473,9 +7919,7 @@
         "operationId": "getTenantIncidentSolutionTemplates"
       },
       "post": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "创建解决方案模板",
         "requestBody": {
           "required": true,
@@ -8504,9 +7948,7 @@
     },
     "/tenant/incident-solution-templates/{id}": {
       "get": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "获取解决方案模板详情",
         "parameters": [
           {
@@ -8528,9 +7970,7 @@
         "operationId": "getTenantIncidentSolutionTemplatesById"
       },
       "put": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "更新解决方案模板",
         "parameters": [
           {
@@ -8562,9 +8002,7 @@
         "operationId": "putTenantIncidentSolutionTemplatesById"
       },
       "delete": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "删除解决方案模板",
         "parameters": [
           {
@@ -8581,9 +8019,7 @@
     },
     "/tenant/incidents/{id}/trigger": {
       "post": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "手动触发工单自愈",
         "parameters": [
           {
@@ -8607,9 +8043,7 @@
     },
     "/tenant/incidents/{id}/dismiss": {
       "post": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "忽略待触发工单",
         "parameters": [
           {
@@ -8639,9 +8073,7 @@
     },
     "/tenant/incidents/{id}/reset-scan": {
       "post": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "重置工单扫描状态",
         "description": "将工单的 scanned 设为 false，清除 matched_rule_id 和 healing_flow_instance_id。\n这样工单会被自愈调度器重新扫描。\n",
         "parameters": [
@@ -8672,9 +8104,7 @@
     },
     "/tenant/incidents/batch-reset-scan": {
       "post": {
-        "tags": [
-          "工单管理"
-        ],
+        "tags": ["工单管理"],
         "summary": "批量重置工单扫描状态",
         "description": "批量重置工单的扫描状态。可以通过指定 ID 列表或按自愈状态筛选。\n",
         "requestBody": {
@@ -8704,10 +8134,7 @@
                 "by_ids": {
                   "summary": "重置指定工单",
                   "value": {
-                    "ids": [
-                      "uuid1",
-                      "uuid2"
-                    ]
+                    "ids": ["uuid1", "uuid2"]
                   }
                 },
                 "by_status": {
@@ -8747,9 +8174,7 @@
     },
     "/tenant/cmdb": {
       "get": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "获取 CMDB 配置项列表",
         "parameters": [
           {
@@ -8829,9 +8254,7 @@
     },
     "/tenant/cmdb/batch-test-connection": {
       "post": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "批量测试 SSH 连接",
         "description": "批量测试多个 CMDB 配置项的 SSH 连接",
         "requestBody": {
@@ -8840,10 +8263,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "cmdb_ids",
-                  "secrets_source_id"
-                ],
+                "required": ["cmdb_ids", "secrets_source_id"],
                 "properties": {
                   "cmdb_ids": {
                     "type": "array",
@@ -8910,9 +8330,7 @@
     },
     "/tenant/cmdb/{id}/test-connection": {
       "post": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "测试单个 CMDB 配置项的 SSH 连接",
         "parameters": [
           {
@@ -8931,9 +8349,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "secrets_source_id"
-                ],
+                "required": ["secrets_source_id"],
                 "properties": {
                   "secrets_source_id": {
                     "type": "string",
@@ -8962,9 +8378,7 @@
     },
     "/tenant/cmdb/{id}/maintenance": {
       "post": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "进入维护模式",
         "description": "将配置项设置为维护状态，到期后自动恢复",
         "parameters": [
@@ -8984,9 +8398,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "reason"
-                ],
+                "required": ["reason"],
                 "properties": {
                   "reason": {
                     "type": "string",
@@ -9021,9 +8433,7 @@
     },
     "/tenant/cmdb/{id}/resume": {
       "post": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "退出维护模式",
         "description": "手动恢复配置项为正常状态",
         "parameters": [
@@ -9054,9 +8464,7 @@
     },
     "/tenant/cmdb/{id}/maintenance-logs": {
       "get": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "获取维护日志",
         "description": "获取配置项的维护历史记录",
         "parameters": [
@@ -9110,9 +8518,7 @@
     },
     "/tenant/cmdb/batch/maintenance": {
       "post": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "批量进入维护模式",
         "description": "批量将配置项设置为维护状态，最多支持 100 个",
         "requestBody": {
@@ -9121,10 +8527,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "ids",
-                  "reason"
-                ],
+                "required": ["ids", "reason"],
                 "properties": {
                   "ids": {
                     "type": "array",
@@ -9176,9 +8579,7 @@
     },
     "/tenant/cmdb/batch/resume": {
       "post": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "批量退出维护模式",
         "description": "批量恢复配置项为正常状态，最多支持 100 个",
         "requestBody": {
@@ -9187,9 +8588,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "ids"
-                ],
+                "required": ["ids"],
                 "properties": {
                   "ids": {
                     "type": "array",
@@ -9232,9 +8631,7 @@
     },
     "/tenant/cmdb/stats": {
       "get": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "获取 CMDB 统计信息",
         "responses": {
           "200": {
@@ -9253,9 +8650,7 @@
     },
     "/tenant/cmdb/{id}": {
       "get": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "获取 CMDB 配置项详情",
         "parameters": [
           {
@@ -9279,9 +8674,7 @@
     },
     "/tenant/secrets-sources": {
       "get": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "获取密钥源列表",
         "parameters": [
           {
@@ -9334,9 +8727,7 @@
         "operationId": "getTenantSecretsSources"
       },
       "post": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "创建密钥源",
         "requestBody": {
           "required": true,
@@ -9365,9 +8756,7 @@
     },
     "/tenant/secrets-sources/stats": {
       "get": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "获取密钥源统计",
         "responses": {
           "200": {
@@ -9399,9 +8788,7 @@
     },
     "/tenant/secrets-sources/{id}": {
       "get": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "获取密钥源详情",
         "parameters": [
           {
@@ -9423,9 +8810,7 @@
         "operationId": "getTenantSecretsSourcesById"
       },
       "put": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "更新密钥源",
         "parameters": [
           {
@@ -9459,9 +8844,7 @@
         "operationId": "putTenantSecretsSourcesById"
       },
       "delete": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "删除密钥源",
         "parameters": [
           {
@@ -9478,9 +8861,7 @@
     },
     "/tenant/secrets-sources/{id}/test": {
       "post": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "测试密钥源连接",
         "description": "测试连接并更新 last_test_at",
         "parameters": [
@@ -9498,9 +8879,7 @@
     },
     "/tenant/secrets-sources/{id}/test-query": {
       "post": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "测试主机凭据获取",
         "description": "支持单选和多选模式。单选传 hostname/ip_address，多选传 hosts 数组。",
         "parameters": [
@@ -9597,9 +8976,7 @@
     },
     "/tenant/secrets-sources/{id}/enable": {
       "post": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "启用密钥源",
         "description": "自动测试连接，通过后启用",
         "parameters": [
@@ -9617,9 +8994,7 @@
     },
     "/tenant/secrets-sources/{id}/disable": {
       "post": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "禁用密钥源",
         "parameters": [
           {
@@ -9636,9 +9011,7 @@
     },
     "/tenant/git-repos": {
       "get": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "获取 Git 仓库列表",
         "parameters": [
           {
@@ -9681,9 +9054,7 @@
         "operationId": "getTenantGitRepos"
       },
       "post": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "创建 Git 仓库",
         "requestBody": {
           "required": true,
@@ -9712,9 +9083,7 @@
     },
     "/tenant/git-repos/{id}": {
       "get": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "获取仓库详情",
         "parameters": [
           {
@@ -9736,9 +9105,7 @@
         "operationId": "getTenantGitReposById"
       },
       "put": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "更新仓库",
         "description": "更新仓库配置。只需传递需要修改的字段。\n**可更新字段：** default_branch, auth_type, auth_config, sync_enabled, sync_interval\n",
         "parameters": [
@@ -9771,9 +9138,7 @@
         "operationId": "putTenantGitReposById"
       },
       "delete": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "删除仓库",
         "parameters": [
           {
@@ -9790,9 +9155,7 @@
     },
     "/tenant/git-repos/{id}/sync": {
       "post": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "同步仓库",
         "parameters": [
           {
@@ -9809,9 +9172,7 @@
     },
     "/tenant/git-repos/validate": {
       "post": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "验证仓库（创建前获取分支列表）",
         "description": "在创建仓库之前，验证 URL 和认证是否有效，并获取可用分支列表。\n前端可使用此接口让用户先选择分支，再提交创建请求。\n",
         "requestBody": {
@@ -9820,9 +9181,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -9852,9 +9211,7 @@
     },
     "/tenant/git-repos/stats": {
       "get": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "获取 Git 仓库统计",
         "responses": {
           "200": {
@@ -9886,9 +9243,7 @@
     },
     "/tenant/git-repos/search-schema": {
       "get": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "获取 Git 仓库搜索字段定义",
         "responses": {
           "200": {
@@ -9925,9 +9280,7 @@
     },
     "/tenant/git-repos/{id}/commits": {
       "get": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "获取 Commit 历史",
         "parameters": [
           {
@@ -9972,9 +9325,7 @@
     },
     "/tenant/git-repos/{id}/files": {
       "get": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "获取文件树",
         "parameters": [
           {
@@ -10036,9 +9387,7 @@
     },
     "/tenant/playbooks": {
       "get": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "获取 Playbook 模板列表",
         "parameters": [
           {
@@ -10082,9 +9431,7 @@
         "operationId": "getTenantPlaybooks"
       },
       "post": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "创建 Playbook 模板",
         "requestBody": {
           "required": true,
@@ -10144,9 +9491,7 @@
     },
     "/tenant/playbooks/stats": {
       "get": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "获取 Playbook 统计",
         "responses": {
           "200": {
@@ -10178,9 +9523,7 @@
     },
     "/tenant/playbooks/{id}": {
       "get": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "获取 Playbook 模板详情",
         "parameters": [
           {
@@ -10202,9 +9545,7 @@
         "operationId": "getTenantPlaybooksById"
       },
       "put": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "更新 Playbook 模板",
         "parameters": [
           {
@@ -10237,9 +9578,7 @@
         "operationId": "putTenantPlaybooksById"
       },
       "delete": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "删除 Playbook 模板",
         "parameters": [
           {
@@ -10256,9 +9595,7 @@
     },
     "/tenant/playbooks/{id}/scan": {
       "post": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "扫描 Playbook 变量",
         "description": "递归扫描入口 Playbook 及其依赖文件，智能推断变量类型。\n\n类型推断优先级：\n1. 增强模式 (.auto-healing.yml / .auto-healing.yaml)\n2. Jinja2 default 表达式\n3. 变量名启发式\n4. 默认 string\n\n增强模式支持：\n- `exposure_mode: scoped`\n- `variables[].playbooks` 指定变量仅暴露给特定入口文件\n",
         "parameters": [
@@ -10283,9 +9620,7 @@
     },
     "/tenant/playbooks/{id}/variables": {
       "put": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "更新变量配置",
         "description": "手动修改变量的 required、description、default 等配置",
         "parameters": [
@@ -10299,9 +9634,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "variables"
-                ],
+                "required": ["variables"],
                 "properties": {
                   "variables": {
                     "type": "array",
@@ -10324,9 +9657,7 @@
     },
     "/tenant/playbooks/{id}/ready": {
       "post": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "上线（设置为 Ready 状态）",
         "description": "将 Playbook 设置为 ready 状态，允许被执行任务使用",
         "parameters": [
@@ -10344,9 +9675,7 @@
     },
     "/tenant/playbooks/{id}/offline": {
       "post": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "下线（设置为 Pending 状态）",
         "description": "将 Playbook 设置为 pending 状态，下线后无法被执行任务使用",
         "parameters": [
@@ -10364,9 +9693,7 @@
     },
     "/tenant/playbooks/{id}/files": {
       "get": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "获取 Playbook 依赖文件列表",
         "description": "获取 Playbook 的入口文件与扫描到的依赖文件列表",
         "parameters": [
@@ -10412,10 +9739,7 @@
                           "relation": {
                             "type": "string",
                             "description": "文件与当前入口的关系",
-                            "enum": [
-                              "entry",
-                              "dependency"
-                            ]
+                            "enum": ["entry", "dependency"]
                           }
                         }
                       }
@@ -10431,9 +9755,7 @@
     },
     "/tenant/playbooks/{id}/scan-logs": {
       "get": {
-        "tags": [
-          "Playbook模板"
-        ],
+        "tags": ["Playbook模板"],
         "summary": "获取扫描日志",
         "parameters": [
           {
@@ -10463,9 +9785,7 @@
     },
     "/tenant/cmdb/search-schema": {
       "get": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "获取 CMDB 搜索字段定义",
         "responses": {
           "200": {
@@ -10499,9 +9819,7 @@
     },
     "/tenant/cmdb/ids": {
       "get": {
-        "tags": [
-          "CMDB"
-        ],
+        "tags": ["CMDB"],
         "summary": "获取符合筛选条件的 CMDB ID 列表",
         "parameters": [
           {
@@ -10595,9 +9913,7 @@
     },
     "/tenant/git-repos/{id}/reset-status": {
       "post": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "重置仓库状态",
         "parameters": [
           {
@@ -10623,9 +9939,7 @@
     },
     "/tenant/git-repos/{id}/logs": {
       "get": {
-        "tags": [
-          "Git仓库"
-        ],
+        "tags": ["Git仓库"],
         "summary": "获取同步日志",
         "parameters": [
           {
@@ -10671,9 +9985,7 @@
     },
     "/tenant/secrets/query": {
       "post": {
-        "tags": [
-          "密钥管理"
-        ],
+        "tags": ["密钥管理"],
         "summary": "按主机查询密钥",
         "requestBody": {
           "required": true,
@@ -10702,9 +10014,7 @@
     },
     "/tenant/audit-logs": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "获取租户审计日志列表",
         "description": "默认返回当前租户内操作审计；当 category=auth 时返回当前租户成员的认证安全事件投影。category=login 为兼容别名，仅返回 auth 中的 login/logout。",
         "parameters": [
@@ -10713,11 +10023,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "operation",
-                "auth",
-                "login"
-              ]
+              "enum": ["operation", "auth", "login"]
             }
           }
         ],
@@ -10731,9 +10037,7 @@
     },
     "/tenant/audit-logs/stats": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "获取审计统计概览",
         "parameters": [
           {
@@ -10741,11 +10045,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "operation",
-                "auth",
-                "login"
-              ]
+              "enum": ["operation", "auth", "login"]
             }
           }
         ],
@@ -10779,9 +10079,7 @@
     },
     "/tenant/audit-logs/user-ranking": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "获取用户操作排行",
         "parameters": [
           {
@@ -10834,9 +10132,7 @@
     },
     "/tenant/audit-logs/action-grouping": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "按操作类型分组统计",
         "parameters": [
           {
@@ -10890,9 +10186,7 @@
     },
     "/tenant/audit-logs/resource-stats": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "获取资源类型统计",
         "parameters": [
           {
@@ -10937,9 +10231,7 @@
     },
     "/tenant/audit-logs/trend": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "获取操作趋势",
         "parameters": [
           {
@@ -10955,11 +10247,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "operation",
-                "auth",
-                "login"
-              ]
+              "enum": ["operation", "auth", "login"]
             }
           }
         ],
@@ -10996,9 +10284,7 @@
     },
     "/tenant/audit-logs/high-risk": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "获取高危操作日志",
         "parameters": [
           {
@@ -11041,9 +10327,7 @@
     },
     "/tenant/audit-logs/export": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "导出审计日志",
         "responses": {
           "200": {
@@ -11062,9 +10346,7 @@
     },
     "/tenant/blacklist-exemptions": {
       "get": {
-        "tags": [
-          "黑名单豁免"
-        ],
+        "tags": ["黑名单豁免"],
         "summary": "获取黑名单豁免列表",
         "parameters": [
           {
@@ -11148,9 +10430,7 @@
         "operationId": "getTenantBlacklistExemptions"
       },
       "post": {
-        "tags": [
-          "黑名单豁免"
-        ],
+        "tags": ["黑名单豁免"],
         "summary": "创建黑名单豁免申请",
         "requestBody": {
           "required": true,
@@ -11158,11 +10438,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "task_id",
-                  "rule_id",
-                  "reason"
-                ],
+                "required": ["task_id", "rule_id", "reason"],
                 "properties": {
                   "task_id": {
                     "type": "string",
@@ -11226,9 +10502,7 @@
     },
     "/tenant/blacklist-exemptions/pending": {
       "get": {
-        "tags": [
-          "黑名单豁免"
-        ],
+        "tags": ["黑名单豁免"],
         "summary": "获取待审批豁免列表",
         "parameters": [
           {
@@ -11271,9 +10545,7 @@
     },
     "/tenant/blacklist-exemptions/search-schema": {
       "get": {
-        "tags": [
-          "黑名单豁免"
-        ],
+        "tags": ["黑名单豁免"],
         "summary": "获取黑名单豁免搜索字段定义",
         "responses": {
           "200": {
@@ -11307,9 +10579,7 @@
     },
     "/tenant/command-blacklist": {
       "get": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "获取黑名单规则列表",
         "parameters": [
           {
@@ -11416,9 +10686,7 @@
         "operationId": "getTenantCommandBlacklist"
       },
       "post": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "创建黑名单规则",
         "requestBody": {
           "required": true,
@@ -11447,9 +10715,7 @@
     },
     "/tenant/command-blacklist/batch-toggle": {
       "post": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "批量启用或禁用规则",
         "requestBody": {
           "required": true,
@@ -11457,10 +10723,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "ids",
-                  "is_active"
-                ],
+                "required": ["ids", "is_active"],
                 "properties": {
                   "ids": {
                     "type": "array",
@@ -11507,9 +10770,7 @@
     },
     "/tenant/command-blacklist/search-schema": {
       "get": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "获取黑名单搜索字段定义",
         "responses": {
           "200": {
@@ -11541,9 +10802,7 @@
     },
     "/tenant/command-blacklist/simulate": {
       "post": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "仿真测试黑名单匹配",
         "requestBody": {
           "required": true,
@@ -11551,10 +10810,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "pattern",
-                  "match_type"
-                ],
+                "required": ["pattern", "match_type"],
                 "properties": {
                   "pattern": {
                     "type": "string"
@@ -11629,9 +10885,7 @@
     },
     "/tenant/audit-logs/{id}": {
       "get": {
-        "tags": [
-          "审计日志"
-        ],
+        "tags": ["审计日志"],
         "summary": "获取审计日志详情",
         "parameters": [
           {
@@ -11668,9 +10922,7 @@
     },
     "/tenant/command-blacklist/{id}": {
       "get": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "获取黑名单规则详情",
         "parameters": [
           {
@@ -11705,9 +10957,7 @@
         "operationId": "getTenantCommandBlacklistById"
       },
       "put": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "更新黑名单规则",
         "parameters": [
           {
@@ -11753,9 +11003,7 @@
         "operationId": "putTenantCommandBlacklistById"
       },
       "delete": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "删除黑名单规则",
         "parameters": [
           {
@@ -11772,9 +11020,7 @@
     },
     "/tenant/command-blacklist/{id}/toggle": {
       "post": {
-        "tags": [
-          "高危指令黑名单"
-        ],
+        "tags": ["高危指令黑名单"],
         "summary": "启用或禁用黑名单规则",
         "parameters": [
           {
@@ -11811,9 +11057,7 @@
     },
     "/tenant/blacklist-exemptions/{id}": {
       "get": {
-        "tags": [
-          "黑名单豁免"
-        ],
+        "tags": ["黑名单豁免"],
         "summary": "获取豁免申请详情",
         "parameters": [
           {
@@ -11850,9 +11094,7 @@
     },
     "/tenant/blacklist-exemptions/{id}/approve": {
       "post": {
-        "tags": [
-          "黑名单豁免"
-        ],
+        "tags": ["黑名单豁免"],
         "summary": "批准豁免申请",
         "parameters": [
           {
@@ -11869,9 +11111,7 @@
     },
     "/tenant/blacklist-exemptions/{id}/reject": {
       "post": {
-        "tags": [
-          "黑名单豁免"
-        ],
+        "tags": ["黑名单豁免"],
         "summary": "拒绝豁免申请",
         "parameters": [
           {
@@ -12654,22 +11894,13 @@
             "type": "string",
             "x-dict-type": "log_level",
             "x-dict-mode": "exact",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "error"
-            ]
+            "enum": ["debug", "info", "warn", "error"]
           },
           "stage": {
             "type": "string",
             "x-dict-type": "execution_stage",
             "x-dict-mode": "exact",
-            "enum": [
-              "prepare",
-              "execute",
-              "cleanup"
-            ]
+            "enum": ["prepare", "execute", "cleanup"]
           },
           "message": {
             "type": "string"
@@ -12855,10 +12086,6 @@
           "is_active": {
             "type": "boolean"
           },
-          "auto_close_source_incident": {
-            "type": "boolean",
-            "description": "流程成功完成后自动关闭源工单"
-          },
           "close_policy": {
             "$ref": "#/components/schemas/FlowClosePolicy"
           },
@@ -12874,9 +12101,7 @@
       },
       "HealingFlowCreate": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string"
@@ -12897,9 +12122,6 @@
             }
           },
           "is_active": {
-            "type": "boolean"
-          },
-          "auto_close_source_incident": {
             "type": "boolean"
           },
           "close_policy": {
@@ -12931,9 +12153,6 @@
           "is_active": {
             "type": "boolean"
           },
-          "auto_close_source_incident": {
-            "type": "boolean"
-          },
           "close_policy": {
             "$ref": "#/components/schemas/FlowClosePolicy"
           }
@@ -12949,9 +12168,7 @@
           "trigger_on": {
             "type": "string",
             "description": "触发时机，当前仅支持 flow_success",
-            "enum": [
-              "flow_success"
-            ]
+            "enum": ["flow_success"]
           },
           "solution_template_id": {
             "type": "string",
@@ -12961,10 +12178,7 @@
           "default_close_status": {
             "type": "string",
             "description": "默认关闭状态",
-            "enum": [
-              "resolved",
-              "closed"
-            ]
+            "enum": ["resolved", "closed"]
           },
           "default_close_code": {
             "type": "string",
@@ -13047,10 +12261,7 @@
           },
           "trigger_mode": {
             "type": "string",
-            "enum": [
-              "auto",
-              "manual"
-            ]
+            "enum": ["auto", "manual"]
           },
           "conditions": {
             "type": "array",
@@ -13060,10 +12271,7 @@
           },
           "match_mode": {
             "type": "string",
-            "enum": [
-              "all",
-              "any"
-            ]
+            "enum": ["all", "any"]
           },
           "flow_id": {
             "type": "string",
@@ -13085,9 +12293,7 @@
       },
       "HealingRuleCreate": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string"
@@ -13100,10 +12306,7 @@
           },
           "trigger_mode": {
             "type": "string",
-            "enum": [
-              "auto",
-              "manual"
-            ]
+            "enum": ["auto", "manual"]
           },
           "conditions": {
             "type": "array",
@@ -13113,10 +12316,7 @@
           },
           "match_mode": {
             "type": "string",
-            "enum": [
-              "all",
-              "any"
-            ]
+            "enum": ["all", "any"]
           },
           "flow_id": {
             "type": "string",
@@ -13141,10 +12341,7 @@
           },
           "trigger_mode": {
             "type": "string",
-            "enum": [
-              "auto",
-              "manual"
-            ]
+            "enum": ["auto", "manual"]
           },
           "conditions": {
             "type": "array",
@@ -13154,10 +12351,7 @@
           },
           "match_mode": {
             "type": "string",
-            "enum": [
-              "all",
-              "any"
-            ]
+            "enum": ["all", "any"]
           },
           "flow_id": {
             "type": "string",
@@ -13258,10 +12452,7 @@
           },
           "trigger_source": {
             "type": "string",
-            "enum": [
-              "manual",
-              "scheduler"
-            ]
+            "enum": ["manual", "scheduler"]
           },
           "current_node_id": {
             "type": "string"
@@ -13277,12 +12468,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "started",
-              "success",
-              "failed",
-              "skipped"
-            ]
+            "enum": ["started", "success", "failed", "skipped"]
           },
           "details": {
             "type": "object",
@@ -13390,12 +12576,7 @@
             "type": "string",
             "x-dict-type": "log_level",
             "x-dict-mode": "exact",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "error"
-            ],
+            "enum": ["debug", "info", "warn", "error"],
             "description": "日志级别"
           },
           "message": {
@@ -13406,9 +12587,7 @@
             "type": "object",
             "description": "日志详情（节点执行的输入输出等）",
             "example": {
-              "hosts": [
-                "192.168.1.100"
-              ],
+              "hosts": ["192.168.1.100"],
               "execution_time_ms": 1500
             }
           },
@@ -14521,11 +13700,7 @@
       },
       "NotificationChannelCreate": {
         "type": "object",
-        "required": [
-          "name",
-          "type",
-          "config"
-        ],
+        "required": ["name", "type", "config"],
         "properties": {
           "name": {
             "type": "string"
@@ -14652,10 +13827,7 @@
       },
       "NotificationTemplateCreate": {
         "type": "object",
-        "required": [
-          "name",
-          "body_template"
-        ],
+        "required": ["name", "body_template"],
         "properties": {
           "name": {
             "type": "string"
@@ -14789,13 +13961,7 @@
             "type": "string",
             "x-dict-type": "notification_log_status",
             "x-dict-mode": "exact",
-            "enum": [
-              "pending",
-              "sent",
-              "delivered",
-              "failed",
-              "bounced"
-            ]
+            "enum": ["pending", "sent", "delivered", "failed", "bounced"]
           },
           "subject": {
             "type": "string"
@@ -14869,14 +14035,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "webhook",
-              "email",
-              "dingtalk",
-              "wecom",
-              "slack",
-              "teams"
-            ]
+            "enum": ["webhook", "email", "dingtalk", "wecom", "slack", "teams"]
           },
           "count": {
             "type": "integer"
@@ -14888,13 +14047,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "sent",
-              "delivered",
-              "failed",
-              "bounced"
-            ]
+            "enum": ["pending", "sent", "delivered", "failed", "bounced"]
           },
           "count": {
             "type": "integer"
@@ -15340,10 +14493,7 @@
           },
           "action": {
             "type": "string",
-            "enum": [
-              "enter",
-              "exit"
-            ],
+            "enum": ["enter", "exit"],
             "description": "操作类型"
           },
           "reason": {
@@ -15362,10 +14512,7 @@
           },
           "exit_type": {
             "type": "string",
-            "enum": [
-              "manual",
-              "auto"
-            ],
+            "enum": ["manual", "auto"],
             "description": "退出方式"
           },
           "operator": {
@@ -15476,10 +14623,7 @@
           "close_status": {
             "type": "string",
             "description": "关闭后的生命周期状态",
-            "enum": [
-              "resolved",
-              "closed"
-            ]
+            "enum": ["resolved", "closed"]
           },
           "solution_template_id": {
             "type": "string",
@@ -15542,10 +14686,7 @@
           "steps_render_mode": {
             "type": "string",
             "description": "执行步骤渲染模式",
-            "enum": [
-              "summary",
-              "detailed"
-            ]
+            "enum": ["summary", "detailed"]
           },
           "steps_max_count": {
             "type": "integer",
@@ -15581,9 +14722,7 @@
       },
       "IncidentSolutionTemplateCreate": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string"
@@ -15605,10 +14744,7 @@
           },
           "steps_render_mode": {
             "type": "string",
-            "enum": [
-              "summary",
-              "detailed"
-            ]
+            "enum": ["summary", "detailed"]
           },
           "steps_max_count": {
             "type": "integer"
@@ -15653,10 +14789,7 @@
           },
           "steps_render_mode": {
             "type": "string",
-            "enum": [
-              "summary",
-              "detailed"
-            ]
+            "enum": ["summary", "detailed"]
           },
           "steps_max_count": {
             "type": "integer"
@@ -15699,22 +14832,14 @@
           },
           "action": {
             "type": "string",
-            "enum": [
-              "close",
-              "update"
-            ]
+            "enum": ["close", "update"]
           },
           "trigger_source": {
             "type": "string"
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "success",
-              "failed",
-              "skipped"
-            ]
+            "enum": ["pending", "success", "failed", "skipped"]
           },
           "request_method": {
             "type": "string"
@@ -15814,12 +14939,7 @@
       },
       "CreateSecretsSourceRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "type",
-          "auth_type",
-          "config"
-        ],
+        "required": ["name", "type", "auth_type", "config"],
         "properties": {
           "name": {
             "type": "string"
@@ -15859,9 +14979,7 @@
       "FileConfig": {
         "type": "object",
         "description": "File 类型配置（仅支持 ssh_key）",
-        "required": [
-          "key_path"
-        ],
+        "required": ["key_path"],
         "properties": {
           "key_path": {
             "type": "string",
@@ -15876,11 +14994,7 @@
       "VaultConfig": {
         "type": "object",
         "description": "Vault 类型配置",
-        "required": [
-          "address",
-          "secret_path",
-          "auth"
-        ],
+        "required": ["address", "secret_path", "auth"],
         "properties": {
           "address": {
             "type": "string",
@@ -15896,10 +15010,7 @@
           },
           "query_key": {
             "type": "string",
-            "enum": [
-              "ip",
-              "hostname"
-            ],
+            "enum": ["ip", "hostname"],
             "description": "查询键，系统自动拼接 secret_path/{query_key}"
           },
           "auth": {
@@ -15913,16 +15024,11 @@
       "VaultAuth": {
         "type": "object",
         "description": "Vault 认证配置",
-        "required": [
-          "type"
-        ],
+        "required": ["type"],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "token",
-              "approle"
-            ]
+            "enum": ["token", "approle"]
           },
           "token": {
             "type": "string",
@@ -15941,9 +15047,7 @@
       "WebhookConfig": {
         "type": "object",
         "description": "Webhook 类型配置",
-        "required": [
-          "url"
-        ],
+        "required": ["url"],
         "properties": {
           "url": {
             "type": "string",
@@ -15951,18 +15055,12 @@
           },
           "method": {
             "type": "string",
-            "enum": [
-              "GET",
-              "POST"
-            ],
+            "enum": ["GET", "POST"],
             "description": "HTTP 方法，默认 GET"
           },
           "query_key": {
             "type": "string",
-            "enum": [
-              "ip",
-              "hostname"
-            ],
+            "enum": ["ip", "hostname"],
             "description": "查询键，系统自动拼接 url/{query_key}"
           },
           "auth": {
@@ -15987,12 +15085,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "none",
-              "basic",
-              "bearer",
-              "api_key"
-            ],
+            "enum": ["none", "basic", "bearer", "api_key"],
             "description": "认证类型"
           },
           "username": {
@@ -16037,9 +15130,7 @@
       },
       "SecretQuery": {
         "type": "object",
-        "required": [
-          "hostname"
-        ],
+        "required": ["hostname"],
         "properties": {
           "hostname": {
             "type": "string"
@@ -16058,10 +15149,7 @@
         "properties": {
           "auth_type": {
             "type": "string",
-            "enum": [
-              "ssh_key",
-              "password"
-            ],
+            "enum": ["ssh_key", "password"],
             "description": "认证类型"
           },
           "username": {
@@ -16193,10 +15281,7 @@
           },
           "action": {
             "type": "string",
-            "enum": [
-              "clone",
-              "pull"
-            ],
+            "enum": ["clone", "pull"],
             "description": "操作类型"
           },
           "status": {
@@ -16227,10 +15312,7 @@
       },
       "CreateGitRepoRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "url"
-        ],
+        "required": ["name", "url"],
         "properties": {
           "name": {
             "type": "string",
@@ -16493,10 +15575,7 @@
       },
       "ActivateRequest": {
         "type": "object",
-        "required": [
-          "main_playbook",
-          "config_mode"
-        ],
+        "required": ["main_playbook", "config_mode"],
         "properties": {
           "main_playbook": {
             "type": "string",
@@ -16671,12 +15750,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "text",
-              "enum",
-              "boolean",
-              "dateRange"
-            ]
+            "enum": ["text", "enum", "boolean", "dateRange"]
           },
           "match_modes": {
             "type": "array",

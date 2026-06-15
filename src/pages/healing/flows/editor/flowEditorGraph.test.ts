@@ -34,7 +34,6 @@ describe('mapFlowResponseToGraph', () => {
         id: 'flow-2',
         name: '自动关单流程',
         is_active: true,
-        auto_close_source_incident: true,
         close_policy: {
           enabled: true,
           solution_template_id: 'template-1',
@@ -47,7 +46,7 @@ describe('mapFlowResponseToGraph', () => {
       jest.fn(),
     );
 
-    expect(mapped.autoCloseSourceIncident).toBe(true);
+    expect(mapped.autoCloseEnabled).toBe(true);
     expect(mapped.closePolicy).toEqual({
       enabled: true,
       solution_template_id: 'template-1',
@@ -56,13 +55,12 @@ describe('mapFlowResponseToGraph', () => {
     });
   });
 
-  it('treats enabled close_policy as auto close when legacy flag is false', () => {
+  it('treats enabled close_policy as auto close', () => {
     const mapped = mapFlowResponseToGraph(
       {
         id: 'flow-3',
         name: '新版自动关单流程',
         is_active: true,
-        auto_close_source_incident: false,
         close_policy: {
           enabled: true,
           solution_template_id: 'template-1',
@@ -73,6 +71,6 @@ describe('mapFlowResponseToGraph', () => {
       jest.fn(),
     );
 
-    expect(mapped.autoCloseSourceIncident).toBe(true);
+    expect(mapped.autoCloseEnabled).toBe(true);
   });
 });

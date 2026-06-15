@@ -125,7 +125,6 @@ describe('buildFlowPayload', () => {
       [],
     );
 
-    expect('auto_close_source_incident' in payload).toBe(false);
     expect(payload.close_policy).toEqual({
       enabled: true,
       solution_template_id: 'template-1',

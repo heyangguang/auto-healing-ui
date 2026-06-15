@@ -37,13 +37,7 @@ const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = ({
 );
 
 function isAutoCloseEnabled(flow: AutoHealing.HealingFlow) {
-  const flowSettings = flow as AutoHealing.HealingFlow & {
-    auto_close_source_incident?: boolean;
-  };
-  return (
-    flowSettings.auto_close_source_incident === true ||
-    flow.close_policy?.enabled === true
-  );
+  return flow.close_policy?.enabled === true;
 }
 
 export const FlowDetailDrawer: React.FC<FlowDetailDrawerProps> = ({
