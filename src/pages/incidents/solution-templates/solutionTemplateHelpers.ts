@@ -17,8 +17,6 @@ export type SolutionTemplateFormValues = {
   steps_render_mode?: 'summary' | 'detailed';
   steps_max_count?: number;
   step_output_max_length?: number;
-  resolution_template?: string;
-  work_notes_template?: string;
   default_close_code?: string;
   default_close_status?: 'resolved' | 'closed';
 };
@@ -108,10 +106,6 @@ export const buildTemplatePayload = (
   description: values.description?.trim() || '',
   name: values.name?.trim() || '',
   problem_template: values.problem_template?.trim() || '',
-  resolution_template:
-    values.resolution_template?.trim() ||
-    values.conclusion_template?.trim() ||
-    '',
   solution_template: values.solution_template?.trim() || '',
   step_output_max_length:
     values.step_output_max_length ||
@@ -123,18 +117,13 @@ export const buildTemplatePayload = (
     values.steps_render_mode ||
     DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_render_mode,
   verification_template: values.verification_template?.trim() || '',
-  work_notes_template:
-    values.work_notes_template?.trim() ||
-    values.solution_template?.trim() ||
-    '',
 });
 
 export const buildTemplateEditorValues = (
   template?: AutoHealing.IncidentSolutionTemplate | null,
 ): SolutionTemplateFormValues => ({
   ...DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES,
-  conclusion_template:
-    template?.conclusion_template || template?.resolution_template || '',
+  conclusion_template: template?.conclusion_template || '',
   default_close_code:
     template?.default_close_code ||
     DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_code,
@@ -143,9 +132,7 @@ export const buildTemplateEditorValues = (
     DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_status,
   description: template?.description || '',
   problem_template: template?.problem_template || '',
-  resolution_template: template?.resolution_template || '',
-  solution_template:
-    template?.solution_template || template?.work_notes_template || '',
+  solution_template: template?.solution_template || '',
   step_output_max_length:
     template?.step_output_max_length ||
     DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.step_output_max_length,
@@ -156,7 +143,6 @@ export const buildTemplateEditorValues = (
     (template?.steps_render_mode as 'summary' | 'detailed' | undefined) ||
     DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.steps_render_mode,
   verification_template: template?.verification_template || '',
-  work_notes_template: template?.work_notes_template || '',
 });
 
 export const parseSolutionTemplateSearchParams = (
@@ -180,10 +166,7 @@ export const buildSolutionTemplatePreview = (
   const problem = renderTemplate(values.problem_template, context);
   const solution = renderTemplate(values.solution_template, context);
   const verification = renderTemplate(values.verification_template, context);
-  const conclusion = renderTemplate(
-    values.conclusion_template || values.resolution_template,
-    context,
-  );
+  const conclusion = renderTemplate(values.conclusion_template, context);
   const steps = buildPreviewSteps(values, context);
   return {
     conclusion,
@@ -252,13 +235,9 @@ export const solutionTemplateSummary = (
   }
   const segments = [
     template.problem_template ? '问题说明' : '',
-    template.solution_template || template.work_notes_template
-      ? '解决方案'
-      : '',
+    template.solution_template ? '解决方案' : '',
     template.verification_template ? '验证结果' : '',
-    template.conclusion_template || template.resolution_template
-      ? '最终结论'
-      : '',
+    template.conclusion_template ? '最终结论' : '',
   ].filter(Boolean);
   return segments.join(' / ');
 };

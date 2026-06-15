@@ -18,8 +18,11 @@ declare namespace GeneratedAutoHealing {
   };
 
   type FlowEdge = {
-    from?: string;
-    to?: string;
+    id?: string;
+    source?: string;
+    target?: string;
+    sourceHandle?: string;
+    targetHandle?: string;
     condition?: string;
   };
 
@@ -83,7 +86,7 @@ declare namespace GeneratedAutoHealing {
 - **host_extractor**: `{source_field, extract_mode, split_by, output_key}`
 - **cmdb_validator**: `{input_key, output_key, fail_on_unknown}`
 - **approval**: `{title, description, approvers, approver_roles, timeout_hours}`
-- **execution**: `{git_repo_id, executor_type, hosts_key, secrets_source_id, extra_vars, keep_credentials}`
+- **execution**: `{task_template_id, task_template_name, hosts_key, extra_vars, variable_mappings}`
 - **notification**: `{channel_ids, template_id}`
 - **condition**: `{conditions, default_target}`
 - **set_variable**: `{variables}`
@@ -250,9 +253,5 @@ declare namespace GeneratedAutoHealing {
   type getTenantBlacklistExemptionsPendingParams =           {
                 'page'?: number;
                 'page_size'?: number;
-          };
-
-  type getTenantChannelsByIdParams =           {
-                'id': string;
           };
 }

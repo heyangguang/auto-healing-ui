@@ -76,8 +76,6 @@ describe('solution template helpers', () => {
         solution_template: '方案',
         verification_template: '验证',
         conclusion_template: '结论',
-        resolution_template: '',
-        work_notes_template: '',
       } as AutoHealing.IncidentSolutionTemplate),
     ).toBe('问题说明 / 解决方案 / 验证结果 / 最终结论');
   });
@@ -87,7 +85,7 @@ describe('solution template helpers', () => {
     expect(getSolutionTemplateStepsModeMeta('detailed').label).toBe('详细步骤');
   });
 
-  it('builds structured payload and fills compatibility fields', () => {
+  it('builds structured payload', () => {
     expect(
       buildTemplatePayload({
         conclusion_template: '  已完成  ',
@@ -100,10 +98,8 @@ describe('solution template helpers', () => {
         default_close_code: 'auto_healed',
         default_close_status: 'resolved',
         name: '模板',
-        resolution_template: '已完成',
         solution_template: '已处理',
         steps_render_mode: 'summary',
-        work_notes_template: '已处理',
       }),
     );
   });

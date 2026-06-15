@@ -8,7 +8,6 @@ import { useAccess } from '@umijs/max';
 import {
   Alert,
   Button,
-  Collapse,
   Empty,
   Form,
   Input,
@@ -385,38 +384,6 @@ const SolutionTemplatePage: React.FC = () => {
                           placeholder="例如：AHS 已完成自动修复，源工单已自动关闭。"
                         />
                       </Form.Item>
-                      <Collapse
-                        ghost
-                        className="solution-templates-advanced"
-                        items={[
-                          {
-                            key: 'compat',
-                            label: '高级兼容字段',
-                            children: (
-                              <>
-                                <Form.Item
-                                  name="resolution_template"
-                                  label="兼容字段：结论模板"
-                                >
-                                  <Input.TextArea
-                                    rows={2}
-                                    placeholder="可选；未填写时会默认使用最终结论模板"
-                                  />
-                                </Form.Item>
-                                <Form.Item
-                                  name="work_notes_template"
-                                  label="兼容字段：过程模板"
-                                >
-                                  <Input.TextArea
-                                    rows={3}
-                                    placeholder="可选；未填写时会默认使用解决方案模板"
-                                  />
-                                </Form.Item>
-                              </>
-                            ),
-                          },
-                        ]}
-                      />
                     </Form>
                   </div>
                 )}

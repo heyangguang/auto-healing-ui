@@ -28,8 +28,8 @@ describe('incident solution template service', () => {
     await expect(getIncidentSolutionTemplate('template-1')).resolves.toEqual({ id: 'template-1', name: '模板1' });
     await expect(createIncidentSolutionTemplate({
       name: '模板2',
-      resolution_template: 'r',
-      work_notes_template: 'w',
+      conclusion_template: 'r',
+      solution_template: 'w',
     })).resolves.toEqual({ id: 'template-2', name: '模板2' });
     await expect(updateIncidentSolutionTemplate('template-1', { name: '模板1-更新' })).resolves.toEqual({ id: 'template-1', name: '模板1-更新' });
     await deleteIncidentSolutionTemplate('template-1');
@@ -40,8 +40,8 @@ describe('incident solution template service', () => {
       method: 'POST',
       data: {
         name: '模板2',
-        resolution_template: 'r',
-        work_notes_template: 'w',
+        conclusion_template: 'r',
+        solution_template: 'w',
       },
     });
     expect(request).toHaveBeenNthCalledWith(4, '/api/v1/tenant/incident-solution-templates/template-1', {

@@ -132,8 +132,6 @@ declare namespace AutoHealing {
     interface FlowEdge {
         source: string;
         target: string;
-        from?: string; // Legacy support
-        to?: string; // Legacy support
         /** 源节点输出口 ID (如 success/failed/approved/rejected/true/false) */
         sourceHandle?: string;
         /** 目标节点输入口 ID */

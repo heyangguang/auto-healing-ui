@@ -3284,18 +3284,13 @@
                     "x-dict-mode": "exact",
                     "description": "触发者"
                   },
-                  "secrets_source_id": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "密钥源ID（可选，向后兼容）"
-                  },
                   "secrets_source_ids": {
                     "type": "array",
                     "items": {
                       "type": "string",
                       "format": "uuid"
                     },
-                    "description": "多密钥源ID（可选，优先使用，用于混合认证场景）"
+                    "description": "运行时覆盖密钥源 ID 列表"
                   },
                   "extra_vars": {
                     "type": "object",
@@ -12223,7 +12218,7 @@
           },
           "config": {
             "type": "object",
-            "description": "节点配置对象，不同节点类型有不同的配置参数。\n详细配置说明请参考 `/docs/workflow-node-reference.md`。\n\n常用节点配置示例：\n- **host_extractor**: `{source_field, extract_mode, split_by, output_key}`\n- **cmdb_validator**: `{input_key, output_key, fail_on_unknown}`\n- **approval**: `{title, description, approvers, approver_roles, timeout_hours}`\n- **execution**: `{git_repo_id, executor_type, hosts_key, secrets_source_id, extra_vars, keep_credentials}`\n- **notification**: `{channel_ids, template_id}`\n- **condition**: `{conditions, default_target}`\n- **set_variable**: `{variables}`\n"
+            "description": "节点配置对象，不同节点类型有不同的配置参数。\n详细配置说明请参考 `/docs/workflow-node-reference.md`。\n\n常用节点配置示例：\n- **host_extractor**: `{source_field, extract_mode, split_by, output_key}`\n- **cmdb_validator**: `{input_key, output_key, fail_on_unknown}`\n- **approval**: `{title, description, approvers, approver_roles, timeout_hours}`\n- **execution**: `{task_template_id, task_template_name, hosts_key, extra_vars, variable_mappings}`\n- **notification**: `{channel_ids, template_id}`\n- **condition**: `{conditions, default_target}`\n- **set_variable**: `{variables}`\n"
           }
         }
       },
@@ -12231,10 +12226,19 @@
         "type": "object",
         "description": "流程边",
         "properties": {
-          "from": {
+          "id": {
             "type": "string"
           },
-          "to": {
+          "source": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "sourceHandle": {
+            "type": "string"
+          },
+          "targetHandle": {
             "type": "string"
           },
           "condition": {
@@ -14696,14 +14700,6 @@
             "type": "integer",
             "description": "单步输出摘要最大长度"
           },
-          "resolution_template": {
-            "type": "string",
-            "description": "兼容旧模型的结论模板"
-          },
-          "work_notes_template": {
-            "type": "string",
-            "description": "兼容旧模型的过程模板"
-          },
           "default_close_code": {
             "type": "string"
           },
@@ -14752,12 +14748,6 @@
           "step_output_max_length": {
             "type": "integer"
           },
-          "resolution_template": {
-            "type": "string"
-          },
-          "work_notes_template": {
-            "type": "string"
-          },
           "default_close_code": {
             "type": "string"
           },
@@ -14796,12 +14786,6 @@
           },
           "step_output_max_length": {
             "type": "integer"
-          },
-          "resolution_template": {
-            "type": "string"
-          },
-          "work_notes_template": {
-            "type": "string"
           },
           "default_close_code": {
             "type": "string"

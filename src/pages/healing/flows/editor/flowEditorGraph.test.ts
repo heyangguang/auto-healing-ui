@@ -1,11 +1,11 @@
 import { mapFlowResponseToGraph } from './flowEditorGraph';
 
 describe('mapFlowResponseToGraph', () => {
-  it('normalizes legacy task fields onto execution nodes', () => {
+  it('maps standard task template fields onto execution nodes', () => {
     const mapped = mapFlowResponseToGraph(
       {
         id: 'flow-1',
-        name: '旧版任务字段流程',
+        name: '任务字段流程',
         is_active: true,
         nodes: [
           {
@@ -13,8 +13,8 @@ describe('mapFlowResponseToGraph', () => {
             type: 'execution',
             name: '执行恢复',
             config: {
-              task_id: 'task-1',
-              task_name: '磁盘恢复模板',
+              task_template_id: 'task-1',
+              task_template_name: '磁盘恢复模板',
             },
             position: { x: 0, y: 0 },
           },

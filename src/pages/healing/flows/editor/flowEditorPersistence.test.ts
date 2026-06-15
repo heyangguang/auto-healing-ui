@@ -85,23 +85,26 @@ describe('validateExecutionNodes', () => {
     expect(result.unavailableNodeLabels).toEqual([]);
   });
 
-  it('accepts legacy task_id when validating execution nodes', async () => {
+  it('rejects execution nodes without task_template_id even if task_id is present', async () => {
     (getExecutionTask as jest.Mock).mockResolvedValueOnce({
       data: {
-        id: 'task-legacy',
+        id: 'task-1',
         extra_vars: {},
       },
     });
 
     const result = await validateExecutionNodes([
-      createExecutionNode('node-legacy', { task_id: 'task-legacy' }),
+      createExecutionNode('node-invalid', { task_id: 'task-1' }),
     ]);
 
     expect(result).toEqual({
-      issue: null,
+      issue: {
+        missingVars: ['task_template_id'],
+        node: expect.objectContaining({ id: 'node-invalid' }),
+      },
       unavailableNodeLabels: [],
     });
-    expect(getExecutionTask).toHaveBeenCalledWith('task-legacy');
+    expect(getExecutionTask).not.toHaveBeenCalled();
   });
 
   afterEach(() => {

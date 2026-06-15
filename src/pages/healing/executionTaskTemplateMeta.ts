@@ -1,37 +1,33 @@
 type ExecutionTaskTemplateFields = {
-    task_id?: unknown;
-    task_name?: unknown;
-    task_template_id?: unknown;
-    task_template_name?: unknown;
+  task_template_id?: unknown;
+  task_template_name?: unknown;
 };
 
 function getStringValue(value: unknown) {
-    return typeof value === 'string' && value.trim() ? value : undefined;
+  return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
 export function resolveExecutionTaskTemplateId(
-    fields?: ExecutionTaskTemplateFields | null,
+  fields?: ExecutionTaskTemplateFields | null,
 ) {
-    return getStringValue(fields?.task_template_id)
-        || getStringValue(fields?.task_id);
+  return getStringValue(fields?.task_template_id);
 }
 
 export function resolveExecutionTaskTemplateName(
-    fields?: ExecutionTaskTemplateFields | null,
+  fields?: ExecutionTaskTemplateFields | null,
 ) {
-    return getStringValue(fields?.task_template_name)
-        || getStringValue(fields?.task_name);
+  return getStringValue(fields?.task_template_name);
 }
 
-export function normalizeExecutionTaskTemplateFields<T extends Record<string, unknown>>(
-    fields: T,
-) {
-    const taskTemplateId = resolveExecutionTaskTemplateId(fields);
-    const taskTemplateName = resolveExecutionTaskTemplateName(fields);
+export function normalizeExecutionTaskTemplateFields<
+  T extends Record<string, unknown>,
+>(fields: T) {
+  const taskTemplateId = resolveExecutionTaskTemplateId(fields);
+  const taskTemplateName = resolveExecutionTaskTemplateName(fields);
 
-    return {
-        ...fields,
-        ...(taskTemplateId ? { task_template_id: taskTemplateId } : {}),
-        ...(taskTemplateName ? { task_template_name: taskTemplateName } : {}),
-    };
+  return {
+    ...fields,
+    ...(taskTemplateId ? { task_template_id: taskTemplateId } : {}),
+    ...(taskTemplateName ? { task_template_name: taskTemplateName } : {}),
+  };
 }

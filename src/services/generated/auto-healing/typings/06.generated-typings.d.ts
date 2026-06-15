@@ -172,8 +172,20 @@ declare namespace GeneratedAutoHealing {
     id?: string;
     name?: string;
     description?: string;
-    resolution_template?: string;
-    work_notes_template?: string;
+    /** 问题说明模板 */
+    problem_template?: string;
+    /** 解决方案模板，描述标准处理方案 */
+    solution_template?: string;
+    /** 验证结果模板 */
+    verification_template?: string;
+    /** 最终结论模板 */
+    conclusion_template?: string;
+    /** 执行步骤渲染模式 */
+    steps_render_mode?: "summary" | "detailed";
+    /** 最多渲染的执行步骤数量 */
+    steps_max_count?: number;
+    /** 单步输出摘要最大长度 */
+    step_output_max_length?: number;
     default_close_code?: string;
     default_close_status?: string;
     created_at?: string;
@@ -183,8 +195,13 @@ declare namespace GeneratedAutoHealing {
   type IncidentSolutionTemplateCreate = {
     name: string;
     description?: string;
-    resolution_template: string;
-    work_notes_template: string;
+    problem_template?: string;
+    solution_template?: string;
+    verification_template?: string;
+    conclusion_template?: string;
+    steps_render_mode?: "summary" | "detailed";
+    steps_max_count?: number;
+    step_output_max_length?: number;
     default_close_code?: string;
     default_close_status?: string;
   };
@@ -192,8 +209,13 @@ declare namespace GeneratedAutoHealing {
   type IncidentSolutionTemplateUpdate = {
     name?: string;
     description?: string;
-    resolution_template?: string;
-    work_notes_template?: string;
+    problem_template?: string;
+    solution_template?: string;
+    verification_template?: string;
+    conclusion_template?: string;
+    steps_render_mode?: "summary" | "detailed";
+    steps_max_count?: number;
+    step_output_max_length?: number;
     default_close_code?: string;
     default_close_status?: string;
   };
@@ -225,32 +247,6 @@ declare namespace GeneratedAutoHealing {
     id?: string;
     flow_name?: string;
     status?: string;
-    created_at?: string;
-  };
-
-  type LoginItem = {
-    id?: string;
-    username?: string;
-    display_name?: string;
-    last_login_at?: string;
-    last_login_ip?: string;
-  };
-
-  type LoginPayload = {
-    access_token?: string;
-    refresh_token?: string;
-    token_type?: string;
-    expires_in?: number;
-    user?: UserInfo;
-    tenants?: { id?: string; name?: string; code?: string }[];
-    current_tenant_id?: string;
-  };
-
-  type MaintenanceItem = {
-    id?: string;
-    cmdb_item_name?: string;
-    action?: string;
-    reason?: string;
     created_at?: string;
   };
 }

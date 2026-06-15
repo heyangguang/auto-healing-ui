@@ -1,4 +1,36 @@
 declare namespace GeneratedAutoHealing {
+  type SearchableField = {
+    key?: string;
+    label?: string;
+    type?: "text" | "enum" | "boolean" | "dateRange";
+    match_modes?: string[];
+    default_match_mode?: string;
+    placeholder?: string;
+    description?: string;
+    options?: FilterOption[];
+  };
+
+  type SearchSchemaData = {
+    fields?: SearchableField[];
+  };
+
+  type SearchSchemaResponse =
+    // #/components/schemas/Success
+    Success & {
+      data?: SearchSchemaData;
+    };
+
+  type Secret = {
+    /** 认证类型 */
+    auth_type?: "ssh_key" | "password";
+    /** SSH 用户名 */
+    username?: string;
+    /** 私钥内容（ssh_key 方式） */
+    private_key?: string;
+    /** 密码（password 方式） */
+    password?: string;
+  };
+
   type SecretQuery = {
     hostname: string;
     ip_address?: string;
@@ -222,18 +254,5 @@ declare namespace GeneratedAutoHealing {
     /** 响应数据根路径 */
     response_data_path?: string;
     field_mapping?: FieldMapping;
-  };
-
-  type WorkbenchIncidentStats = {
-    pending_count?: number;
-    last_7_days_total?: number;
-  };
-
-  type WorkbenchOverview = {
-    system_health?: SystemHealth;
-    resource_overview?: ResourceOverview;
-    healing_stats?: HealingStats;
-    incident_stats?: WorkbenchIncidentStats;
-    host_stats?: HostStats;
   };
 }

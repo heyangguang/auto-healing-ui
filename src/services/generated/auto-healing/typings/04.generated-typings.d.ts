@@ -1,4 +1,8 @@
 declare namespace GeneratedAutoHealing {
+  type getTenantChannelsByIdParams =           {
+                'id': string;
+          };
+
   type getTenantChannelsParams =           {
                 'page'?: number;
                 'page_size'?: number;
@@ -249,9 +253,5 @@ declare namespace GeneratedAutoHealing {
                 'severity'?: "critical" | "high" | "medium" | "low";
                 'date_from'?: string;
                 'date_to'?: string;
-          };
-
-  type getTenantHealingRulesByIdParams =           {
-                'id': string;
           };
 }

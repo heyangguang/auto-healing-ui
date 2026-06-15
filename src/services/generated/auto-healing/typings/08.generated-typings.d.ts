@@ -1,4 +1,34 @@
 declare namespace GeneratedAutoHealing {
+  type PlaybookVariable = {
+    /** 变量名 */
+    name?: string;
+    /** 变量类型 */
+    type?:
+      | "string"
+      | "number"
+      | "boolean"
+      | "list"
+      | "object"
+      | "enum"
+      | "password";
+    /** 描述 */
+    description?: string;
+    /** 是否必填 */
+    required?: boolean;
+    /** 默认值 */
+    default?: unknown;
+    /** 所有来源位置 */
+    sources?: { file?: string; line?: number }[];
+    /** 主来源（类型推断来源） */
+    primary_source?: string;
+    /** 是否在代码中存在 */
+    in_code?: boolean;
+    enum?: string[];
+    min?: number;
+    max?: number;
+    pattern?: string;
+  };
+
   type Plugin = {
     id?: string;
     name?: string;
@@ -224,34 +254,6 @@ cmdb_mapping: { 标准字段: 外部字段 }
           };
 
   type postTenantIncidentsByIdDismissParams =           {
-                'id': string;
-          };
-
-  type postTenantIncidentsByIdResetScanParams =           {
-                'id': string;
-          };
-
-  type postTenantIncidentsByIdTriggerParams =           {
-                'id': string;
-          };
-
-  type postTenantPlaybooksByIdOfflineParams =           {
-                'id': string;
-          };
-
-  type postTenantPlaybooksByIdReadyParams =           {
-                'id': string;
-          };
-
-  type postTenantPlaybooksByIdScanParams =           {
-                'id': string;
-          };
-
-  type postTenantPluginsByIdActivateParams =           {
-                'id': string;
-          };
-
-  type postTenantPluginsByIdDeactivateParams =           {
                 'id': string;
           };
 }

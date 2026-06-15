@@ -160,9 +160,7 @@ export async function postTenantExecutionTasksByIdExecute(
   body: {
     /** 触发者 */
     triggered_by?: string;
-    /** 密钥源ID（可选，向后兼容） */
-    secrets_source_id?: string;
-    /** 多密钥源ID（可选，优先使用，用于混合认证场景） */
+    /** 运行时覆盖密钥源 ID 列表 */
     secrets_source_ids?: string[];
     /** 运行时覆盖变量 */
     extra_vars?: Record<string, unknown>;

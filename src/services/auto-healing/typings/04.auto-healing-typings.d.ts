@@ -1,7 +1,6 @@
 declare namespace AutoHealing {
     interface ExecuteTaskRequest {
         triggered_by?: string;
-        secrets_source_id?: UUID;
         secrets_source_ids?: UUID[];
         extra_vars?: JsonObject;
         target_hosts?: string;

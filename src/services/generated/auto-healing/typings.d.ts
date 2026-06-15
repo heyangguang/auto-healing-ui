@@ -8,3 +8,4 @@
 /// <reference path="./typings/08.generated-typings.d.ts" />
 /// <reference path="./typings/09.generated-typings.d.ts" />
 /// <reference path="./typings/10.generated-typings.d.ts" />
+/// <reference path="./typings/11.generated-typings.d.ts" />

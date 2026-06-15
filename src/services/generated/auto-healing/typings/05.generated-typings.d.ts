@@ -1,4 +1,8 @@
 declare namespace GeneratedAutoHealing {
+  type getTenantHealingRulesByIdParams =           {
+                'id': string;
+          };
+
   type getTenantHealingRulesParams =           {
                 'page'?: number;
                 'page_size'?: number;

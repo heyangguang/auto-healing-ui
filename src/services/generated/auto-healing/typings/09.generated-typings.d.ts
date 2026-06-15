@@ -1,4 +1,32 @@
 declare namespace GeneratedAutoHealing {
+  type postTenantIncidentsByIdResetScanParams =           {
+                'id': string;
+          };
+
+  type postTenantIncidentsByIdTriggerParams =           {
+                'id': string;
+          };
+
+  type postTenantPlaybooksByIdOfflineParams =           {
+                'id': string;
+          };
+
+  type postTenantPlaybooksByIdReadyParams =           {
+                'id': string;
+          };
+
+  type postTenantPlaybooksByIdScanParams =           {
+                'id': string;
+          };
+
+  type postTenantPluginsByIdActivateParams =           {
+                'id': string;
+          };
+
+  type postTenantPluginsByIdDeactivateParams =           {
+                'id': string;
+          };
+
   type postTenantPluginsByIdSyncParams =           {
                 'id': string;
           };
@@ -221,37 +249,5 @@ declare namespace GeneratedAutoHealing {
     playbook_name?: string;
     status?: string;
     created_at?: string;
-  };
-
-  type SearchableField = {
-    key?: string;
-    label?: string;
-    type?: "text" | "enum" | "boolean" | "dateRange";
-    match_modes?: string[];
-    default_match_mode?: string;
-    placeholder?: string;
-    description?: string;
-    options?: FilterOption[];
-  };
-
-  type SearchSchemaData = {
-    fields?: SearchableField[];
-  };
-
-  type SearchSchemaResponse =
-    // #/components/schemas/Success
-    Success & {
-      data?: SearchSchemaData;
-    };
-
-  type Secret = {
-    /** 认证类型 */
-    auth_type?: "ssh_key" | "password";
-    /** SSH 用户名 */
-    username?: string;
-    /** 私钥内容（ssh_key 方式） */
-    private_key?: string;
-    /** 密码（password 方式） */
-    password?: string;
   };
 }

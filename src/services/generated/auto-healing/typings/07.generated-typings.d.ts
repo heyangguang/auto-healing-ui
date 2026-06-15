@@ -1,4 +1,30 @@
 declare namespace GeneratedAutoHealing {
+  type LoginItem = {
+    id?: string;
+    username?: string;
+    display_name?: string;
+    last_login_at?: string;
+    last_login_ip?: string;
+  };
+
+  type LoginPayload = {
+    access_token?: string;
+    refresh_token?: string;
+    token_type?: string;
+    expires_in?: number;
+    user?: UserInfo;
+    tenants?: { id?: string; name?: string; code?: string }[];
+    current_tenant_id?: string;
+  };
+
+  type MaintenanceItem = {
+    id?: string;
+    cmdb_item_name?: string;
+    action?: string;
+    reason?: string;
+    created_at?: string;
+  };
+
   type MessageResponse =
     // #/components/schemas/Success
     Success;
@@ -6,6 +32,8 @@ declare namespace GeneratedAutoHealing {
   type Notification = {
     id?: string;
     execution_run_id?: string;
+    workflow_instance_id?: string;
+    incident_id?: string;
     template_id?: string;
     channel_id?: string;
     status?: "pending" | "sent" | "delivered" | "failed" | "bounced";
@@ -136,7 +164,7 @@ declare namespace GeneratedAutoHealing {
   };
 
   type NotificationTypeCount = {
-    type?: "webhook" | "dingtalk" | "email";
+    type?: "webhook" | "email" | "dingtalk" | "wecom" | "slack" | "teams";
     count?: number;
   };
 
@@ -217,35 +245,5 @@ declare namespace GeneratedAutoHealing {
     ready?: number;
     by_status?: StatusCount[];
     recent_scans?: ScanItem[];
-  };
-
-  type PlaybookVariable = {
-    /** 变量名 */
-    name?: string;
-    /** 变量类型 */
-    type?:
-      | "string"
-      | "number"
-      | "boolean"
-      | "list"
-      | "object"
-      | "enum"
-      | "password";
-    /** 描述 */
-    description?: string;
-    /** 是否必填 */
-    required?: boolean;
-    /** 默认值 */
-    default?: unknown;
-    /** 所有来源位置 */
-    sources?: { file?: string; line?: number }[];
-    /** 主来源（类型推断来源） */
-    primary_source?: string;
-    /** 是否在代码中存在 */
-    in_code?: boolean;
-    enum?: string[];
-    min?: number;
-    max?: number;
-    pattern?: string;
   };
 }
