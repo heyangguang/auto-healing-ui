@@ -49,7 +49,8 @@ const runtimeJsonPanelStyle: React.CSSProperties = {
   margin: 0,
   padding: '8px 10px',
   maxHeight: 132,
-  overflow: 'auto',
+  overflowX: 'hidden',
+  overflowY: 'auto',
   border: '1px solid #e8e8e8',
   background: '#fafafa',
   color: '#262626',
@@ -58,6 +59,7 @@ const runtimeJsonPanelStyle: React.CSSProperties = {
   lineHeight: '18px',
   whiteSpace: 'pre-wrap',
   overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
 };
 
 const RunDetailSidebar: React.FC<RunDetailSidebarProps> = ({
@@ -253,7 +255,7 @@ const RunDetailSidebar: React.FC<RunDetailSidebarProps> = ({
         </Field>
         {run?.runtime_extra_vars &&
           Object.keys(run.runtime_extra_vars).length > 0 && (
-            <Field label="额外变量">
+            <Field label="额外变量" stacked>
               <pre style={runtimeJsonPanelStyle}>
                 {JSON.stringify(run.runtime_extra_vars, null, 2)}
               </pre>

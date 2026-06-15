@@ -21,13 +21,15 @@ export const SectionTitle: React.FC<{
   </div>
 );
 
-export const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
-  label,
-  children,
-}) => (
+export const Field: React.FC<{
+  label: string;
+  children: React.ReactNode;
+  stacked?: boolean;
+}> = ({ label, children, stacked = false }) => (
   <div
     style={{
       display: 'flex',
+      flexDirection: stacked ? 'column' : 'row',
       alignItems: 'flex-start',
       minWidth: 0,
       padding: '5px 0',
@@ -35,12 +37,30 @@ export const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
       lineHeight: '22px',
     }}
   >
-    <span style={{ width: 80, flexShrink: 0, color: '#8c8c8c', fontSize: 12 }}>
+    <span
+      style={{
+        width: stacked ? 'auto' : 80,
+        flexShrink: 0,
+        color: '#8c8c8c',
+        fontSize: 12,
+        marginBottom: stacked ? 6 : 0,
+      }}
+    >
       {label}
     </span>
-    <span style={{ flex: 1, minWidth: 0, color: '#262626', fontWeight: 500 }}>
+    <div
+      style={{
+        flex: 1,
+        minWidth: 0,
+        width: stacked ? '100%' : undefined,
+        maxWidth: '100%',
+        overflow: 'hidden',
+        color: '#262626',
+        fontWeight: 500,
+      }}
+    >
       {children}
-    </span>
+    </div>
   </div>
 );
 
