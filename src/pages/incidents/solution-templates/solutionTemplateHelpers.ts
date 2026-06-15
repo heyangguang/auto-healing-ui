@@ -336,7 +336,10 @@ function buildPreviewVariables() {
   };
 }
 
-function renderTemplate(template = '', context: Record<string, unknown>) {
+export function renderTemplate(
+  template = '',
+  context: Record<string, unknown>,
+) {
   return template
     .replace(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g, (_match, path) => {
       const resolved = resolvePreviewPath(context, path as string);
