@@ -597,28 +597,28 @@
           </div>
         </article>
 
-        <article class="card scenario-auto">
+        <article class="card scenario-review">
           <div class="card-header">
             <span class="mark clean">L</span>
             <h2>清理日志</h2>
           </div>
-          <p class="desc">生成日志膨胀工单并注入大文件，ITSM 同步后自动执行日志清理并回写解决方案。</p>
+          <p class="desc">生成日志膨胀工单并注入大文件，ITSM 同步后保留为普通工单，由演示人员到执行任务中手动清理。</p>
           <div class="meta">
             <span>模式</span>
-            <strong>自动自愈</strong>
+            <strong>手动执行</strong>
             <span>任务</span>
             <strong>Demo Clean Logs Task</strong>
             <span>仓库</span>
             <strong>fault-playbooks</strong>
             <span>通知</span>
-            <strong>开始 + 自愈结果</strong>
+            <strong>任务开始 + 执行结果</strong>
           </div>
           <div class="card-actions">
             <button class="primary" data-scenario="clean-logs">生成工单</button>
             <div class="watch-links" aria-label="清理日志观察入口">
               <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fresources%2Fincidents" data-ahs-target="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
-              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fhealing%2Finstances" data-ahs-target="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Ftemplates" data-ahs-target="/execution/templates" target="_blank" rel="noreferrer">执行任务</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fruns" data-ahs-target="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fnotification%2Frecords" data-ahs-target="/notification/records" target="_blank" rel="noreferrer">通知记录</a>
             </div>
