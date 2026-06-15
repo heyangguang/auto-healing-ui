@@ -4,6 +4,7 @@ import {
     postTenantHealingApprovalsIdApprove,
     postTenantHealingApprovalsIdReject,
 } from '@/services/generated/auto-healing/approvals';
+import { normalizePaginatedResponse } from './responseAdapters';
 
 type ApprovalHistoryStatus = Exclude<AutoHealing.ApprovalStatus, 'pending'>;
 type ApprovalHistoryParams = {
@@ -44,15 +45,17 @@ export async function getApprovals(params?: {
     flow_instance_id?: string;
     status?: AutoHealing.ApprovalStatus;
 }) {
-    return getTenantHealingApprovals((params || {}) as GeneratedAutoHealing.getTenantHealingApprovalsParams) as Promise<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>;
+    return normalizePaginatedResponse<AutoHealing.ApprovalTask>(
+        await getTenantHealingApprovals((params || {}) as GeneratedAutoHealing.getTenantHealingApprovalsParams),
+    );
 }
 
 export async function getApprovalHistory(params?: ApprovalHistoryParams) {
     if (params?.status) {
-        return request<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>('/api/v1/tenant/healing/approvals', {
+        return normalizePaginatedResponse<AutoHealing.ApprovalTask>(await request<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>('/api/v1/tenant/healing/approvals', {
             method: 'GET',
             params,
-        });
+        }));
     }
 
     const page = params?.page ?? 1;
@@ -69,8 +72,9 @@ export async function getApprovalHistory(params?: ApprovalHistoryParams) {
             },
         })
     )));
+    const normalizedResponses = responses.map((response) => normalizePaginatedResponse<AutoHealing.ApprovalTask>(response));
     const mergedItems = sortApprovalHistoryItems(
-        responses.flatMap((response) => response.data || []),
+        normalizedResponses.flatMap((response) => response.data || []),
         params?.sort_by,
         params?.sort_order,
     );
@@ -78,7 +82,7 @@ export async function getApprovalHistory(params?: ApprovalHistoryParams) {
 
     return {
         data: mergedItems.slice(startIndex, startIndex + pageSize),
-        total: responses.reduce((sum, response) => sum + Number(response.total ?? response.data?.length ?? 0), 0),
+        total: normalizedResponses.reduce((sum, response) => sum + Number(response.total ?? response.data?.length ?? 0), 0),
     } as AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>;
 }
 
@@ -89,10 +93,10 @@ export async function getPendingApprovals(params?: {
     date_from?: string;
     date_to?: string;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>('/api/v1/tenant/healing/approvals/pending', {
+    return normalizePaginatedResponse<AutoHealing.ApprovalTask>(await request<AutoHealing.PaginatedResponse<AutoHealing.ApprovalTask>>('/api/v1/tenant/healing/approvals/pending', {
         method: 'GET',
         params,
-    });
+    }));
 }
 
 export async function getApproval(id: string) {

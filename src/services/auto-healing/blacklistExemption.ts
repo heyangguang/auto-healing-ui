@@ -52,7 +52,7 @@ export type CreateBlacklistExemptionRequest = {
 
 /** 查询豁免列表 */
 export async function getBlacklistExemptions(params?: BlacklistExemptionListParams) {
-    return normalizePaginatedResponse(await request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions', {
+    return normalizePaginatedResponse<ExemptionRecord>(await request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions', {
         method: 'GET',
         params,
     }));
@@ -90,7 +90,7 @@ export async function rejectBlacklistExemption(id: string, rejectReason?: string
 
 /** 获取待审批列表 */
 export async function getPendingExemptions(params?: BlacklistExemptionListParams) {
-    return normalizePaginatedResponse(await request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions/pending', {
+    return normalizePaginatedResponse<ExemptionRecord>(await request<{ data: ExemptionRecord[]; total: number }>('/api/v1/tenant/blacklist-exemptions/pending', {
         method: 'GET',
         params,
     }));

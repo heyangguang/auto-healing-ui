@@ -1,5 +1,6 @@
 import { request } from '@umijs/max';
 import { normalizePaginatedResponse, unwrapData } from './responseAdapters';
+import type { PlatformUserRecord } from './platform/contracts';
 
 type RoleListParams = {
     name?: string;
@@ -149,8 +150,8 @@ export async function getPlatformRoleUsers(roleId: string, params?: {
     name?: string;
 }) {
     return normalizeRoleUsersPage(
-        normalizePaginatedResponse(await request<{
-            data: { id: string; username: string; display_name: string; email: string; status: string }[];
+        normalizePaginatedResponse<PlatformUserRecord>(await request<{
+            data: PlatformUserRecord[];
             total: number;
         }>(`/api/v1/platform/roles/${roleId}/users`, {
             method: 'GET',

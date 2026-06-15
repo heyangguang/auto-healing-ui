@@ -58,9 +58,16 @@ export function unwrapItems<T>(response: PaginatedEnvelope<T> | T[]): T[] {
 
 export function normalizePaginatedResponse<T>(
   response: PaginatedEnvelope<T> | T[],
+): AutoHealing.PaginatedResponse<T>;
+export function normalizePaginatedResponse<T>(
+  response: unknown,
+): AutoHealing.PaginatedResponse<T>;
+export function normalizePaginatedResponse<T>(
+  response: unknown,
 ): AutoHealing.PaginatedResponse<T> {
-  const items = unwrapItems(response);
-  const envelope = Array.isArray(response) ? {} : response;
+  const source = response as PaginatedEnvelope<T> | T[];
+  const items = unwrapItems(source);
+  const envelope = Array.isArray(source) ? {} : source;
   const nested = Array.isArray(envelope?.data) ? undefined : envelope?.data;
   const deeplyNested = asNestedEnvelope<T>(nested)?.data && !Array.isArray(asNestedEnvelope<T>(nested)?.data)
     ? undefined

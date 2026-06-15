@@ -50,7 +50,7 @@ export type BlacklistSimulationResponse = {
 
 /** 列表查询 */
 export async function getCommandBlacklist(params?: CommandBlacklistListParams) {
-    return normalizePaginatedResponse(await request<{
+    return normalizePaginatedResponse<CommandBlacklistRule>(await request<{
         data: CommandBlacklistRule[];
         total: number;
         page: number;
