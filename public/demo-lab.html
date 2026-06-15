@@ -340,6 +340,33 @@
         outline: none;
       }
 
+      .toast {
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        transform: translate(-50%, -12px);
+        z-index: 100;
+        max-width: min(520px, calc(100% - 32px));
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        color: var(--text);
+        padding: 10px 14px;
+        font-size: 13px;
+        line-height: 1.5;
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.16s ease,
+          transform 0.16s ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
       .result {
         margin-top: 16px;
         border: 1px solid var(--border);
@@ -468,10 +495,10 @@
         </div>
         <nav class="links" aria-label="demo links">
           <button class="link-button" id="show-status" type="button">目标状态</button>
-          <a class="link-button" href="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
-          <a class="link-button" href="/execution/templates" target="_blank" rel="noreferrer">执行任务</a>
-          <a class="link-button" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop</a>
-          <a class="link-button" href="http://118.196.22.79:13000/" target="_blank" rel="noreferrer">Gitea</a>
+          <a class="link-button" href="/user/login?demo=tenant&amp;redirect=%2Fresources%2Fincidents" data-ahs-target="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
+          <a class="link-button" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Ftemplates" data-ahs-target="/execution/templates" target="_blank" rel="noreferrer">执行任务</a>
+          <a class="link-button" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop</a>
+          <a class="link-button" href="http://118.196.22.79:13000/" data-credential-label="Gitea" data-credential-username="gitadmin" data-credential-password="GitAdmin123!" target="_blank" rel="noreferrer">Gitea</a>
         </nav>
       </header>
 
@@ -534,10 +561,10 @@
           <div class="card-actions">
             <button class="primary" data-scenario="clean-logs">生成工单</button>
             <div class="watch-links" aria-label="清理日志观察入口">
-              <a class="watch-link" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop 工单</a>
-              <a class="watch-link" href="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
-              <a class="watch-link" href="/execution/execute" target="_blank" rel="noreferrer">手动执行</a>
-              <a class="watch-link" href="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
+              <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fresources%2Fincidents" data-ahs-target="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fexecute" data-ahs-target="/execution/execute" target="_blank" rel="noreferrer">手动执行</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fruns" data-ahs-target="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
             </div>
           </div>
         </article>
@@ -559,10 +586,10 @@
           <div class="card-actions">
             <button class="primary" data-scenario="kill-process">生成工单</button>
             <div class="watch-links" aria-label="杀死异常进程观察入口">
-              <a class="watch-link" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop 工单</a>
-              <a class="watch-link" href="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
-              <a class="watch-link" href="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
-              <a class="watch-link" href="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
+              <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fresources%2Fincidents" data-ahs-target="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fhealing%2Finstances" data-ahs-target="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fruns" data-ahs-target="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
             </div>
           </div>
         </article>
@@ -584,10 +611,10 @@
           <div class="card-actions">
             <button class="primary" data-scenario="blacklist">生成工单</button>
             <div class="watch-links" aria-label="黑名单指令观察入口">
-              <a class="watch-link" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop 工单</a>
-              <a class="watch-link" href="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
-              <a class="watch-link" href="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
-              <a class="watch-link" href="/security/command-blacklist" target="_blank" rel="noreferrer">黑名单规则</a>
+              <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fhealing%2Finstances" data-ahs-target="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fruns" data-ahs-target="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
+              <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fsecurity%2Fcommand-blacklist" data-ahs-target="/security/command-blacklist" target="_blank" rel="noreferrer">黑名单规则</a>
             </div>
           </div>
         </article>
@@ -601,6 +628,7 @@
         <pre id="result-json"></pre>
       </section>
     </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script>
       const result = document.getElementById('result');
@@ -613,10 +641,68 @@
       const showStatusButton = document.getElementById('show-status');
       const refreshStatusButton = document.getElementById('refresh-status');
       const autoRefreshSelect = document.getElementById('auto-refresh');
+      const toast = document.getElementById('toast');
       const buttons = Array.from(document.querySelectorAll('button[data-scenario]'));
       let autoRefreshTimer = null;
       let refreshResetTimer = null;
+      let toastTimer = null;
       let isRefreshingStatus = false;
+
+      function hasAhsLoginToken() {
+        return Boolean(
+          window.localStorage.getItem('auto_healing_token') ||
+            window.sessionStorage.getItem('auto_healing_token'),
+        );
+      }
+
+      function buildAhsLoginUrl(targetPath) {
+        return `/user/login?demo=tenant&redirect=${encodeURIComponent(targetPath)}`;
+      }
+
+      function showToast(message) {
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add('show');
+        toastTimer = window.setTimeout(() => {
+          toast.classList.remove('show');
+        }, 2600);
+      }
+
+      async function copyText(value) {
+        if (window.navigator.clipboard && window.isSecureContext) {
+          await window.navigator.clipboard.writeText(value);
+          return;
+        }
+        const input = document.createElement('textarea');
+        input.value = value;
+        input.setAttribute('readonly', 'readonly');
+        input.style.position = 'fixed';
+        input.style.left = '-9999px';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+
+      document.querySelectorAll('a[data-ahs-target]').forEach((link) => {
+        link.addEventListener('click', () => {
+          const targetPath = link.dataset.ahsTarget;
+          if (!targetPath) return;
+          link.href = hasAhsLoginToken() ? targetPath : buildAhsLoginUrl(targetPath);
+        });
+      });
+
+      document.querySelectorAll('a[data-credential-label]').forEach((link) => {
+        link.addEventListener('click', () => {
+          const label = link.dataset.credentialLabel || '系统';
+          const username = link.dataset.credentialUsername || '';
+          const password = link.dataset.credentialPassword || '';
+          const text = `${label}\n账号: ${username}\n密码: ${password}`;
+          copyText(text)
+            .then(() => showToast(`已复制 ${label} 账号密码，新页面打开后可直接粘贴。`))
+            .catch(() => showToast(`${label} 账号: ${username} / 密码: ${password}`));
+        });
+      });
 
       function escapeHtml(value) {
         return String(value ?? '')
