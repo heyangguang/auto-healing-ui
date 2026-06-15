@@ -81,6 +81,7 @@ const NotificationTemplatesPage: React.FC = () => {
         searchFields={NOTIFICATION_TEMPLATE_SEARCH_FIELDS}
         tabs={[{ key: 'editor', label: '模板编辑器' }]}
         title="通知模板"
+        fitContentHeight
       >
         <div className="templates-body templates-body--loading">
           <div className="templates-loading-inline">
@@ -114,6 +115,7 @@ const NotificationTemplatesPage: React.FC = () => {
       searchFields={NOTIFICATION_TEMPLATE_SEARCH_FIELDS}
       tabs={[{ key: 'editor', label: '模板编辑器' }]}
       title="通知模板"
+      fitContentHeight
     >
       <div className="templates-body">
         <TemplateSidebar

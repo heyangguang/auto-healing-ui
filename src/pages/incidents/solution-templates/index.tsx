@@ -126,6 +126,7 @@ const SolutionTemplatePage: React.FC = () => {
       searchFields={SOLUTION_TEMPLATE_SEARCH_FIELDS}
       tabs={[{ key: 'editor', label: '解决方案库' }]}
       title="解决方案库"
+      fitContentHeight
     >
       <div className="solution-templates-body">
         <div className="solution-templates-sidebar">
