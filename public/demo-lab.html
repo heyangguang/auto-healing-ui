@@ -243,6 +243,22 @@
         padding: 18px;
       }
 
+      .scenario-trigger {
+        order: 1;
+      }
+
+      .scenario-approval {
+        order: 2;
+      }
+
+      .scenario-auto {
+        order: 3;
+      }
+
+      .scenario-review {
+        order: 4;
+      }
+
       .card-header {
         display: flex;
         align-items: center;
@@ -553,12 +569,12 @@
       </section>
 
       <section class="grid" aria-label="demo scenarios">
-        <article class="card">
+        <article class="card scenario-trigger">
           <div class="card-header">
-            <span class="mark clean">L</span>
-            <h2>清理日志</h2>
+            <span class="mark clean">T</span>
+            <h2>自愈触发</h2>
           </div>
-          <p class="desc">生成日志膨胀工单，在 SSH 靶机注入可清理日志文件，适合演示人工确认后启动自愈。</p>
+          <p class="desc">生成日志膨胀工单，在 SSH 靶机注入可清理日志文件，ITSM 同步后进入待触发工单池。</p>
           <div class="meta">
             <span>模式</span>
             <strong>手动确认自愈</strong>
@@ -571,7 +587,7 @@
           </div>
           <div class="card-actions">
             <button class="primary" data-scenario="clean-logs">生成工单</button>
-            <div class="watch-links" aria-label="清理日志观察入口">
+            <div class="watch-links" aria-label="自愈触发观察入口">
               <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fresources%2Fincidents" data-ahs-target="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fpending%2Ftriggers" data-ahs-target="/pending/triggers" target="_blank" rel="noreferrer">自愈触发</a>
@@ -581,7 +597,7 @@
           </div>
         </article>
 
-        <article class="card">
+        <article class="card scenario-auto">
           <div class="card-header">
             <span class="mark kill">P</span>
             <h2>杀死异常进程</h2>
@@ -609,7 +625,7 @@
           </div>
         </article>
 
-        <article class="card">
+        <article class="card scenario-auto">
           <div class="card-header">
             <span class="mark block">B</span>
             <h2>黑名单指令</h2>
@@ -637,7 +653,7 @@
           </div>
         </article>
 
-        <article class="card">
+        <article class="card scenario-approval">
           <div class="card-header">
             <span class="mark approval">A</span>
             <h2>自愈审批</h2>
@@ -662,12 +678,12 @@
           </div>
         </article>
 
-        <article class="card">
+        <article class="card scenario-review">
           <div class="card-header">
             <span class="mark review">R</span>
-            <h2>任务审批</h2>
+            <h2>任务模板审核</h2>
           </div>
-          <p class="desc">生成任务审核演示工单，同时向 Gitea 注入变量变更，让 AHS 真实标记任务模板待审核。</p>
+          <p class="desc">生成任务审核演示工单，同时向 Gitea 注入变量变更，让 AHS 真实标记任务模板待审核；它不是自愈触发入口。</p>
           <div class="meta">
             <span>模式</span>
             <strong>变量审核后执行</strong>
@@ -678,7 +694,7 @@
           </div>
           <div class="card-actions">
             <button class="primary" data-scenario="task-approval">生成工单</button>
-            <div class="watch-links" aria-label="任务审批观察入口">
+            <div class="watch-links" aria-label="任务模板审核观察入口">
               <a class="watch-link" href="http://118.196.22.79:18084/" data-credential-label="iTop" data-credential-username="admin" data-credential-password="admin" target="_blank" rel="noreferrer">iTop 工单</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Ftemplates%3Fneeds_review%3Dtrue" data-ahs-target="/execution/templates?needs_review=true" target="_blank" rel="noreferrer">待审核任务</a>
               <a class="watch-link" href="/user/login?demo=tenant&amp;redirect=%2Fexecution%2Fexecute" data-ahs-target="/execution/execute" target="_blank" rel="noreferrer">执行入口</a>
