@@ -1,8 +1,8 @@
 import React from 'react';
-import type { PendingApprovalRecord, PendingTriggerRecord } from './types';
 import PendingApprovalTable from './PendingApprovalTable';
 import PendingTriggerTable from './PendingTriggerTable';
 import { PENDING_CENTER_TABS } from './shared';
+import type { PendingApprovalRecord, PendingTriggerRecord } from './types';
 import type { PendingCenterTab } from './usePendingCenterViewState';
 
 export interface PendingCenterContentProps {
@@ -53,8 +53,8 @@ export default function PendingCenterContent({
       tabs={PENDING_CENTER_TABS}
       activeTab={activeTab}
       onTabChange={onTabChange}
-      title="待办中心"
-      description="查看待审批的任务，执行批准或拒绝操作。"
+      title="自愈审批"
+      description="查看自愈流程的待审批任务，执行批准或拒绝操作。"
       canApprove={canApprove}
       resolveApprovers={resolveApprovers}
       onApprove={onApprove}

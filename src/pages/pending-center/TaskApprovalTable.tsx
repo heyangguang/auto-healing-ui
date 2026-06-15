@@ -1,19 +1,25 @@
 import React, { useCallback, useMemo } from 'react';
 import type { AdvancedSearchField } from '@/components/StandardTable';
 import StandardTable from '@/components/StandardTable';
-import { getApprovalHistory, getPendingApprovals } from '@/services/auto-healing/healing';
+import {
+  getApprovalHistory,
+  getPendingApprovals,
+} from '@/services/auto-healing/healing';
+import type { ApprovalActorResolver } from './approvalTableColumns';
 import {
   createApprovalHistoryColumns,
   createPendingApprovalColumns,
 } from './approvalTableColumns';
-import type { ApprovalActorResolver } from './approvalTableColumns';
 import {
+  type ApprovalTableRequestParams,
   approvalSearchFields,
   buildPendingApprovalParams,
   pendingCenterHeaderIcon,
-  type ApprovalTableRequestParams,
 } from './shared';
-import { approvalHistorySearchFields, buildApprovalHistoryParams } from './taskApprovalShared';
+import {
+  approvalHistorySearchFields,
+  buildApprovalHistoryParams,
+} from './taskApprovalShared';
 import type { PendingApprovalRecord } from './types';
 
 const pendingAdvancedSearchFields: AdvancedSearchField[] = [
@@ -46,18 +52,37 @@ export default function TaskApprovalTable({
   onTabChange,
 }: TaskApprovalTableProps) {
   const pendingColumns = useMemo(
-    () => createPendingApprovalColumns({ canApprove, resolveApprovers, onApprove, onReject }),
+    () =>
+      createPendingApprovalColumns({
+        canApprove,
+        resolveApprovers,
+        onApprove,
+        onReject,
+      }),
     [canApprove, onApprove, onReject, resolveApprovers],
   );
-  const historyColumns = useMemo(() => createApprovalHistoryColumns(resolveActor), [resolveActor]);
-  const handlePendingRequest = useCallback(async (params: ApprovalTableRequestParams) => {
-    const response = await getPendingApprovals(buildPendingApprovalParams(params));
-    return { data: response.data || [], total: Number(response.total ?? 0) };
-  }, []);
-  const handleHistoryRequest = useCallback(async (params: ApprovalTableRequestParams) => {
-    const response = await getApprovalHistory(buildApprovalHistoryParams(params));
-    return { data: response.data || [], total: Number(response.total ?? 0) };
-  }, []);
+  const historyColumns = useMemo(
+    () => createApprovalHistoryColumns(resolveActor),
+    [resolveActor],
+  );
+  const handlePendingRequest = useCallback(
+    async (params: ApprovalTableRequestParams) => {
+      const response = await getPendingApprovals(
+        buildPendingApprovalParams(params),
+      );
+      return { data: response.data || [], total: Number(response.total ?? 0) };
+    },
+    [],
+  );
+  const handleHistoryRequest = useCallback(
+    async (params: ApprovalTableRequestParams) => {
+      const response = await getApprovalHistory(
+        buildApprovalHistoryParams(params),
+      );
+      return { data: response.data || [], total: Number(response.total ?? 0) };
+    },
+    [],
+  );
 
   return (
     <StandardTable<PendingApprovalRecord>
@@ -68,15 +93,23 @@ export default function TaskApprovalTable({
       ]}
       activeTab={activeTab}
       onTabChange={onTabChange}
-      title="任务审批"
-      description="查看待审批任务与已处理审批记录，支持直接批准或拒绝操作。"
+      title="自愈审批"
+      description="查看自愈流程的待审批任务与已处理审批记录，支持直接批准或拒绝操作。"
       headerIcon={pendingCenterHeaderIcon}
-      searchFields={activeTab === 'history' ? approvalHistorySearchFields : approvalSearchFields}
-      advancedSearchFields={activeTab === 'history' ? [] : pendingAdvancedSearchFields}
+      searchFields={
+        activeTab === 'history'
+          ? approvalHistorySearchFields
+          : approvalSearchFields
+      }
+      advancedSearchFields={
+        activeTab === 'history' ? [] : pendingAdvancedSearchFields
+      }
       columns={activeTab === 'history' ? historyColumns : pendingColumns}
       rowKey="id"
       onRowClick={onRowClick}
-      request={activeTab === 'history' ? handleHistoryRequest : handlePendingRequest}
+      request={
+        activeTab === 'history' ? handleHistoryRequest : handlePendingRequest
+      }
       defaultPageSize={20}
       preferenceKey={`task_approvals_${activeTab}`}
       refreshTrigger={refreshTrigger}

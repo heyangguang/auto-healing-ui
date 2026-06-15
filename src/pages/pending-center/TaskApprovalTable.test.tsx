@@ -1,17 +1,23 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
+import React from 'react';
 import TaskApprovalTable from './TaskApprovalTable';
 
 jest.mock('@/components/StandardTable', () => ({
   __esModule: true,
-  default: (props: { title: string; tabs?: { key: string; label: string }[]; activeTab?: string }) => {
+  default: (props: {
+    title: string;
+    tabs?: { key: string; label: string }[];
+    activeTab?: string;
+  }) => {
     const ReactLocal = require('react');
     return ReactLocal.createElement(
       'div',
       null,
       ReactLocal.createElement('div', null, props.title),
       ReactLocal.createElement('div', null, props.activeTab),
-      ...(props.tabs || []).map((tab) => ReactLocal.createElement('span', { key: tab.key }, tab.label)),
+      ...(props.tabs || []).map((tab) =>
+        ReactLocal.createElement('span', { key: tab.key }, tab.label),
+      ),
     );
   },
 }));
@@ -38,7 +44,7 @@ describe('TaskApprovalTable', () => {
       }),
     );
 
-    expect(screen.getByText('任务审批')).toBeTruthy();
+    expect(screen.getByText('自愈审批')).toBeTruthy();
     expect(screen.getByText('待审批任务')).toBeTruthy();
     expect(screen.getByText('审批记录')).toBeTruthy();
   });

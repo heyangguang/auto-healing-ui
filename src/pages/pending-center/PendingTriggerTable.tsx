@@ -1,17 +1,19 @@
-import React, { useCallback, useMemo } from 'react';
-import { Button, Space } from 'antd';
 import { StopOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import StandardTable, { type StandardColumnDef } from '@/components/StandardTable';
+import { Button, Space } from 'antd';
+import React, { useCallback, useMemo } from 'react';
+import StandardTable, {
+  type StandardColumnDef,
+} from '@/components/StandardTable';
 import { getPendingTriggers } from '@/services/auto-healing/healing';
-import type { PendingTriggerRecord } from './types';
 import {
   buildPendingTriggerParams,
   formatPendingCenterTime,
   getSeverityTag,
   pendingCenterHeaderIcon,
-  triggerSearchFields,
   type TriggerTableRequestParams,
+  triggerSearchFields,
 } from './shared';
+import type { PendingTriggerRecord } from './types';
 
 export interface PendingTriggerTableProps {
   tableKey: string;
@@ -24,7 +26,7 @@ export interface PendingTriggerTableProps {
   onRowClick: (record: PendingTriggerRecord) => void;
 }
 
-const triggerDescription = '查看待触发的自愈工单，确认后启动自愈流程。';
+const triggerDescription = '查看待人工确认触发的自愈工单，确认后启动自愈流程。';
 
 function createTitleColumn(): StandardColumnDef<PendingTriggerRecord> {
   return {
@@ -105,10 +107,22 @@ function createActionColumn(
     fixed: 'right',
     render: (_, record) => (
       <Space size={4}>
-        <Button type="primary" size="small" icon={<ThunderboltOutlined />} disabled={!canTriggerHealing} onClick={() => onTrigger(record)}>
+        <Button
+          type="primary"
+          size="small"
+          icon={<ThunderboltOutlined />}
+          disabled={!canTriggerHealing}
+          onClick={() => onTrigger(record)}
+        >
           启动
         </Button>
-        <Button danger size="small" icon={<StopOutlined />} disabled={!canTriggerHealing} onClick={() => onDismiss(record)}>
+        <Button
+          danger
+          size="small"
+          icon={<StopOutlined />}
+          disabled={!canTriggerHealing}
+          onClick={() => onDismiss(record)}
+        >
           忽略
         </Button>
       </Space>
@@ -147,13 +161,18 @@ export default function PendingTriggerTable({
     [canTriggerHealing, onDismiss, onTrigger],
   );
 
-  const handleRequest = useCallback(async (params: TriggerTableRequestParams) => {
-    const response = await getPendingTriggers(buildPendingTriggerParams(params));
-    return {
-      data: response.data || [],
-      total: Number(response.total ?? 0),
-    };
-  }, []);
+  const handleRequest = useCallback(
+    async (params: TriggerTableRequestParams) => {
+      const response = await getPendingTriggers(
+        buildPendingTriggerParams(params),
+      );
+      return {
+        data: response.data || [],
+        total: Number(response.total ?? 0),
+      };
+    },
+    [],
+  );
 
   return (
     <StandardTable<PendingTriggerRecord>
@@ -161,7 +180,7 @@ export default function PendingTriggerTable({
       tabs={tabs}
       activeTab={activeTab}
       onTabChange={onTabChange}
-      title="待办中心"
+      title="自愈触发"
       description={triggerDescription}
       headerIcon={pendingCenterHeaderIcon}
       searchFields={triggerSearchFields}
