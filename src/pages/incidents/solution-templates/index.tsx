@@ -278,7 +278,13 @@ const SolutionTemplatePage: React.FC = () => {
                       <Form.Item
                         name="name"
                         label="模板名称"
-                        rules={[{ required: true, message: '请输入模板名称' }]}
+                        rules={[
+                          {
+                            required: true,
+                            message: '请输入模板名称',
+                            whitespace: true,
+                          },
+                        ]}
                       >
                         <Input placeholder="例如：服务恢复自动关单模板" />
                       </Form.Item>

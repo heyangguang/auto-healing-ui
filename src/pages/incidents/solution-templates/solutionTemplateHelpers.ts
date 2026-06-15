@@ -37,6 +37,7 @@ export const DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES: SolutionTemplateFormValues =
     default_close_code: 'auto_healed',
     default_close_status: 'resolved',
     description: '',
+    name: '',
     problem_template: '',
     solution_template: '',
     step_output_max_length: 240,
@@ -131,6 +132,7 @@ export const buildTemplateEditorValues = (
     (template?.default_close_status as 'resolved' | 'closed' | undefined) ||
     DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.default_close_status,
   description: template?.description || '',
+  name: template?.name || '',
   problem_template: template?.problem_template || '',
   solution_template: template?.solution_template || '',
   step_output_max_length:

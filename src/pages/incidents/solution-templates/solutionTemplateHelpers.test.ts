@@ -1,6 +1,8 @@
 import {
   buildSolutionTemplatePreview,
+  buildTemplateEditorValues,
   buildTemplatePayload,
+  DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES,
   filterSolutionTemplates,
   getSolutionTemplateCloseStatusMeta,
   getSolutionTemplateStepsModeMeta,
@@ -102,5 +104,26 @@ describe('solution template helpers', () => {
         steps_render_mode: 'summary',
       }),
     );
+  });
+
+  it('includes template name when building editor values', () => {
+    expect(
+      buildTemplateEditorValues({
+        id: 'template-a',
+        name: '服务恢复模板',
+        solution_template: '方案',
+        conclusion_template: '结论',
+      } as AutoHealing.IncidentSolutionTemplate),
+    ).toEqual(
+      expect.objectContaining({
+        name: '服务恢复模板',
+        solution_template: '方案',
+        conclusion_template: '结论',
+      }),
+    );
+  });
+
+  it('clears template name in default form values for create mode', () => {
+    expect(DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.name).toBe('');
   });
 });
