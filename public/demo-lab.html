@@ -310,6 +310,36 @@
         margin-top: auto;
       }
 
+      .watch-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .watch-link {
+        min-height: 32px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 10px;
+        font-size: 12px;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
+        background: #f8fafd;
+      }
+
+      .watch-link:hover,
+      .watch-link:focus-visible {
+        border-color: var(--blue);
+        color: var(--blue);
+        outline: none;
+      }
+
       .result {
         margin-top: 16px;
         border: 1px solid var(--border);
@@ -411,6 +441,21 @@
           align-items: flex-start;
           flex-direction: column;
         }
+
+        .stage-actions {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          width: 100%;
+        }
+
+        .stage-time {
+          grid-column: 1 / -1;
+        }
+
+        .refresh-select {
+          min-width: 0;
+          width: 100%;
+        }
       }
     </style>
   </head>
@@ -488,6 +533,12 @@
           </div>
           <div class="card-actions">
             <button class="primary" data-scenario="clean-logs">生成工单</button>
+            <div class="watch-links" aria-label="清理日志观察入口">
+              <a class="watch-link" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
+              <a class="watch-link" href="/execution/execute" target="_blank" rel="noreferrer">手动执行</a>
+              <a class="watch-link" href="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
+            </div>
           </div>
         </article>
 
@@ -507,6 +558,12 @@
           </div>
           <div class="card-actions">
             <button class="primary" data-scenario="kill-process">生成工单</button>
+            <div class="watch-links" aria-label="杀死异常进程观察入口">
+              <a class="watch-link" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/resources/incidents" target="_blank" rel="noreferrer">AHS 工单</a>
+              <a class="watch-link" href="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
+              <a class="watch-link" href="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
+            </div>
           </div>
         </article>
 
@@ -526,6 +583,12 @@
           </div>
           <div class="card-actions">
             <button class="primary" data-scenario="blacklist">生成工单</button>
+            <div class="watch-links" aria-label="黑名单指令观察入口">
+              <a class="watch-link" href="http://118.196.22.79:18084/" target="_blank" rel="noreferrer">iTop 工单</a>
+              <a class="watch-link" href="/healing/instances" target="_blank" rel="noreferrer">自愈实例</a>
+              <a class="watch-link" href="/execution/runs" target="_blank" rel="noreferrer">执行记录</a>
+              <a class="watch-link" href="/security/command-blacklist" target="_blank" rel="noreferrer">黑名单规则</a>
+            </div>
           </div>
         </article>
       </section>
