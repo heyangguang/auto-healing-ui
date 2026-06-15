@@ -1,7 +1,7 @@
-import { hasActiveImpersonationSession } from './tenantContext';
-import { emitTenantContextChanged } from './tenantContextEvents';
 import { unwrapData } from '@/services/auto-healing/responseAdapters';
 import type { RefreshFailureReason } from './authBootstrap';
+import { hasActiveImpersonationSession } from './tenantContext';
+import { emitTenantContextChanged } from './tenantContextEvents';
 
 const TOKEN_KEY = 'auto_healing_token';
 const REFRESH_TOKEN_KEY = 'auto_healing_refresh_token';
@@ -25,19 +25,13 @@ type RefreshTokenAttempt =
   | { reason: 'success'; token: string }
   | { reason: RefreshFailureReason; token: null };
 
-type ResponseHeaders =
-  | Headers
-  | Record<string, string | undefined>
-  | { get?: (name: string) => string | null }
-  | undefined;
+const getStorage = (): Storage =>
+  localStorage.getItem(REMEMBER_KEY) === 'true' ? localStorage : sessionStorage;
 
-const getStorage = (): Storage => (
-  localStorage.getItem(REMEMBER_KEY) === 'true' ? localStorage : sessionStorage
-);
-
-const getStoredValue = (key: string): string | null => (
-  getStorage().getItem(key) || localStorage.getItem(key) || sessionStorage.getItem(key)
-);
+const getStoredValue = (key: string): string | null =>
+  getStorage().getItem(key) ||
+  localStorage.getItem(key) ||
+  sessionStorage.getItem(key);
 
 let cachedTokenExpiry: { token: string; expiry: number | null } | null = null;
 let isRefreshing = false;
@@ -99,9 +93,10 @@ export const parseJwtExpiry = (token: string): number | null => {
 };
 
 export const isTokenExpiringSoon = (token: string): boolean => {
-  const expiry = cachedTokenExpiry?.token === token
-    ? cachedTokenExpiry.expiry
-    : parseJwtExpiry(token);
+  const expiry =
+    cachedTokenExpiry?.token === token
+      ? cachedTokenExpiry.expiry
+      : parseJwtExpiry(token);
   cachedTokenExpiry = { token, expiry };
   if (!expiry) {
     return true;
@@ -109,11 +104,15 @@ export const isTokenExpiringSoon = (token: string): boolean => {
   return Date.now() >= expiry - 5 * 60 * 1000;
 };
 
-function parseRefreshTokenResponse(payload: unknown): RefreshTokenResponse | null {
+function parseRefreshTokenResponse(
+  payload: unknown,
+): RefreshTokenResponse | null {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return null;
   }
-  const data = unwrapData<RefreshTokenResponse>((payload as RefreshTokenEnvelope) || {});
+  const data = unwrapData<RefreshTokenResponse>(
+    (payload as RefreshTokenEnvelope) || {},
+  );
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return null;
   }
@@ -145,7 +144,8 @@ async function doRefreshToken(): Promise<RefreshTokenAttempt> {
     }
 
     TokenManager.setTokens(data.access_token, data.refresh_token);
-    const isPlatformAdmin = localStorage.getItem('is-platform-admin') === 'true';
+    const isPlatformAdmin =
+      localStorage.getItem('is-platform-admin') === 'true';
     const isImpersonating = hasActiveImpersonationSession();
     if (!isPlatformAdmin && data.tenants) {
       const existingRaw = localStorage.getItem('tenant-storage');
@@ -153,17 +153,25 @@ async function doRefreshToken(): Promise<RefreshTokenAttempt> {
       if (existingRaw) {
         try {
           const existing = JSON.parse(existingRaw) as TenantStorageState;
-          if (existing.currentTenantId && data.tenants.some((tenant) => tenant.id === existing.currentTenantId)) {
+          if (
+            existing.currentTenantId &&
+            data.tenants.some(
+              (tenant) => tenant.id === existing.currentTenantId,
+            )
+          ) {
             preservedTenantId = existing.currentTenantId;
           }
         } catch {
           /* noop */
         }
       }
-      localStorage.setItem('tenant-storage', JSON.stringify({
-        currentTenantId: preservedTenantId,
-        tenants: data.tenants,
-      }));
+      localStorage.setItem(
+        'tenant-storage',
+        JSON.stringify({
+          currentTenantId: preservedTenantId,
+          tenants: data.tenants,
+        }),
+      );
       emitTenantContextChanged();
     } else if (isPlatformAdmin && !isImpersonating) {
       localStorage.removeItem('tenant-storage');
@@ -204,18 +212,35 @@ export async function ensureFreshToken(): Promise<string | null> {
   return token;
 }
 
-export function getResponseHeaderValue(headers: ResponseHeaders, headerName: string) {
+export function getResponseHeaderValue(headers: unknown, headerName: string) {
   if (!headers) {
     return undefined;
   }
   if (headers instanceof Headers) {
-    return headers.get(headerName) ?? headers.get(headerName.toLowerCase()) ?? undefined;
+    return (
+      headers.get(headerName) ??
+      headers.get(headerName.toLowerCase()) ??
+      undefined
+    );
   }
-  if ('get' in headers && typeof headers.get === 'function') {
-    return headers.get(headerName) ?? headers.get(headerName.toLowerCase()) ?? undefined;
+  if (
+    typeof headers === 'object' &&
+    'get' in headers &&
+    typeof headers.get === 'function'
+  ) {
+    return (
+      headers.get(headerName) ??
+      headers.get(headerName.toLowerCase()) ??
+      undefined
+    );
   }
-  const recordHeaders = headers as Record<string, string | undefined>;
-  return recordHeaders[headerName] ?? recordHeaders[headerName.toLowerCase()];
+  if (typeof headers !== 'object') {
+    return undefined;
+  }
+  const recordHeaders = headers as Record<string, unknown>;
+  const value =
+    recordHeaders[headerName] ?? recordHeaders[headerName.toLowerCase()];
+  return typeof value === 'string' ? value : undefined;
 }
 
 export const __TEST_ONLY__ = {
