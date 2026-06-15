@@ -26,7 +26,7 @@ export async function dismissIncident(id: string) {
     });
 }
 
-export async function getDismissedTriggers(params?: {
+export async function getTriggerRecords(params?: {
     page?: number;
     page_size?: number;
     title?: string;
@@ -34,7 +34,7 @@ export async function getDismissedTriggers(params?: {
     date_from?: string;
     date_to?: string;
 }) {
-    return request<AutoHealing.PaginatedResponse<AutoHealing.Incident>>('/api/v1/tenant/healing/pending/dismissed', {
+    return request<AutoHealing.PaginatedResponse<AutoHealing.Incident>>('/api/v1/tenant/healing/pending/records', {
         method: 'GET',
         params,
     });

@@ -1,5 +1,5 @@
-import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
 import PendingTriggers from './index';
 
 const pendingRecord = {
@@ -22,8 +22,8 @@ jest.mock('@umijs/max', () => ({
 
 jest.mock('@/services/auto-healing/healing', () => ({
   dismissIncident: jest.fn(),
-  getDismissedTriggers: jest.fn(),
   getPendingTriggers: jest.fn(),
+  getTriggerRecords: jest.fn(),
   resetIncidentScan: jest.fn(),
   triggerHealing: jest.fn(),
 }));
@@ -32,22 +32,36 @@ jest.mock('@/components/StandardTable', () => {
   const ReactLocal = require('react');
 
   return function MockStandardTable(props: {
-    activeTab: 'pending' | 'dismissed';
+    activeTab: 'pending' | 'records';
     onTabChange: (key: string) => void;
     onRowClick: (record: typeof pendingRecord | typeof dismissedRecord) => void;
   }) {
-    const currentRecord = props.activeTab === 'pending' ? pendingRecord : dismissedRecord;
+    const currentRecord =
+      props.activeTab === 'pending' ? pendingRecord : dismissedRecord;
     return ReactLocal.createElement(
       'div',
       null,
-      ReactLocal.createElement('button', {
-        type: 'button',
-        onClick: () => props.onRowClick(currentRecord),
-      }, 'open-row'),
-      ReactLocal.createElement('button', {
-        type: 'button',
-        onClick: () => props.onTabChange(props.activeTab === 'pending' ? 'dismissed' : 'pending'),
-      }, props.activeTab === 'pending' ? 'switch-to-dismissed' : 'switch-to-pending'),
+      ReactLocal.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: () => props.onRowClick(currentRecord),
+        },
+        'open-row',
+      ),
+      ReactLocal.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: () =>
+            props.onTabChange(
+              props.activeTab === 'pending' ? 'records' : 'pending',
+            ),
+        },
+        props.activeTab === 'pending'
+          ? 'switch-to-records'
+          : 'switch-to-pending',
+      ),
     );
   };
 });
@@ -65,9 +79,16 @@ jest.mock('antd', () => {
   const ReactLocal = require('react');
   return {
     ...actual,
-    Drawer: ({ open, extra, children }: { open: boolean; extra?: unknown; children?: unknown }) => (
-      open ? ReactLocal.createElement('div', null, extra, children) : null
-    ),
+    Drawer: ({
+      open,
+      extra,
+      children,
+    }: {
+      open: boolean;
+      extra?: unknown;
+      children?: unknown;
+    }) =>
+      open ? ReactLocal.createElement('div', null, extra, children) : null,
     Modal: {
       confirm: jest.fn(),
     },
@@ -78,10 +99,10 @@ jest.mock('antd', () => {
 });
 
 describe('PendingTriggers', () => {
-  it('closes the dismissed trigger drawer when switching back to pending', () => {
+  it('closes the trigger record drawer when switching back to pending', () => {
     render(React.createElement(PendingTriggers));
 
-    fireEvent.click(screen.getByRole('button', { name: 'switch-to-dismissed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'switch-to-records' }));
     fireEvent.click(screen.getByRole('button', { name: 'open-row' }));
 
     expect(screen.getByText('trigger-detail:trigger-dismissed')).toBeTruthy();

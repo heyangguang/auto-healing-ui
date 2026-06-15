@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   AlertOutlined,
   CheckCircleOutlined,
@@ -9,14 +8,19 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { Button, Space, Tag } from 'antd';
+import dayjs from 'dayjs';
+import React from 'react';
 import type {
   AdvancedSearchField,
   SearchField,
   StandardColumnDef,
 } from '@/components/StandardTable';
-import { INCIDENT_SEVERITY_MAP, SEVERITY_TAG_COLORS } from '@/constants/incidentDicts';
+import {
+  INCIDENT_HEALING_MAP,
+  INCIDENT_SEVERITY_MAP,
+  SEVERITY_TAG_COLORS,
+} from '@/constants/incidentDicts';
 import type { PendingTriggerRecord } from './types';
-import dayjs from 'dayjs';
 
 const severityIconMap: Record<string, React.ReactNode> = {
   critical: <AlertOutlined />,
@@ -29,7 +33,10 @@ const severityIconMap: Record<string, React.ReactNode> = {
   '4': <CheckCircleOutlined />,
 };
 
-const severityMap: Record<string, { color: string; label: string; icon: React.ReactNode }> = Object.fromEntries(
+const severityMap: Record<
+  string,
+  { color: string; label: string; icon: React.ReactNode }
+> = Object.fromEntries(
   Object.entries(INCIDENT_SEVERITY_MAP).map(([key, meta]) => [
     key,
     {
@@ -63,7 +70,10 @@ export type TableSorter = { field: string; order: 'ascend' | 'descend' };
 
 export type TriggerAdvancedSearch = {
   severity?: string;
-  created_at?: [string | dayjs.Dayjs | null | undefined, string | dayjs.Dayjs | null | undefined];
+  created_at?: [
+    string | dayjs.Dayjs | null | undefined,
+    string | dayjs.Dayjs | null | undefined,
+  ];
 };
 
 export type TriggerTableRequestParams = {
@@ -89,14 +99,71 @@ export type TriggerApiParams = {
 export const triggerHeaderIcon = (
   <svg viewBox="0 0 48 48" fill="none">
     <title>待触发工单图标</title>
-    <rect x="10" y="8" width="28" height="34" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
-    <path d="M18 8V6a6 6 0 0 1 12 0v2" stroke="currentColor" strokeWidth="2" fill="none" />
-    <path d="M16 18l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    <line x1="26" y1="18" x2="34" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M16 26l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    <line x1="26" y1="26" x2="34" y2="26" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <circle cx="36" cy="38" r="7" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.6" />
-    <path d="M36 35v3l2 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+    <rect
+      x="10"
+      y="8"
+      width="28"
+      height="34"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="2"
+      fill="none"
+    />
+    <path
+      d="M18 8V6a6 6 0 0 1 12 0v2"
+      stroke="currentColor"
+      strokeWidth="2"
+      fill="none"
+    />
+    <path
+      d="M16 18l2 2 4-4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <line
+      x1="26"
+      y1="18"
+      x2="34"
+      y2="18"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M16 26l2 2 4-4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <line
+      x1="26"
+      y1="26"
+      x2="34"
+      y2="26"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <circle
+      cx="36"
+      cy="38"
+      r="7"
+      stroke="currentColor"
+      strokeWidth="2"
+      fill="none"
+      opacity="0.6"
+    />
+    <path
+      d="M36 35v3l2 1.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity="0.6"
+    />
   </svg>
 );
 
@@ -104,9 +171,17 @@ export function getTriggerSeverityTag(severity: string | number) {
   const value = String(severity).toLowerCase();
   const config = severityMap[value];
   if (config) {
-    return <Tag color={config.color} icon={config.icon}>{config.label}</Tag>;
+    return (
+      <Tag color={config.color} icon={config.icon}>
+        {config.label}
+      </Tag>
+    );
   }
-  return <Tag color="default" icon={<CheckCircleOutlined />}>低</Tag>;
+  return (
+    <Tag color="default" icon={<CheckCircleOutlined />}>
+      低
+    </Tag>
+  );
 }
 
 export function formatTriggerTime(value: string | null | undefined) {
@@ -114,6 +189,24 @@ export function formatTriggerTime(value: string | null | undefined) {
     return '-';
   }
   return dayjs(value).format('YYYY-MM-DD HH:mm:ss');
+}
+
+function getTriggerRecordActionTag(record: PendingTriggerRecord) {
+  if (record.healing_status === 'dismissed') {
+    return <Tag color="default">已忽略</Tag>;
+  }
+  if (record.healing_flow_instance_id) {
+    return <Tag color="processing">已触发</Tag>;
+  }
+  return <Tag color="default">-</Tag>;
+}
+
+function getTriggerRecordHealingTag(record: PendingTriggerRecord) {
+  const config = INCIDENT_HEALING_MAP[record.healing_status || ''];
+  if (!config) {
+    return <Tag color="default">{record.healing_status || '-'}</Tag>;
+  }
+  return <Tag color={config.badge}>{config.text}</Tag>;
 }
 
 function setTriggerFilter(
@@ -131,7 +224,9 @@ function setTriggerFilter(
   apiParams.title = value;
 }
 
-export function buildTriggerApiParams(params: TriggerTableRequestParams): TriggerApiParams {
+export function buildTriggerApiParams(
+  params: TriggerTableRequestParams,
+): TriggerApiParams {
   const apiParams: TriggerApiParams = {
     page: params.page,
     page_size: params.pageSize,
@@ -253,12 +348,25 @@ export function createPendingTriggerColumns({
   ];
 }
 
-export function createDismissedTriggerColumns({
+export function createTriggerRecordColumns({
   canTriggerHealing,
   onResetScan,
 }: TriggerColumnsOptions): StandardColumnDef<PendingTriggerRecord>[] {
   return [
     ...sharedColumns,
+    {
+      columnKey: 'record_action',
+      columnTitle: '处理结果',
+      width: 100,
+      render: (_, record) => getTriggerRecordActionTag(record),
+    },
+    {
+      columnKey: 'healing_status',
+      columnTitle: '自愈状态',
+      dataIndex: 'healing_status',
+      width: 110,
+      render: (_, record) => getTriggerRecordHealingTag(record),
+    },
     {
       columnKey: 'created_at',
       columnTitle: '创建时间',
@@ -269,7 +377,7 @@ export function createDismissedTriggerColumns({
     },
     {
       columnKey: 'updated_at',
-      columnTitle: '忽略时间',
+      columnTitle: '处理时间',
       dataIndex: 'updated_at',
       width: 180,
       sorter: true,
@@ -281,16 +389,19 @@ export function createDismissedTriggerColumns({
       width: 100,
       fixedColumn: true,
       fixed: 'right',
-      render: (_, record) => (
-        <Button
-          size="small"
-          icon={<UndoOutlined />}
-          disabled={!canTriggerHealing}
-          onClick={() => onResetScan(record)}
-        >
-          恢复
-        </Button>
-      ),
+      render: (_, record) =>
+        record.healing_status === 'dismissed' ? (
+          <Button
+            size="small"
+            icon={<UndoOutlined />}
+            disabled={!canTriggerHealing}
+            onClick={() => onResetScan(record)}
+          >
+            恢复
+          </Button>
+        ) : (
+          '-'
+        ),
     },
   ];
 }

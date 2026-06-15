@@ -3,13 +3,13 @@ import StandardTable, {
   type StandardColumnDef,
 } from '@/components/StandardTable';
 import {
-  getDismissedTriggers,
   getPendingTriggers,
+  getTriggerRecords,
 } from '@/services/auto-healing/healing';
 import {
   buildTriggerApiParams,
-  createDismissedTriggerColumns,
   createPendingTriggerColumns,
+  createTriggerRecordColumns,
   type TriggerTableRequestParams,
   triggerAdvancedSearchFields,
   triggerHeaderIcon,
@@ -30,7 +30,7 @@ export interface TriggerTabsTableProps {
 }
 
 function buildTriggerRequest(
-  loader: typeof getPendingTriggers | typeof getDismissedTriggers,
+  loader: typeof getPendingTriggers | typeof getTriggerRecords,
 ) {
   return async (params: TriggerTableRequestParams) => {
     const response = await loader(buildTriggerApiParams(params));
@@ -40,11 +40,11 @@ function buildTriggerRequest(
 
 function getTriggerTableMeta(isPending: boolean) {
   return {
-    title: isPending ? '自愈触发' : '已忽略工单',
+    title: isPending ? '自愈触发' : '触发记录',
     description: isPending
       ? '查看待人工确认触发的自愈工单，确认后启动自愈流程。'
-      : '已忽略的自愈工单记录，这些工单不会执行自愈流程。',
-    preferenceKey: isPending ? 'pending_triggers' : 'dismissed_triggers',
+      : '查看已确认触发或已忽略的工单处理记录。',
+    preferenceKey: isPending ? 'pending_triggers' : 'trigger_records',
   };
 }
 
@@ -67,8 +67,8 @@ export default function TriggerTabsTable({
       onDismiss,
       onResetScan,
     });
-  const dismissedColumns: StandardColumnDef<PendingTriggerRecord>[] =
-    createDismissedTriggerColumns({
+  const recordColumns: StandardColumnDef<PendingTriggerRecord>[] =
+    createTriggerRecordColumns({
       canTriggerHealing,
       onTrigger,
       onDismiss,
@@ -80,7 +80,7 @@ export default function TriggerTabsTable({
       key={`triggers-${activeTab}-${refreshCount}`}
       tabs={[
         { key: 'pending', label: '待触发工单' },
-        { key: 'dismissed', label: '已忽略' },
+        { key: 'records', label: '触发记录' },
       ]}
       activeTab={activeTab}
       onTabChange={onTabChange}
@@ -89,13 +89,13 @@ export default function TriggerTabsTable({
       headerIcon={triggerHeaderIcon}
       searchFields={triggerSearchFields}
       advancedSearchFields={triggerAdvancedSearchFields}
-      columns={isPending ? pendingColumns : dismissedColumns}
+      columns={isPending ? pendingColumns : recordColumns}
       rowKey="id"
       onRowClick={onRowClick}
       request={
         isPending
           ? buildTriggerRequest(getPendingTriggers)
-          : buildTriggerRequest(getDismissedTriggers)
+          : buildTriggerRequest(getTriggerRecords)
       }
       defaultPageSize={10}
       preferenceKey={tableMeta.preferenceKey}

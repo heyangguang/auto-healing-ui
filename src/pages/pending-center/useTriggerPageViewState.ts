@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { PendingTriggerRecord } from './types';
 
-export type TriggerPageTab = 'pending' | 'dismissed';
+export type TriggerPageTab = 'pending' | 'records';
 
 export default function useTriggerPageViewState() {
   const [activeTab, setActiveTab] = useState<TriggerPageTab>('pending');
@@ -18,10 +18,20 @@ export default function useTriggerPageViewState() {
     setDetail(null);
   }, []);
 
-  const handleTabChange = useCallback((key: string) => {
-    setActiveTab(key as TriggerPageTab);
-    closeDrawer();
-  }, [closeDrawer]);
+  const handleTabChange = useCallback(
+    (key: string) => {
+      setActiveTab(key as TriggerPageTab);
+      closeDrawer();
+    },
+    [closeDrawer],
+  );
 
-  return { activeTab, drawerOpen, detail, openDetail, closeDrawer, handleTabChange };
+  return {
+    activeTab,
+    drawerOpen,
+    detail,
+    openDetail,
+    closeDrawer,
+    handleTabChange,
+  };
 }
