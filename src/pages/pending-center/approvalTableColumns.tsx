@@ -1,9 +1,9 @@
-import React from 'react';
 import { Button, Space, Tag, Typography } from 'antd';
+import React from 'react';
 import type { StandardColumnDef } from '@/components/StandardTable';
 import { getApprovalStatusConfig } from '@/constants/instanceDicts';
-import type { PendingApprovalRecord } from './types';
 import { formatPendingCenterTime } from './shared';
+import type { PendingApprovalRecord } from './types';
 
 const { Text } = Typography;
 
@@ -21,6 +21,39 @@ function renderApprovalStatus(status?: string) {
   return <Tag color={statusConfig.color}>{statusConfig.text}</Tag>;
 }
 
+function isJsonObject(
+  value: AutoHealing.JsonValue | undefined,
+): value is AutoHealing.JsonObject {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getStringValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function getIncidentIdFromContext(
+  context?: AutoHealing.JsonObject,
+): string | undefined {
+  const incident = context?.incident;
+
+  if (!isJsonObject(incident)) {
+    return undefined;
+  }
+
+  return getStringValue(incident.external_id) || getStringValue(incident.id);
+}
+
+function getApprovalIncidentId(
+  record: PendingApprovalRecord,
+): string | undefined {
+  return (
+    getStringValue(record.flow_instance?.incident?.external_id) ||
+    getIncidentIdFromContext(record.flow_instance?.context) ||
+    getIncidentIdFromContext(record.context) ||
+    getStringValue(record.flow_instance?.incident_id)
+  );
+}
+
 function createNodeNameColumn(): StandardColumnDef<PendingApprovalRecord> {
   return {
     columnKey: 'node_name',
@@ -32,17 +65,35 @@ function createNodeNameColumn(): StandardColumnDef<PendingApprovalRecord> {
   };
 }
 
+function createIncidentIdColumn(): StandardColumnDef<PendingApprovalRecord> {
+  return {
+    columnKey: 'incident_id',
+    columnTitle: '工单ID',
+    width: 130,
+    render: (_, record) => {
+      const incidentId = getApprovalIncidentId(record);
+
+      return incidentId ? (
+        <Tag color="blue">{incidentId}</Tag>
+      ) : (
+        <Text type="secondary">—</Text>
+      );
+    },
+  };
+}
+
 function createFlowInstanceColumn(): StandardColumnDef<PendingApprovalRecord> {
   return {
     columnKey: 'flow_instance_id',
     columnTitle: '流程实例',
     dataIndex: 'flow_instance_id',
     width: 180,
-    render: (_, record) => (
-      record.flow_instance_id
-        ? <Tag>FLOW-{record.flow_instance_id.substring(0, 8)}</Tag>
-        : <Text type="secondary">—</Text>
-    ),
+    render: (_, record) =>
+      record.flow_instance_id ? (
+        <Tag>FLOW-{record.flow_instance_id.substring(0, 8)}</Tag>
+      ) : (
+        <Text type="secondary">—</Text>
+      ),
   };
 }
 
@@ -97,7 +148,8 @@ function createDecisionCommentColumn(): StandardColumnDef<PendingApprovalRecord>
     dataIndex: 'decision_comment',
     width: 220,
     ellipsis: true,
-    render: (_, record) => record.decision_comment || <Text type="secondary">—</Text>,
+    render: (_, record) =>
+      record.decision_comment || <Text type="secondary">—</Text>,
   };
 }
 
@@ -126,10 +178,20 @@ function createActionColumn(
     fixed: 'right',
     render: (_, record) => (
       <Space>
-        <Button type="primary" size="small" disabled={!canApprove} onClick={() => onApprove(record)}>
+        <Button
+          type="primary"
+          size="small"
+          disabled={!canApprove}
+          onClick={() => onApprove(record)}
+        >
           批准
         </Button>
-        <Button danger size="small" disabled={!canApprove} onClick={() => onReject(record)}>
+        <Button
+          danger
+          size="small"
+          disabled={!canApprove}
+          onClick={() => onReject(record)}
+        >
           拒绝
         </Button>
       </Space>
@@ -142,6 +204,7 @@ export function createPendingApprovalColumns(
 ): StandardColumnDef<PendingApprovalRecord>[] {
   return [
     createNodeNameColumn(),
+    createIncidentIdColumn(),
     createFlowInstanceColumn(),
     createStatusColumn(),
     createApproversColumn(options.resolveApprovers),
@@ -155,6 +218,7 @@ export function createApprovalHistoryColumns(
 ): StandardColumnDef<PendingApprovalRecord>[] {
   return [
     createNodeNameColumn(),
+    createIncidentIdColumn(),
     createFlowInstanceColumn(),
     createStatusColumn(),
     createCreatedAtColumn(),
