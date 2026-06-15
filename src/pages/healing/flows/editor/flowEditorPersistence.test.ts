@@ -1,6 +1,9 @@
-import { buildFlowPayload, validateExecutionNodes } from './flowEditorPersistence';
 import { getExecutionTask } from '@/services/auto-healing/execution';
 import { getPlaybook } from '@/services/auto-healing/playbooks';
+import {
+  buildFlowPayload,
+  validateExecutionNodes,
+} from './flowEditorPersistence';
 
 jest.mock('@/services/auto-healing/execution', () => ({
   getExecutionTask: jest.fn(),
@@ -10,10 +13,7 @@ jest.mock('@/services/auto-healing/playbooks', () => ({
   getPlaybook: jest.fn(),
 }));
 
-function createExecutionNode(
-  id: string,
-  data?: Record<string, unknown>,
-){
+function createExecutionNode(id: string, data?: Record<string, unknown>) {
   return {
     id,
     type: 'execution',
@@ -47,7 +47,9 @@ describe('validateExecutionNodes', () => {
   });
 
   it('keeps save validation non-blocking when remote template lookup fails', async () => {
-    (getExecutionTask as jest.Mock).mockRejectedValueOnce(new Error('network down'));
+    (getExecutionTask as jest.Mock).mockRejectedValueOnce(
+      new Error('network down'),
+    );
 
     const result = await validateExecutionNodes([
       createExecutionNode('node-2', { task_template_id: 'task-2' }),
@@ -123,7 +125,7 @@ describe('buildFlowPayload', () => {
       [],
     );
 
-    expect(payload.auto_close_source_incident).toBe(true);
+    expect('auto_close_source_incident' in payload).toBe(false);
     expect(payload.close_policy).toEqual({
       enabled: true,
       solution_template_id: 'template-1',

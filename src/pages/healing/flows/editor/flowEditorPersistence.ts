@@ -175,7 +175,7 @@ export function buildFlowPayload(
   flowIsActive: boolean,
   flowName: string,
   nodes: FlowEditorNode[],
-): AutoHealing.CreateFlowRequest & { auto_close_source_incident: boolean } {
+): AutoHealing.CreateFlowRequest {
   const apiNodes = nodes.map((node) => {
     const { dryRunMessage, dryRunOutput, logs, onRetry, status, ...config } =
       node.data;
@@ -205,7 +205,6 @@ export function buildFlowPayload(
       : undefined;
 
   return {
-    auto_close_source_incident: autoCloseSourceIncident,
     close_policy: effectiveClosePolicy,
     edges: edges.map((edge) => ({
       id: edge.id,

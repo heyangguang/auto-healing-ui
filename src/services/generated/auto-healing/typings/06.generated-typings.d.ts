@@ -5,7 +5,6 @@ declare namespace GeneratedAutoHealing {
     nodes?: FlowNode[];
     edges?: FlowEdge[];
     is_active?: boolean;
-    auto_close_source_incident?: boolean;
     close_policy?: FlowClosePolicy;
   };
 

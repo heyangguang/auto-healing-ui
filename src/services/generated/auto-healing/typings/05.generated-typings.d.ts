@@ -237,8 +237,6 @@ declare namespace GeneratedAutoHealing {
     /** DAG 边定义 */
     edges?: FlowEdge[];
     is_active?: boolean;
-    /** 流程成功完成后自动关闭源工单 */
-    auto_close_source_incident?: boolean;
     close_policy?: FlowClosePolicy;
     created_by?: string;
     created_at?: string;
@@ -250,7 +248,6 @@ declare namespace GeneratedAutoHealing {
     nodes?: FlowNode[];
     edges?: FlowEdge[];
     is_active?: boolean;
-    auto_close_source_incident?: boolean;
     close_policy?: FlowClosePolicy;
   };
 }
