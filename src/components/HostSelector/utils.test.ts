@@ -1,7 +1,11 @@
 import {
   getHostIdentityValues,
+  getHostSelectionValue,
+  hostMatchesValue,
   isHostExcluded,
+  isHostSelected,
   normalizeHostIdentity,
+  normalizeSelectedHostValues,
 } from './utils';
 
 describe('HostSelector utils', () => {
@@ -17,6 +21,7 @@ describe('HostSelector utils', () => {
     expect(getHostIdentityValues(host)).toEqual([
       '118.196.22.79',
       'e2e-target-01',
+      'cmdb-1',
     ]);
   });
 
@@ -24,5 +29,22 @@ describe('HostSelector utils', () => {
     expect(isHostExcluded(host, ['e2e-target-01'])).toBe(true);
     expect(isHostExcluded(host, ['118.196.22.79'])).toBe(true);
     expect(isHostExcluded(host, ['other-host'])).toBe(false);
+  });
+
+  it('selects hosts by any CMDB identity', () => {
+    expect(getHostSelectionValue(host)).toBe('e2e-target-01');
+    expect(hostMatchesValue(host, '118.196.22.79')).toBe(true);
+    expect(hostMatchesValue(host, 'E2E-TARGET-01')).toBe(true);
+    expect(isHostSelected(host, ['118.196.22.79'])).toBe(true);
+    expect(isHostSelected(host, ['e2e-target-01'])).toBe(true);
+  });
+
+  it('normalizes selected hostname and ip duplicates to one CMDB host', () => {
+    expect(
+      normalizeSelectedHostValues(
+        ['e2e-target-01', '118.196.22.79', 'other-host'],
+        [host],
+      ),
+    ).toEqual(['e2e-target-01', 'other-host']);
   });
 });

@@ -19,8 +19,14 @@ import { createHostColumns } from './tableColumns';
 import type { CMDBItemsParams, HostSelectorModalProps } from './types';
 import {
   createPlaceholderItem,
+  getHostIdentityValues,
+  getHostSelectionValue,
   getTotalFromListResponse,
+  hostMatchesValue,
   isHostExcluded,
+  isHostSelected,
+  normalizeHostIdentity,
+  normalizeSelectedHostValues,
   normalizeStatsResponse,
 } from './utils';
 
@@ -138,44 +144,63 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
   useEffect(() => {
     const newMap = new Map(selectedMap);
     let changed = false;
-    hosts.forEach((host) => {
-      if (!host.ip_address || newMap.has(host.ip_address)) return;
-      newMap.set(host.ip_address, host);
+    selectedIps.forEach((selectedValue) => {
+      const matchedHost = hosts.find((host) =>
+        hostMatchesValue(host, selectedValue),
+      );
+      if (!matchedHost || newMap.get(selectedValue) === matchedHost) return;
+      newMap.set(selectedValue, matchedHost);
       changed = true;
     });
     if (changed) setSelectedMap(newMap);
-  }, [hosts, selectedMap]);
+  }, [hosts, selectedIps, selectedMap]);
 
   const handleOk = useCallback(() => {
-    const uniqueIps = Array.from(new Set(selectedIps));
-    const items = uniqueIps.map(
-      (ip) => selectedMap.get(ip) || createPlaceholderItem(ip),
+    const knownHosts = Array.from(
+      new Map(
+        [...Array.from(selectedMap.values()), ...hosts].map((host) => [
+          String(host.id || getHostSelectionValue(host)),
+          host,
+        ]),
+      ).values(),
     );
-    onOk(uniqueIps, items);
-  }, [onOk, selectedIps, selectedMap]);
+    const uniqueHosts = normalizeSelectedHostValues(selectedIps, knownHosts);
+    const items = uniqueHosts.map((hostValue) => {
+      const item =
+        knownHosts.find((host) => hostMatchesValue(host, hostValue)) ||
+        createPlaceholderItem(hostValue);
+      return item;
+    });
+    onOk(uniqueHosts, items);
+  }, [hosts, onOk, selectedIps, selectedMap]);
 
   const selectedRowKeys = useMemo(() => {
     return hosts
-      .filter(
-        (host) => host.ip_address && selectedIps.includes(host.ip_address),
-      )
+      .filter((host) => isHostSelected(host, selectedIps))
       .map((host) => host.id);
   }, [hosts, selectedIps]);
 
   const updateSelectionFromCurrentPage = useCallback(
     (selectedRows: AutoHealing.CMDBItem[]) => {
-      const currentPageIps = hosts
-        .map((host) => host.ip_address)
-        .filter(Boolean) as string[];
-      const selectedOnPageIps = selectedRows
-        .map((host) => host.ip_address)
+      const currentPageIdentities = new Set(
+        hosts.flatMap((host) => getHostIdentityValues(host)),
+      );
+      const selectedOnPageHosts = selectedRows
+        .filter((host) => !isHostExcluded(host, excludeHosts))
+        .map(getHostSelectionValue)
         .filter(Boolean) as string[];
       setSelectedIps((prev) => {
-        const preserved = prev.filter((ip) => !currentPageIps.includes(ip));
-        return Array.from(new Set([...preserved, ...selectedOnPageIps]));
+        const preserved = prev.filter(
+          (hostValue) =>
+            !currentPageIdentities.has(normalizeHostIdentity(hostValue)),
+        );
+        return normalizeSelectedHostValues(
+          [...preserved, ...selectedOnPageHosts],
+          hosts,
+        );
       });
     },
-    [hosts],
+    [excludeHosts, hosts],
   );
 
   const treeData = useMemo(() => {
@@ -386,13 +411,23 @@ const HostSelectorModal: React.FC<HostSelectorModalProps> = ({
                 }}
                 onRow={(record) => ({
                   onClick: () => {
-                    const ip = record.ip_address || '';
-                    if (!ip || isHostExcluded(record, excludeHosts)) return;
+                    const hostValue = getHostSelectionValue(record);
+                    if (!hostValue || isHostExcluded(record, excludeHosts))
+                      return;
                     setSelectedIps((prev) => {
-                      const current = new Set(prev);
-                      if (current.has(ip)) current.delete(ip);
-                      else current.add(ip);
-                      return Array.from(current);
+                      if (isHostSelected(record, prev)) {
+                        const recordIdentities = new Set(
+                          getHostIdentityValues(record),
+                        );
+                        return prev.filter(
+                          (value) =>
+                            !recordIdentities.has(normalizeHostIdentity(value)),
+                        );
+                      }
+                      return normalizeSelectedHostValues(
+                        [...prev, hostValue],
+                        hosts,
+                      );
                     });
                   },
                   style: {

@@ -25,6 +25,15 @@ export function normalizeHostIdentity(value?: string | null): string {
   return (value || '').trim().toLowerCase();
 }
 
+export function getHostSelectionValue(host: AutoHealing.CMDBItem): string {
+  return (
+    host.hostname ||
+    host.ip_address ||
+    host.name ||
+    String(host.id || '')
+  ).trim();
+}
+
 export function getHostIdentityValues(host: AutoHealing.CMDBItem): string[] {
   return Array.from(
     new Set(
@@ -32,9 +41,26 @@ export function getHostIdentityValues(host: AutoHealing.CMDBItem): string[] {
         normalizeHostIdentity(host.ip_address),
         normalizeHostIdentity(host.hostname),
         normalizeHostIdentity(host.name),
+        normalizeHostIdentity(String(host.id || '')),
       ].filter(Boolean),
     ),
   );
+}
+
+export function hostMatchesValue(
+  host: AutoHealing.CMDBItem,
+  value?: string | null,
+): boolean {
+  const identity = normalizeHostIdentity(value);
+  if (!identity) return false;
+  return getHostIdentityValues(host).includes(identity);
+}
+
+export function isHostSelected(
+  host: AutoHealing.CMDBItem,
+  selectedHosts: string[] = [],
+): boolean {
+  return selectedHosts.some((value) => hostMatchesValue(host, value));
 }
 
 export function isHostExcluded(
@@ -46,6 +72,33 @@ export function isHostExcluded(
     excludeHosts.map(normalizeHostIdentity).filter(Boolean),
   );
   return getHostIdentityValues(host).some((identity) => excluded.has(identity));
+}
+
+export function normalizeSelectedHostValues(
+  values: string[],
+  knownHosts: AutoHealing.CMDBItem[] = [],
+): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  values.forEach((rawValue) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return;
+    const knownHost = knownHosts.find((host) =>
+      hostMatchesValue(host, trimmed),
+    );
+    const identities = knownHost
+      ? getHostIdentityValues(knownHost)
+      : [normalizeHostIdentity(trimmed)];
+    if (identities.some((identity) => seen.has(identity))) return;
+
+    result.push(knownHost ? getHostSelectionValue(knownHost) : trimmed);
+    identities.forEach((identity) => {
+      seen.add(identity);
+    });
+  });
+
+  return result;
 }
 
 export function getTotalFromListResponse(response: unknown): number {
