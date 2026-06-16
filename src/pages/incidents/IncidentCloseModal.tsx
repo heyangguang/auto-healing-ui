@@ -1,6 +1,5 @@
 import { history } from '@umijs/max';
 import {
-  Alert,
   Button,
   Col,
   Collapse,
@@ -10,6 +9,7 @@ import {
   Row,
   Select,
   Space,
+  Tag,
   Typography,
 } from 'antd';
 import React from 'react';
@@ -43,6 +43,31 @@ const closeStatusOptions = [
   { value: 'resolved', label: '已解决' },
   { value: 'closed', label: '已关闭' },
 ];
+
+const sidePanelStyle: React.CSSProperties = {
+  background: '#fafafa',
+  border: '1px solid #f0f0f0',
+  borderRadius: 8,
+  padding: 16,
+};
+
+const templatePanelStyle: React.CSSProperties = {
+  background: '#f0f7ff',
+  border: '1px solid #b7d9ff',
+  borderRadius: 8,
+  padding: 16,
+};
+
+const contextRowStyle: React.CSSProperties = {
+  alignItems: 'baseline',
+  display: 'grid',
+  gap: 12,
+  gridTemplateColumns: '72px minmax(0, 1fr)',
+};
+
+function displayValue(value?: React.ReactNode) {
+  return value || <Typography.Text type="secondary">-</Typography.Text>;
+}
 
 function parseTemplateVarsText(
   text?: string,
@@ -165,6 +190,16 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
     () => templates.find((template) => template.id === selectedTemplateId),
     [selectedTemplateId, templates],
   );
+  const selectedTemplateDescription = React.useMemo(() => {
+    if (!selectedTemplate) {
+      return '';
+    }
+    return (
+      selectedTemplate.description ||
+      solutionTemplateSummary(selectedTemplate) ||
+      '使用 incident / operator / system 内置变量生成关单内容。'
+    );
+  }, [selectedTemplate]);
 
   React.useEffect(() => {
     if (!open) {
@@ -390,107 +425,163 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
       >
         <Row gutter={[24, 0]} align="top" style={{ marginInline: 0 }}>
           <Col xs={24} lg={10}>
-            <Form.Item
-              name="solution_template_id"
-              label="解决方案模板"
-              extra={
-                <Space size={8} wrap>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    选择后自动生成说明和备注
-                  </Typography.Text>
-                  <Button
-                    type="link"
-                    size="small"
-                    style={{ paddingInline: 0 }}
-                    onClick={() =>
-                      history.push('/resources/incident-solution-templates')
-                    }
-                  >
-                    管理模板
-                  </Button>
-                </Space>
-              }
-            >
-              <Select
-                allowClear
-                showSearch
-                loading={
-                  templatesLoading ||
-                  templateDetailLoadingId === selectedTemplateId
-                }
-                options={templates.map((template) => ({
-                  label: template.name,
-                  value: template.id,
-                }))}
-                optionFilterProp="label"
-                placeholder="可选：选择一个关单模板"
-                onChange={(templateId) => {
-                  if (!templateId) {
-                    templateApplyRequestRef.current += 1;
-                    selectedTemplateIdRef.current = null;
-                    setTemplateDetailLoadingId(null);
-                    return;
-                  }
-                  selectedTemplateIdRef.current = templateId;
-                  void applySelectedTemplate(templateId, templateVarsText);
-                }}
-              />
-            </Form.Item>
-            {selectedTemplate ? (
-              <Alert
-                style={{ marginBottom: 16 }}
-                type="info"
-                showIcon
-                title={selectedTemplate.name}
-                description={
-                  selectedTemplate.description ||
-                  solutionTemplateSummary(selectedTemplate) ||
-                  '使用 incident / operator / system 内置变量生成关单内容。'
-                }
-              />
-            ) : null}
-            <Row gutter={[12, 0]} style={{ marginInline: 0 }}>
-              <Col xs={24} sm={12} lg={24} xl={12}>
-                <Form.Item
-                  name="close_status"
-                  label="关闭状态"
-                  rules={[{ required: true, message: '请选择关闭状态' }]}
-                >
-                  <Select options={closeStatusOptions} />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} lg={24} xl={12}>
-                <Form.Item name="close_code" label="关闭码">
-                  <Input placeholder="例如：auto_healed" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Collapse
-              ghost
-              size="small"
-              style={{ marginTop: -4 }}
-              items={[
-                {
-                  key: 'template-vars',
-                  label: '高级变量',
-                  children: (
-                    <Form.Item
-                      name="template_vars_text"
-                      label="补充模板变量（JSON，可选）"
-                      extra={
-                        '通常不用填。只有模板包含 execution.run_id 这类额外占位符时，才在这里补充对应 JSON；系统已自动提供 incident / operator / system。'
+            <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+              <Form.Item
+                name="solution_template_id"
+                label="解决方案模板"
+                style={{ marginBottom: 0 }}
+                extra={
+                  <Space size={8} wrap>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      选择后自动生成说明和备注
+                    </Typography.Text>
+                    <Button
+                      type="link"
+                      size="small"
+                      style={{ paddingInline: 0 }}
+                      onClick={() =>
+                        history.push('/resources/incident-solution-templates')
                       }
+                    >
+                      管理模板
+                    </Button>
+                  </Space>
+                }
+              >
+                <Select
+                  allowClear
+                  showSearch
+                  loading={
+                    templatesLoading ||
+                    templateDetailLoadingId === selectedTemplateId
+                  }
+                  options={templates.map((template) => ({
+                    label: template.name,
+                    value: template.id,
+                  }))}
+                  optionFilterProp="label"
+                  placeholder="可选：选择一个关单模板"
+                  onChange={(templateId) => {
+                    if (!templateId) {
+                      templateApplyRequestRef.current += 1;
+                      selectedTemplateIdRef.current = null;
+                      setTemplateDetailLoadingId(null);
+                      return;
+                    }
+                    selectedTemplateIdRef.current = templateId;
+                    void applySelectedTemplate(templateId, templateVarsText);
+                  }}
+                />
+              </Form.Item>
+              {selectedTemplate ? (
+                <div style={templatePanelStyle}>
+                  <Space align="start" size={12}>
+                    <Tag color="blue" style={{ marginInlineEnd: 0 }}>
+                      已选模板
+                    </Tag>
+                    <div style={{ minWidth: 0 }}>
+                      <Typography.Text strong>
+                        {selectedTemplate.name}
+                      </Typography.Text>
+                      <Typography.Paragraph
+                        type="secondary"
+                        style={{ marginBottom: 0, marginTop: 8 }}
+                        ellipsis={{ rows: 2, expandable: false }}
+                      >
+                        {selectedTemplateDescription}
+                      </Typography.Paragraph>
+                    </div>
+                  </Space>
+                </div>
+              ) : null}
+              <div style={sidePanelStyle}>
+                <Typography.Text strong>回写参数</Typography.Text>
+                <Row
+                  gutter={[12, 0]}
+                  style={{ marginInline: 0, marginTop: 12 }}
+                >
+                  <Col xs={24} sm={12} lg={24} xl={12}>
+                    <Form.Item
+                      name="close_status"
+                      label="关闭状态"
+                      rules={[{ required: true, message: '请选择关闭状态' }]}
                       style={{ marginBottom: 0 }}
                     >
-                      <Input.TextArea
-                        rows={4}
-                        placeholder='例如：{"execution":{"run_id":"run-1","message":"人工确认恢复正常"}}'
-                      />
+                      <Select options={closeStatusOptions} />
                     </Form.Item>
-                  ),
-                },
-              ]}
-            />
+                  </Col>
+                  <Col xs={24} sm={12} lg={24} xl={12}>
+                    <Form.Item
+                      name="close_code"
+                      label="关闭码"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Input placeholder="例如：auto_healed" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+              <div style={sidePanelStyle}>
+                <Typography.Text strong>工单上下文</Typography.Text>
+                <Space
+                  orientation="vertical"
+                  size={10}
+                  style={{ marginTop: 12, width: '100%' }}
+                >
+                  <div style={contextRowStyle}>
+                    <Typography.Text type="secondary">源工单</Typography.Text>
+                    <Typography.Text copyable={Boolean(incident?.external_id)}>
+                      {displayValue(incident?.external_id)}
+                    </Typography.Text>
+                  </div>
+                  <div style={contextRowStyle}>
+                    <Typography.Text type="secondary">当前状态</Typography.Text>
+                    {displayValue(
+                      incident?.status ? <Tag>{incident.status}</Tag> : null,
+                    )}
+                  </div>
+                  <div style={contextRowStyle}>
+                    <Typography.Text type="secondary">影响资产</Typography.Text>
+                    <Typography.Text ellipsis>
+                      {displayValue(incident?.affected_ci)}
+                    </Typography.Text>
+                  </div>
+                  <div style={contextRowStyle}>
+                    <Typography.Text type="secondary">来源</Typography.Text>
+                    <Typography.Text ellipsis>
+                      {displayValue(incident?.source)}
+                    </Typography.Text>
+                  </div>
+                </Space>
+              </div>
+              <div style={{ ...sidePanelStyle, padding: '8px 12px' }}>
+                <Collapse
+                  ghost
+                  size="small"
+                  items={[
+                    {
+                      key: 'template-vars',
+                      label: '高级变量',
+                      children: (
+                        <Form.Item
+                          name="template_vars_text"
+                          label="补充模板变量（JSON，可选）"
+                          extra={
+                            '通常不用填。只有模板包含 execution.run_id 这类额外占位符时，才在这里补充对应 JSON；系统已自动提供 incident / operator / system。'
+                          }
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Input.TextArea
+                            rows={4}
+                            placeholder='例如：{"execution":{"run_id":"run-1","message":"人工确认恢复正常"}}'
+                          />
+                        </Form.Item>
+                      ),
+                    },
+                  ]}
+                />
+              </div>
+            </Space>
           </Col>
           <Col xs={24} lg={14}>
             <Form.Item
