@@ -67,6 +67,32 @@ const contextRowStyle: React.CSSProperties = {
   gridTemplateColumns: '72px minmax(0, 1fr)',
 };
 
+const builtInTemplateVariableGroups = [
+  {
+    label: '工单',
+    variables: [
+      'incident.external_id',
+      'incident.title',
+      'incident.affected_ci',
+      'incident.source_plugin_name',
+      'incident.status',
+      'incident.category',
+    ],
+  },
+  {
+    label: '操作人',
+    variables: ['operator.name'],
+  },
+  {
+    label: '系统',
+    variables: ['system.timestamp', 'system.trigger_source'],
+  },
+  {
+    label: '回写',
+    variables: ['close_code', 'close_status'],
+  },
+];
+
 const SYSTEM_TEMPLATE_ROOTS = new Set([
   'close_code',
   'close_status',
@@ -148,7 +174,7 @@ function extractTemplateVariablePaths(
       const root = segments[0];
       let extraPath = '';
       if (!root || SYSTEM_TEMPLATE_ROOTS.has(root)) {
-        return;
+        continue;
       }
       if (root === 'input') {
         extraPath = segments.slice(1).join('.');
@@ -631,9 +657,36 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
               <div style={sidePanelStyle}>
                 <Space
                   orientation="vertical"
-                  size={12}
+                  size={14}
                   style={{ width: '100%' }}
                 >
+                  <Space
+                    orientation="vertical"
+                    size={10}
+                    style={{ width: '100%' }}
+                  >
+                    <Typography.Text strong>系统内置变量</Typography.Text>
+                    <Typography.Text type="secondary">
+                      模板可直接使用这些占位符，不需要客户补充。
+                    </Typography.Text>
+                    {builtInTemplateVariableGroups.map((group) => (
+                      <div key={group.label}>
+                        <Typography.Text
+                          type="secondary"
+                          style={{ display: 'block', marginBottom: 6 }}
+                        >
+                          {group.label}
+                        </Typography.Text>
+                        <Space size={[6, 6]} wrap>
+                          {group.variables.map((variable) => (
+                            <Tag key={variable} style={{ margin: 0 }}>
+                              {variable}
+                            </Tag>
+                          ))}
+                        </Space>
+                      </div>
+                    ))}
+                  </Space>
                   <Space align="center" size={8} wrap>
                     <Typography.Text strong>模板额外变量</Typography.Text>
                     {selectedTemplateExtraVariablePaths.length > 0 ? (

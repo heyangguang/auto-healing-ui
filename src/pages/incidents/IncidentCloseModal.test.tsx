@@ -64,7 +64,8 @@ describe('IncidentCloseModal', () => {
       name: '自动修复模板',
       default_close_code: 'auto_healed',
       default_close_status: 'resolved',
-      solution_template: '执行编号 {{ execution.run_id }}',
+      solution_template:
+        '工单 {{ incident.external_id }} 执行编号 {{ execution.run_id }}',
       verification_template: '执行结果 {{ input.execution.message }}',
     });
     const onSubmit = jest.fn().mockResolvedValue(undefined);
@@ -92,6 +93,10 @@ describe('IncidentCloseModal', () => {
       expect(screen.getByLabelText('execution.run_id')).toBeTruthy();
       expect(screen.getByLabelText('execution.message')).toBeTruthy();
     });
+    expect(screen.getByText('系统内置变量')).toBeTruthy();
+    expect(screen.getByText('incident.external_id')).toBeTruthy();
+    expect(screen.getByText('operator.name')).toBeTruthy();
+    expect(screen.queryByLabelText('incident.external_id')).toBeNull();
 
     fireEvent.change(screen.getByLabelText('execution.run_id'), {
       target: { value: 'run-1' },
