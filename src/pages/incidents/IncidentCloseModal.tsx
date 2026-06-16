@@ -44,6 +44,8 @@ const closeStatusOptions = [
   { value: 'closed', label: '已关闭' },
 ];
 
+const generatedTextareaAutoSize = { maxRows: 18, minRows: 8 };
+
 const sidePanelStyle: React.CSSProperties = {
   background: '#fafafa',
   border: '1px solid #f0f0f0',
@@ -688,14 +690,16 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
               ]}
             >
               <Input.TextArea
-                rows={8}
+                autoSize={generatedTextareaAutoSize}
                 placeholder="例如：已完成修复并验证恢复正常"
+                style={{ resize: 'none' }}
               />
             </Form.Item>
             <Form.Item name="work_notes" label="处理备注">
               <Input.TextArea
-                rows={8}
+                autoSize={generatedTextareaAutoSize}
                 placeholder="写给源工单系统的处理过程说明"
+                style={{ resize: 'none' }}
               />
             </Form.Item>
           </Col>
