@@ -1,11 +1,9 @@
 import { history } from '@umijs/max';
 import {
   Button,
-  Col,
   Form,
   Input,
   Modal,
-  Row,
   Select,
   Space,
   Tag,
@@ -23,6 +21,7 @@ import {
   SOLUTION_TEMPLATE_SYSTEM_VARIABLE_ROOTS,
   solutionTemplateSummary,
 } from './solution-templates/solutionTemplateHelpers';
+import './IncidentCloseModal.css';
 
 type IncidentCloseModalProps = {
   incident?: AutoHealing.Incident | null;
@@ -45,29 +44,6 @@ const closeStatusOptions = [
   { value: 'resolved', label: '已解决' },
   { value: 'closed', label: '已关闭' },
 ];
-
-const generatedTextareaAutoSize = { maxRows: 18, minRows: 8 };
-
-const sidePanelStyle: React.CSSProperties = {
-  background: '#fafafa',
-  border: '1px solid #f0f0f0',
-  borderRadius: 8,
-  padding: 16,
-};
-
-const templatePanelStyle: React.CSSProperties = {
-  background: '#f0f7ff',
-  border: '1px solid #b7d9ff',
-  borderRadius: 8,
-  padding: 16,
-};
-
-const contextRowStyle: React.CSSProperties = {
-  alignItems: 'baseline',
-  display: 'grid',
-  gap: 12,
-  gridTemplateColumns: '72px minmax(0, 1fr)',
-};
 
 function displayValue(value?: React.ReactNode) {
   return value || <Typography.Text type="secondary">-</Typography.Text>;
@@ -465,13 +441,13 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
         selectedTemplateIdRef.current = null;
         form.resetFields();
       }}
-      width={960}
+      className="incident-close-modal"
+      width={1120}
       styles={{
         body: {
-          maxHeight: 'calc(100vh - 220px)',
+          maxHeight: 'calc(100vh - 190px)',
           overflowX: 'hidden',
           overflowY: 'auto',
-          paddingTop: 12,
         },
       }}
     >
@@ -492,30 +468,13 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
           });
         }}
       >
-        <Row gutter={[24, 0]} align="top" style={{ marginInline: 0 }}>
-          <Col xs={24} lg={10}>
-            <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+        <div className="incident-close-workbench">
+          <section className="incident-close-config">
+            <div className="incident-close-template-area">
               <Form.Item
                 name="solution_template_id"
                 label="解决方案模板"
                 style={{ marginBottom: 0 }}
-                extra={
-                  <Space size={8} wrap>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      选择后自动生成说明和备注
-                    </Typography.Text>
-                    <Button
-                      type="link"
-                      size="small"
-                      style={{ paddingInline: 0 }}
-                      onClick={() =>
-                        history.push('/resources/incident-solution-templates')
-                      }
-                    >
-                      管理模板
-                    </Button>
-                  </Space>
-                }
               >
                 <Select
                   allowClear
@@ -543,188 +502,182 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                   }}
                 />
               </Form.Item>
+              <div className="incident-close-template-hint">
+                <Typography.Text type="secondary">
+                  选择模板后自动生成说明和备注
+                </Typography.Text>
+                <Button
+                  type="link"
+                  size="small"
+                  className="incident-close-link-button"
+                  onClick={() =>
+                    history.push('/resources/incident-solution-templates')
+                  }
+                >
+                  管理模板
+                </Button>
+              </div>
               {selectedTemplate ? (
-                <div style={templatePanelStyle}>
-                  <Space align="start" size={12}>
-                    <Tag color="blue" style={{ marginInlineEnd: 0 }}>
-                      已选模板
-                    </Tag>
-                    <div style={{ minWidth: 0 }}>
-                      <Typography.Text strong>
-                        {selectedTemplate.name}
-                      </Typography.Text>
-                      <Typography.Paragraph
-                        type="secondary"
-                        style={{ marginBottom: 0, marginTop: 8 }}
-                        ellipsis={{ rows: 2, expandable: false }}
-                      >
-                        {selectedTemplateDescription}
-                      </Typography.Paragraph>
-                    </div>
-                  </Space>
+                <div className="incident-close-selected-template">
+                  <Tag color="blue" style={{ margin: 0 }}>
+                    已选模板
+                  </Tag>
+                  <div className="incident-close-selected-template-text">
+                    <Typography.Text strong ellipsis>
+                      {selectedTemplate.name}
+                    </Typography.Text>
+                    <Typography.Text type="secondary" ellipsis>
+                      {selectedTemplateDescription}
+                    </Typography.Text>
+                  </div>
                 </div>
               ) : null}
-              <div style={sidePanelStyle}>
-                <Typography.Text strong>回写参数</Typography.Text>
-                <Row
-                  gutter={[12, 0]}
-                  style={{ marginInline: 0, marginTop: 12 }}
-                >
-                  <Col xs={24} sm={12} lg={24} xl={12}>
-                    <Form.Item
-                      name="close_status"
-                      label="关闭状态"
-                      rules={[{ required: true, message: '请选择关闭状态' }]}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Select options={closeStatusOptions} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} sm={12} lg={24} xl={12}>
-                    <Form.Item
-                      name="close_code"
-                      label="关闭码"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Input placeholder="例如：auto_healed" />
-                    </Form.Item>
-                  </Col>
-                </Row>
+            </div>
+            <div className="incident-close-status-area">
+              <Form.Item
+                name="close_status"
+                label="关闭状态"
+                rules={[{ required: true, message: '请选择关闭状态' }]}
+                style={{ marginBottom: 0 }}
+              >
+                <Select options={closeStatusOptions} />
+              </Form.Item>
+              <Form.Item
+                name="close_code"
+                label="关闭码"
+                style={{ marginBottom: 0 }}
+              >
+                <Input placeholder="例如：auto_healed" />
+              </Form.Item>
+            </div>
+          </section>
+
+          <section className="incident-close-context-strip">
+            <div className="incident-close-context-item">
+              <Typography.Text type="secondary">源工单</Typography.Text>
+              <Typography.Text copyable={Boolean(incident?.external_id)}>
+                {displayValue(incident?.external_id)}
+              </Typography.Text>
+            </div>
+            <div className="incident-close-context-item">
+              <Typography.Text type="secondary">当前状态</Typography.Text>
+              {renderIncidentStatus(incident?.status)}
+            </div>
+            <div className="incident-close-context-item">
+              <Typography.Text type="secondary">影响资产</Typography.Text>
+              <Typography.Text ellipsis>
+                {displayValue(incident?.affected_ci)}
+              </Typography.Text>
+            </div>
+            <div className="incident-close-context-item">
+              <Typography.Text type="secondary">来源</Typography.Text>
+              <Typography.Text ellipsis>
+                {displayValue(getIncidentSourceLabel(incident))}
+              </Typography.Text>
+            </div>
+          </section>
+
+          <section className="incident-close-content-grid">
+            <div className="incident-close-content-panel">
+              <Form.Item
+                name="resolution"
+                label="解决说明"
+                rules={[
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (getFieldValue('solution_template_id') || value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        new Error('请输入解决说明，或选择解决方案模板'),
+                      );
+                    },
+                  }),
+                ]}
+              >
+                <Input.TextArea
+                  placeholder="例如：已完成修复并验证恢复正常"
+                  rows={12}
+                  style={{ resize: 'none' }}
+                />
+              </Form.Item>
+            </div>
+            <div className="incident-close-content-panel">
+              <Form.Item name="work_notes" label="处理备注">
+                <Input.TextArea
+                  placeholder="写给源工单系统的处理过程说明"
+                  rows={12}
+                  style={{ resize: 'none' }}
+                />
+              </Form.Item>
+            </div>
+          </section>
+
+          <section className="incident-close-helper-grid">
+            <div className="incident-close-helper-panel">
+              <div className="incident-close-helper-header">
+                <Typography.Text strong>模板额外变量</Typography.Text>
+                {selectedTemplateExtraVariablePaths.length > 0 ? (
+                  <Tag color="processing" style={{ margin: 0 }}>
+                    自动识别
+                  </Tag>
+                ) : null}
               </div>
-              <div style={sidePanelStyle}>
-                <Typography.Text strong>工单上下文</Typography.Text>
-                <Space
-                  orientation="vertical"
-                  size={10}
-                  style={{ marginTop: 12, width: '100%' }}
-                >
-                  <div style={contextRowStyle}>
-                    <Typography.Text type="secondary">源工单</Typography.Text>
-                    <Typography.Text copyable={Boolean(incident?.external_id)}>
-                      {displayValue(incident?.external_id)}
-                    </Typography.Text>
-                  </div>
-                  <div style={contextRowStyle}>
-                    <Typography.Text type="secondary">当前状态</Typography.Text>
-                    {renderIncidentStatus(incident?.status)}
-                  </div>
-                  <div style={contextRowStyle}>
-                    <Typography.Text type="secondary">影响资产</Typography.Text>
-                    <Typography.Text ellipsis>
-                      {displayValue(incident?.affected_ci)}
-                    </Typography.Text>
-                  </div>
-                  <div style={contextRowStyle}>
-                    <Typography.Text type="secondary">来源</Typography.Text>
-                    <Typography.Text ellipsis>
-                      {displayValue(getIncidentSourceLabel(incident))}
-                    </Typography.Text>
-                  </div>
-                </Space>
-              </div>
-              <div style={sidePanelStyle}>
-                <Space
-                  orientation="vertical"
-                  size={14}
-                  style={{ width: '100%' }}
-                >
-                  <Space
-                    orientation="vertical"
-                    size={10}
-                    style={{ width: '100%' }}
-                  >
-                    <Typography.Text strong>系统内置变量</Typography.Text>
-                    <Typography.Text type="secondary">
-                      模板可直接使用这些占位符，不需要客户补充。
-                    </Typography.Text>
-                    {SOLUTION_TEMPLATE_BUILT_IN_VARIABLE_GROUPS.map((group) => (
-                      <div key={group.label}>
-                        <Typography.Text
-                          type="secondary"
-                          style={{ display: 'block', marginBottom: 6 }}
-                        >
-                          {group.label}
-                        </Typography.Text>
-                        <Space size={[6, 6]} wrap>
-                          {group.variables.map((variable) => (
-                            <Tag key={variable.path} style={{ margin: 0 }}>
-                              {variable.path}
-                            </Tag>
-                          ))}
-                        </Space>
-                      </div>
+              {selectedTemplate ? (
+                selectedTemplateExtraVariablePaths.length > 0 ? (
+                  <div className="incident-close-extra-vars-grid">
+                    {selectedTemplateExtraVariablePaths.map((path) => (
+                      <Form.Item
+                        key={path}
+                        name={['template_vars', ...path.split('.')]}
+                        label={path}
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input allowClear placeholder={`请输入 ${path}`} />
+                      </Form.Item>
                     ))}
-                  </Space>
-                  <Space align="center" size={8} wrap>
-                    <Typography.Text strong>模板额外变量</Typography.Text>
-                    {selectedTemplateExtraVariablePaths.length > 0 ? (
-                      <Tag color="processing" style={{ margin: 0 }}>
-                        自动识别
-                      </Tag>
-                    ) : null}
-                  </Space>
+                  </div>
+                ) : (
                   <Typography.Text type="secondary">
-                    系统已提供 incident / operator /
-                    system；只需补充模板里额外出现的占位符。
+                    当前模板没有额外占位符，系统变量会自动填充。
                   </Typography.Text>
-                  {selectedTemplate ? (
-                    selectedTemplateExtraVariablePaths.length > 0 ? (
-                      selectedTemplateExtraVariablePaths.map((path) => (
-                        <Form.Item
-                          key={path}
-                          name={['template_vars', ...path.split('.')]}
-                          label={path}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <Input allowClear placeholder={`请输入 ${path}`} />
-                        </Form.Item>
-                      ))
-                    ) : (
-                      <Typography.Text type="secondary">
-                        当前模板无需人工补充变量。
-                      </Typography.Text>
-                    )
-                  ) : (
-                    <Typography.Text type="secondary">
-                      选择模板后自动识别需要补充的变量。
-                    </Typography.Text>
-                  )}
-                </Space>
+                )
+              ) : (
+                <Typography.Text type="secondary">
+                  选择模板后，额外占位符会自动变成输入项。
+                </Typography.Text>
+              )}
+            </div>
+
+            <div className="incident-close-helper-panel incident-close-variable-reference">
+              <div className="incident-close-helper-header">
+                <Typography.Text strong>系统内置变量</Typography.Text>
+                <Typography.Text type="secondary">
+                  模板可直接使用，不需要客户补充。
+                </Typography.Text>
               </div>
-            </Space>
-          </Col>
-          <Col xs={24} lg={14}>
-            <Form.Item
-              name="resolution"
-              label="解决说明"
-              rules={[
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    if (getFieldValue('solution_template_id') || value) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(
-                      new Error('请输入解决说明，或选择解决方案模板'),
-                    );
-                  },
-                }),
-              ]}
-            >
-              <Input.TextArea
-                autoSize={generatedTextareaAutoSize}
-                placeholder="例如：已完成修复并验证恢复正常"
-                style={{ resize: 'none' }}
-              />
-            </Form.Item>
-            <Form.Item name="work_notes" label="处理备注">
-              <Input.TextArea
-                autoSize={generatedTextareaAutoSize}
-                placeholder="写给源工单系统的处理过程说明"
-                style={{ resize: 'none' }}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+              <div className="incident-close-variable-groups">
+                {SOLUTION_TEMPLATE_BUILT_IN_VARIABLE_GROUPS.map((group) => (
+                  <div
+                    className="incident-close-variable-group"
+                    key={group.label}
+                  >
+                    <Typography.Text type="secondary">
+                      {group.label}
+                    </Typography.Text>
+                    <Space size={[6, 6]} wrap>
+                      {group.variables.map((variable) => (
+                        <Tag key={variable.path} style={{ margin: 0 }}>
+                          {variable.path}
+                        </Tag>
+                      ))}
+                    </Space>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
       </Form>
     </Modal>
   );
