@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Col,
+  Collapse,
   Form,
   Input,
   Modal,
@@ -112,23 +113,19 @@ export function buildCloseModalTemplateValues(
 ): Partial<CloseModalFormValues> {
   const context = buildTemplateContext(incident, templateVars);
   const resolutionParts: string[] = [];
+  const workNoteParts: string[] = [];
   const problem = renderTemplate(template.problem_template, context);
+  const solution = renderTemplate(template.solution_template, context);
+  const verification = renderTemplate(template.verification_template, context);
+  const conclusion = renderTemplate(template.conclusion_template, context);
 
-  appendTemplateSection(
-    resolutionParts,
-    '解决方案',
-    renderTemplate(template.solution_template, context),
-  );
-  appendTemplateSection(
-    resolutionParts,
-    '验证结果',
-    renderTemplate(template.verification_template, context),
-  );
-  appendTemplateSection(
-    resolutionParts,
-    '最终结论',
-    renderTemplate(template.conclusion_template, context),
-  );
+  appendTemplateSection(workNoteParts, '问题说明', problem);
+  appendTemplateSection(workNoteParts, '处理动作', solution);
+  appendTemplateSection(workNoteParts, '验证结果', verification);
+
+  appendTemplateSection(resolutionParts, '解决方案', solution);
+  appendTemplateSection(resolutionParts, '验证结果', verification);
+  appendTemplateSection(resolutionParts, '最终结论', conclusion);
 
   return {
     close_code: template.default_close_code || undefined,
@@ -137,7 +134,7 @@ export function buildCloseModalTemplateValues(
       | 'closed'
       | undefined,
     resolution: resolutionParts.join('\n\n') || undefined,
-    work_notes: problem ? `【问题说明】\n${problem}` : undefined,
+    work_notes: workNoteParts.join('\n\n') || undefined,
   };
 }
 
@@ -156,9 +153,12 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
   const [templateDetailLoadingId, setTemplateDetailLoadingId] = React.useState<
     string | null
   >(null);
-  const lastAppliedTemplateValuesRef = React.useRef<
-    Partial<CloseModalFormValues>
-  >({});
+  const isApplyingTemplateValuesRef = React.useRef(false);
+  const manuallyEditedTemplateFieldsRef = React.useRef<
+    Set<keyof CloseModalFormValues>
+  >(new Set());
+  const templateApplyRequestRef = React.useRef(0);
+  const selectedTemplateIdRef = React.useRef<string | null>(null);
   const selectedTemplateId = Form.useWatch('solution_template_id', form);
   const templateVarsText = Form.useWatch('template_vars_text', form);
   const selectedTemplate = React.useMemo(
@@ -208,71 +208,73 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
         incident,
         templateVars,
       );
-      const previousValues = lastAppliedTemplateValuesRef.current;
-      const currentValues = form.getFieldsValue([
-        'close_code',
-        'close_status',
-        'resolution',
-        'work_notes',
-      ]);
       const patch: Partial<CloseModalFormValues> = {};
+      const shouldPatchGeneratedValue = (
+        field: keyof CloseModalFormValues,
+        nextValue?: string,
+      ) => {
+        return Boolean(
+          nextValue && !manuallyEditedTemplateFieldsRef.current.has(field),
+        );
+      };
 
-      if (
-        nextValues.close_code &&
-        (!currentValues.close_code ||
-          currentValues.close_code === previousValues.close_code)
-      ) {
+      if (shouldPatchGeneratedValue('close_code', nextValues.close_code)) {
         patch.close_code = nextValues.close_code;
       }
-      if (
-        nextValues.close_status &&
-        (!currentValues.close_status ||
-          currentValues.close_status === previousValues.close_status)
-      ) {
+      if (shouldPatchGeneratedValue('close_status', nextValues.close_status)) {
         patch.close_status = nextValues.close_status;
       }
-      if (
-        nextValues.resolution &&
-        (!currentValues.resolution ||
-          currentValues.resolution === previousValues.resolution)
-      ) {
+      if (shouldPatchGeneratedValue('resolution', nextValues.resolution)) {
         patch.resolution = nextValues.resolution;
       }
-      if (
-        nextValues.work_notes &&
-        (!currentValues.work_notes ||
-          currentValues.work_notes === previousValues.work_notes)
-      ) {
+      if (shouldPatchGeneratedValue('work_notes', nextValues.work_notes)) {
         patch.work_notes = nextValues.work_notes;
       }
 
       if (Object.keys(patch).length > 0) {
-        form.setFieldsValue(patch);
+        isApplyingTemplateValuesRef.current = true;
+        try {
+          form.setFieldsValue(patch);
+        } finally {
+          isApplyingTemplateValuesRef.current = false;
+        }
       }
-      lastAppliedTemplateValuesRef.current = nextValues;
     },
     [form, incident],
   );
 
-  React.useEffect(() => {
-    if (!open || !selectedTemplateId || !selectedTemplate) {
-      return;
-    }
-
-    let active = true;
-    const applySelectedTemplate = async () => {
+  const applySelectedTemplate = React.useCallback(
+    async (templateId?: string | null, templateVarsTextValue?: string) => {
+      if (!open || !templateId) {
+        return;
+      }
+      const requestId = templateApplyRequestRef.current + 1;
+      templateApplyRequestRef.current = requestId;
       let templateVars: AutoHealing.JsonObject | undefined;
       try {
-        templateVars = parseTemplateVarsText(templateVarsText);
+        templateVars = parseTemplateVarsText(templateVarsTextValue);
       } catch {
         return;
       }
-      let templateToApply = selectedTemplate;
+      const isCurrentTemplateSelection = () =>
+        selectedTemplateIdRef.current === templateId;
+      if (!isCurrentTemplateSelection()) {
+        return;
+      }
+      let templateToApply = templates.find(
+        (template) => template.id === templateId,
+      );
+      if (!templateToApply) {
+        return;
+      }
       if (!hasTemplateBody(templateToApply)) {
-        setTemplateDetailLoadingId(selectedTemplateId);
+        setTemplateDetailLoadingId(templateId);
         try {
-          const detail = await getIncidentSolutionTemplate(selectedTemplateId);
-          if (!active) {
+          const detail = await getIncidentSolutionTemplate(templateId);
+          if (
+            templateApplyRequestRef.current !== requestId ||
+            !isCurrentTemplateSelection()
+          ) {
             return;
           }
           templateToApply = detail;
@@ -282,30 +284,31 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
             ),
           );
         } catch {
-          templateToApply = selectedTemplate;
+          // Keep the list item as a fallback so default status/code can still apply.
         } finally {
-          if (active) {
+          if (templateApplyRequestRef.current === requestId) {
             setTemplateDetailLoadingId(null);
           }
         }
       }
-      if (active) {
+      if (
+        templateApplyRequestRef.current === requestId &&
+        isCurrentTemplateSelection()
+      ) {
         applyTemplateValues(templateToApply, templateVars);
       }
-    };
+    },
+    [applyTemplateValues, open, templates],
+  );
 
-    void applySelectedTemplate();
+  React.useEffect(() => {
+    if (!open || !selectedTemplateId) {
+      return;
+    }
 
-    return () => {
-      active = false;
-    };
-  }, [
-    applyTemplateValues,
-    open,
-    selectedTemplate,
-    selectedTemplateId,
-    templateVarsText,
-  ]);
+    selectedTemplateIdRef.current = selectedTemplateId;
+    void applySelectedTemplate(selectedTemplateId, templateVarsText);
+  }, [applySelectedTemplate, open, selectedTemplateId, templateVarsText]);
 
   return (
     <Modal
@@ -344,14 +347,18 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
       }}
       afterOpenChange={(visible) => {
         if (visible) {
-          lastAppliedTemplateValuesRef.current = {};
+          manuallyEditedTemplateFieldsRef.current = new Set();
+          templateApplyRequestRef.current += 1;
+          selectedTemplateIdRef.current = null;
           form.setFieldsValue({
             close_status: 'resolved',
             close_code: 'auto_healed',
           });
           return;
         }
-        lastAppliedTemplateValuesRef.current = {};
+        manuallyEditedTemplateFieldsRef.current = new Set();
+        templateApplyRequestRef.current += 1;
+        selectedTemplateIdRef.current = null;
         form.resetFields();
       }}
       width={960}
@@ -368,6 +375,18 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
         form={form}
         layout="vertical"
         initialValues={{ close_status: 'resolved', close_code: 'auto_healed' }}
+        onValuesChange={(changedValues) => {
+          if (isApplyingTemplateValuesRef.current) {
+            return;
+          }
+          (
+            ['close_code', 'close_status', 'resolution', 'work_notes'] as const
+          ).forEach((field) => {
+            if (Object.hasOwn(changedValues, field)) {
+              manuallyEditedTemplateFieldsRef.current.add(field);
+            }
+          });
+        }}
       >
         <Row gutter={[24, 0]} align="top" style={{ marginInline: 0 }}>
           <Col xs={24} lg={10}>
@@ -407,8 +426,13 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                 placeholder="可选：选择一个关单模板"
                 onChange={(templateId) => {
                   if (!templateId) {
-                    lastAppliedTemplateValuesRef.current = {};
+                    templateApplyRequestRef.current += 1;
+                    selectedTemplateIdRef.current = null;
+                    setTemplateDetailLoadingId(null);
+                    return;
                   }
+                  selectedTemplateIdRef.current = templateId;
+                  void applySelectedTemplate(templateId, templateVarsText);
                 }}
               />
             </Form.Item>
@@ -441,18 +465,32 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item
-              name="template_vars_text"
-              label="补充模板变量（JSON，可选）"
-              extra={
-                '通常不用填。只有模板包含 execution.run_id 这类额外占位符时，才在这里补充对应 JSON；系统已自动提供 incident / operator / system。'
-              }
-            >
-              <Input.TextArea
-                rows={5}
-                placeholder='例如：{"execution":{"run_id":"run-1","message":"人工确认恢复正常"}}'
-              />
-            </Form.Item>
+            <Collapse
+              ghost
+              size="small"
+              style={{ marginTop: -4 }}
+              items={[
+                {
+                  key: 'template-vars',
+                  label: '高级变量',
+                  children: (
+                    <Form.Item
+                      name="template_vars_text"
+                      label="补充模板变量（JSON，可选）"
+                      extra={
+                        '通常不用填。只有模板包含 execution.run_id 这类额外占位符时，才在这里补充对应 JSON；系统已自动提供 incident / operator / system。'
+                      }
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Input.TextArea
+                        rows={4}
+                        placeholder='例如：{"execution":{"run_id":"run-1","message":"人工确认恢复正常"}}'
+                      />
+                    </Form.Item>
+                  ),
+                },
+              ]}
+            />
           </Col>
           <Col xs={24} lg={14}>
             <Form.Item

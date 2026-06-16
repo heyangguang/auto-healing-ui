@@ -18,6 +18,23 @@ jest.mock('@/services/auto-healing/incidentSolutionTemplates', () => ({
   getIncidentSolutionTemplates: jest.fn(),
 }));
 
+async function selectTemplateOption(label: string) {
+  const selector = document.querySelector('.ant-select');
+  expect(selector).toBeTruthy();
+  fireEvent.mouseDown(selector as Element);
+  await waitFor(() => {
+    expect(document.querySelector('.ant-select-dropdown')).toBeTruthy();
+  });
+  const optionContent = Array.from(
+    document.querySelectorAll('.ant-select-item-option-content'),
+  ).find((item) => item.textContent === label);
+  expect(optionContent).toBeTruthy();
+  const option = optionContent?.closest('.ant-select-item-option');
+  expect(option).toBeTruthy();
+  fireEvent.mouseDown(option as Element);
+  fireEvent.click(option as Element);
+}
+
 describe('IncidentCloseModal', () => {
   beforeEach(() => {
     (getIncidentSolutionTemplates as jest.Mock).mockResolvedValue([
@@ -60,6 +77,7 @@ describe('IncidentCloseModal', () => {
     fireEvent.change(screen.getByLabelText('解决说明'), {
       target: { value: '已恢复' },
     });
+    fireEvent.click(screen.getByText('高级变量'));
     fireEvent.change(screen.getByLabelText('补充模板变量（JSON，可选）'), {
       target: { value: '{"execution":{"run_id":"run-1"}}' },
     });
@@ -98,8 +116,7 @@ describe('IncidentCloseModal', () => {
       expect(getIncidentSolutionTemplates).toHaveBeenCalled();
     });
 
-    fireEvent.mouseDown(screen.getByLabelText('解决方案模板'));
-    fireEvent.click(await screen.findByText('自动修复模板'));
+    await selectTemplateOption('自动修复模板');
 
     await waitFor(() => {
       expect(getIncidentSolutionTemplate).toHaveBeenCalledWith('template-1');
@@ -111,6 +128,86 @@ describe('IncidentCloseModal', () => {
     expect(screen.getByLabelText('处理备注')).toHaveProperty(
       'value',
       expect.stringContaining('工单 R-000040 触发 日志目录快速膨胀'),
+    );
+    expect(screen.getByLabelText('处理备注')).toHaveProperty(
+      'value',
+      expect.stringContaining('执行 clean_logs 自动化处理'),
+    );
+  });
+
+  it('refreshes generated notes when switching templates before manual edits', async () => {
+    (getIncidentSolutionTemplates as jest.Mock).mockResolvedValue([
+      {
+        id: 'template-1',
+        name: '进程处置模板',
+        default_close_code: 'auto_healed',
+        default_close_status: 'resolved',
+      },
+      {
+        id: 'template-2',
+        name: '黑名单拦截模板',
+        default_close_code: 'auto_healed',
+        default_close_status: 'resolved',
+      },
+    ]);
+    (getIncidentSolutionTemplate as jest.Mock).mockImplementation(
+      async (id: string) => ({
+        id,
+        name: id === 'template-1' ? '进程处置模板' : '黑名单拦截模板',
+        default_close_code: 'auto_healed',
+        default_close_status: 'resolved',
+        problem_template:
+          '工单 {{ incident.external_id }} 触发 {{ incident.title }}',
+        solution_template:
+          id === 'template-1'
+            ? '终止异常进程并确认进程数量为 0'
+            : '拦截命中的黑名单命令，阻断危险操作',
+        verification_template:
+          id === 'template-1'
+            ? '确认异常进程已关闭'
+            : '确认风险操作未在目标机执行',
+        conclusion_template: '业务风险已消除',
+      }),
+    );
+
+    render(
+      React.createElement(IncidentCloseModal, {
+        incident: {
+          id: 'incident-1',
+          external_id: 'R-000041',
+          title: '日志目录快速膨胀',
+        } as AutoHealing.Incident,
+        loading: false,
+        open: true,
+        onCancel: jest.fn(),
+        onSubmit: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(getIncidentSolutionTemplates).toHaveBeenCalled();
+    });
+
+    await selectTemplateOption('进程处置模板');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('处理备注')).toHaveProperty(
+        'value',
+        expect.stringContaining('终止异常进程并确认进程数量为 0'),
+      );
+    });
+
+    await selectTemplateOption('黑名单拦截模板');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('处理备注')).toHaveProperty(
+        'value',
+        expect.stringContaining('拦截命中的黑名单命令，阻断危险操作'),
+      );
+    });
+    expect(screen.getByLabelText('处理备注')).not.toHaveProperty(
+      'value',
+      expect.stringContaining('终止异常进程并确认进程数量为 0'),
     );
   });
 
@@ -139,6 +236,10 @@ describe('IncidentCloseModal', () => {
     expect(values.close_code).toBe('auto_healed');
     expect(values.close_status).toBe('resolved');
     expect(values.work_notes).toContain('工单 R-000040 触发 日志目录快速膨胀');
+    expect(values.work_notes).toContain('【处理动作】');
+    expect(values.work_notes).toContain('执行 clean_logs 自动化处理');
+    expect(values.work_notes).toContain('【验证结果】');
+    expect(values.work_notes).toContain('确认 e2e-target-01 已恢复');
     expect(values.resolution).toContain('【解决方案】');
     expect(values.resolution).toContain('执行 clean_logs 自动化处理');
     expect(values.resolution).toContain('【验证结果】');
@@ -169,6 +270,7 @@ describe('IncidentCloseModal', () => {
     );
 
     expect(values.work_notes).toContain('执行编号 run-1');
+    expect(values.work_notes).toContain('执行结果 人工确认恢复正常');
     expect(values.resolution).toContain('执行结果 人工确认恢复正常');
   });
 });
