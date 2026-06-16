@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { getIncidentSolutionTemplates } from '@/services/auto-healing/incidentSolutionTemplates';
+import {
+  getIncidentSolutionTemplate,
+  getIncidentSolutionTemplates,
+} from '@/services/auto-healing/incidentSolutionTemplates';
 import {
   buildCloseModalTemplateValues,
   IncidentCloseModal,
@@ -11,6 +14,7 @@ jest.mock('@umijs/max', () => ({
 }));
 
 jest.mock('@/services/auto-healing/incidentSolutionTemplates', () => ({
+  getIncidentSolutionTemplate: jest.fn(),
   getIncidentSolutionTemplates: jest.fn(),
 }));
 
@@ -24,6 +28,17 @@ describe('IncidentCloseModal', () => {
         default_close_status: 'resolved',
       },
     ]);
+    (getIncidentSolutionTemplate as jest.Mock).mockResolvedValue({
+      id: 'template-1',
+      name: '自动修复模板',
+      default_close_code: 'auto_healed',
+      default_close_status: 'resolved',
+      problem_template:
+        '工单 {{ incident.external_id }} 触发 {{ incident.title }}',
+      solution_template: '执行 {{ incident.category }} 自动化处理',
+      verification_template: '确认 {{ incident.affected_ci }} 已恢复',
+      conclusion_template: '业务已恢复正常',
+    });
   });
 
   it('parses template vars json before submit', async () => {
@@ -60,6 +75,43 @@ describe('IncidentCloseModal', () => {
         }),
       );
     });
+  });
+
+  it('loads template detail and fills editable fields when selected template has only summary fields', async () => {
+    render(
+      React.createElement(IncidentCloseModal, {
+        incident: {
+          id: 'incident-1',
+          external_id: 'R-000040',
+          title: '日志目录快速膨胀',
+          affected_ci: 'e2e-target-01',
+          category: 'clean_logs',
+        } as AutoHealing.Incident,
+        loading: false,
+        open: true,
+        onCancel: jest.fn(),
+        onSubmit: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(getIncidentSolutionTemplates).toHaveBeenCalled();
+    });
+
+    fireEvent.mouseDown(screen.getByLabelText('解决方案模板'));
+    fireEvent.click(await screen.findByText('自动修复模板'));
+
+    await waitFor(() => {
+      expect(getIncidentSolutionTemplate).toHaveBeenCalledWith('template-1');
+      expect(screen.getByLabelText('解决说明')).toHaveProperty(
+        'value',
+        expect.stringContaining('执行 clean_logs 自动化处理'),
+      );
+    });
+    expect(screen.getByLabelText('处理备注')).toHaveProperty(
+      'value',
+      expect.stringContaining('工单 R-000040 触发 日志目录快速膨胀'),
+    );
   });
 
   it('builds editable close fields from the selected solution template', () => {

@@ -10,7 +10,10 @@ import {
   Typography,
 } from 'antd';
 import React from 'react';
-import { getIncidentSolutionTemplates } from '@/services/auto-healing/incidentSolutionTemplates';
+import {
+  getIncidentSolutionTemplate,
+  getIncidentSolutionTemplates,
+} from '@/services/auto-healing/incidentSolutionTemplates';
 import {
   renderTemplate,
   solutionTemplateSummary,
@@ -64,6 +67,15 @@ function appendTemplateSection(
   lines.push(`【${title}】\n${content.trim()}`);
 }
 
+function hasTemplateBody(template?: AutoHealing.IncidentSolutionTemplate) {
+  return Boolean(
+    template?.problem_template?.trim() ||
+      template?.solution_template?.trim() ||
+      template?.verification_template?.trim() ||
+      template?.conclusion_template?.trim(),
+  );
+}
+
 export function buildCloseModalTemplateValues(
   template: AutoHealing.IncidentSolutionTemplate,
   incident?: AutoHealing.Incident | null,
@@ -111,6 +123,9 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
     AutoHealing.IncidentSolutionTemplate[]
   >([]);
   const [templatesLoading, setTemplatesLoading] = React.useState(false);
+  const [templateDetailLoadingId, setTemplateDetailLoadingId] = React.useState<
+    string | null
+  >(null);
   const lastAppliedTemplateValuesRef = React.useRef<
     Partial<CloseModalFormValues>
   >({});
@@ -201,6 +216,47 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
     [form, incident],
   );
 
+  React.useEffect(() => {
+    if (!open || !selectedTemplateId || !selectedTemplate) {
+      return;
+    }
+
+    let active = true;
+    const applySelectedTemplate = async () => {
+      let templateToApply = selectedTemplate;
+      if (!hasTemplateBody(templateToApply)) {
+        setTemplateDetailLoadingId(selectedTemplateId);
+        try {
+          const detail = await getIncidentSolutionTemplate(selectedTemplateId);
+          if (!active) {
+            return;
+          }
+          templateToApply = detail;
+          setTemplates((current) =>
+            current.map((item) =>
+              item.id === detail.id ? { ...item, ...detail } : item,
+            ),
+          );
+        } catch {
+          templateToApply = selectedTemplate;
+        } finally {
+          if (active) {
+            setTemplateDetailLoadingId(null);
+          }
+        }
+      }
+      if (active) {
+        applyTemplateValues(templateToApply);
+      }
+    };
+
+    void applySelectedTemplate();
+
+    return () => {
+      active = false;
+    };
+  }, [applyTemplateValues, open, selectedTemplate, selectedTemplateId]);
+
   return (
     <Modal
       title="关闭工单"
@@ -288,7 +344,9 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
           <Select
             allowClear
             showSearch
-            loading={templatesLoading}
+            loading={
+              templatesLoading || templateDetailLoadingId === selectedTemplateId
+            }
             options={templates.map((template) => ({
               label: template.name,
               value: template.id,
@@ -296,12 +354,9 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
             optionFilterProp="label"
             placeholder="可选：选择一个关单模板"
             onChange={(templateId) => {
-              const template = templates.find((item) => item.id === templateId);
-              if (!template) {
+              if (!templateId) {
                 lastAppliedTemplateValuesRef.current = {};
-                return;
               }
-              applyTemplateValues(template);
             }}
           />
         </Form.Item>
@@ -310,7 +365,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
             style={{ marginBottom: 16 }}
             type="info"
             showIcon
-            message={selectedTemplate.name}
+            title={selectedTemplate.name}
             description={
               selectedTemplate.description ||
               solutionTemplateSummary(selectedTemplate) ||
