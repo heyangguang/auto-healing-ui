@@ -11,20 +11,23 @@ import {
   buildSolutionTemplatePreview,
   buildTemplateEditorValues,
   buildTemplatePayload,
+  classifySolutionTemplateVariables,
   DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES,
   filterSolutionTemplates,
   parseSolutionTemplateSearchParams,
-  solutionTemplateSummary,
-  sortSolutionTemplates,
   type SolutionTemplateFormValues,
   type SolutionTemplateSearchParams,
   type SolutionTemplateSortField,
   type SolutionTemplateSortOrder,
+  solutionTemplateSummary,
+  sortSolutionTemplates,
 } from './solutionTemplateHelpers';
 
 export const useSolutionTemplatesPage = () => {
   const [form] = Form.useForm<SolutionTemplateFormValues>();
-  const [templates, setTemplates] = useState<AutoHealing.IncidentSolutionTemplate[]>([]);
+  const [templates, setTemplates] = useState<
+    AutoHealing.IncidentSolutionTemplate[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -46,7 +49,12 @@ export const useSolutionTemplatesPage = () => {
       setTemplates(data);
       setSelectedId((current) => current || data[0]?.id || null);
     } catch (error: unknown) {
-      message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '加载解决方案模板失败，请稍后重试'));
+      message.error(
+        extractErrorMsg(
+          error as Parameters<typeof extractErrorMsg>[0],
+          '加载解决方案模板失败，请稍后重试',
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -56,11 +64,28 @@ export const useSolutionTemplatesPage = () => {
     void loadTemplates();
   }, [loadTemplates]);
 
-  const visibleTemplates = useMemo(() => sortSolutionTemplates(
-    filterSolutionTemplates(templates, { searchField, searchText, closeStatus, stepsMode }),
-    sortBy,
-    sortOrder,
-  ), [closeStatus, searchField, searchText, sortBy, sortOrder, stepsMode, templates]);
+  const visibleTemplates = useMemo(
+    () =>
+      sortSolutionTemplates(
+        filterSolutionTemplates(templates, {
+          searchField,
+          searchText,
+          closeStatus,
+          stepsMode,
+        }),
+        sortBy,
+        sortOrder,
+      ),
+    [
+      closeStatus,
+      searchField,
+      searchText,
+      sortBy,
+      sortOrder,
+      stepsMode,
+      templates,
+    ],
+  );
 
   useEffect(() => {
     if (isCreating) {
@@ -87,15 +112,25 @@ export const useSolutionTemplatesPage = () => {
     setIsDirty(false);
   }, [form, isCreating, selectedTemplate]);
 
-  const previewSections = useMemo(() => buildSolutionTemplatePreview(form.getFieldsValue(true)), [form, formRevision, isCreating, selectedId]);
+  const previewSections = useMemo(
+    () => buildSolutionTemplatePreview(form.getFieldsValue(true)),
+    [form, formRevision, isCreating, selectedId],
+  );
+  const variableUsage = useMemo(
+    () => classifySolutionTemplateVariables(form.getFieldsValue(true)),
+    [form, formRevision, isCreating, selectedId],
+  );
 
-  const handleSearchChange = useCallback((params: SolutionTemplateSearchParams) => {
-    const next = parseSolutionTemplateSearchParams(params);
-    setSearchField(next.searchField);
-    setSearchText(next.searchText);
-    setCloseStatus(next.closeStatus);
-    setStepsMode(next.stepsMode);
-  }, []);
+  const handleSearchChange = useCallback(
+    (params: SolutionTemplateSearchParams) => {
+      const next = parseSolutionTemplateSearchParams(params);
+      setSearchField(next.searchField);
+      setSearchText(next.searchText);
+      setCloseStatus(next.closeStatus);
+      setStepsMode(next.stepsMode);
+    },
+    [],
+  );
 
   const handleCreate = useCallback(() => {
     setIsCreating(true);
@@ -115,19 +150,31 @@ export const useSolutionTemplatesPage = () => {
       const values = await form.validateFields();
       setSaving(true);
       if (isCreating) {
-        const created = await createIncidentSolutionTemplate(buildTemplatePayload(values));
+        const created = await createIncidentSolutionTemplate(
+          buildTemplatePayload(values),
+        );
         message.success('模板已创建');
         setIsCreating(false);
         setSelectedId(created.id);
       } else if (selectedTemplate) {
-        await updateIncidentSolutionTemplate(selectedTemplate.id, buildTemplatePayload(values));
+        await updateIncidentSolutionTemplate(
+          selectedTemplate.id,
+          buildTemplatePayload(values),
+        );
         message.success('模板已更新');
       }
       setIsDirty(false);
       await loadTemplates();
     } catch (error: unknown) {
-      if (!(typeof error === 'object' && error !== null && 'errorFields' in error)) {
-        message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], isCreating ? '创建解决方案模板失败' : '更新解决方案模板失败'));
+      if (
+        !(typeof error === 'object' && error !== null && 'errorFields' in error)
+      ) {
+        message.error(
+          extractErrorMsg(
+            error as Parameters<typeof extractErrorMsg>[0],
+            isCreating ? '创建解决方案模板失败' : '更新解决方案模板失败',
+          ),
+        );
       }
     } finally {
       setSaving(false);
@@ -144,7 +191,12 @@ export const useSolutionTemplatesPage = () => {
       setSelectedId(null);
       await loadTemplates();
     } catch (error: unknown) {
-      message.error(extractErrorMsg(error as Parameters<typeof extractErrorMsg>[0], '删除解决方案模板失败'));
+      message.error(
+        extractErrorMsg(
+          error as Parameters<typeof extractErrorMsg>[0],
+          '删除解决方案模板失败',
+        ),
+      );
     }
   }, [loadTemplates, selectedTemplate]);
 
@@ -176,5 +228,6 @@ export const useSolutionTemplatesPage = () => {
     sortOrder,
     templates: visibleTemplates,
     totalTemplates: templates.length,
+    variableUsage,
   };
 };

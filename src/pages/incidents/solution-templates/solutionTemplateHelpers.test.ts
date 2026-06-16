@@ -2,6 +2,7 @@ import {
   buildSolutionTemplatePreview,
   buildTemplateEditorValues,
   buildTemplatePayload,
+  classifySolutionTemplateVariables,
   DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES,
   filterSolutionTemplates,
   getSolutionTemplateCloseStatusMeta,
@@ -125,5 +126,27 @@ describe('solution template helpers', () => {
 
   it('clears template name in default form values for create mode', () => {
     expect(DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES.name).toBe('');
+  });
+
+  it('classifies built-in and supplemental template variables', () => {
+    expect(
+      classifySolutionTemplateVariables({
+        problem_template:
+          '工单 {{ incident.external_id }} 来自 {{ incident.source_plugin_name }}',
+        solution_template:
+          '执行 {{ execution.run_id }}，流程 {{ flow.instance_id }}',
+        verification_template:
+          '复核 {{ operator.name }} / {{ system.timestamp }} / {{ close_code }}',
+      }),
+    ).toEqual({
+      extraVariables: ['execution.run_id', 'flow.instance_id'],
+      systemVariables: [
+        'incident.external_id',
+        'incident.source_plugin_name',
+        'operator.name',
+        'system.timestamp',
+        'close_code',
+      ],
+    });
   });
 });

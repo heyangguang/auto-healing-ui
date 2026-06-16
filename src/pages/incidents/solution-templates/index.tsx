@@ -25,9 +25,11 @@ import StandardTable from '@/components/StandardTable';
 import {
   getSolutionTemplateCloseStatusMeta,
   getSolutionTemplateStepsModeMeta,
+  SOLUTION_TEMPLATE_BUILT_IN_VARIABLE_GROUPS,
   SOLUTION_TEMPLATE_COLUMNS,
   SOLUTION_TEMPLATE_SEARCH_FIELDS,
   SOLUTION_TEMPLATE_SORT_OPTIONS,
+  type SolutionTemplateVariableUsage,
 } from './solutionTemplateHelpers';
 import { useSolutionTemplatesPage } from './useSolutionTemplatesPage';
 import './index.css';
@@ -70,6 +72,119 @@ const solutionTemplateHeaderIcon = (
   </svg>
 );
 
+const TemplateVariableReference: React.FC<{
+  variableUsage: SolutionTemplateVariableUsage;
+}> = ({ variableUsage }) => {
+  const hasVariables =
+    variableUsage.systemVariables.length > 0 ||
+    variableUsage.extraVariables.length > 0;
+  return (
+    <div className="solution-templates-variable-reference">
+      <div className="solution-templates-variable-reference-header">
+        <div>
+          <Typography.Text strong>模板变量说明</Typography.Text>
+          <Typography.Text type="secondary">
+            使用 {'{{ variable.path }}'}{' '}
+            写入占位符，点击变量可复制完整写法，悬停可查看含义。
+          </Typography.Text>
+        </div>
+        <Tag color="blue" style={{ margin: 0 }}>
+          系统自动填充
+        </Tag>
+      </div>
+      <div className="solution-templates-variable-reference-body">
+        <div className="solution-templates-variable-groups">
+          {SOLUTION_TEMPLATE_BUILT_IN_VARIABLE_GROUPS.map((group) => (
+            <div
+              className="solution-templates-variable-group"
+              key={group.label}
+            >
+              <div
+                className="solution-templates-variable-group-title"
+                title={group.description}
+              >
+                <Typography.Text strong>{group.label}</Typography.Text>
+              </div>
+              <div className="solution-templates-variable-list">
+                {group.variables.map((variable) => (
+                  <Typography.Text
+                    className="solution-templates-variable-chip"
+                    copyable={{
+                      text: `{{ ${variable.path} }}`,
+                      tooltips: ['复制占位符', '已复制'],
+                    }}
+                    key={variable.path}
+                    title={variable.description}
+                  >
+                    <span className="solution-templates-variable-chip-code">
+                      {variable.path}
+                    </span>
+                    <span className="solution-templates-variable-chip-desc">
+                      {variable.description}
+                    </span>
+                  </Typography.Text>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="solution-templates-variable-side">
+          <div className="solution-templates-variable-extra-rule">
+            <Typography.Text strong>额外变量</Typography.Text>
+            <Typography.Text type="secondary">
+              不在左侧列表里的占位符，例如 {'{{ execution.run_id }}'}、
+              {'{{ flow.instance_id }}'}，手动关单时会自动变成补充输入框。
+            </Typography.Text>
+          </div>
+          <div className="solution-templates-variable-usage">
+            <Typography.Text strong>当前模板变量识别</Typography.Text>
+            {hasVariables ? (
+              <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+                <div className="solution-templates-variable-usage-row">
+                  <Typography.Text type="secondary">系统可填充</Typography.Text>
+                  {variableUsage.systemVariables.length > 0 ? (
+                    <Space size={[6, 6]} wrap>
+                      {variableUsage.systemVariables.map((variable) => (
+                        <Tag key={variable} style={{ margin: 0 }}>
+                          {variable}
+                        </Tag>
+                      ))}
+                    </Space>
+                  ) : (
+                    <Typography.Text type="secondary">暂未使用</Typography.Text>
+                  )}
+                </div>
+                <div className="solution-templates-variable-usage-row">
+                  <Typography.Text type="secondary">需要补充</Typography.Text>
+                  {variableUsage.extraVariables.length > 0 ? (
+                    <Space size={[6, 6]} wrap>
+                      {variableUsage.extraVariables.map((variable) => (
+                        <Tag
+                          color="processing"
+                          key={variable}
+                          style={{ margin: 0 }}
+                        >
+                          {variable}
+                        </Tag>
+                      ))}
+                    </Space>
+                  ) : (
+                    <Typography.Text type="secondary">暂无</Typography.Text>
+                  )}
+                </div>
+              </Space>
+            ) : (
+              <Typography.Text type="secondary">
+                模板内容里还没有检测到占位符。
+              </Typography.Text>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SolutionTemplatePage: React.FC = () => {
   const access = useAccess();
   const {
@@ -96,6 +211,7 @@ const SolutionTemplatePage: React.FC = () => {
     sortOrder,
     templates,
     totalTemplates,
+    variableUsage,
   } = useSolutionTemplatesPage();
   const canCreateSolutionTemplate = access.canCreateSolutionTemplate;
   const canUpdateSolutionTemplate = access.canUpdateSolutionTemplate;
@@ -264,6 +380,7 @@ const SolutionTemplatePage: React.FC = () => {
                       message="解决方案模板采用“静态方案 + 动态步骤”模式"
                       description="问题说明、解决方案、验证结果和最终结论由模板定义，执行步骤由系统根据真实运行过程自动生成。"
                     />
+                    <TemplateVariableReference variableUsage={variableUsage} />
                     <Form
                       form={form}
                       layout="vertical"

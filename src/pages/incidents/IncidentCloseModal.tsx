@@ -19,6 +19,8 @@ import {
 } from '@/services/auto-healing/incidentSolutionTemplates';
 import {
   renderTemplate,
+  SOLUTION_TEMPLATE_BUILT_IN_VARIABLE_GROUPS,
+  SOLUTION_TEMPLATE_SYSTEM_VARIABLE_ROOTS,
   solutionTemplateSummary,
 } from './solution-templates/solutionTemplateHelpers';
 
@@ -66,40 +68,6 @@ const contextRowStyle: React.CSSProperties = {
   gap: 12,
   gridTemplateColumns: '72px minmax(0, 1fr)',
 };
-
-const builtInTemplateVariableGroups = [
-  {
-    label: '工单',
-    variables: [
-      'incident.external_id',
-      'incident.title',
-      'incident.affected_ci',
-      'incident.source_plugin_name',
-      'incident.status',
-      'incident.category',
-    ],
-  },
-  {
-    label: '操作人',
-    variables: ['operator.name'],
-  },
-  {
-    label: '系统',
-    variables: ['system.timestamp', 'system.trigger_source'],
-  },
-  {
-    label: '回写',
-    variables: ['close_code', 'close_status'],
-  },
-];
-
-const SYSTEM_TEMPLATE_ROOTS = new Set([
-  'close_code',
-  'close_status',
-  'incident',
-  'operator',
-  'system',
-]);
 
 function displayValue(value?: React.ReactNode) {
   return value || <Typography.Text type="secondary">-</Typography.Text>;
@@ -173,7 +141,7 @@ function extractTemplateVariablePaths(
       const segments = rawPath.split('.').filter(Boolean);
       const root = segments[0];
       let extraPath = '';
-      if (!root || SYSTEM_TEMPLATE_ROOTS.has(root)) {
+      if (!root || SOLUTION_TEMPLATE_SYSTEM_VARIABLE_ROOTS.has(root)) {
         continue;
       }
       if (root === 'input') {
@@ -669,7 +637,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                     <Typography.Text type="secondary">
                       模板可直接使用这些占位符，不需要客户补充。
                     </Typography.Text>
-                    {builtInTemplateVariableGroups.map((group) => (
+                    {SOLUTION_TEMPLATE_BUILT_IN_VARIABLE_GROUPS.map((group) => (
                       <div key={group.label}>
                         <Typography.Text
                           type="secondary"
@@ -679,8 +647,8 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                         </Typography.Text>
                         <Space size={[6, 6]} wrap>
                           {group.variables.map((variable) => (
-                            <Tag key={variable} style={{ margin: 0 }}>
-                              {variable}
+                            <Tag key={variable.path} style={{ margin: 0 }}>
+                              {variable.path}
                             </Tag>
                           ))}
                         </Space>

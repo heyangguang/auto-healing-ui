@@ -21,6 +21,67 @@ export type SolutionTemplateFormValues = {
   default_close_status?: 'resolved' | 'closed';
 };
 
+export type SolutionTemplateVariableDefinition = {
+  path: string;
+  description: string;
+};
+
+export type SolutionTemplateVariableGroup = {
+  label: string;
+  description: string;
+  variables: SolutionTemplateVariableDefinition[];
+};
+
+export type SolutionTemplateVariableUsage = {
+  extraVariables: string[];
+  systemVariables: string[];
+};
+
+export const SOLUTION_TEMPLATE_BUILT_IN_VARIABLE_GROUPS: SolutionTemplateVariableGroup[] =
+  [
+    {
+      label: '工单',
+      description: '来自当前工单，适合写问题背景和影响对象。',
+      variables: [
+        { path: 'incident.external_id', description: '源工单编号' },
+        { path: 'incident.title', description: '工单标题' },
+        { path: 'incident.affected_ci', description: '影响资产' },
+        { path: 'incident.source_plugin_name', description: '来源系统' },
+        { path: 'incident.status', description: '当前状态' },
+        { path: 'incident.category', description: '故障分类' },
+      ],
+    },
+    {
+      label: '操作人',
+      description: '来自关单动作或自动流程的操作者信息。',
+      variables: [{ path: 'operator.name', description: '操作人名称' }],
+    },
+    {
+      label: '系统',
+      description: '由系统在渲染模板时自动生成。',
+      variables: [
+        { path: 'system.timestamp', description: '渲染时间' },
+        { path: 'system.trigger_source', description: '触发来源' },
+      ],
+    },
+    {
+      label: '回写',
+      description: '来自当前关单回写参数。',
+      variables: [
+        { path: 'close_code', description: '关闭码' },
+        { path: 'close_status', description: '关闭状态' },
+      ],
+    },
+  ];
+
+export const SOLUTION_TEMPLATE_SYSTEM_VARIABLE_ROOTS = new Set([
+  'close_code',
+  'close_status',
+  'incident',
+  'operator',
+  'system',
+]);
+
 export const SOLUTION_TEMPLATE_CLOSE_STATUS_META = {
   closed: { color: 'default', label: '已关闭' },
   resolved: { color: 'blue', label: '已解决' },
@@ -181,6 +242,35 @@ export const buildSolutionTemplatePreview = (
     ].filter((section) => section.content.trim().length > 0),
   };
 };
+
+export function classifySolutionTemplateVariables(
+  values?: Partial<SolutionTemplateFormValues> | null,
+): SolutionTemplateVariableUsage {
+  const systemVariables: string[] = [];
+  const extraVariables: string[] = [];
+  const seen = new Set<string>();
+  const collect = (content?: string) => {
+    for (const match of content?.matchAll(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g) ||
+      []) {
+      const path = match[1];
+      if (!path || seen.has(path)) {
+        continue;
+      }
+      seen.add(path);
+      const root = path.split('.')[0];
+      if (SOLUTION_TEMPLATE_SYSTEM_VARIABLE_ROOTS.has(root)) {
+        systemVariables.push(path);
+      } else {
+        extraVariables.push(path);
+      }
+    }
+  };
+  collect(values?.problem_template);
+  collect(values?.solution_template);
+  collect(values?.verification_template);
+  collect(values?.conclusion_template);
+  return { extraVariables, systemVariables };
+}
 
 export const sortSolutionTemplates = (
   templates: AutoHealing.IncidentSolutionTemplate[],
