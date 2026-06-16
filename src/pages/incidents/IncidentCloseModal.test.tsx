@@ -60,7 +60,7 @@ describe('IncidentCloseModal', () => {
     fireEvent.change(screen.getByLabelText('解决说明'), {
       target: { value: '已恢复' },
     });
-    fireEvent.change(screen.getByLabelText('模板变量（JSON）'), {
+    fireEvent.change(screen.getByLabelText('补充模板变量（JSON，可选）'), {
       target: { value: '{"execution":{"run_id":"run-1"}}' },
     });
     fireEvent.click(screen.getByRole('button', { name: '关闭并回写' }));
@@ -145,5 +145,30 @@ describe('IncidentCloseModal', () => {
     expect(values.resolution).toContain('确认 e2e-target-01 已恢复');
     expect(values.resolution).toContain('【最终结论】');
     expect(values.resolution).toContain('业务已恢复正常');
+  });
+
+  it('uses supplemental template variables when rendering close fields', () => {
+    const values = buildCloseModalTemplateValues(
+      {
+        id: 'template-1',
+        name: '自动修复模板',
+        default_close_code: 'auto_healed',
+        default_close_status: 'resolved',
+        problem_template: '执行编号 {{ execution.run_id }}',
+        solution_template: '执行结果 {{ input.execution.message }}',
+      },
+      {
+        id: 'incident-1',
+      } as AutoHealing.Incident,
+      {
+        execution: {
+          message: '人工确认恢复正常',
+          run_id: 'run-1',
+        },
+      },
+    );
+
+    expect(values.work_notes).toContain('执行编号 run-1');
+    expect(values.resolution).toContain('执行结果 人工确认恢复正常');
   });
 });

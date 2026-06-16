@@ -2,9 +2,11 @@ import { history } from '@umijs/max';
 import {
   Alert,
   Button,
+  Col,
   Form,
   Input,
   Modal,
+  Row,
   Select,
   Space,
   Typography,
@@ -41,11 +43,28 @@ const closeStatusOptions = [
   { value: 'closed', label: '已关闭' },
 ];
 
-function buildTemplateContext(incident?: AutoHealing.Incident | null) {
-  return {
+function parseTemplateVarsText(
+  text?: string,
+): AutoHealing.JsonObject | undefined {
+  if (!text?.trim()) {
+    return undefined;
+  }
+  const parsed = JSON.parse(text);
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('模板变量必须是 JSON 对象');
+  }
+  return parsed as AutoHealing.JsonObject;
+}
+
+function buildTemplateContext(
+  incident?: AutoHealing.Incident | null,
+  templateVars?: AutoHealing.JsonObject,
+) {
+  const context: Record<string, unknown> = {
     close_code: 'auto_healed',
     close_status: 'resolved',
     incident: incident || {},
+    input: {},
     operator: {
       name: 'manual-close',
     },
@@ -54,6 +73,16 @@ function buildTemplateContext(incident?: AutoHealing.Incident | null) {
       trigger_source: 'manual_close',
     },
   };
+  if (templateVars) {
+    const input = context.input as Record<string, unknown>;
+    Object.entries(templateVars).forEach(([key, value]) => {
+      input[key] = value;
+      if (!(key in context)) {
+        context[key] = value;
+      }
+    });
+  }
+  return context;
 }
 
 function appendTemplateSection(
@@ -79,8 +108,9 @@ function hasTemplateBody(template?: AutoHealing.IncidentSolutionTemplate) {
 export function buildCloseModalTemplateValues(
   template: AutoHealing.IncidentSolutionTemplate,
   incident?: AutoHealing.Incident | null,
+  templateVars?: AutoHealing.JsonObject,
 ): Partial<CloseModalFormValues> {
-  const context = buildTemplateContext(incident);
+  const context = buildTemplateContext(incident, templateVars);
   const resolutionParts: string[] = [];
   const problem = renderTemplate(template.problem_template, context);
 
@@ -130,6 +160,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
     Partial<CloseModalFormValues>
   >({});
   const selectedTemplateId = Form.useWatch('solution_template_id', form);
+  const templateVarsText = Form.useWatch('template_vars_text', form);
   const selectedTemplate = React.useMemo(
     () => templates.find((template) => template.id === selectedTemplateId),
     [selectedTemplateId, templates],
@@ -168,8 +199,15 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
   }, [open]);
 
   const applyTemplateValues = React.useCallback(
-    (template: AutoHealing.IncidentSolutionTemplate) => {
-      const nextValues = buildCloseModalTemplateValues(template, incident);
+    (
+      template: AutoHealing.IncidentSolutionTemplate,
+      templateVars?: AutoHealing.JsonObject,
+    ) => {
+      const nextValues = buildCloseModalTemplateValues(
+        template,
+        incident,
+        templateVars,
+      );
       const previousValues = lastAppliedTemplateValuesRef.current;
       const currentValues = form.getFieldsValue([
         'close_code',
@@ -223,6 +261,12 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
 
     let active = true;
     const applySelectedTemplate = async () => {
+      let templateVars: AutoHealing.JsonObject | undefined;
+      try {
+        templateVars = parseTemplateVarsText(templateVarsText);
+      } catch {
+        return;
+      }
       let templateToApply = selectedTemplate;
       if (!hasTemplateBody(templateToApply)) {
         setTemplateDetailLoadingId(selectedTemplateId);
@@ -246,7 +290,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
         }
       }
       if (active) {
-        applyTemplateValues(templateToApply);
+        applyTemplateValues(templateToApply, templateVars);
       }
     };
 
@@ -255,7 +299,13 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
     return () => {
       active = false;
     };
-  }, [applyTemplateValues, open, selectedTemplate, selectedTemplateId]);
+  }, [
+    applyTemplateValues,
+    open,
+    selectedTemplate,
+    selectedTemplateId,
+    templateVarsText,
+  ]);
 
   return (
     <Modal
@@ -269,28 +319,18 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
       onOk={async () => {
         const values = await form.validateFields();
         let templateVars: AutoHealing.JsonObject | undefined;
-        if (values.template_vars_text?.trim()) {
-          try {
-            const parsed = JSON.parse(values.template_vars_text);
-            if (
-              !parsed ||
-              Array.isArray(parsed) ||
-              typeof parsed !== 'object'
-            ) {
-              throw new Error('模板变量必须是 JSON 对象');
-            }
-            templateVars = parsed as AutoHealing.JsonObject;
-          } catch {
-            form.setFields([
-              {
-                name: 'template_vars_text',
-                errors: [
-                  '请输入合法的 JSON 对象，例如 {"execution":{"run_id":"run-1"}}',
-                ],
-              },
-            ]);
-            return;
-          }
+        try {
+          templateVars = parseTemplateVarsText(values.template_vars_text);
+        } catch {
+          form.setFields([
+            {
+              name: 'template_vars_text',
+              errors: [
+                '请输入合法的 JSON 对象，例如 {"execution":{"run_id":"run-1"}}',
+              ],
+            },
+          ]);
+          return;
         }
         await onSubmit({
           close_code: values.close_code,
@@ -314,111 +354,135 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
         lastAppliedTemplateValuesRef.current = {};
         form.resetFields();
       }}
+      width={960}
+      styles={{
+        body: {
+          maxHeight: 'calc(100vh - 220px)',
+          overflowY: 'auto',
+          paddingTop: 12,
+        },
+      }}
     >
       <Form
         form={form}
         layout="vertical"
         initialValues={{ close_status: 'resolved', close_code: 'auto_healed' }}
       >
-        <Form.Item
-          name="solution_template_id"
-          label="解决方案模板"
-          extra={
-            <Space size={8}>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                选择模板后，未填写的解决说明和处理备注会按模板自动生成
-              </Typography.Text>
-              <Button
-                type="link"
-                size="small"
-                style={{ paddingInline: 0 }}
-                onClick={() =>
-                  history.push('/resources/incident-solution-templates')
-                }
-              >
-                管理模板
-              </Button>
-            </Space>
-          }
-        >
-          <Select
-            allowClear
-            showSearch
-            loading={
-              templatesLoading || templateDetailLoadingId === selectedTemplateId
-            }
-            options={templates.map((template) => ({
-              label: template.name,
-              value: template.id,
-            }))}
-            optionFilterProp="label"
-            placeholder="可选：选择一个关单模板"
-            onChange={(templateId) => {
-              if (!templateId) {
-                lastAppliedTemplateValuesRef.current = {};
+        <Row gutter={24} align="top">
+          <Col xs={24} lg={10}>
+            <Form.Item
+              name="solution_template_id"
+              label="解决方案模板"
+              extra={
+                <Space size={8} wrap>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    选择后自动生成说明和备注
+                  </Typography.Text>
+                  <Button
+                    type="link"
+                    size="small"
+                    style={{ paddingInline: 0 }}
+                    onClick={() =>
+                      history.push('/resources/incident-solution-templates')
+                    }
+                  >
+                    管理模板
+                  </Button>
+                </Space>
               }
-            }}
-          />
-        </Form.Item>
-        {selectedTemplate ? (
-          <Alert
-            style={{ marginBottom: 16 }}
-            type="info"
-            showIcon
-            title={selectedTemplate.name}
-            description={
-              selectedTemplate.description ||
-              solutionTemplateSummary(selectedTemplate) ||
-              '当前模板会使用系统自动注入的 incident / operator / system 变量，并允许你通过模板变量补充自定义字段。'
-            }
-          />
-        ) : null}
-        <Form.Item
-          name="close_status"
-          label="关闭状态"
-          rules={[{ required: true, message: '请选择关闭状态' }]}
-        >
-          <Select options={closeStatusOptions} />
-        </Form.Item>
-        <Form.Item
-          name="resolution"
-          label="解决说明"
-          rules={[
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                if (getFieldValue('solution_template_id') || value) {
-                  return Promise.resolve();
+            >
+              <Select
+                allowClear
+                showSearch
+                loading={
+                  templatesLoading ||
+                  templateDetailLoadingId === selectedTemplateId
                 }
-                return Promise.reject(
-                  new Error('请输入解决说明，或选择解决方案模板'),
-                );
-              },
-            }),
-          ]}
-        >
-          <Input.TextArea
-            rows={3}
-            placeholder="例如：已完成修复并验证恢复正常"
-          />
-        </Form.Item>
-        <Form.Item name="work_notes" label="处理备注">
-          <Input.TextArea rows={3} placeholder="写给源工单系统的处理过程说明" />
-        </Form.Item>
-        <Form.Item name="close_code" label="关闭码">
-          <Input placeholder="例如：auto_healed" />
-        </Form.Item>
-        <Form.Item
-          name="template_vars_text"
-          label="模板变量（JSON）"
-          extra={
-            '仅在模板需要额外变量时填写，例如 {"execution":{"run_id":"run-1"}}。'
-          }
-        >
-          <Input.TextArea
-            rows={4}
-            placeholder='例如：{"execution":{"run_id":"run-1","message":"人工确认恢复正常"}}'
-          />
-        </Form.Item>
+                options={templates.map((template) => ({
+                  label: template.name,
+                  value: template.id,
+                }))}
+                optionFilterProp="label"
+                placeholder="可选：选择一个关单模板"
+                onChange={(templateId) => {
+                  if (!templateId) {
+                    lastAppliedTemplateValuesRef.current = {};
+                  }
+                }}
+              />
+            </Form.Item>
+            {selectedTemplate ? (
+              <Alert
+                style={{ marginBottom: 16 }}
+                type="info"
+                showIcon
+                title={selectedTemplate.name}
+                description={
+                  selectedTemplate.description ||
+                  solutionTemplateSummary(selectedTemplate) ||
+                  '使用 incident / operator / system 内置变量生成关单内容。'
+                }
+              />
+            ) : null}
+            <Row gutter={12}>
+              <Col xs={24} sm={12} lg={24} xl={12}>
+                <Form.Item
+                  name="close_status"
+                  label="关闭状态"
+                  rules={[{ required: true, message: '请选择关闭状态' }]}
+                >
+                  <Select options={closeStatusOptions} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} lg={24} xl={12}>
+                <Form.Item name="close_code" label="关闭码">
+                  <Input placeholder="例如：auto_healed" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item
+              name="template_vars_text"
+              label="补充模板变量（JSON，可选）"
+              extra={
+                '通常不用填。只有模板包含 execution.run_id 这类额外占位符时，才在这里补充对应 JSON；系统已自动提供 incident / operator / system。'
+              }
+            >
+              <Input.TextArea
+                rows={5}
+                placeholder='例如：{"execution":{"run_id":"run-1","message":"人工确认恢复正常"}}'
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} lg={14}>
+            <Form.Item
+              name="resolution"
+              label="解决说明"
+              rules={[
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (getFieldValue('solution_template_id') || value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error('请输入解决说明，或选择解决方案模板'),
+                    );
+                  },
+                }),
+              ]}
+            >
+              <Input.TextArea
+                rows={8}
+                placeholder="例如：已完成修复并验证恢复正常"
+              />
+            </Form.Item>
+            <Form.Item name="work_notes" label="处理备注">
+              <Input.TextArea
+                rows={8}
+                placeholder="写给源工单系统的处理过程说明"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
       </Form>
     </Modal>
   );
