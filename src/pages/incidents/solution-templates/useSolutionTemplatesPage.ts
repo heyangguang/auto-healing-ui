@@ -105,10 +105,12 @@ export const useSolutionTemplatesPage = () => {
   useEffect(() => {
     if (isCreating) {
       form.setFieldsValue(DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES);
+      setFormRevision((value) => value + 1);
       setIsDirty(false);
       return;
     }
     form.setFieldsValue(buildTemplateEditorValues(selectedTemplate));
+    setFormRevision((value) => value + 1);
     setIsDirty(false);
   }, [form, isCreating, selectedTemplate]);
 
@@ -137,6 +139,7 @@ export const useSolutionTemplatesPage = () => {
     setSelectedId(null);
     setShowPreview(false);
     form.setFieldsValue(DEFAULT_SOLUTION_TEMPLATE_FORM_VALUES);
+    setFormRevision((value) => value + 1);
   }, [form]);
 
   const handleSelect = useCallback((id: string) => {

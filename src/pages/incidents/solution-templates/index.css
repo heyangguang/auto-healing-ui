@@ -112,6 +112,15 @@
   margin-bottom: 18px;
 }
 
+.solution-templates-variable-drawer .ant-drawer-body {
+  padding: 20px;
+  background: #f6f8fb;
+}
+
+.solution-templates-variable-drawer .solution-templates-variable-reference {
+  margin-bottom: 0;
+}
+
 .solution-templates-variable-reference {
   display: flex;
   flex-direction: column;

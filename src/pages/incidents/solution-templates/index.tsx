@@ -2,12 +2,14 @@ import {
   DeleteOutlined,
   EyeOutlined,
   PlusOutlined,
+  QuestionCircleOutlined,
   SaveOutlined,
 } from '@ant-design/icons';
 import { useAccess } from '@umijs/max';
 import {
   Alert,
   Button,
+  Drawer,
   Empty,
   Form,
   Input,
@@ -187,6 +189,8 @@ const TemplateVariableReference: React.FC<{
 
 const SolutionTemplatePage: React.FC = () => {
   const access = useAccess();
+  const [variableReferenceOpen, setVariableReferenceOpen] =
+    React.useState(false);
   const {
     form,
     handleCreate,
@@ -317,6 +321,12 @@ const SolutionTemplatePage: React.FC = () => {
                 </div>
                 <Space>
                   <Button
+                    icon={<QuestionCircleOutlined />}
+                    onClick={() => setVariableReferenceOpen(true)}
+                  >
+                    变量说明
+                  </Button>
+                  <Button
                     icon={<EyeOutlined />}
                     onClick={() => setShowPreview(!showPreview)}
                   >
@@ -380,7 +390,6 @@ const SolutionTemplatePage: React.FC = () => {
                       message="解决方案模板采用“静态方案 + 动态步骤”模式"
                       description="问题说明、解决方案、验证结果和最终结论由模板定义，执行步骤由系统根据真实运行过程自动生成。"
                     />
-                    <TemplateVariableReference variableUsage={variableUsage} />
                     <Form
                       form={form}
                       layout="vertical"
@@ -512,6 +521,16 @@ const SolutionTemplatePage: React.FC = () => {
                   </div>
                 )}
               </div>
+              <Drawer
+                className="solution-templates-variable-drawer"
+                destroyOnHidden
+                onClose={() => setVariableReferenceOpen(false)}
+                open={variableReferenceOpen}
+                title="模板变量说明"
+                width={720}
+              >
+                <TemplateVariableReference variableUsage={variableUsage} />
+              </Drawer>
             </>
           )}
         </div>
