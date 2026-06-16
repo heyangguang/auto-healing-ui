@@ -358,6 +358,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
       styles={{
         body: {
           maxHeight: 'calc(100vh - 220px)',
+          overflowX: 'hidden',
           overflowY: 'auto',
           paddingTop: 12,
         },
@@ -368,7 +369,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
         layout="vertical"
         initialValues={{ close_status: 'resolved', close_code: 'auto_healed' }}
       >
-        <Row gutter={24} align="top">
+        <Row gutter={[24, 0]} align="top" style={{ marginInline: 0 }}>
           <Col xs={24} lg={10}>
             <Form.Item
               name="solution_template_id"
@@ -424,7 +425,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                 }
               />
             ) : null}
-            <Row gutter={12}>
+            <Row gutter={[12, 0]} style={{ marginInline: 0 }}>
               <Col xs={24} sm={12} lg={24} xl={12}>
                 <Form.Item
                   name="close_status"
