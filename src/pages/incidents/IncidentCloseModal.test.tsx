@@ -58,7 +58,15 @@ describe('IncidentCloseModal', () => {
     });
   });
 
-  it('parses template vars json before submit', async () => {
+  it('submits detected supplemental template variables as template vars', async () => {
+    (getIncidentSolutionTemplate as jest.Mock).mockResolvedValue({
+      id: 'template-1',
+      name: '自动修复模板',
+      default_close_code: 'auto_healed',
+      default_close_status: 'resolved',
+      solution_template: '执行编号 {{ execution.run_id }}',
+      verification_template: '执行结果 {{ input.execution.message }}',
+    });
     const onSubmit = jest.fn().mockResolvedValue(undefined);
 
     render(
@@ -74,21 +82,33 @@ describe('IncidentCloseModal', () => {
       expect(getIncidentSolutionTemplates).toHaveBeenCalled();
     });
 
-    fireEvent.change(screen.getByLabelText('解决说明'), {
-      target: { value: '已恢复' },
+    await selectTemplateOption('自动修复模板');
+
+    await waitFor(() => {
+      expect(getIncidentSolutionTemplate).toHaveBeenCalledWith('template-1');
     });
-    fireEvent.click(screen.getByText('高级变量'));
-    fireEvent.change(screen.getByLabelText('补充模板变量（JSON，可选）'), {
-      target: { value: '{"execution":{"run_id":"run-1"}}' },
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('execution.run_id')).toBeTruthy();
+      expect(screen.getByLabelText('execution.message')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('execution.run_id'), {
+      target: { value: 'run-1' },
+    });
+    fireEvent.change(screen.getByLabelText('execution.message'), {
+      target: { value: '人工确认恢复正常' },
     });
     fireEvent.click(screen.getByRole('button', { name: '关闭并回写' }));
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          resolution: '已恢复',
           template_vars: {
-            execution: { run_id: 'run-1' },
+            execution: {
+              message: '人工确认恢复正常',
+              run_id: 'run-1',
+            },
           },
         }),
       );

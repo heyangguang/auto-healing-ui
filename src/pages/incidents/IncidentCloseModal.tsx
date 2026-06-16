@@ -2,7 +2,6 @@ import { history } from '@umijs/max';
 import {
   Button,
   Col,
-  Collapse,
   Form,
   Input,
   Modal,
@@ -13,6 +12,7 @@ import {
   Typography,
 } from 'antd';
 import React from 'react';
+import { INCIDENT_STATUS_MAP as STATUS_MAP } from '@/constants/incidentDicts';
 import {
   getIncidentSolutionTemplate,
   getIncidentSolutionTemplates,
@@ -35,7 +35,7 @@ type CloseModalFormValues = {
   close_status?: 'closed' | 'resolved';
   resolution?: string;
   solution_template_id?: string;
-  template_vars_text?: string;
+  template_vars?: Record<string, unknown>;
   work_notes?: string;
 };
 
@@ -65,21 +65,105 @@ const contextRowStyle: React.CSSProperties = {
   gridTemplateColumns: '72px minmax(0, 1fr)',
 };
 
+const SYSTEM_TEMPLATE_ROOTS = new Set([
+  'close_code',
+  'close_status',
+  'incident',
+  'operator',
+  'system',
+]);
+
 function displayValue(value?: React.ReactNode) {
   return value || <Typography.Text type="secondary">-</Typography.Text>;
 }
 
-function parseTemplateVarsText(
-  text?: string,
+function compactTemplateVars(
+  value?: unknown,
 ): AutoHealing.JsonObject | undefined {
-  if (!text?.trim()) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return undefined;
   }
-  const parsed = JSON.parse(text);
-  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
-    throw new Error('模板变量必须是 JSON 对象');
+  const result: AutoHealing.JsonObject = {};
+  Object.entries(value as Record<string, unknown>).forEach(([key, item]) => {
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (trimmed) {
+        result[key] = trimmed;
+      }
+      return;
+    }
+    if (item && typeof item === 'object' && !Array.isArray(item)) {
+      const nested = compactTemplateVars(item);
+      if (nested && Object.keys(nested).length > 0) {
+        result[key] = nested;
+      }
+    }
+  });
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function getIncidentSourceLabel(incident?: AutoHealing.Incident | null) {
+  return incident?.source_plugin_name || incident?.plugin?.name || undefined;
+}
+
+function renderIncidentStatus(status?: AutoHealing.IncidentStatus) {
+  if (!status) {
+    return <Typography.Text type="secondary">-</Typography.Text>;
   }
-  return parsed as AutoHealing.JsonObject;
+  const info =
+    STATUS_MAP[status] ||
+    (status === 'new'
+      ? {
+          color: 'blue',
+          text: '新建',
+        }
+      : {
+          color: 'default',
+          text: status,
+        });
+  return (
+    <span style={{ justifySelf: 'start' }}>
+      <Tag color={info.color} style={{ margin: 0 }}>
+        {info.text}
+      </Tag>
+    </span>
+  );
+}
+
+function extractTemplateVariablePaths(
+  template?: AutoHealing.IncidentSolutionTemplate | null,
+) {
+  if (!template) {
+    return [];
+  }
+  const paths: string[] = [];
+  const seen = new Set<string>();
+  const collect = (content?: string) => {
+    for (const match of content?.matchAll(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g) ||
+      []) {
+      const rawPath = match[1];
+      const segments = rawPath.split('.').filter(Boolean);
+      const root = segments[0];
+      let extraPath = '';
+      if (!root || SYSTEM_TEMPLATE_ROOTS.has(root)) {
+        return;
+      }
+      if (root === 'input') {
+        extraPath = segments.slice(1).join('.');
+      } else {
+        extraPath = segments.join('.');
+      }
+      if (extraPath && !seen.has(extraPath)) {
+        seen.add(extraPath);
+        paths.push(extraPath);
+      }
+    }
+  };
+  collect(template.problem_template);
+  collect(template.solution_template);
+  collect(template.verification_template);
+  collect(template.conclusion_template);
+  return paths;
 }
 
 function buildTemplateContext(
@@ -185,10 +269,14 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
   const templateApplyRequestRef = React.useRef(0);
   const selectedTemplateIdRef = React.useRef<string | null>(null);
   const selectedTemplateId = Form.useWatch('solution_template_id', form);
-  const templateVarsText = Form.useWatch('template_vars_text', form);
+  const templateVarsValue = Form.useWatch('template_vars', form);
   const selectedTemplate = React.useMemo(
     () => templates.find((template) => template.id === selectedTemplateId),
     [selectedTemplateId, templates],
+  );
+  const selectedTemplateExtraVariablePaths = React.useMemo(
+    () => extractTemplateVariablePaths(selectedTemplate),
+    [selectedTemplate],
   );
   const selectedTemplateDescription = React.useMemo(() => {
     if (!selectedTemplate) {
@@ -279,18 +367,16 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
   );
 
   const applySelectedTemplate = React.useCallback(
-    async (templateId?: string | null, templateVarsTextValue?: string) => {
+    async (
+      templateId?: string | null,
+      templateVarsValue?: Record<string, unknown>,
+    ) => {
       if (!open || !templateId) {
         return;
       }
       const requestId = templateApplyRequestRef.current + 1;
       templateApplyRequestRef.current = requestId;
-      let templateVars: AutoHealing.JsonObject | undefined;
-      try {
-        templateVars = parseTemplateVarsText(templateVarsTextValue);
-      } catch {
-        return;
-      }
+      const templateVars = compactTemplateVars(templateVarsValue);
       const isCurrentTemplateSelection = () =>
         selectedTemplateIdRef.current === templateId;
       if (!isCurrentTemplateSelection()) {
@@ -342,8 +428,8 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
     }
 
     selectedTemplateIdRef.current = selectedTemplateId;
-    void applySelectedTemplate(selectedTemplateId, templateVarsText);
-  }, [applySelectedTemplate, open, selectedTemplateId, templateVarsText]);
+    void applySelectedTemplate(selectedTemplateId, templateVarsValue);
+  }, [applySelectedTemplate, open, selectedTemplateId, templateVarsValue]);
 
   return (
     <Modal
@@ -356,20 +442,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
       destroyOnHidden
       onOk={async () => {
         const values = await form.validateFields();
-        let templateVars: AutoHealing.JsonObject | undefined;
-        try {
-          templateVars = parseTemplateVarsText(values.template_vars_text);
-        } catch {
-          form.setFields([
-            {
-              name: 'template_vars_text',
-              errors: [
-                '请输入合法的 JSON 对象，例如 {"execution":{"run_id":"run-1"}}',
-              ],
-            },
-          ]);
-          return;
-        }
+        const templateVars = compactTemplateVars(values.template_vars);
         await onSubmit({
           close_code: values.close_code,
           close_status: values.close_status,
@@ -466,10 +539,11 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                       templateApplyRequestRef.current += 1;
                       selectedTemplateIdRef.current = null;
                       setTemplateDetailLoadingId(null);
+                      form.setFieldValue('template_vars', undefined);
                       return;
                     }
                     selectedTemplateIdRef.current = templateId;
-                    void applySelectedTemplate(templateId, templateVarsText);
+                    void applySelectedTemplate(templateId, templateVarsValue);
                   }}
                 />
               </Form.Item>
@@ -536,9 +610,7 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                   </div>
                   <div style={contextRowStyle}>
                     <Typography.Text type="secondary">当前状态</Typography.Text>
-                    {displayValue(
-                      incident?.status ? <Tag>{incident.status}</Tag> : null,
-                    )}
+                    {renderIncidentStatus(incident?.status)}
                   </div>
                   <div style={contextRowStyle}>
                     <Typography.Text type="secondary">影响资产</Typography.Text>
@@ -549,37 +621,52 @@ export const IncidentCloseModal: React.FC<IncidentCloseModalProps> = ({
                   <div style={contextRowStyle}>
                     <Typography.Text type="secondary">来源</Typography.Text>
                     <Typography.Text ellipsis>
-                      {displayValue(incident?.source)}
+                      {displayValue(getIncidentSourceLabel(incident))}
                     </Typography.Text>
                   </div>
                 </Space>
               </div>
-              <div style={{ ...sidePanelStyle, padding: '8px 12px' }}>
-                <Collapse
-                  ghost
-                  size="small"
-                  items={[
-                    {
-                      key: 'template-vars',
-                      label: '高级变量',
-                      children: (
+              <div style={sidePanelStyle}>
+                <Space
+                  orientation="vertical"
+                  size={12}
+                  style={{ width: '100%' }}
+                >
+                  <Space align="center" size={8} wrap>
+                    <Typography.Text strong>模板额外变量</Typography.Text>
+                    {selectedTemplateExtraVariablePaths.length > 0 ? (
+                      <Tag color="processing" style={{ margin: 0 }}>
+                        自动识别
+                      </Tag>
+                    ) : null}
+                  </Space>
+                  <Typography.Text type="secondary">
+                    系统已提供 incident / operator /
+                    system；只需补充模板里额外出现的占位符。
+                  </Typography.Text>
+                  {selectedTemplate ? (
+                    selectedTemplateExtraVariablePaths.length > 0 ? (
+                      selectedTemplateExtraVariablePaths.map((path) => (
                         <Form.Item
-                          name="template_vars_text"
-                          label="补充模板变量（JSON，可选）"
-                          extra={
-                            '通常不用填。只有模板包含 execution.run_id 这类额外占位符时，才在这里补充对应 JSON；系统已自动提供 incident / operator / system。'
-                          }
+                          key={path}
+                          name={['template_vars', ...path.split('.')]}
+                          label={path}
                           style={{ marginBottom: 0 }}
                         >
-                          <Input.TextArea
-                            rows={4}
-                            placeholder='例如：{"execution":{"run_id":"run-1","message":"人工确认恢复正常"}}'
-                          />
+                          <Input allowClear placeholder={`请输入 ${path}`} />
                         </Form.Item>
-                      ),
-                    },
-                  ]}
-                />
+                      ))
+                    ) : (
+                      <Typography.Text type="secondary">
+                        当前模板无需人工补充变量。
+                      </Typography.Text>
+                    )
+                  ) : (
+                    <Typography.Text type="secondary">
+                      选择模板后自动识别需要补充的变量。
+                    </Typography.Text>
+                  )}
+                </Space>
               </div>
             </Space>
           </Col>
