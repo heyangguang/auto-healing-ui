@@ -18,6 +18,7 @@ import {
   type IncidentWritebackLog,
   resetIncidentScan,
 } from '@/services/auto-healing/incidents';
+import { extractErrorMsg } from '@/utils/errorMsg';
 import { IncidentBatchToolbar } from './IncidentBatchToolbar';
 import { IncidentCloseModal } from './IncidentCloseModal';
 import { IncidentDetailDrawer } from './IncidentDetailDrawer';
@@ -31,6 +32,49 @@ import {
 import { buildIncidentApiParams } from './incidentRequest';
 import { createIncidentColumns } from './incidentTableColumns';
 import './index.css';
+
+function getWritebackLogTimestamp(log: IncidentWritebackLog) {
+  return (
+    Date.parse(log.created_at || log.finished_at || log.started_at || '') || 0
+  );
+}
+
+function getLatestFailedCloseWritebackLog(logs: IncidentWritebackLog[]) {
+  return [...logs]
+    .filter((log) => log.status === 'failed' && log.action === 'close')
+    .sort(
+      (a, b) => getWritebackLogTimestamp(b) - getWritebackLogTimestamp(a),
+    )[0];
+}
+
+function renderCloseFailureContent(
+  errorMessage: string,
+  log?: IncidentWritebackLog,
+) {
+  const detail = log?.error_message || log?.response_body;
+  return (
+    <div className="incident-close-failure">
+      <div className="incident-close-failure-message">{errorMessage}</div>
+      {log ? (
+        <div className="incident-close-failure-detail">
+          <div>
+            <span>回写记录</span>
+            <strong>{log.id}</strong>
+          </div>
+          <div>
+            <span>源系统状态码</span>
+            <strong>{log.response_status_code ?? '-'}</strong>
+          </div>
+          {detail ? <pre>{detail}</pre> : null}
+        </div>
+      ) : (
+        <div className="incident-close-failure-tip">
+          未能读取到最新回写记录，请稍后在工单详情的回写记录中查看。
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ========== 组件 ========== */
 const IncidentList: React.FC = () => {
@@ -70,8 +114,10 @@ const IncidentList: React.FC = () => {
     try {
       const logs = await getIncidentWritebackLogs(incidentId);
       setWritebackLogs(logs);
+      return logs;
     } catch {
       setWritebackLogs([]);
+      return [];
     } finally {
       setWritebackLogsLoading(false);
     }
@@ -215,11 +261,29 @@ const IncidentList: React.FC = () => {
         await reloadCurrentDetail(currentRow.id);
         triggerRefresh();
         void loadStats();
+      } catch (error) {
+        const errorMessage = extractErrorMsg(
+          error as Parameters<typeof extractErrorMsg>[0],
+          '关闭工单失败，请查看回写记录',
+        );
+        const logs = await loadWritebackLogs(currentRow.id);
+        const latestFailureLog = getLatestFailedCloseWritebackLog(logs);
+        Modal.error({
+          title: '关闭工单失败',
+          width: 620,
+          content: renderCloseFailureContent(errorMessage, latestFailureLog),
+        });
       } finally {
         setCloseSubmitting(false);
       }
     },
-    [currentRow, loadStats, reloadCurrentDetail, triggerRefresh],
+    [
+      currentRow,
+      loadStats,
+      loadWritebackLogs,
+      reloadCurrentDetail,
+      triggerRefresh,
+    ],
   );
 
   const columns = useMemo(

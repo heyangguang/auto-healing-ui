@@ -1,17 +1,24 @@
-import React from 'react';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { Modal, message } from 'antd';
-import IncidentList from './index';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { useAccess } from '@umijs/max';
+import { Modal, message } from 'antd';
+import React from 'react';
 import {
   batchResetIncidentScan,
   closeIncident,
   getIncident,
-  getIncidentWritebackLogs,
   getIncidentStats,
   getIncidents,
+  getIncidentWritebackLogs,
   resetIncidentScan,
 } from '@/services/auto-healing/incidents';
+import IncidentList from './index';
 
 jest.mock('@umijs/max', () => ({
   useAccess: jest.fn(),
@@ -35,11 +42,13 @@ jest.mock('@/components/StandardTable', () => {
 
     React.useEffect(() => {
       let active = true;
-      props.request?.({ page: 1, pageSize: 20 }).then((result: { data?: AutoHealing.Incident[] }) => {
-        if (active) {
-          setRows(result.data || []);
-        }
-      });
+      props
+        .request?.({ page: 1, pageSize: 20 })
+        .then((result: { data?: AutoHealing.Incident[] }) => {
+          if (active) {
+            setRows(result.data || []);
+          }
+        });
       return () => {
         active = false;
       };
@@ -74,18 +83,59 @@ jest.mock('./IncidentDetailDrawer', () => {
     IncidentDetailDrawer: ({
       canResetScan,
       incident,
+      onOpenCloseModal,
       onResetScan,
       open,
-    }: any) => (open && incident ? React.createElement(
-      'div',
-      { 'data-testid': 'incident-detail-drawer' },
-      React.createElement('span', { 'data-testid': 'detail-title' }, incident.title),
-      React.createElement(
-        'button',
-        { type: 'button', disabled: !canResetScan, onClick: () => onResetScan(incident) },
-        '抽屉重置扫描',
-      ),
-    ) : null),
+    }: any) =>
+      open && incident
+        ? React.createElement(
+            'div',
+            { 'data-testid': 'incident-detail-drawer' },
+            React.createElement(
+              'span',
+              { 'data-testid': 'detail-title' },
+              incident.title,
+            ),
+            React.createElement(
+              'button',
+              { type: 'button', onClick: () => onOpenCloseModal(incident) },
+              '打开关单',
+            ),
+            React.createElement(
+              'button',
+              {
+                type: 'button',
+                disabled: !canResetScan,
+                onClick: () => onResetScan(incident),
+              },
+              '抽屉重置扫描',
+            ),
+          )
+        : null,
+  };
+});
+
+jest.mock('./IncidentCloseModal', () => {
+  const React = require('react');
+
+  return {
+    IncidentCloseModal: ({ loading, onSubmit, open }: any) =>
+      open
+        ? React.createElement(
+            'button',
+            {
+              disabled: loading,
+              onClick: () =>
+                onSubmit({
+                  close_code: 'manual_fixed',
+                  resolution: '已处理',
+                  work_notes: '验证通过',
+                }),
+              type: 'button',
+            },
+            '提交关单',
+          )
+        : null,
   };
 });
 
@@ -95,7 +145,9 @@ jest.mock('./IncidentStatsBar', () => ({
     return React.createElement(
       'div',
       { 'data-testid': 'incident-stats-bar' },
-      stats ? `${stats.total}/${stats.scanned}/${stats.unscanned}/${stats.healed}` : 'empty',
+      stats
+        ? `${stats.total}/${stats.scanned}/${stats.unscanned}/${stats.healed}`
+        : 'empty',
     );
   },
 }));
@@ -114,10 +166,12 @@ describe('IncidentList integration', () => {
   beforeEach(() => {
     jest.spyOn(message, 'success').mockImplementation(jest.fn());
     jest.spyOn(message, 'error').mockImplementation(jest.fn());
-    jest.spyOn(Modal, 'confirm').mockImplementation(({ onOk }: { onOk?: () => void | Promise<void> }) => {
-      void onOk?.();
-      return { destroy: jest.fn(), update: jest.fn() } as never;
-    });
+    jest
+      .spyOn(Modal, 'confirm')
+      .mockImplementation(({ onOk }: { onOk?: () => void | Promise<void> }) => {
+        void onOk?.();
+        return { destroy: jest.fn(), update: jest.fn() } as never;
+      });
 
     (useAccess as jest.Mock).mockReturnValue({
       canSyncPlugin: true,
@@ -127,17 +181,48 @@ describe('IncidentList integration', () => {
       total: 1,
     });
     (getIncidentStats as jest.Mock)
-      .mockResolvedValueOnce({ total: 10, scanned: 4, unscanned: 6, healed: 1, failed: 0 })
-      .mockResolvedValueOnce({ total: 9, scanned: 5, unscanned: 4, healed: 2, failed: 0 })
-      .mockResolvedValueOnce({ total: 8, scanned: 6, unscanned: 2, healed: 3, failed: 0 });
+      .mockResolvedValueOnce({
+        total: 10,
+        scanned: 4,
+        unscanned: 6,
+        healed: 1,
+        failed: 0,
+      })
+      .mockResolvedValueOnce({
+        total: 9,
+        scanned: 5,
+        unscanned: 4,
+        healed: 2,
+        failed: 0,
+      })
+      .mockResolvedValueOnce({
+        total: 8,
+        scanned: 6,
+        unscanned: 2,
+        healed: 3,
+        failed: 0,
+      });
     (getIncident as jest.Mock)
       .mockResolvedValueOnce(incident)
-      .mockResolvedValueOnce({ ...incident, scanned: true, healing_status: 'matched' })
-      .mockResolvedValueOnce({ ...incident, scanned: true, healing_status: 'triggered' });
+      .mockResolvedValueOnce({
+        ...incident,
+        scanned: true,
+        healing_status: 'matched',
+      })
+      .mockResolvedValueOnce({
+        ...incident,
+        scanned: true,
+        healing_status: 'triggered',
+      });
     (resetIncidentScan as jest.Mock).mockResolvedValue({});
-    (batchResetIncidentScan as jest.Mock).mockResolvedValue({ affected_count: 1 });
+    (batchResetIncidentScan as jest.Mock).mockResolvedValue({
+      affected_count: 1,
+    });
     (getIncidentWritebackLogs as jest.Mock).mockResolvedValue([]);
-    (closeIncident as jest.Mock).mockResolvedValue({ local_status: 'healed', source_updated: true });
+    (closeIncident as jest.Mock).mockResolvedValue({
+      local_status: 'healed',
+      source_updated: true,
+    });
   });
 
   afterEach(() => {
@@ -151,15 +236,21 @@ describe('IncidentList integration', () => {
       expect(getIncidentStats).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(screen.getByTestId('incident-stats-bar').textContent).toBe('10/4/6/1');
+      expect(screen.getByTestId('incident-stats-bar').textContent).toBe(
+        '10/4/6/1',
+      );
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: '打开-incident-1' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: '打开-incident-1' }),
+    );
 
     await waitFor(() => {
       expect(getIncident).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByTestId('detail-title').textContent).toBe('磁盘空间不足告警');
+    expect(screen.getByTestId('detail-title').textContent).toBe(
+      '磁盘空间不足告警',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: '抽屉重置扫描' }));
 
@@ -169,27 +260,39 @@ describe('IncidentList integration', () => {
       expect(getIncident).toHaveBeenCalledTimes(2);
     });
     await waitFor(() => {
-      expect(screen.getByTestId('incident-stats-bar').textContent).toBe('9/5/4/2');
+      expect(screen.getByTestId('incident-stats-bar').textContent).toBe(
+        '9/5/4/2',
+      );
     });
 
     fireEvent.click(screen.getByRole('button', { name: '选择-incident-1' }));
 
     await waitFor(() => {
-      expect(within(screen.getByTestId('batch-toolbar')).getByText('已选 1 项')).toBeTruthy();
+      expect(
+        within(screen.getByTestId('batch-toolbar')).getByText('已选 1 项'),
+      ).toBeTruthy();
     });
 
     await act(async () => {
-      fireEvent.click(within(screen.getByTestId('batch-toolbar')).getByRole('button', { name: /重置扫描/ }));
+      fireEvent.click(
+        within(screen.getByTestId('batch-toolbar')).getByRole('button', {
+          name: /重置扫描/,
+        }),
+      );
       await Promise.resolve();
     });
 
     await waitFor(() => {
-      expect(batchResetIncidentScan).toHaveBeenCalledWith({ ids: ['incident-1'] });
+      expect(batchResetIncidentScan).toHaveBeenCalledWith({
+        ids: ['incident-1'],
+      });
       expect(getIncidentStats).toHaveBeenCalledTimes(3);
       expect(getIncident).toHaveBeenCalledTimes(3);
     });
     await waitFor(() => {
-      expect(screen.getByTestId('incident-stats-bar').textContent).toBe('8/6/2/3');
+      expect(screen.getByTestId('incident-stats-bar').textContent).toBe(
+        '8/6/2/3',
+      );
     });
   });
 
@@ -201,10 +304,79 @@ describe('IncidentList integration', () => {
 
     render(React.createElement(IncidentList));
 
-    fireEvent.click(await screen.findByRole('button', { name: '打开-incident-1' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: '打开-incident-1' }),
+    );
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '抽屉重置扫描' }).hasAttribute('disabled')).toBe(true);
+      expect(
+        screen
+          .getByRole('button', { name: '抽屉重置扫描' })
+          .hasAttribute('disabled'),
+      ).toBe(true);
     });
+  });
+
+  it('shows source writeback detail when closing an incident fails', async () => {
+    const modalError = jest.spyOn(Modal, 'error').mockImplementation(jest.fn());
+    const failedLog = {
+      action: 'close',
+      created_at: '2026-06-22T10:00:00Z',
+      error_message: '关闭工单返回错误状态码 502: String too long',
+      external_id: 'INC-1001',
+      id: 'log-1',
+      response_body: '{"error":"String too long"}',
+      response_status_code: 502,
+      status: 'failed',
+      trigger_source: 'manual_close',
+    };
+    (closeIncident as jest.Mock).mockRejectedValue({
+      response: {
+        data: {
+          message:
+            '源系统回写失败（HTTP 502）：String too long。回写记录ID：log-1',
+        },
+      },
+    });
+    (getIncidentWritebackLogs as jest.Mock).mockResolvedValue([failedLog]);
+
+    render(React.createElement(IncidentList));
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: '打开-incident-1' }),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('incident-detail-drawer')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '打开关单' }));
+    fireEvent.click(screen.getByRole('button', { name: '提交关单' }));
+
+    await waitFor(() => {
+      expect(closeIncident).toHaveBeenCalledWith('incident-1', {
+        close_code: 'manual_fixed',
+        resolution: '已处理',
+        work_notes: '验证通过',
+      });
+      expect(modalError).toHaveBeenCalled();
+    });
+
+    const modalConfig = modalError.mock.calls[0][0] as {
+      title?: string;
+      content?: any;
+    };
+    expect(modalConfig.title).toBe('关闭工单失败');
+    render(React.createElement(React.Fragment, null, modalConfig.content));
+
+    expect(
+      screen.getByText(
+        '源系统回写失败（HTTP 502）：String too long。回写记录ID：log-1',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('log-1')).toBeTruthy();
+    expect(screen.getByText('502')).toBeTruthy();
+    expect(
+      screen.getByText('关闭工单返回错误状态码 502: String too long'),
+    ).toBeTruthy();
   });
 });

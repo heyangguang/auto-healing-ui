@@ -173,6 +173,7 @@ declare namespace AutoHealing {
         message: string;
         local_status: string;
         source_updated: boolean;
+        writeback_log_id?: UUID | null;
     }
 
     interface IncidentSolutionTemplate {

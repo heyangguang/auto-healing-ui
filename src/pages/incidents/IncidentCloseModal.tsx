@@ -36,7 +36,7 @@ type CloseModalFormValues = {
   close_status?: 'closed' | 'resolved';
   resolution?: string;
   solution_template_id?: string;
-  template_vars?: Record<string, unknown>;
+  template_vars?: AutoHealing.JsonObject;
   work_notes?: string;
 };
 
